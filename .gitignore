@@ -1,0 +1,16 @@
+# Compiled python
+*.pyc
+
+# Build, distribution, virtual environment
+build/
+dist/
+venv/
+*.egg-info/
+
+# testing coverage
+.coverage
+.coverage.*
+htmlcov/
+
+# Open api output
+openapi/llmops_etl*
