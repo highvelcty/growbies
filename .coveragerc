@@ -1,0 +1,29 @@
+# This is a coverage configuration file
+[run]
+
+# The "branch" setting will give more visibility into logic branching coverage.
+# e.g.
+#
+# 1: if some_var == True:
+# 2:     pass
+# 3:
+#
+# With branch = False and some_var set True,
+#    lines 1,2,3 above will show covered
+# With branch = True and some_var set True
+#    lines 1,2 above will show covered, but indication that branching from line 1 -> 3 was not
+#    covered
+
+branch = False
+source = precision_farming
+omit =
+    tests/*
+
+parallel = True
+
+[report]
+exclude_lines =
+    pragma: no cover
+
+    # do not cover
+    raise NotImplementedError
