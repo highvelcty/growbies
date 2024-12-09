@@ -12,5 +12,5 @@ venv/
 .coverage.*
 htmlcov/
 
-# Open api output
-openapi/llmops_etl*
+# IDE
+.idea
