@@ -27,6 +27,11 @@ class Paths(Enum):
     HTMLCOV = ROOT / 'htmlcov'
     HTMLCOV_INDEX = HTMLCOV / 'index.html'
 
+    # /output
+    OUTPUT = ROOT / 'output'
+    LOG_FILE = OUTPUT / 'log.log'
+    DATA_FILE = OUTPUT / 'data.log'
+
     # /precision_farming
     PRECISION_FARMING = ROOT / 'precision_farming'
 
