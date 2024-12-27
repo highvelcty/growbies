@@ -1,20 +1,27 @@
 import time
 
-from precision_farming.arduino.arduino import arduino_serial
-from precision_farming.utils.paths import Paths
+from precision_farming.arduino.arduino import ArduinoSerial
+from precision_farming.session import Session
 from precision_farming.utils.timestamp import get_utc_iso_ts_str
 
 POLLING_SEC = 1
 
-def main():
+def main(sess: Session):
+    arduino_serial = ArduinoSerial()
     iteration = 0
-    with open(Paths.DATA_FILE.value, 'w') as outf:
+    with open(sess.path_to_data, 'w') as outf:
+        outf.write('timestamp,channel0,channel1,channel2,channel3\n')
         try:
             while True:
-                sample = arduino_serial.sample()
                 ts = get_utc_iso_ts_str()
-                outf.write(f'{ts},{sample}\n')
-                print(f'{iteration}: {sample}')
+                samples = arduino_serial.sample()
+                outf.write(f'{ts},')
+                for idx, sample in enumerate(samples):
+                    if idx != len(samples) - 1:
+                        outf.write(f'{sample},')
+                    else:
+                        outf.write(f'{sample}\n')
+                print(f'{iteration}: {samples}')
                 iteration += 1
                 time.sleep(POLLING_SEC)
         except KeyboardInterrupt:

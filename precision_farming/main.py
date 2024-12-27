@@ -4,7 +4,7 @@ import logging
 import sys
 
 from .exec import execute, monitor
-from .utils import log
+from .session import Session
 from .utils.paths import Paths
 
 CMD = 'cmd'
@@ -13,15 +13,17 @@ class Level1Cmd(StrEnum):
     EXECUTE = 'execute'
     MONITOR = 'monitor'
 
+class MonitorParam(StrEnum):
+    TAG = 'tag'
+
 
 def main():
-    log.start(Paths.LOG_FILE.value, logging.INFO, logging.INFO)
-
     parser = ArgumentParser(description="Precision farming CLI.")
     sub = parser.add_subparsers(dest=CMD, metavar=CMD)
 
     help_str = 'Monitor a sensor.'
-    sub.add_parser(Level1Cmd.MONITOR, description=help_str, help=help_str)
+    sub_sub = sub.add_parser(Level1Cmd.MONITOR, description=help_str, help=help_str)
+    sub_sub.add_argument(f'--{MonitorParam.TAG}', action='append', help='Session tags')
 
     help_str = ('Loop execute commands. A prompt will be given for each command. The return of '
                 'each command will be output to standard output.')
@@ -32,8 +34,13 @@ def main():
     cmd = getattr(ns_args, CMD)
 
     if cmd == Level1Cmd.MONITOR:
-        monitor.main()
+        tags = getattr(ns_args, MonitorParam.TAG)
+        if tags is None:
+            tags = []
+        sess = Session(tags)
+        monitor.main(sess)
     elif cmd == Level1Cmd.EXECUTE:
+        _ = Session()
         execute.main()
     elif cmd is None:
         # noinspection PyTypeChecker

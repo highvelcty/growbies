@@ -30,7 +30,7 @@ class Paths(Enum):
     # /output
     OUTPUT = ROOT / 'output'
     LOG_FILE = OUTPUT / 'log.log'
-    DATA_FILE = OUTPUT / 'data.log'
+    DATA_FILE = OUTPUT / 'data.csv'
 
     # /precision_farming
     PRECISION_FARMING = ROOT / 'precision_farming'
