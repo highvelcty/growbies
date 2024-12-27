@@ -1,9 +1,10 @@
-from typing import Union
+from precision_farming.session import Session
 
-from precision_farming.arduino.arduino import arduino_serial
+from precision_farming.arduino.arduino import ArduinoSerial
 
 def main():
     while True:
+        arduino_serial = ArduinoSerial()
         try:
             cmd = input("Enter command: ")
             print(arduino_serial.execute(cmd))

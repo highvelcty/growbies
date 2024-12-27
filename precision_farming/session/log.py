@@ -1,12 +1,11 @@
+import atexit
 import logging
 import sys
 import time
 from pathlib import Path
 
-from . import timestamp
-from .paths import Paths
-
-FILENAME = 'test_run.log'
+from precision_farming.utils import timestamp
+from precision_farming.utils.paths import Paths
 
 
 class StdoutFilter(logging.Filter):
@@ -18,7 +17,7 @@ class StdoutFilter(logging.Filter):
         return record.levelno <= self._level
 
 
-def start(path: Path, file_level: int, stdout_level: int):
+def start(path: Path, *, file_level: int, stdout_level: int):
     logger = logging.getLogger(Paths.ROOT.value.resolve().name)
     logger.setLevel(logging.DEBUG)
 
@@ -45,3 +44,5 @@ def start(path: Path, file_level: int, stdout_level: int):
     logger.addHandler(file_hdlr)
     logger.addHandler(stdout_hdlr)
     logger.addHandler(stderr_hdlr)
+
+    atexit.register(logging.shutdown)

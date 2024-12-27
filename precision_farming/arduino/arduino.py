@@ -21,7 +21,7 @@ class ArduinoSerial(serial.Serial):
            dsrdtr=False, rtscts=False, xonxoff=False, parity=serial.PARITY_NONE
            bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE
         """
-        super().__init__(port='/dev/ttyACM2', baudrate=115200, timeout=0.5)
+        super().__init__(port='/dev/ttyACM0', baudrate=115200, timeout=0.5)
 
         self._wait_for_ready()
 
@@ -38,7 +38,7 @@ class ArduinoSerial(serial.Serial):
             raise TimeoutError(f'Arduino serial port not ready in {self.READY_TIMEOUT_SEC} seconds')
 
 
-    def execute(self, cmd: 'Level1Cmd'):
+    def execute(self, cmd: 'Level1Cmd') -> bytes:
         if isinstance(cmd, self.Level1Cmd):
             out_data = (cmd.value + '\n').encode()
         else:
@@ -58,13 +58,11 @@ class ArduinoSerial(serial.Serial):
         logger.debug(f'Arduino input serial data: {in_data}')
         return in_data
 
-    def sample(self) -> float:
-        data = self.execute(self.Level1Cmd.SAMPLE)
+    def sample(self) -> list[int]:
+        data = []
+        data_str = self.execute(self.Level1Cmd.SAMPLE).decode().strip()
         try:
-            data = float(data.strip())
+            data = [int(val) for val in data_str.split(',')]
         except ValueError:
-            logger.error(f'Failed to convert sample to float. Received "{data}"')
+            logger.exception(f'Failed to convert samples to ints. Received string: "{data_str}"')
         return data
-
-# global singleton
-arduino_serial = ArduinoSerial()
