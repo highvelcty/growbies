@@ -1,0 +1,96 @@
+|2024-12-20T19:26:10Z precision_farming.arduino.arduino ERROR|
+Failed to convert sample to float. Received "b'450,574,744,601,\n'"
+|2024-12-20T19:26:11Z precision_farming.arduino.arduino ERROR|
+Failed to convert sample to float. Received "b'453,574,744,590,\n'"
+|2024-12-20T19:26:12Z precision_farming.arduino.arduino ERROR|
+Failed to convert sample to float. Received "b'453,574,744,589,\n'"
+|2024-12-20T19:26:13Z precision_farming.arduino.arduino ERROR|
+Failed to convert sample to float. Received "b'454,574,742,585,\n'"
+|2024-12-20T19:26:14Z precision_farming.arduino.arduino ERROR|
+Failed to convert sample to float. Received "b'453,574,743,586,\n'"
+|2024-12-20T19:29:26Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'440,566,737,575,\n'"
+|2024-12-20T19:29:27Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'443,566,737,572,\n'"
+|2024-12-20T19:29:28Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,566,736,571,\n'"
+|2024-12-20T19:29:29Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'443,566,737,570,\n'"
+|2024-12-20T19:29:30Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,566,737,570,\n'"
+|2024-12-20T19:29:31Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,577,737,585,\n'"
+|2024-12-20T19:29:32Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'443,570,738,578,\n'"
+|2024-12-20T19:29:33Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'443,570,738,575,\n'"
+|2024-12-20T19:29:34Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,570,737,574,\n'"
+|2024-12-20T19:29:35Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,570,737,574,\n'"
+|2024-12-20T19:29:36Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,569,738,573,\n'"
+|2024-12-20T19:29:37Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,569,738,572,\n'"
+|2024-12-20T19:29:38Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,569,737,572,\n'"
+|2024-12-20T19:29:39Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,569,736,571,\n'"
+|2024-12-20T19:29:40Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,569,736,570,\n'"
+|2024-12-20T19:29:41Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,569,736,570,\n'"
+|2024-12-20T19:29:42Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,569,737,570,\n'"
+|2024-12-20T19:29:43Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,569,737,570,\n'"
+|2024-12-20T19:29:44Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'444,569,737,569,\n'"
+|2024-12-20T19:30:14Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'439,582,736,579,\n'"
+|2024-12-20T19:30:15Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'442,582,734,575,\n'"
+|2024-12-20T19:30:16Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "b'442,582,734,575,\n'"
+|2024-12-20T19:30:57Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "438,577,734,572,"
+|2024-12-20T19:30:58Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "440,577,733,567,"
+|2024-12-20T19:30:59Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "441,577,733,566,"
+|2024-12-20T19:31:00Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "441,577,732,566,"
+|2024-12-20T19:31:01Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "441,577,733,566,"
+|2024-12-20T19:31:02Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "441,577,733,566,"
+|2024-12-20T19:31:03Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "441,577,732,566,"
+|2024-12-20T19:31:20Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "437,575,732,569,"
+Traceback (most recent call last):
+  File "/home/meyer/code/precision_farming/precision_farming/arduino/arduino.py", line 65, in sample
+    data = [int(val) for val in data_str.split(',')]
+            ~~~^^^^^
+ValueError: invalid literal for int() with base 10: ''
+|2024-12-20T19:31:21Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "440,575,732,565,"
+Traceback (most recent call last):
+  File "/home/meyer/code/precision_farming/precision_farming/arduino/arduino.py", line 65, in sample
+    data = [int(val) for val in data_str.split(',')]
+            ~~~^^^^^
+ValueError: invalid literal for int() with base 10: ''
+|2024-12-20T19:31:22Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "440,575,732,564,"
+Traceback (most recent call last):
+  File "/home/meyer/code/precision_farming/precision_farming/arduino/arduino.py", line 65, in sample
+    data = [int(val) for val in data_str.split(',')]
+            ~~~^^^^^
+ValueError: invalid literal for int() with base 10: ''
+|2024-12-20T19:31:23Z precision_farming.arduino.arduino ERROR|
+Failed to convert samples to floats. Received string: "440,576,731,564,"
+Traceback (most recent call last):
+  File "/home/meyer/code/precision_farming/precision_farming/arduino/arduino.py", line 65, in sample
+    data = [int(val) for val in data_str.split(',')]
+            ~~~^^^^^
+ValueError: invalid literal for int() with base 10: ''
