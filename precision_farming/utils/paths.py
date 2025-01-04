@@ -29,8 +29,9 @@ class Paths(Enum):
 
     # /output
     OUTPUT = ROOT / 'output'
-    LOG_FILE = OUTPUT / 'log.log'
-    DATA_FILE = OUTPUT / 'data.csv'
+    DEFAULT_OUTPUT_DIR = OUTPUT / 'default'
+    DEFAULT_LOG = DEFAULT_OUTPUT_DIR / 'log.log'
+    DEFAULT_DATA = DEFAULT_OUTPUT_DIR / 'data.csv'
 
     # /precision_farming
     PRECISION_FARMING = ROOT / 'precision_farming'

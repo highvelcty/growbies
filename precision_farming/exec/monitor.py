@@ -1,3 +1,4 @@
+
 from typing import TextIO
 import logging
 import time
@@ -27,13 +28,17 @@ def _continue_stream(outf: TextIO):
 def main(sess: Session):
     arduino_serial = ArduinoSerial()
     iteration = 0
+    # Note: logging is intentionally avoided this retry loop. This is because the errors being
+    # handled are likely due to temporary unavailability of the host file system. Logging also
+    # accesses the file system and would further complicate the matter.
     for retry in range(OSERROR_RETRIES):
         if retry:
-            logger.info(f'OSError retry {retry} / {OSERROR_RETRIES}')
+            # print here instead of log because it is likely the host file system is not available.
+            print(f'OSError retry {retry} / {OSERROR_RETRIES}')
             time.sleep(OSERROR_RETRY_DELAY_SECOND)
-        with open(sess.path_to_data, 'a+') as outf:
-            _continue_stream(outf)
-            try:
+        try:
+            with open(sess.path_to_data, 'a+') as outf:
+                _continue_stream(outf)
                 while True:
                     ts = get_utc_iso_ts_str()
                     samples = arduino_serial.sample()
@@ -46,10 +51,11 @@ def main(sess: Session):
                     print(f'{iteration}: {samples}')
                     iteration += 1
                     time.sleep(POLLING_SEC)
-            except OSError:
-                logger.exception(f'OSError encountered during monitor.')
-                continue
-            except KeyboardInterrupt:
-                break
+        except OSError:
+            # print here instead of log because it is likely the host file system is not available.
+            print(f'OSError encountered during monitor.')
+            continue
+        except KeyboardInterrupt:
+            break
     else:
-        logger.error(f'Exhausted {OSERROR_RETRIES} OSError retries. See log for exception details.')
+        print(f'Exhausted {OSERROR_RETRIES} OSError retries. See log for exception details.')
