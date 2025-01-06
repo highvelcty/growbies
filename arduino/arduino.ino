@@ -1,16 +1,15 @@
 // The internal buffer size for each channel
-#define BUF_SIZE 10
 #define CHAN_SELECT_DELAY_MS 1
 
 enum MuxChannel{
     MUX_CHANNEL_MIN = 0,
-    MUX_CHANNEL_MAX = 3
+    MUX_CHANNEL_MAX = 7
 };
 
 enum ChannelSelect{
     CHAN_SELECT_MASK_0 = 0x01,
     CHAN_SELECT_MASK_1 = 0x02,
-    CHAN_SELECT_MASK_2 = 0x04
+    CHAN_SELECT_MASK_2 = 0x04,
 };
 
 enum ArduinoPins{
@@ -23,23 +22,6 @@ enum ArduinoPins{
 
 char serial_recv[256];
 char* serial_recv_ptr = &serial_recv[0];
-
-
-int channel0[BUF_SIZE];
-int* channel0HeadPtr = &channel0[0];
-int* channel0TailPtr = &channel0[0];
-
-int channel1[BUF_SIZE];
-int* channel1HeadPtr = &channel1[0];
-int* channel1TailPtr = &channel1[0];
-
-int channel2[BUF_SIZE];
-int* channel2HeadPtr = &channel2[0];
-int* channel2TailPtr = &channel2[0];
-
-int channel3[BUF_SIZE];
-int* channel3HeadPtr = &channel3[0];
-int* channel3TailPtr = &channel3[0];
 
 
 void setup() {

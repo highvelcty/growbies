@@ -21,7 +21,8 @@ def _continue_stream(outf: TextIO):
         if read_char == '\n':
             break
         if idx == 0:
-            outf.write('timestamp,channel0,channel1,channel2,channel3\n')
+            outf.write('timestamp,channel0,channel1,channel2,channel3,channel4,channel5,channel6,'
+                       'channel7\n')
             break
     outf.truncate()
 
@@ -48,7 +49,7 @@ def main(sess: Session):
                             outf.write(f'{sample},')
                         else:
                             outf.write(f'{sample}\n')
-                    print(f'{iteration}: {samples}')
+                    logger.info(f'{iteration}: {samples}')
                     iteration += 1
                     time.sleep(POLLING_SEC)
         except OSError:

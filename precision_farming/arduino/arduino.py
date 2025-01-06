@@ -43,7 +43,7 @@ class ArduinoSerial(serial.Serial):
             out_data = (cmd.value + '\n').encode()
         else:
             out_data = (cmd + '\n').encode()
-        logger.debug(f'Arduino output serial data: {out_data}')
+        logger.debug(f'Arduino serial out: {out_data}')
         self.write(out_data)
         startt = time.time()
         in_data = b''
@@ -55,7 +55,7 @@ class ArduinoSerial(serial.Serial):
                     break
 
         # in_data = self.readline()
-        logger.debug(f'Arduino input serial data: {in_data}')
+        logger.debug(f'Arduino serial in: {in_data}')
         return in_data
 
     def sample(self) -> list[int]:
