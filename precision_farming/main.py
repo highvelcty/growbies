@@ -3,15 +3,15 @@ from enum import StrEnum
 from pathlib import Path
 import sys
 
-from .exec import execute, monitor
+from .exec import execute, monitor, plot
 from .session import Session
-from .utils.paths import Paths
 
 CMD = 'cmd'
 
 class Level1Cmd(StrEnum):
     EXECUTE = 'execute'
     MONITOR = 'monitor'
+    PLOT = 'plot'
 
 class MonitorParam(StrEnum):
     PATH = 'path'
@@ -32,6 +32,9 @@ def main():
                 'each command will be output to standard output.')
     sub.add_parser(Level1Cmd.EXECUTE, description=help_str, help=help_str)
 
+    help_str = 'Plot data.'
+    sub.add_parser(Level1Cmd.PLOT, description=help_str, help=help_str)
+
     ns_args = parser.parse_args(sys.argv[1:])
 
     cmd = getattr(ns_args, CMD)
@@ -47,12 +50,14 @@ def main():
                 path_or_tags = tags
         else:
             path_or_tags = Path(path)
-
         sess = Session(path_or_tags)
         monitor.main(sess)
     elif cmd == Level1Cmd.EXECUTE:
         _ = Session()
         execute.main()
+    elif cmd == Level1Cmd.PLOT:
+        _ = Session()
+        plot.main()
     elif cmd is None:
         # noinspection PyTypeChecker
         parser.error(f'A command must be given {[cmd.value for cmd in Level1Cmd]}.')

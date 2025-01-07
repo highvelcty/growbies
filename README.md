@@ -47,3 +47,12 @@ Arduino Setup
 =============
 - Install [arduino-cli](https://arduino.github.io/arduino-cli/1.1/installation/)
 - Install arduino uno board platform `./arduino-cli core install arduino:avr`
+
+RPM Dependencies
+================
+- tkinter: https://software.opensuse.org/download/package?package=python314-tk&project=openSUSE%3AFactory
+
+Notes
+=====
+- There is a bug with matplotlib and python 3.14
+  - https://github.com/matplotlib/matplotlib/issues/29185

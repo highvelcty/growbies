@@ -1,4 +1,4 @@
-
+import ctypes
 from typing import TextIO
 import logging
 import time
@@ -10,7 +10,14 @@ from precision_farming.utils.timestamp import get_utc_iso_ts_str
 POLLING_SEC = 1
 OSERROR_RETRIES = 5
 OSERROR_RETRY_DELAY_SECOND = 1
+SAMPLING_RETRIES = 5
 logger = logging.getLogger(__name__)
+
+class DataIn(ctypes.Structure):
+    _fields_ = [
+        ('data', ctypes.c_uint16 * ArduinoSerial.NUMBER_OF_CHANNELS)
+    ]
+
 
 def _continue_stream(outf: TextIO):
     idx = outf.tell()
@@ -32,6 +39,7 @@ def main(sess: Session):
     # Note: logging is intentionally avoided this retry loop. This is because the errors being
     # handled are likely due to temporary unavailability of the host file system. Logging also
     # accesses the file system and would further complicate the matter.
+    sampling_retry = 0
     for retry in range(OSERROR_RETRIES):
         if retry:
             # print here instead of log because it is likely the host file system is not available.
@@ -41,16 +49,25 @@ def main(sess: Session):
             with open(sess.path_to_data, 'a+') as outf:
                 _continue_stream(outf)
                 while True:
+                    if sampling_retry > SAMPLING_RETRIES:
+                        logger.error(f'Sampling persistently fails with {SAMPLING_RETRIES} '
+                                     f'retries.')
+                    if sampling_retry:
+                        logger.warning('Sampling retry.')
+
+                    # Sample
                     ts = get_utc_iso_ts_str()
                     samples = arduino_serial.sample()
-                    outf.write(f'{ts},')
-                    for idx, sample in enumerate(samples):
-                        if idx != len(samples) - 1:
-                            outf.write(f'{sample},')
-                        else:
-                            outf.write(f'{sample}\n')
-                    logger.info(f'{iteration}: {samples}')
-                    iteration += 1
+
+                    if samples is None:
+                        sampling_retry += 1
+                    if samples is not None:
+                        sampling_retry = 0
+                        outf.write(f'{ts},' + ','.join((str(sample) for sample in samples.data))
+                                   + '\n')
+                        logger.info(f'{iteration}: {[sample for sample in samples.data]}')
+                        iteration += 1
+
                     time.sleep(POLLING_SEC)
         except OSError:
             # print here instead of log because it is likely the host file system is not available.

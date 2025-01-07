@@ -1,5 +1,7 @@
-// The internal buffer size for each channel
 #define CHAN_SELECT_DELAY_MS 1
+#define MAIN_POLLING_LOOP_INTERVAL_MS 1
+#define SLIP_END '\xc0'
+
 
 enum MuxChannel{
     MUX_CHANNEL_MIN = 0,
@@ -19,8 +21,11 @@ enum ArduinoPins{
     ARDUINO_DIGITAL_PIN4_TO_MUX_S2 = 4,
 };
 
+struct OutData{
+    int data[MUX_CHANNEL_MAX + 1];
+};
 
-char serial_recv[256];
+char serial_recv[64];
 char* serial_recv_ptr = &serial_recv[0];
 
 
@@ -40,33 +45,34 @@ void selectChannel(int channel){
 }
 
 void sample(){
+    OutData outData;
     for(int channel = MUX_CHANNEL_MIN; channel <= MUX_CHANNEL_MAX; channel++){
         selectChannel(channel);
         delay(CHAN_SELECT_DELAY_MS);
-        Serial.print(analogRead(ARDUINO_ANALOG_PIN0_TO_MUX_COMMON));
-        if (channel != MUX_CHANNEL_MAX){
-            Serial.print(",");
-        }
+        outData.data[channel] = analogRead(ARDUINO_ANALOG_PIN0_TO_MUX_COMMON);
     }
-    Serial.print("\n");
+    Serial.write((byte*)&outData, sizeof(outData));
+    Serial.write(192);
 }
 
 void loop() {
-    while (!Serial.available());
+    while (!Serial.available()){
+        delay(MAIN_POLLING_LOOP_INTERVAL_MS);
+    }
     *serial_recv_ptr = Serial.read();
-    if (*serial_recv_ptr == '\n'){
+    if (*serial_recv_ptr == SLIP_END){
         *serial_recv_ptr = '\0';
         if (!strcmp("sample", serial_recv)){
             sample();
         }
         else if (!strcmp("loopback", serial_recv)) {
             Serial.print(serial_recv);
-            Serial.print("\n");
+            Serial.write(SLIP_END);
         }
         else{
-            Serial.print("Unrecognized command: ");
+            Serial.print("Unrecognized cmd: ");
             Serial.print(serial_recv);
-            Serial.print("\n");
+            Serial.write(SLIP_END);
         }
         serial_recv_ptr = &serial_recv[0];
     }
