@@ -1,5 +1,3 @@
-from precision_farming.session import Session
-
 from precision_farming.arduino.arduino import ArduinoSerial
 
 def main():

@@ -35,6 +35,10 @@ class Paths(Enum):
 
     # /precision_farming
     PRECISION_FARMING = ROOT / 'precision_farming'
+    PRECISION_FARMING_EXEC = PRECISION_FARMING / 'exec'
+    PRECISION_FARMING_MONITOR = PRECISION_FARMING / 'monitor'
+    PRECISION_FARMING_PLOT = PRECISION_FARMING / 'plot'
+
 
     # /venv
     VENV = ROOT / 'venv'
