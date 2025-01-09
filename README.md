@@ -12,31 +12,12 @@ Activate the virtual environment with:
 $ source <path_to_venv>/bin/activate
 ```
 
-There are required and optional dependencies.
-
-To install all required and optional dependencies:
-
+There are required and optional dependencies. To install all required and optional dependencies:
 ```
-$ pip install -e .[BUILD,TESTS]
+$ pip install -e .[ALL]
 ```
 
-To install required dependencies:
-
-```
-$ pip install -e .
-```
-
-To install optional `BUILD` dependencies:
-
-```
-$ pip install -e .[BUILD]
-```
-
-To install optional `TESTS` dependencies:
-
-```
-$ pip install -e .[TESTS]
-```
+See [setup.cfg](setup.cfg) for other optional dependencies.
 
 Other Setup
 ===========
