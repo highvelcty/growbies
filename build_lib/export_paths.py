@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from precision_farming.utils import paths
+from growbies.utils import paths
 
 path_to_output = paths.Paths.BUILD_PATHS_ENV.value
 path_to_output.parent.mkdir(parents=True, exist_ok=True)

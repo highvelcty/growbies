@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-import precision_farming
+import growbies
 
 class Test(TestCase):
     def test(self):
-        self.assertTrue(hasattr(precision_farming, '__version__'))
+        self.assertTrue(hasattr(growbies, '__version__'))

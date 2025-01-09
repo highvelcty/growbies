@@ -31,7 +31,7 @@ tests:
 	./run_tests.sh
 
 ### Utilities ######################################################################################
-$(PATH_DIST): $(PATH_PRECISION_FARMING)
+$(PATH_DIST): $(PATH_GROWBIES)
 	( \
 		python -m build \
 	)

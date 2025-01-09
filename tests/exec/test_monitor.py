@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest import TestCase
 from io import StringIO
 
-from precision_farming.exec import monitor
+from growbies.monitor import monitor
 
 
 PATH_TO_SAMPLES = Path(__file__).parent / 'samples'

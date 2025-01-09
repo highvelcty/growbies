@@ -50,7 +50,14 @@ Arduino Setup
 
 RPM Dependencies
 ================
-- tkinter: https://software.opensuse.org/download/package?package=python314-tk&project=openSUSE%3AFactory
+- opensuse
+  - python3<xx>
+  - python3<xx>-tk
+- ubuntu 20.04
+  - add-apt-repository ppa:deadsnakes/ppa 
+  - python3<xx>
+  - python3<xx>-tk
+  - python3<xx>-venv
 
 Notes
 =====
