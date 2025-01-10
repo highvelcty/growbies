@@ -32,4 +32,3 @@ cmd = getattr(ns, CMD)
 
 sub_cmd = shlex.split(f'{sys.executable} -m {__package__}.{cmd} ') + sys.argv[2:]
 os.execvp(sys.executable, sub_cmd)
-
