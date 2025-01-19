@@ -1,3 +1,11 @@
+Summary
+=======
+A feedback-control, based on networks of things and machine learning, for agriculture.
+
+In development. 
+
+![growbies.png](growbies.png)
+
 Python Virtual Environment
 ==========================
 Create a virtual environment with:
@@ -42,5 +50,9 @@ RPM Dependencies
 
 Notes
 =====
-- There is a bug with matplotlib and python 3.14
+- There is a bug with matplotlib and python 3.14. 
   - https://github.com/matplotlib/matplotlib/issues/29185
+  - fix at https://github.com/tacaswell/matplotlib/commit/60903f0b0cf6b50b2fdc84ce205b9d6cb9f65de7
+    - thank you
+  
+  
