@@ -1,7 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-
-from PIL.ImageOps import expand
+from typing import Optional
 
 from growbies.utils import timestamp
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
@@ -13,12 +12,13 @@ import matplotlib
 
 matplotlib.use('TkAgg')
 
-def csv():
-    path_to_csv = Path('/home/meyer/tmp/data.csv')
+def csv(path: Optional[Path] = None):
+    if path is None:
+        path = Path('/home/meyer/tmp/data.csv')
     labels = None
     x_data: list[datetime] = []
     y_datas: list[list[int]] = []
-    with open(path_to_csv, 'r') as inf:
+    with open(path, 'r') as inf:
         for line in inf.readlines():
             if labels is None:
                 labels = line.split(',')

@@ -28,7 +28,5 @@ for pkg in (exec, monitor, plot):
     sub.add_parser(pkg.__name__.split('.')[-1], help=pkg.__doc__, add_help=False)
 
 ns, args = parser.parse_known_args(sys.argv[1:])
-cmd = getattr(ns, CMD)
-
-sub_cmd = shlex.split(f'{sys.executable} -m {__package__}.{cmd} ') + sys.argv[2:]
+sub_cmd = shlex.split(f'{sys.executable} -m {__package__}.{getattr(ns, CMD)} ') + sys.argv[2:]
 os.execvp(sys.executable, sub_cmd)
