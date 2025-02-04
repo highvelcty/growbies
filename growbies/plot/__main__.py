@@ -21,5 +21,6 @@ if path is not None:
     path = Path(path)
 
 _ = Session()
+# plot.velo_vs_scale()
 plot.csv(path)
 # plot.resister_divider()

@@ -192,3 +192,47 @@ def resister_divider():
     print('exited')
 
     # plt.show()
+
+def velo_vs_scale():
+    path = '/home/meyer/tmp/corrected_by_hand_scale_mm.csv'
+    x_axis = list()
+    y_axis = list()
+
+    with open(path, 'r') as inf:
+        lines = list(inf.readlines())
+        _, x_title, y_title = lines[0].split(',')
+        for line in lines[1:]:
+            filename_root, scale_data, mm_data = line.split(',')
+            if mm_data == '0' or scale_data == '0':
+                continue
+
+            mm_data = float(mm_data.strip())
+            scale_data = int(scale_data.strip())
+
+            if mm_data < 1.0:
+                continue
+
+            if scale_data > 5000:
+                continue
+
+            y_axis.append(mm_data)
+            x_axis.append(scale_data)
+
+    fig: plt.Figure = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.plot()
+    # noinspection PyTypeHints
+    ax.xaxis: Axis
+    ax.yaxis: Axis
+    ax.xaxis.set_label_text(x_title)
+    ax.yaxis.set_label_text(y_title)
+    print(mm_data)
+    plt.plot(x_axis, y_axis, marker='.', linestyle='-')
+    for i in range(len(x_axis) - 1):
+        dx = x_axis[i+1] - x_axis[i]
+        dy = y_axis[i+1] - y_axis[i]
+        plt.quiver(x_axis[i], y_axis[i], dx, dy,
+                  headwidth=3, headlength=5, color='black')
+    plt.grid(True)
+    plt.title('Velostat (2x), 12ga copper loop, inverted lids, 5V, R1=220ohm')
+    plt.show()

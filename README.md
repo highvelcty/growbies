@@ -4,7 +4,7 @@ A feedback-control, based on networks of things and machine learning, for agricu
 
 In development. 
 
-![growbies.png](growbies.png)
+![growbies.png](docs/source/binary/growbies.png)
 
 Python Virtual Environment
 ==========================
@@ -39,14 +39,18 @@ Arduino Setup
 
 RPM Dependencies
 ================
-- opensuse
+The associated optional pip build dependency tags are shown in brackets.
+
+opensuse:
   - python3<xx>
-  - python3<xx>-tk
-- ubuntu 20.04
+  - python3<xx>-tk [GUI]
+  - tesseract-ocr [TRAINING]
+ubuntu 20.04:
   - add-apt-repository ppa:deadsnakes/ppa 
-  - python3<xx>
-  - python3<xx>-tk
-  - python3<xx>-venv
+    - python3<xx>
+    - python3<xx>-tk [GUI]
+    - python3<xx>-venv
+  - tesseract-ocr [TRAINING]
 
 Notes
 =====
@@ -54,5 +58,3 @@ Notes
   - https://github.com/matplotlib/matplotlib/issues/29185
   - fix at https://github.com/tacaswell/matplotlib/commit/60903f0b0cf6b50b2fdc84ce205b9d6cb9f65de7
     - thank you
-  
-  
