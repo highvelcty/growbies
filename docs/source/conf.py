@@ -25,4 +25,4 @@ html_theme = 'sphinx_rtd_theme'
 extensions = ['sphinx_rtd_dark_mode']
 default_dark_mode = True
 
-html_static_path = ['_static']
+# html_static_path = ['_static']
