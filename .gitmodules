@@ -1,0 +1,4 @@
+[submodule "arduino/HX711"]
+	path = arduino/HX711
+	url = git@github.com:highvelcty/HX711.git
+	branch = growbies

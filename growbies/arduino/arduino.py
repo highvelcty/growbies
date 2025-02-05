@@ -49,7 +49,6 @@ class ArduinoSerial(serial.Serial):
 
     def execute(self, cmd: 'Level1Cmd', *, ignore_read_timeout: bool = False) -> bytes:
         out_data = cmd.encode() + self.SLIP_END
-        logger.debug(f'Arduino serial out: {out_data}')
         self.write(out_data)
         startt = time.time()
         in_data = bytearray()
@@ -64,7 +63,6 @@ class ArduinoSerial(serial.Serial):
                 logger.error(f'Arduino serial port read timeout of {self.READ_TIMEOUT_SEC} '
                              f'seconds.')
 
-        logger.debug(f'Arduino serial in: {in_data}')
         return in_data[:-1]
 
     def sample(self) -> Optional['Samples']:
