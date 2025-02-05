@@ -98,6 +98,7 @@ An R1 value of 100 ohms was in place for the duration of this testing.
 .. image:: binary/ring_sensor_sweep.png
 
 |
+
 Another rendition of the ring sensor hardware.
 
 .. image:: binary/ring_sensor_sweep_2.png
