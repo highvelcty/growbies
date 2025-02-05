@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Eric Meyer (highvelcty)'
+project = 'Growbies'
 copyright = '2025, Eric Meyer'
 author = 'Eric Meyer'
 
