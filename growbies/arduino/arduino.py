@@ -30,7 +30,7 @@ class ArduinoSerial(serial.Serial):
     READY_RETRY_DELAY_SEC = 0.25
     READ_TIMEOUT_SEC = 1
     SLIP_END = b'\xC0'
-    class Level1Cmd(StrEnum):
+    class LeveCmd(StrEnum):
         LOOPBACK = 'loopback'
         SAMPLE = 'sample'
 
@@ -61,7 +61,7 @@ class ArduinoSerial(serial.Serial):
                 self.write(bytes((Slip.ESC, Slip.ESC_ESC)))
             else:
                 self.write(bytes((byte,)))
-        self.write(Slip.END)
+        self.write(bytes((Slip.END,)))
 
     def _slip_decode(self, buf: bytes) -> int:
         num_bytes = self.recv_buf_idx
@@ -106,7 +106,7 @@ class ArduinoSerial(serial.Serial):
                 time.sleep(self.READY_RETRY_DELAY_SEC)
             cmd = CmdHdr()
             cmd.cmd = CmdHdr.Cmd.LOOPBACK
-            cmd_resp = self.execute2(bytes(cast(Buffer, cmd)), ignore_read_timeout=True)
+            cmd_resp = self.execute2(bytes(cast(Buffer, cmd)), ignore_read_timeout=False)
             if cmd_resp.cmd == CmdHdr.Cmd.LOOPBACK:
                 logger.info(f'Serial port ready in {time.time() - startt:.02f} seconds.')
                 break
@@ -118,12 +118,13 @@ class ArduinoSerial(serial.Serial):
     def execute2(self, buf: bytes, *, ignore_read_timeout: bool = False) -> CmdHdr:
         # Send
         self._slip_send_frame(buf)
+        return ''
 
-        # Receive
-        if 1: return ''
+        print(f'emey start recv')
+        # Receive       
         startt = time.time()
         while time.time() - startt < self.READ_TIMEOUT_SEC:
-            bytes_in_waiting = self.in_waiting
+            bytes_in_waiting = self.in_waiting            
             if bytes_in_waiting:
                 buf_len = self._slip_decode(self.read(bytes_in_waiting))
 
@@ -131,6 +132,7 @@ class ArduinoSerial(serial.Serial):
                     hdr = CmdHdr.from_buffer(cast(Buffer, self.recv_buf))
                     return hdr
         else:
+            print(f'emey read timeout')
             if not ignore_read_timeout:
                 logger.error(f'Arduino serial port read timeout of {self.READ_TIMEOUT_SEC} '
                              f'seconds.')
