@@ -1,5 +1,6 @@
-from enum import StrEnum
-from typing import Optional
+from enum import IntEnum, StrEnum
+from typing import cast, Optional
+from typing_extensions import Buffer
 import ctypes
 import logging
 import time
@@ -7,6 +8,21 @@ import time
 import serial
 
 logger = logging.getLogger(__name__)
+
+class Slip(IntEnum):
+    END = 0xC0
+    ESC = 0xDB
+    ESC_END = 0xDC
+    ESC_ESC = 0xDD
+
+
+class CmdHdr(ctypes.Structure):
+    class Cmd(IntEnum):
+        LOOPBACK = 0
+
+    _fields_ = [
+        ('cmd', ctypes.c_uint16)
+    ]
 
 class ArduinoSerial(serial.Serial):
     NUMBER_OF_CHANNELS = 8
@@ -18,6 +34,13 @@ class ArduinoSerial(serial.Serial):
         LOOPBACK = 'loopback'
         SAMPLE = 'sample'
 
+    class Cmd(IntEnum):
+        LOOPBACK = 0
+
+    recv_buf = bytearray(64)
+    recv_buf_idx = 0
+    within_escape = False
+
     def __init__(self):
         """
         The following settings seem to work with arduino uno, but it also seems that they don't
@@ -28,7 +51,36 @@ class ArduinoSerial(serial.Serial):
         """
         super().__init__(port='/dev/ttyACM0', baudrate=115200, timeout=0.5)
 
-        self._wait_for_ready()
+        self._wait_for_ready2()
+
+    def _slip_send(self, buf: bytes):
+        for byte in buf:
+            if byte == Slip.END:
+                self.write(bytes((Slip.ESC, Slip.ESC_END)))
+            elif byte == Slip.ESC:
+                self.write(bytes((Slip.ESC, Slip.ESC_ESC)))
+            else:
+                self.write(bytes((byte,)))
+
+    def _slip_recv(self, buf: bytes) -> int:
+        num_bytes = self.recv_buf_idx
+        for byte in buf:
+            if byte == Slip.END:
+                self.recv_buf_idx = 0
+            elif byte == Slip.ESC:
+                self.within_escape = True
+            else:
+                if self.within_escape:
+                    self.within_escape = False
+                    if byte == Slip.ESC_END:
+                        self.recv_buf[self.recv_buf_idx] = Slip.END
+                    elif byte == Slip.ESC_ESC:
+                        self.recv_buf[self.recv_buf_idx] = Slip.ESC
+                else:
+                    self.recv_buf[self.recv_buf_idx] = byte
+                self.recv_buf_idx += 1
+                num_bytes += 1
+        return num_bytes
 
     def _wait_for_ready(self):
         """From experimentation and quick reading on the internet; it seems that opening a serial
@@ -46,6 +98,40 @@ class ArduinoSerial(serial.Serial):
             raise TimeoutError(f'Arduino serial port not ready with {self.READY_RETRIES} retries '
                                f'with {self.READY_RETRY_DELAY_SEC} second delay between tries.')
 
+    def _wait_for_ready2(self):
+        startt = time.time()
+        for retry in range(self.READY_RETRIES):
+            if retry:
+                time.sleep(self.READY_RETRY_DELAY_SEC)
+            cmd = CmdHdr()
+            cmd.cmd = CmdHdr.Cmd.LOOPBACK
+            cmd_resp = self.execute2(bytes(cast(cmd, Buffer)), ignore_read_timeout=True)
+            if cmd_resp.cmd == CmdHdr.Cmd.LOOPBACK:
+                logger.info(f'Serial port ready in {time.time() - startt:.02f} seconds.')
+                break
+        else:
+            raise TimeoutError(f'Arduino serial port not ready with {self.READY_RETRIES} retries '
+                               f'with {self.READY_RETRY_DELAY_SEC} second delay between tries.')
+
+
+    def execute2(self, buf: bytes, *, ignore_read_timeout: bool = False) -> CmdHdr:
+        # Send
+        self._slip_send(buf)
+
+        # Receive
+        startt = time.time()
+        while time.time() - startt < self.READ_TIMEOUT_SEC:
+            bytes_in_waiting = self.in_waiting
+            if bytes_in_waiting:
+                buf_len = self._slip_recv(self.read(bytes_in_waiting))
+
+                if buf_len > ctypes.sizeof(CmdHdr):
+                    hdr = CmdHdr.from_buffer(cast(self.recv_buf, Buffer))
+                    return hdr
+        else:
+            if not ignore_read_timeout:
+                logger.error(f'Arduino serial port read timeout of {self.READ_TIMEOUT_SEC} '
+                             f'seconds.')
 
     def execute(self, cmd: 'Level1Cmd', *, ignore_read_timeout: bool = False) -> bytes:
         out_data = cmd.encode() + self.SLIP_END
