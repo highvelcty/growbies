@@ -116,13 +116,16 @@ class ArduinoSerial(serial.Serial):
 
     def execute2(self, buf: bytes, *, ignore_read_timeout: bool = False) -> CmdHdr:
         # Send
+        print(f'emey sending: {buf}')
         self._slip_send(buf)
 
         # Receive
+        if 1: return ''
         startt = time.time()
         while time.time() - startt < self.READ_TIMEOUT_SEC:
             bytes_in_waiting = self.in_waiting
             if bytes_in_waiting:
+                print(f'emey bytes in waiting')
                 buf_len = self._slip_recv(self.read(bytes_in_waiting))
 
                 if buf_len > ctypes.sizeof(CmdHdr):
