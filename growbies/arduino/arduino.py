@@ -105,7 +105,7 @@ class ArduinoSerial(serial.Serial):
                 time.sleep(self.READY_RETRY_DELAY_SEC)
             cmd = CmdHdr()
             cmd.cmd = CmdHdr.Cmd.LOOPBACK
-            cmd_resp = self.execute2(bytes(cast(cmd, Buffer)), ignore_read_timeout=True)
+            cmd_resp = self.execute2(bytes(cast(Buffer, cmd)), ignore_read_timeout=True)
             if cmd_resp.cmd == CmdHdr.Cmd.LOOPBACK:
                 logger.info(f'Serial port ready in {time.time() - startt:.02f} seconds.')
                 break
@@ -126,7 +126,7 @@ class ArduinoSerial(serial.Serial):
                 buf_len = self._slip_recv(self.read(bytes_in_waiting))
 
                 if buf_len > ctypes.sizeof(CmdHdr):
-                    hdr = CmdHdr.from_buffer(cast(self.recv_buf, Buffer))
+                    hdr = CmdHdr.from_buffer(cast(Buffer, self.recv_buf))
                     return hdr
         else:
             if not ignore_read_timeout:
