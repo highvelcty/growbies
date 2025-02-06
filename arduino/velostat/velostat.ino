@@ -52,7 +52,7 @@ void sample(){
         outData.data[channel] = analogRead(ARDUINO_ANALOG_PIN0_TO_MUX_COMMON);
     }
     Serial.write((byte*)&outData, sizeof(outData));
-    Serial.write(192);
+    Serial.write(SLIP_END);
 }
 
 void loop() {
