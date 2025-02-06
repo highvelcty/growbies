@@ -53,7 +53,7 @@ class ArduinoSerial(serial.Serial):
 
         self._wait_for_ready2()
 
-    def _slip_send(self, buf: bytes):
+    def _slip_send_frame(self, buf: bytes):
         for byte in buf:
             if byte == Slip.END:
                 self.write(bytes((Slip.ESC, Slip.ESC_END)))
@@ -61,8 +61,9 @@ class ArduinoSerial(serial.Serial):
                 self.write(bytes((Slip.ESC, Slip.ESC_ESC)))
             else:
                 self.write(bytes((byte,)))
+        self.write(Slip.END)
 
-    def _slip_recv(self, buf: bytes) -> int:
+    def _slip_decode(self, buf: bytes) -> int:
         num_bytes = self.recv_buf_idx
         for byte in buf:
             if byte == Slip.END:
@@ -116,8 +117,7 @@ class ArduinoSerial(serial.Serial):
 
     def execute2(self, buf: bytes, *, ignore_read_timeout: bool = False) -> CmdHdr:
         # Send
-        print(f'emey sending: {buf}')
-        self._slip_send(buf)
+        self._slip_send_frame(buf)
 
         # Receive
         if 1: return ''
@@ -125,8 +125,7 @@ class ArduinoSerial(serial.Serial):
         while time.time() - startt < self.READ_TIMEOUT_SEC:
             bytes_in_waiting = self.in_waiting
             if bytes_in_waiting:
-                print(f'emey bytes in waiting')
-                buf_len = self._slip_recv(self.read(bytes_in_waiting))
+                buf_len = self._slip_decode(self.read(bytes_in_waiting))
 
                 if buf_len > ctypes.sizeof(CmdHdr):
                     hdr = CmdHdr.from_buffer(cast(Buffer, self.recv_buf))
