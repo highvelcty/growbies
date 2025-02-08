@@ -15,22 +15,13 @@ class Slip(IntEnum):
     ESC_END = 0xDC
     ESC_ESC = 0xDD
 
-
-class CmdHdr(ctypes.Structure):
-    class Cmd(IntEnum):
-        LOOPBACK = 0
-
-    _fields_ = [
-        ('cmd', ctypes.c_uint16)
-    ]
-
 class ArduinoSerial(serial.Serial):
     NUMBER_OF_CHANNELS = 8
     READY_RETRIES = 5
     READY_RETRY_DELAY_SEC = 0.25
     READ_TIMEOUT_SEC = 1
     SLIP_END = b'\xC0'
-    class LeveCmd(StrEnum):
+    class Level1Cmd(StrEnum):
         LOOPBACK = 'loopback'
         SAMPLE = 'sample'
 
@@ -51,37 +42,8 @@ class ArduinoSerial(serial.Serial):
         """
         super().__init__(port='/dev/ttyACM0', baudrate=115200, timeout=0.5)
 
-        self._wait_for_ready2()
+        self._wait_for_ready()
 
-    def _slip_send_frame(self, buf: bytes):
-        for byte in buf:
-            if byte == Slip.END:
-                self.write(bytes((Slip.ESC, Slip.ESC_END)))
-            elif byte == Slip.ESC:
-                self.write(bytes((Slip.ESC, Slip.ESC_ESC)))
-            else:
-                self.write(bytes((byte,)))
-        self.write(bytes((Slip.END,)))
-
-    def _slip_decode(self, buf: bytes) -> int:
-        num_bytes = self.recv_buf_idx
-        for byte in buf:
-            if byte == Slip.END:
-                self.recv_buf_idx = 0
-            elif byte == Slip.ESC:
-                self.within_escape = True
-            else:
-                if self.within_escape:
-                    self.within_escape = False
-                    if byte == Slip.ESC_END:
-                        self.recv_buf[self.recv_buf_idx] = Slip.END
-                    elif byte == Slip.ESC_ESC:
-                        self.recv_buf[self.recv_buf_idx] = Slip.ESC
-                else:
-                    self.recv_buf[self.recv_buf_idx] = byte
-                self.recv_buf_idx += 1
-                num_bytes += 1
-        return num_bytes
 
     def _wait_for_ready(self):
         """From experimentation and quick reading on the internet; it seems that opening a serial
@@ -98,44 +60,6 @@ class ArduinoSerial(serial.Serial):
         else:
             raise TimeoutError(f'Arduino serial port not ready with {self.READY_RETRIES} retries '
                                f'with {self.READY_RETRY_DELAY_SEC} second delay between tries.')
-
-    def _wait_for_ready2(self):
-        startt = time.time()
-        for retry in range(self.READY_RETRIES):
-            if retry:
-                time.sleep(self.READY_RETRY_DELAY_SEC)
-            cmd = CmdHdr()
-            cmd.cmd = CmdHdr.Cmd.LOOPBACK
-            cmd_resp = self.execute2(bytes(cast(Buffer, cmd)), ignore_read_timeout=False)
-            if cmd_resp.cmd == CmdHdr.Cmd.LOOPBACK:
-                logger.info(f'Serial port ready in {time.time() - startt:.02f} seconds.')
-                break
-        else:
-            raise TimeoutError(f'Arduino serial port not ready with {self.READY_RETRIES} retries '
-                               f'with {self.READY_RETRY_DELAY_SEC} second delay between tries.')
-
-
-    def execute2(self, buf: bytes, *, ignore_read_timeout: bool = False) -> CmdHdr:
-        # Send
-        self._slip_send_frame(buf)
-        return ''
-
-        print(f'emey start recv')
-        # Receive       
-        startt = time.time()
-        while time.time() - startt < self.READ_TIMEOUT_SEC:
-            bytes_in_waiting = self.in_waiting            
-            if bytes_in_waiting:
-                buf_len = self._slip_decode(self.read(bytes_in_waiting))
-
-                if buf_len > ctypes.sizeof(CmdHdr):
-                    hdr = CmdHdr.from_buffer(cast(Buffer, self.recv_buf))
-                    return hdr
-        else:
-            print(f'emey read timeout')
-            if not ignore_read_timeout:
-                logger.error(f'Arduino serial port read timeout of {self.READ_TIMEOUT_SEC} '
-                             f'seconds.')
 
     def execute(self, cmd: 'Level1Cmd', *, ignore_read_timeout: bool = False) -> bytes:
         out_data = cmd.encode() + self.SLIP_END
@@ -161,6 +85,7 @@ class ArduinoSerial(serial.Serial):
         except (ValueError, TypeError):
             logger.exception('Failed to cast sample data to structure.')
         return None
+
 
 class Samples(ctypes.Structure):
     # noinspection PyTypeChecker
