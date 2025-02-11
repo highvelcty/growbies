@@ -1,6 +1,5 @@
 from enum import IntEnum
 from typing import ByteString, cast, Optional, TypeVar, Union
-from typing_extensions import Buffer
 import ctypes
 import logging
 
@@ -9,7 +8,6 @@ logger = logging.getLogger(__name__)
 class PacketHeader(ctypes.Structure):
     _fields_ = [
         ('command', ctypes.c_uint16),
-        ('length', ctypes.c_uint16),
     ]
 
 class BaseStruct(ctypes.Structure):
@@ -33,10 +31,11 @@ class Packet(object):
 
     class Command(IntEnum):
         LOOPBACK = 0
+        SAMPLE = 1
 
     @classmethod
-    def make(cls, source: Union[ByteString, int]) -> 'Packet':
-        """This is the intended method for construction."""
+    def make(cls, source: Union[ByteString, int]) -> Optional['Packet']:
+        validate_checksum = True
         if isinstance(source, int):
             source = bytearray(source)
         data_len = len(source) - cls.MIN_SIZE_IN_BYTES
@@ -48,46 +47,42 @@ class Packet(object):
             ]
             _pack_ = 1
 
-        return NewPacket.from_buffer(cast(Buffer, source))
+        buf_len = len(source)
+
+        if buf_len < Packet.MIN_SIZE_IN_BYTES:
+            logger.error(f'Buffer underflow for deserializing to {Packet.__class__}. '
+                         f'Expected at least {Packet.MIN_SIZE_IN_BYTES} bytes, '
+                         f'observed {buf_len} bytes.')
+            return
+
+        packet = NewPacket.from_buffer(cast(bytes, source))
+
+        if validate_checksum and not packet.validate_checksum():
+            logger.error('Packet checksum mismatch.')
+            return
+        return packet
 
     @classmethod
     def from_command(cls, cmd_struct: TBaseCommand):
         if isinstance(cmd_struct, CommandLoopback):
             command = Packet.Command.LOOPBACK
+        elif isinstance(cmd_struct, CommandSample):
+            command = Packet.Command.SAMPLE
         else:
-            raise Exception(f'No command value mapping for structure "{cmd_struct.__qualname__}"')
+            raise Exception(f'No command value mapping for structure "{cmd_struct.__class__}"')
 
-        length = cls.MIN_SIZE_IN_BYTES + ctypes.sizeof(cmd_struct)
-        header = PacketHeader()
-        header.command = command
-        header.length = length
-        buf = bytearray(b''.join((cast(Buffer, header), cmd_struct, b'\x00' * cls.CHECKSUM_BYTES)))
-        packet = cls.make(memoryview(cast(Buffer, buf)).cast('B'))
+        packet = cls.make(cls.MIN_SIZE_IN_BYTES + ctypes.sizeof(cmd_struct))
+        packet.header.command = command
+        ctypes.memmove(ctypes.addressof(packet.data), ctypes.addressof(cmd_struct),
+                       ctypes.sizeof(cmd_struct))
         packet.update_checksum()
         return packet
 
     def get_payload(self) -> Optional[TBaseResponse]:
-        buf_len = ctypes.sizeof(self)
-
-        if buf_len < Packet.MIN_SIZE_IN_BYTES:
-            logger.error(f'Buffer underflow for deserializing to {Packet.__qualname__}. '
-                         f'Expected at least {Packet.MIN_SIZE_IN_BYTES} bytes, '
-                         f'observed {buf_len} bytes.')
-            return
-
-        # packet = Packet.from_buffer_dynamic(buf)
-        exp_len = self.header.length
-        if exp_len != buf_len:
-            logger.error(f'Packet header length of {exp_len} bytes does not match observed buffer '
-                         f'length of {buf_len} bytes.')
-            return
-
-        if not self.validate_checksum():
-            logger.error('Packet checksum mismatch.')
-            return
-
         if self.header.command == Packet.Command.LOOPBACK:
             resp_struct = RespLoopback
+        elif self.header.command == Packet.Command.SAMPLE:
+            resp_struct = RespSample
         else:
             logger.error(f'Unrecognized command {self.header.command}')
             return
@@ -99,7 +94,7 @@ class Packet(object):
                          f'{resp_struct.__qualname__}", observed data payload of {obs_len} bytes.')
             return
 
-        return resp_struct.from_buffer(cast(Buffer,self.data))
+        return resp_struct.from_buffer(cast(bytes,self.data))
 
     @property
     def checksum(self) -> int:
@@ -114,10 +109,12 @@ class Packet(object):
         return getattr(self, 'header')
 
     def calc_checksum(self) -> int:
-        return sum(memoryview(cast(Buffer, self)).cast('B')[:-self.CHECKSUM_BYTES])
+        return sum(memoryview(cast(bytes, self)).cast('B')[:-self.CHECKSUM_BYTES])
 
     def update_checksum(self) -> int:
-        setattr(self, 'checksum', self.calc_checksum())
+        checksum = self.calc_checksum()
+        setattr(self, 'checksum', checksum)
+        return checksum
 
     def validate_checksum(self) -> bool:
         return self.calc_checksum() == self.checksum
@@ -133,6 +130,10 @@ class CommandLoopback(BaseCommand):
         for ii in range(ctypes.sizeof(self)):
             self.payload[ii] = ii
 
+    @property
+    def payload(self):
+        return super().payload
+
 
 class RespLoopback(BaseResponse):
     _fields_ = CommandLoopback.fields
@@ -142,3 +143,15 @@ class RespLoopback(BaseResponse):
             if self.payload[ii] != ii:
                 return False
         return True
+
+class CommandSample(BaseCommand):
+    pass
+
+class RespSample(BaseResponse):
+    _fields_ = [
+        ('sample', ctypes.c_int32)
+    ]
+
+    @property
+    def sample(self) -> int:
+        return super().sample

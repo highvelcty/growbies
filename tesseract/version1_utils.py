@@ -105,7 +105,6 @@ def make_training_for_full_black_white_picture():
 
     for a_data in data:
         new_path = path / f'{a_data[0]}.gt.txt'
-        print(f'emey new path: {new_path}')
         with open(new_path, 'w') as outf:
             outf.write(f'{a_data[1]}{a_data[2]}\n')
 
@@ -213,7 +212,6 @@ def make_scale_training():
 
     for a_data in data:
         new_path = path / f'{a_data[0]}.gt.txt'
-        print(f'emey new path: {new_path}')
         with open(new_path, 'w') as outf:
             outf.write(f'{a_data[1]}\n')
 
@@ -320,7 +318,6 @@ def make_mm_training_data():
 
     for a_data in data:
         new_path = path / f'{a_data[0]}.gt.txt'
-        print(f'emey new path: {new_path}')
         with open(new_path, 'w') as outf:
             outf.write(f'{a_data[1]}\n')
 

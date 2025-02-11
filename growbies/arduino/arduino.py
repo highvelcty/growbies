@@ -1,6 +1,5 @@
 from enum import IntEnum, StrEnum
 from typing import cast, Optional
-from typing_extensions import Buffer
 import ctypes
 import logging
 import time
