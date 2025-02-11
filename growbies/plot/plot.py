@@ -134,7 +134,6 @@ def resister_divider():
 
     z_min = 0
     z_max = 5
-    print(f'emey: {x.size}, {y.size}, {z.size}')
 
     c = ax.pcolormesh(x, y, z, cmap='RdBu', vmin=z_min, vmax=z_max)
     ax.set_title('pcolormesh')
