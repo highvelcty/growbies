@@ -3,7 +3,7 @@ from typing import TextIO
 import logging
 import time
 
-from growbies.arduino.arduino import Arduino
+from growbies.arduino.arduino import ArduinoSerial
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str
 
@@ -12,6 +12,12 @@ OSERROR_RETRIES = 5
 OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5
 logger = logging.getLogger(__name__)
+
+class DataIn(ctypes.Structure):
+    _fields_ = [
+        ('data', ctypes.c_uint16 * ArduinoSerial.NUMBER_OF_CHANNELS)
+    ]
+
 
 def _continue_stream(outf: TextIO):
     idx = outf.tell()
@@ -28,7 +34,7 @@ def _continue_stream(outf: TextIO):
     outf.truncate()
 
 def main(sess: Session):
-    arduino_serial = Arduino()
+    arduino_serial = ArduinoSerial()
     iteration = 0
     # Note: logging is intentionally avoided this retry loop. This is because the errors being
     # handled are likely due to temporary unavailability of the host file system. Logging also

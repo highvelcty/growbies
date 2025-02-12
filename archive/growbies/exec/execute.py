@@ -1,8 +1,8 @@
-from growbies.arduino.arduino import Arduino
+from growbies.arduino.arduino import ArduinoSerial
 
 def main():
     while True:
-        arduino_serial = Arduino()
+        arduino_serial = ArduinoSerial()
         try:
             cmd = input("Enter command: ")
             print(arduino_serial.execute(cmd))
