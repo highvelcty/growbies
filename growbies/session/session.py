@@ -38,11 +38,7 @@ class Session(object):
             self._output_dir = Paths.OUTPUT.value / dir_name
 
         self._output_dir.mkdir(parents=True, exist_ok=True)
-        log.start(self._path_to_log, file_level=logging.DEBUG, stdout_level=logging.INFO)
-
-    @property
-    def _path_to_log(self) -> Path:
-        return self._output_dir / self.OutputFiles.LOG.value
+        log.start(Paths.DEFAULT_LOG.value, file_level=logging.DEBUG, stdout_level=logging.INFO)
 
     @property
     def path_to_data(self) -> Path:

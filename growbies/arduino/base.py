@@ -7,8 +7,8 @@ from growbies.utils.bufstr import BufStr
 
 
 class BaseArduinoSerial(serial.Serial):
-    DEBUG_SEND = True
-    DEBUG_RECV = True
+    DEBUG_SEND = False
+    DEBUG_RECV = False
 
     def __init__(self, *args, port='/dev/ttyACM0', baudrate=115200, timeout=0.5, **kw):
         """

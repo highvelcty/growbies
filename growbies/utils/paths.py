@@ -30,7 +30,7 @@ class Paths(Enum):
     # /output
     OUTPUT = ROOT / 'output'
     DEFAULT_OUTPUT_DIR = OUTPUT / 'default'
-    DEFAULT_LOG = DEFAULT_OUTPUT_DIR / 'log.log'
+    DEFAULT_LOG = OUTPUT / 'log.log'
     DEFAULT_DATA = DEFAULT_OUTPUT_DIR / 'data.csv'
 
     # /growbies

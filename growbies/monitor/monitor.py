@@ -1,4 +1,3 @@
-import ctypes
 from typing import TextIO
 import logging
 import time
@@ -7,7 +6,7 @@ from growbies.arduino.arduino import Arduino
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str
 
-POLLING_SEC = 0.25
+POLLING_SEC = 1
 OSERROR_RETRIES = 5
 OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5
@@ -51,15 +50,14 @@ def main(sess: Session):
 
                     # Sample
                     ts = get_utc_iso_ts_str()
-                    samples = arduino_serial.sample()
+                    sample = arduino_serial.sample()
 
-                    if samples is None:
+                    if sample is None:
                         sampling_retry += 1
-                    if samples is not None:
+                    if sample is not None:
                         sampling_retry = 0
-                        outf.write(f'{ts},' + ','.join((str(sample) for sample in samples.data))
-                                   + '\n')
-                        logger.info(f'{iteration}: {[sample for sample in samples.data]}')
+                        outf.write(f'{ts},{sample}\n')
+                        logger.info(f'{iteration}: {sample}')
                         iteration += 1
 
                     time.sleep(POLLING_SEC)
