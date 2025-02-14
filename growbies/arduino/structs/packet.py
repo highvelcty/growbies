@@ -1,32 +1,19 @@
-from typing import ByteString, cast, Optional, Sequence, Union
+from typing import ByteString, cast, Optional, Union
 import ctypes
 import logging
 
-from growbies.utils.bufstr import BufStr
+from .command import PacketHeader
 
 logger = logging.getLogger(__name__)
 
 
-class PacketHeader(ctypes.Structure):
-    _pack_ = 1
-    _fields_ = [
-        ('type', ctypes.c_uint16),
-    ]
-
-    @property
-    def type(self) -> ctypes.c_uint16:
-        return super().type
-
-    @type.setter
-    def type(self, value: ctypes.c_uint16):
-        super().type = value
-
-    def __str__(self):
-        return BufStr(memoryview(self).cast('B'))
-
 
 class Packet(object):
     MIN_SIZE_IN_BYTES = ctypes.sizeof(PacketHeader)
+
+    class Field:
+        HEADER = 'header'
+        DATA = 'data'
 
     @classmethod
     def make(cls, source: Union[ByteString, int]) -> Optional['Packet']:
@@ -36,8 +23,8 @@ class Packet(object):
         data_len = buf_len - cls.MIN_SIZE_IN_BYTES
         class NewPacket(Packet, ctypes.Structure):
             _fields_ = [
-                ('header', PacketHeader),
-                ('data', ctypes.c_uint8 * data_len) # noqa - false positive pycharm 2025
+                (cls.Field.HEADER, PacketHeader),
+                (cls.Field.DATA, ctypes.c_uint8 * data_len) # noqa - false positive pycharm 2025
             ]
             _pack_ = 1
 
@@ -45,7 +32,7 @@ class Packet(object):
             logger.error(f'Buffer underflow for deserializing to {Packet.__class__}. '
                          f'Expected at least {Packet.MIN_SIZE_IN_BYTES} bytes, '
                          f'observed {buf_len} bytes.')
-            return
+            return None
 
         packet = NewPacket.from_buffer(cast(bytes, source))
 
@@ -53,8 +40,8 @@ class Packet(object):
 
     @property
     def header(self) -> PacketHeader:
-        return getattr(self, 'header')
+        return getattr(self, self.Field.HEADER)
 
     @property
     def data(self) -> ctypes.Array[ctypes.c_uint8]:
-        return getattr(self, 'data')
+        return getattr(self, self.Field.DATA)

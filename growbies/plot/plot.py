@@ -42,7 +42,8 @@ def csv(path: Optional[Path] = None):
     ax.tick_params(axis='x', labelrotation=90)
 
     for y_data in y_datas:
-        plt.plot(x_data, y_data)
+        if len(x_data) == len(y_data):
+            plt.plot(x_data, y_data)
     plt.show()
 
 

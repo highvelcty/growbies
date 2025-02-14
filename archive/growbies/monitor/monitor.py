@@ -7,7 +7,7 @@ from growbies.arduino.arduino import ArduinoSerial
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str
 
-POLLING_SEC = 0.25
+POLLING_SEC = 1
 OSERROR_RETRIES = 5
 OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5

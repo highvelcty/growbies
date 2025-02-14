@@ -50,14 +50,14 @@ def main(sess: Session):
 
                     # Sample
                     ts = get_utc_iso_ts_str()
-                    sample = arduino_serial.sample()
+                    sample = arduino_serial.read_average()
 
                     if sample is None:
                         sampling_retry += 1
                     if sample is not None:
                         sampling_retry = 0
                         outf.write(f'{ts},{sample}\n')
-                        logger.info(f'{iteration}: {sample}')
+                        print(f'{iteration}: {sample}')
                         iteration += 1
 
                     time.sleep(POLLING_SEC)

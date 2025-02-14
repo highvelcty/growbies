@@ -7,8 +7,8 @@ from growbies.utils.bufstr import BufStr
 
 
 class BaseArduinoSerial(serial.Serial):
-    DEBUG_SEND = False
-    DEBUG_RECV = False
+    DEBUG_DATALINK_READ = False
+    DEBUG_DATALINK_WRITE = False
 
     def __init__(self, *args, port='/dev/ttyACM0', baudrate=115200, timeout=0.5, **kw):
         """
@@ -23,11 +23,11 @@ class BaseArduinoSerial(serial.Serial):
 
     def read(self, size=1) -> bytes:
         buf = super().read(size)
-        if self.DEBUG_RECV: print(f'python recv:\n{BufStr(buf)}')
+        if self.DEBUG_DATALINK_READ: print(f'python datalink recv:\n{BufStr(buf)}')
         return buf
 
     def write(self, buf: ByteString):
-        if self.DEBUG_SEND: print(f'python send:\n{BufStr(buf)}')
+        if self.DEBUG_DATALINK_WRITE: print(f'python datalink send:\n{BufStr(buf)}')
         super().write(buf)
 
     @abstractmethod

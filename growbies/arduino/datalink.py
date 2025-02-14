@@ -17,7 +17,7 @@ class ArduinoDatalink(ABC, BaseArduinoSerial):
     READY_RETRIES = 5
     READY_RETRY_DELAY_SEC = 1
 
-    READ_TIMEOUT_SEC = 1
+    READ_TIMEOUT_SEC = 3
 
     RECV_BUF_BYTES = 64
 
@@ -62,3 +62,6 @@ class ArduinoDatalink(ABC, BaseArduinoSerial):
                         self._recv_buf[self._recv_buf_idx] = byte
                 self._recv_buf_idx = min(self._recv_buf_idx + 1, self.RECV_BUF_BYTES)
         return False
+
+    def recv_buf_len(self) -> int:
+        return self._recv_buf_idx

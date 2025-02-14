@@ -18,26 +18,21 @@ class ArduinoTransport(ArduinoNetwork, ABC):
     def _recv_resp(self) -> Optional[TBaseResponse]:
         packet = self._recv_packet()
         if packet is None:
-            logger.error('Packet not received at the transport layer.')
-            return
-        resp = self._get_resp(packet)
-        if resp is None:
-            logger.error('Failed to deserialize response from packet.')
-        else:
-            return resp
+            return None
+        return self._get_resp(packet)
 
     @staticmethod
     def _get_resp(packet: Packet) -> Optional[TBaseResponse]:
         resp_struct = RespType.get_struct(packet.header.type)
         if resp_struct is None:
-            logger.error(f'Unrecognized response type: {packet.header.type}')
-            return
+            logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
+            return None
 
         exp_len = ctypes.sizeof(resp_struct)
         obs_len = ctypes.sizeof(packet)
         if exp_len != obs_len:
-            logger.error(f'Expected {exp_len} bytes for deserializing to "'
+            logger.error(f'Transport layer expected {exp_len} bytes for deserializing to "'
                          f'{resp_struct.__qualname__}", observed data payload of {obs_len} bytes.')
-            return
+            return None
 
         return resp_struct.from_buffer(cast(bytes, packet))
