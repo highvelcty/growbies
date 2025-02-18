@@ -12,12 +12,16 @@ import matplotlib
 
 matplotlib.use('TkAgg')
 
-def csv(path: Optional[Path] = None):
-    if path is None:
-        path = Path('/home/meyer/tmp/data.csv')
+def normalize_list(data):
+    min_val = min(data)
+    max_val = max(data)
+    normalized_data = [(x - min_val) / (max_val - min_val) for x in data]
+    return normalized_data
+
+def _extract_x_data_and_y_datas(path: Path) -> tuple[list[datetime],list[list[Optional[int]]]]:
     labels = None
     x_data: list[datetime] = []
-    y_datas: list[list[int]] = []
+    y_datas: list[list[Optional[int]]] = []
     with open(path, 'r') as inf:
         for line in inf.readlines():
             if labels is None:
@@ -28,9 +32,41 @@ def csv(path: Optional[Path] = None):
                 dt = timestamp.get_utc_dt(data[0])
                 x_data.append(dt)
                 for channel, channel_data in enumerate(data[1:]):
+                    channel_data = channel_data.strip()
+
                     if len(y_datas) < channel + 1:
                         y_datas.append([])
-                    y_datas[channel].append(int(channel_data))
+                    if channel_data is None or channel_data == '':
+                        y_datas[channel].append(None)
+                    else:
+                        y_datas[channel].append(int(channel_data))
+    return x_data, y_datas
+
+def csv(path: Optional[Path] = None):
+    if path is None:
+        path = Path('/home/meyer/tmp/data.csv')
+    x_data, y_datas = _extract_x_data_and_y_datas(path)
+    labels = None
+    x_data: list[datetime] = []
+    y_datas: list[list[Optional[int]]] = []
+    with open(path, 'r') as inf:
+        for line in inf.readlines():
+            if labels is None:
+                labels = line.split(',')
+                y_datas.extend(([] for _ in range(len(labels) - 1)))
+            else:
+                data = line.split(',')
+                dt = timestamp.get_utc_dt(data[0])
+                x_data.append(dt)
+                for channel, channel_data in enumerate(data[1:]):
+                    channel_data = channel_data.strip()
+
+                    if len(y_datas) < channel + 1:
+                        y_datas.append([])
+                    if channel_data is None or channel_data == '':
+                        y_datas[channel].append(None)
+                    else:
+                        y_datas[channel].append(int(channel_data))
 
     fig: plt.Figure = plt.figure()
     ax = fig.add_subplot(111)
@@ -41,10 +77,116 @@ def csv(path: Optional[Path] = None):
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
     ax.tick_params(axis='x', labelrotation=90)
 
-    for y_data in y_datas:
-        if len(x_data) == len(y_data):
-            plt.plot(x_data, y_data)
+    x_ticks = [x_data[idx] for idx in range(0,len(x_data), len(x_data)//9)]
+    x_tick_labels = [timestamp.get_utc_iso_ts_str(dt) for dt in x_ticks]
+
+    cleaned_ydata_1 = list()
+    for value in y_datas[1]:
+        if value is None:
+            cleaned_ydata_1.append(0)
+        else:
+            cleaned_ydata_1.append(value)
+    ydata_0_norm = normalize_list(y_datas[0])
+    ydata_1_norm = normalize_list(cleaned_ydata_1)
+    uncleaned_ydata_1 = [None if data==0 else data for data in ydata_1_norm]
+    plt.plot(x_data, ydata_0_norm)
+    plt.plot(x_data, uncleaned_ydata_1, marker='o')
+    ax.set_xticks(x_ticks, x_tick_labels, rotation=90)
+    fig.tight_layout()
     plt.show()
+
+    kitchen_x_data = list()
+    load_cell_y_data = list()
+    for data_0, data_1 in zip(ydata_0_norm, uncleaned_ydata_1):
+        if data_1 is not None:
+            kitchen_x_data.append(data_0)
+            load_cell_y_data.append(data_1)
+
+    plt.plot(kitchen_x_data, load_cell_y_data, marker='.', linestyle='-')
+    for i in range(len(kitchen_x_data) - 1):
+        dy = load_cell_y_data[i+1] - load_cell_y_data[i]
+        if dy > 0:
+            dy = 1
+        if dy < 0:
+            dy = -1
+        plt.quiver(kitchen_x_data[i], load_cell_y_data[i], 0.001, dy,
+                  headwidth=2, headlength=5, color='black')
+
+    plt.show()
+
+    difference_y_data = list()
+    for kitchen_data, load_cell_data in (zip(kitchen_x_data, load_cell_y_data)):
+        difference_y_data.append(load_cell_data-kitchen_data)
+
+    plt.plot(kitchen_x_data, difference_y_data, marker='.', linestyle='-')
+    for i in range(len(kitchen_x_data) - 1):
+        dy = load_cell_y_data[i+1] - load_cell_y_data[i]
+        if dy > 0:
+            dy = 1
+        if dy < 0:
+            dy = -1
+        plt.quiver(kitchen_x_data[i], difference_y_data[i], 0.001, dy,
+                  headwidth=2, headlength=5, color='black')
+    plt.show()
+
+def csv_difference(path: Optional[Path] = None):
+    if path is None:
+        path = Path('/home/meyer/tmp/data.csv')
+    x_data, y_datas = _extract_x_data_and_y_datas(path)
+    load_cell_y_data, kitchen_scale_y_data = y_datas
+
+    difference_y_data = list()
+    multiplier_y_data = list()
+    error_y_data = list()
+
+    filtered_x_data = list()
+    filtered_load_cell_y_data = list()
+    filtered_kitchen_scale_y_data = list()
+
+    for x_point, load_cell_point, kitchen_scale_point in (
+            zip(x_data, load_cell_y_data, kitchen_scale_y_data)):
+        if kitchen_scale_point is not None:
+            difference_y_data.append(load_cell_point - kitchen_scale_point)
+            if kitchen_scale_point == 0:
+                multiplier_y_data.append(0)
+            else:
+                multiplier_y_data.append(load_cell_point / kitchen_scale_point)
+            error_y_data.append(((load_cell_point - kitchen_scale_point)/kitchen_scale_point) * 100)
+            filtered_x_data.append(x_point)
+            filtered_load_cell_y_data.append(load_cell_point)
+            filtered_kitchen_scale_y_data.append(kitchen_scale_point)
+
+    fig: plt.Figure = plt.figure()
+    ax = fig.add_subplot(111)
+    # noinspection PyTypeHints
+    ax.xaxis: Axis
+    # ax.xaxis.set_major_formatter(mdates.DateFormatter(timestamp.FMT))
+    # ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
+    # ax.tick_params(axis='x', labelrotation=90)
+
+    # plt.plot(filtered_x_data, difference_y_data)
+    # plt.plot(filtered_x_data, filtered_load_cell_y_data, marker='.')
+    # plt.plot(filtered_x_data, filtered_kitchen_scale_y_data, marker='.')
+    # plt.plot(filtered_kitchen_scale_y_data, multiplier_y_data, marker='.')
+    plt.plot(filtered_kitchen_scale_y_data, error_y_data, marker='.')
+
+    for i in range(len(filtered_x_data) - 1):
+        dy = filtered_kitchen_scale_y_data[i+1] - filtered_kitchen_scale_y_data[i]
+        if dy > 0:
+            dy = 1
+        if dy < 0:
+            dy = -1
+        plt.quiver(filtered_kitchen_scale_y_data[i], error_y_data[i], 0.001, dy,
+                  headwidth=2, headlength=5, color='black')
+
+    # x_ticks = [filtered_x_data[idx] for idx in range(0,len(filtered_x_data),
+    #                                                  len(filtered_x_data)//9)]
+    # x_tick_labels = [timestamp.get_utc_iso_ts_str(dt) for dt in x_ticks]
+    # ax.set_xticks(x_ticks, x_tick_labels, rotation=90)
+    fig.tight_layout()
+    plt.show()
+
+    print(f'average: {sum(multiplier_y_data)/len(multiplier_y_data)}')
 
 
 def main2():
@@ -221,8 +363,10 @@ def velo_vs_scale():
     fig: plt.Figure = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot()
+
     # noinspection PyTypeHints
     ax.xaxis: Axis
+    # noinspection PyTypeHints
     ax.yaxis: Axis
     ax.xaxis.set_label_text(x_title)
     ax.yaxis.set_label_text(y_title)

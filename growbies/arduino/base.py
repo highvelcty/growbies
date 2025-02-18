@@ -6,7 +6,7 @@ import serial
 from growbies.utils.bufstr import BufStr
 
 
-class BaseArduinoSerial(serial.Serial):
+class BaseArduinoSerial(object):
     DEBUG_DATALINK_READ = False
     DEBUG_DATALINK_WRITE = False
 
@@ -18,17 +18,21 @@ class BaseArduinoSerial(serial.Serial):
            dsrdtr=False, rtscts=False, xonxoff=False, parity=serial.PARITY_NONE
            bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE
         """
-        super().__init__(*args, port=port, baudrate=baudrate, timeout=timeout, **kw)
+        self._serial = serial.Serial(*args, port=port, baudrate=baudrate, timeout=timeout, **kw)
         self.wait_for_ready()
 
+    @property
+    def in_waiting(self) -> int:
+        return self._serial.in_waiting
+
     def read(self, size=1) -> bytes:
-        buf = super().read(size)
+        buf = self._serial.read(size)
         if self.DEBUG_DATALINK_READ: print(f'python datalink recv:\n{BufStr(buf)}')
         return buf
 
     def write(self, buf: ByteString):
         if self.DEBUG_DATALINK_WRITE: print(f'python datalink send:\n{BufStr(buf)}')
-        super().write(buf)
+        self._serial.write(buf)
 
     @abstractmethod
     def wait_for_ready(self):

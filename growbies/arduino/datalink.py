@@ -17,7 +17,7 @@ class ArduinoDatalink(ABC, BaseArduinoSerial):
     READY_RETRIES = 5
     READY_RETRY_DELAY_SEC = 1
 
-    READ_TIMEOUT_SEC = 3
+    DEFAULT_READ_TIMEOUT_SEC = 3
 
     RECV_BUF_BYTES = 64
 

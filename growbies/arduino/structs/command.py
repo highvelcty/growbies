@@ -51,6 +51,7 @@ class Error(IntEnum):
     NONE = 0
     ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW = 1
     ERROR_UNRECOGNIZED_COMMAND = 2
+    ERROR_HX711_NOT_READY = 3
 
 class Gain(IntEnum):
     GAIN_32 = 32
@@ -126,6 +127,12 @@ class CmdReadAverage(BaseCmdWithTimesParam):
 
 
 class CmdSetGain(BaseCommand):
+    class Gain(IntEnum):
+        GAIN_32 = 32
+        GAIN_64 = 64
+        GAIN_128 = 128
+    DEFAULT_GAIN = Gain.GAIN_128
+
     class Field(BaseCommand.Field):
         GAIN = 'gain'
 
@@ -135,6 +142,7 @@ class CmdSetGain(BaseCommand):
 
     def __init__(self, *args, **kw):
         kw[self.Field.TYPE] = CmdType.SET_GAIN
+        kw.setdefault(self.Field.GAIN, self.DEFAULT_GAIN)
         super().__init__(*args, **kw)
 
     @property
@@ -159,7 +167,7 @@ class CmdGetUnits(BaseCmdWithTimesParam):
 
 
 class CmdTare(BaseCmdWithTimesParam):
-    def __int__(self, *args, **kw):
+    def __init__(self, *args, **kw):
         kw[self.Field.TYPE] = CmdType.TARE
         super().__init__(*args, **kw)
 
@@ -169,7 +177,7 @@ class CmdSetScale(BaseCommand):
     class Field(BaseCommand.Field):
         SCALE = 'scale'
 
-    _fields = [
+    _fields_ = [
         (Field.SCALE, ctypes.c_float)
     ]
 

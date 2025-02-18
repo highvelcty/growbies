@@ -22,7 +22,7 @@ path = getattr(ns_args, Param.PATH)
 
 if path is None:
     if tags is None:
-        path_or_tags = []
+        path_or_tags = None
     else:
         path_or_tags = tags
 else:

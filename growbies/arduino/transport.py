@@ -15,8 +15,10 @@ class ArduinoTransport(ArduinoNetwork, ABC):
     def _send_cmd(self, cmd: TBaseCommand):
         self._send_packet(memoryview(cmd).cast('B'))
 
-    def _recv_resp(self) -> Optional[TBaseResponse]:
-        packet = self._recv_packet()
+    def _recv_resp(self, *,
+                   read_timeout_sec = ArduinoNetwork.DEFAULT_READ_TIMEOUT_SEC) \
+            -> Optional[TBaseResponse]:
+        packet = self._recv_packet(read_timeout_sec=read_timeout_sec)
         if packet is None:
             return None
         return self._get_resp(packet)

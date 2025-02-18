@@ -94,3 +94,35 @@ def get_utc_iso_ts_str(ts: Optional[TS_t] = None,
     """
     return get_utc_dt(ts, fmt).isoformat(timespec=timespec).split('+')[0] + UTC_Z
 
+
+class ContextElapsedTime(object):
+    def __init__(self):
+        self._start_time = None
+        self._end_time = None
+
+    def __enter__(self):
+        self._start_time = datetime.now()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._end_time = datetime.now()
+
+    def __str__(self):
+
+        # Format the elapsed time
+        if self._end_time is None:
+            end_time = datetime.now()
+        else:
+            end_time = self._end_time
+
+        if self._start_time is None:
+            return 'Timer not started.'
+
+        elapsed_time = end_time - self._start_time
+        days = elapsed_time.days
+        hours = elapsed_time.seconds // 3600
+        minutes = (elapsed_time.seconds % 3600) // 60
+        seconds = elapsed_time.seconds % 60
+        microseconds = elapsed_time.microseconds
+
+        return f'{days} days, {hours:02d}:{minutes:02d}:{seconds:02d}.{microseconds:06d}'

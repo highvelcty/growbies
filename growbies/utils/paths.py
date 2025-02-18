@@ -32,12 +32,14 @@ class Paths(Enum):
     DEFAULT_OUTPUT_DIR = OUTPUT / 'default'
     DEFAULT_LOG = OUTPUT / 'log.log'
     DEFAULT_DATA = DEFAULT_OUTPUT_DIR / 'data.csv'
+    FILELOCK = OUTPUT / 'file.lock'
 
     # /growbies
     GROWBIES = ROOT / 'growbies'
     GROWBIES_EXEC = GROWBIES / 'exec'
     GROWBIES_MONITOR = GROWBIES / 'monitor'
     GROWBIES_PLOT = GROWBIES / 'plot'
+    GROWBIES_HUMAN_INPUT = GROWBIES / 'human_input'
 
 
     # /venv

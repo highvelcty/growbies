@@ -16,17 +16,18 @@ class Session(object):
         LOG = Paths.DEFAULT_LOG.value.name
         DATA = Paths.DEFAULT_DATA.value.name
 
-    def __init__(self, path_or_tags: Optional[Union[Path, Iterable[str]]] = None):
+    def __init__(self, path_or_tags: Optional[Union[Union[Path, str], Iterable[str]]] = None):
         """
         :param path_or_tags: A value of::
-            - None: Continue the default session default subdirectory in the output directory.
+            - None: Continue the default session in the default subdirectory in the output
+              directory.
             - Empty list: Start a session at an ISO timestamp subdirectory in the output
               directory.
             - Path that exists: Continue a session at the existing path.
             - Path that does not exist: Start a session associated with the new path.
         """
-        if isinstance(path_or_tags, Path):
-            self._output_dir = path_or_tags
+        if isinstance(path_or_tags, (Path, str)):
+            self._output_dir = Path(path_or_tags)
         elif path_or_tags is None:
             self._output_dir = Paths.DEFAULT_OUTPUT_DIR.value
         else:

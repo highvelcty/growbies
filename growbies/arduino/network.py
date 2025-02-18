@@ -1,12 +1,12 @@
 from abc import ABC
-from typing import ByteString, cast, Optional, Union
+from typing import ByteString, Optional
 import ctypes
 import logging
 import time
 
 logger = logging.getLogger(__name__)
 
-from .datalink import ArduinoDatalink, Slip
+from .datalink import ArduinoDatalink
 from .structs.packet import Packet
 from growbies.utils.bufstr import BufStr
 
@@ -30,10 +30,12 @@ class ArduinoNetwork(ArduinoDatalink, ABC):
                   f'{BufStr(bytes(buf) + bytes(checksum))}')
 
 
-    def _recv_packet(self) -> Optional[Packet]:
+    def _recv_packet(self, *,
+                     read_timeout_sec:int = ArduinoDatalink.DEFAULT_READ_TIMEOUT_SEC) \
+                     -> Optional[Packet]:
         self._slip_reset_recv_state()
         startt = time.time()
-        while time.time() - startt < self.READ_TIMEOUT_SEC:
+        while time.time() - startt < read_timeout_sec:
             bytes_in_waiting = self.in_waiting
             if bytes_in_waiting:
                 if self._slip_decode_frame(self.read(bytes_in_waiting)):
@@ -55,5 +57,5 @@ class ArduinoNetwork(ArduinoDatalink, ABC):
                         logger.error('Network layer packet checksum underflow.')
                         return None
         else:
-            logger.error(f'Network layer timeout of {self.READ_TIMEOUT_SEC} seconds waiting for a '
+            logger.error(f'Network layer timeout of {read_timeout_sec} seconds waiting for a '
                          f'valid packet.')
