@@ -21,8 +21,8 @@ class Arduino(ArduinoTransport):
             -> Optional[command.TBaseResponse]:
         for retry in range(retries):
             if retry:
+                logger.error(f'Execution layer attempt {retry+1}/{self.EXEC_RETRIES}')
                 self.reset_communication()
-                # time.sleep(retry_delay_sec)
 
             # Send
             self._send_cmd(cmd)
@@ -30,14 +30,13 @@ class Arduino(ArduinoTransport):
             # Receive
             resp = self._recv_resp(read_timeout_sec=read_timeout_sec)
             if resp is None:
-                logger.error(f'Execution layer no response on retry {retry+1} / {retries}')
+                logger.error(f'Execution layer no response.')
             elif isinstance(resp, command.RespError):
                 logger.error(f'Execution layer error response 0x{resp.error:04X} received.')
             else:
                 return resp
         else:
-            logger.error(f'Execution layer exhausted {self.EXEC_RETRIES} retries executing '
-                         f'command:\n{cmd}')
+            logger.error(f'Execution layer retries exhausted executing command:\n{cmd}')
 
     def manual_calibration(self):
         self.set_scale()
@@ -52,6 +51,10 @@ class Arduino(ArduinoTransport):
         known_weight = self.get_units(times=self.MANUAL_CALIBRATION_SAMPLES)
         self.set_scale(value / known_weight)
 
+    def get_channel(self) -> int:
+        resp: command.RespByte = self.execute(command.CmdGetChannel())
+        return resp.data
+
     def get_scale(self) -> float:
         return self.execute(command.CmdGetScale()).data
 
@@ -59,6 +62,13 @@ class Arduino(ArduinoTransport):
         resp: command.RespLong = self.execute(command.CmdGetUnits(times=times))
         return resp.data
 
+    def power_up(self):
+        cmd = command.CmdPowerUp()
+        _: command.RespVoid = self.execute(cmd)
+
+    def power_down(self):
+        cmd = command.CmdPowerDown()
+        _: command.RespVoid = self.execute(cmd)
 
     def read_average(self, times: int = command.CmdReadAverage.DEFAULT_TIMES) -> int:
         cmd = command.CmdReadAverage(times=times)
@@ -74,6 +84,9 @@ class Arduino(ArduinoTransport):
                 bytes_in_waiting = self.in_waiting
                 if bytes_in_waiting:
                     _ = self.read(bytes_in_waiting)
+
+    def set_channel(self, channel: int):
+        self.execute(command.CmdSetChannel(channel=channel))
 
     def set_gain(self, gain: command.CmdSetGain.Gain):
         self.execute(command.CmdSetGain(gain=gain))

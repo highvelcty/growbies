@@ -46,27 +46,6 @@ def csv(path: Optional[Path] = None):
     if path is None:
         path = Path('/home/meyer/tmp/data.csv')
     x_data, y_datas = _extract_x_data_and_y_datas(path)
-    labels = None
-    x_data: list[datetime] = []
-    y_datas: list[list[Optional[int]]] = []
-    with open(path, 'r') as inf:
-        for line in inf.readlines():
-            if labels is None:
-                labels = line.split(',')
-                y_datas.extend(([] for _ in range(len(labels) - 1)))
-            else:
-                data = line.split(',')
-                dt = timestamp.get_utc_dt(data[0])
-                x_data.append(dt)
-                for channel, channel_data in enumerate(data[1:]):
-                    channel_data = channel_data.strip()
-
-                    if len(y_datas) < channel + 1:
-                        y_datas.append([])
-                    if channel_data is None or channel_data == '':
-                        y_datas[channel].append(None)
-                    else:
-                        y_datas[channel].append(int(channel_data))
 
     fig: plt.Figure = plt.figure()
     ax = fig.add_subplot(111)
@@ -80,6 +59,12 @@ def csv(path: Optional[Path] = None):
     x_ticks = [x_data[idx] for idx in range(0,len(x_data), len(x_data)//9)]
     x_tick_labels = [timestamp.get_utc_iso_ts_str(dt) for dt in x_ticks]
 
+    # plt.plot(x_data, y_datas[0])
+    # ax.set_xticks(x_ticks, x_tick_labels, rotation=90)
+    # fig.tight_layout()
+    # plt.show()
+
+
     cleaned_ydata_1 = list()
     for value in y_datas[1]:
         if value is None:
@@ -91,7 +76,13 @@ def csv(path: Optional[Path] = None):
     uncleaned_ydata_1 = [None if data==0 else data for data in ydata_1_norm]
     plt.plot(x_data, ydata_0_norm)
     plt.plot(x_data, uncleaned_ydata_1, marker='o')
+    # plt.plot(x_data, y_datas[1], marker='o')
     ax.set_xticks(x_ticks, x_tick_labels, rotation=90)
+    plt.ylabel('normalized weight')
+    plt.title('Experiment: Water bowl fill/empty 2 times\n'
+              'Test scale: single load cell, double e-block\n'
+              'full Wheatstone bridge.')
+              # 'single load cell, double e-block on concrete')
     fig.tight_layout()
     plt.show()
 
@@ -112,11 +103,16 @@ def csv(path: Optional[Path] = None):
         plt.quiver(kitchen_x_data[i], load_cell_y_data[i], 0.001, dy,
                   headwidth=2, headlength=5, color='black')
 
+    plt.title('Test scale vs. reference scale\n(~100g - ~4kg)')
+    plt.ylabel(f'Normalized test scale mass')
+    plt.xlabel('Normalized reference scale mass')
+
+    fig.tight_layout()
     plt.show()
 
     difference_y_data = list()
     for kitchen_data, load_cell_data in (zip(kitchen_x_data, load_cell_y_data)):
-        difference_y_data.append(load_cell_data-kitchen_data)
+        difference_y_data.append((load_cell_data-kitchen_data)*100)
 
     plt.plot(kitchen_x_data, difference_y_data, marker='.', linestyle='-')
     for i in range(len(kitchen_x_data) - 1):
@@ -127,6 +123,11 @@ def csv(path: Optional[Path] = None):
             dy = -1
         plt.quiver(kitchen_x_data[i], difference_y_data[i], 0.001, dy,
                   headwidth=2, headlength=5, color='black')
+    plt.title('% Error vs. normalized reference scale mass\n'
+              '(~100g - ~4kg)')
+    plt.ylabel('% error')
+    plt.xlabel('normalized reference scale mass')
+    fig.tight_layout()
     plt.show()
 
 def csv_difference(path: Optional[Path] = None):

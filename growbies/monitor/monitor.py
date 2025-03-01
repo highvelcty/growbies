@@ -1,4 +1,4 @@
-from typing import TextIO
+from typing import Optional
 import logging
 import time
 
@@ -11,6 +11,7 @@ POLLING_SEC = 1
 OSERROR_RETRIES = 5
 OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5
+CHANNELS = 4
 logger = logging.getLogger(__name__)
 
 def _continue_stream(sess: Session):
@@ -28,12 +29,16 @@ def _continue_stream(sess: Session):
                 break
         outf.truncate()
 
+
 def main(sess: Session):
     arduino_serial = Arduino()
     iteration = 0
     # Note: logging is intentionally avoided this retry loop. This is because the errors being
     # handled are likely due to temporary unavailability of the host file system. Logging also
     # accesses the file system and would further complicate the matter.
+
+    arduino_serial.set_scale(1)
+    arduino_serial.tare()
 
     with ContextElapsedTime() as elapsed_time:
         sampling_retry = 0
