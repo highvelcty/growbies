@@ -11,4 +11,5 @@ Stories
 
 .. toctree::
     velostat
+    4xfullbridge
 
