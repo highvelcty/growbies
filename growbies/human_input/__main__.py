@@ -15,5 +15,4 @@ parser.add_argument(Param.PATH,
 ns_args = parser.parse_args()
 
 path = getattr(ns_args, Param.PATH)
-sess = Session(path)
 main(Session(path))

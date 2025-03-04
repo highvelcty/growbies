@@ -18,35 +18,52 @@ def normalize_list(data):
     normalized_data = [(x - min_val) / (max_val - min_val) for x in data]
     return normalized_data
 
-def _extract_x_data_and_y_datas(path: Path) -> tuple[list[datetime],list[list[Optional[int]]]]:
+def _extract_x_data_and_y_datas(path: Path) -> \
+        tuple[list[datetime],
+              list[list[int]],
+              list[datetime], list[int]]:
     labels = None
-    x_data: list[datetime] = []
-    y_datas: list[list[Optional[int]]] = []
+    x_data: list[datetime] = list()
+    y_datas: list[list[int]] = list()
+    ref_x_data: list[datetime] = list()
+    ref_y_data: list[int] = list()
     with open(path, 'r') as inf:
         for line in inf.readlines():
+            line = line.strip()
             if labels is None:
                 labels = line.split(',')
-                y_datas.extend(([] for _ in range(len(labels) - 1)))
+                y_datas.extend(([] for _ in range(len(labels) - 2)))
             else:
                 data = line.split(',')
+                ref_data = None
                 dt = timestamp.get_utc_dt(data[0])
                 x_data.append(dt)
-                for channel, channel_data in enumerate(data[1:]):
+                data = data[1:]
+                if len(data) >= (len(labels) - 1):
+                    ref_data = int(data[-1])
+                    data = data[:-1]
+
+                for channel, channel_data in enumerate(data):
                     channel_data = channel_data.strip()
+                    y_datas[channel].append(int(channel_data))
 
-                    if len(y_datas) < channel + 1:
-                        y_datas.append([])
-                    if channel_data is None or channel_data == '':
-                        y_datas[channel].append(None)
-                    else:
-                        y_datas[channel].append(int(channel_data))
-    return x_data, y_datas
+                if ref_data is not None:
+                    ref_x_data.append(dt)
+                    ref_y_data.append(ref_data)
 
-def csv(path: Optional[Path] = None):
-    if path is None:
-        path = Path('/home/meyer/tmp/data.csv')
-    x_data, y_datas = _extract_x_data_and_y_datas(path)
+    return x_data, y_datas, ref_x_data, ref_y_data
 
+
+def time_plot(path: Path):
+    x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
+
+    ### Time #######################################################################################
+    title = 'Normalized Scale Over Time'
+    _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data)
+
+def _time_plot(title: str,
+               timestamps: list[datetime], channel_datas: list[list[int]],
+               ref_timestamps: Optional[list[datetime]], ref_scale_data: Optional[list[int]]):
     fig: plt.Figure = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot()
@@ -56,77 +73,90 @@ def csv(path: Optional[Path] = None):
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=5))
     ax.tick_params(axis='x', labelrotation=90)
 
-    x_ticks = [x_data[idx] for idx in range(0,len(x_data), len(x_data)//9)]
+    x_ticks = [timestamps[idx] for idx in range(0, len(timestamps), len(timestamps)//9)]
     x_tick_labels = [timestamp.get_utc_iso_ts_str(dt) for dt in x_ticks]
 
-    # plt.plot(x_data, y_datas[0])
-    # ax.set_xticks(x_ticks, x_tick_labels, rotation=90)
-    # fig.tight_layout()
-    # plt.show()
+    summed_channel_data = list()
+    for idx in range(len(channel_datas[0])):
+        total = 0
+        for channel_data in channel_datas:
+            total += channel_data[idx]
+        summed_channel_data.append(total)
 
+    for channel, y_data in enumerate(channel_datas):
+        plt.plot(timestamps, normalize_list(y_data), label=f'Channel {channel}')
+    plt.plot(timestamps, normalize_list(summed_channel_data), marker='^', label='Sum')
+    if ref_timestamps:
+        plt.plot(ref_timestamps, normalize_list(ref_scale_data), marker='o', label='Reference')
+    plt.legend()
 
-    cleaned_ydata_1 = list()
-    for value in y_datas[1]:
-        if value is None:
-            cleaned_ydata_1.append(0)
-        else:
-            cleaned_ydata_1.append(value)
-    ydata_0_norm = normalize_list(y_datas[0])
-    ydata_1_norm = normalize_list(cleaned_ydata_1)
-    uncleaned_ydata_1 = [None if data==0 else data for data in ydata_1_norm]
-    plt.plot(x_data, ydata_0_norm)
-    plt.plot(x_data, uncleaned_ydata_1, marker='o')
-    # plt.plot(x_data, y_datas[1], marker='o')
     ax.set_xticks(x_ticks, x_tick_labels, rotation=90)
-    plt.ylabel('normalized weight')
-    plt.title('Experiment: Water bowl fill/empty 2 times\n'
-              'Test scale: single load cell, double e-block\n'
-              'full Wheatstone bridge.')
-              # 'single load cell, double e-block on concrete')
+    plt.ylabel('normalized mass')
+    plt.title(title)
     fig.tight_layout()
     plt.show()
 
-    kitchen_x_data = list()
-    load_cell_y_data = list()
-    for data_0, data_1 in zip(ydata_0_norm, uncleaned_ydata_1):
-        if data_1 is not None:
-            kitchen_x_data.append(data_0)
-            load_cell_y_data.append(data_1)
+def bucket_test(path: Path):
+    x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
 
-    plt.plot(kitchen_x_data, load_cell_y_data, marker='.', linestyle='-')
-    for i in range(len(kitchen_x_data) - 1):
-        dy = load_cell_y_data[i+1] - load_cell_y_data[i]
+    ### Time #######################################################################################
+    title = ('Experiment: Water bowl fill/empty 1 times\n'
+             'Test scale: 4xfull bridge with 4x HX711\n'
+             'Context: Grow box with shaky shelving, offset mass')
+    _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data)
+
+    ### Linearity ##################################################################################
+    fig: plt.Figure = plt.figure()
+    summed_channel_data = list()
+    for idx in range(len(y_datas[0])):
+        total = 0
+        for channel_data in y_datas:
+            total += channel_data[idx]
+        summed_channel_data.append(total)
+
+    test_y_data = list()
+    for ref_x, ref_y in zip(ref_x_data, ref_y_data):
+        for test_x, test_y in zip(x_data, summed_channel_data):
+            if ref_x == test_x:
+                test_y_data.append(test_y)
+
+    lin_x = normalize_list(ref_y_data)
+    lin_y = normalize_list(test_y_data)
+    plt.plot(lin_x, lin_y, marker='.', linestyle='-')
+    for i in range(len(lin_x) - 1):
+        dy = lin_y[i+1] - lin_y[i]
         if dy > 0:
             dy = 1
         if dy < 0:
             dy = -1
-        plt.quiver(kitchen_x_data[i], load_cell_y_data[i], 0.001, dy,
+        plt.quiver(lin_x[i], lin_y[i], 0.001, dy,
                   headwidth=2, headlength=5, color='black')
 
-    plt.title('Test scale vs. reference scale\n(~100g - ~4kg)')
+    plt.title('Test scale vs. reference scale\n(~200g - ~4kg)')
     plt.ylabel(f'Normalized test scale mass')
     plt.xlabel('Normalized reference scale mass')
 
     fig.tight_layout()
     plt.show()
 
+    ### Error ######################################################################################
+    error_x_data = ref_y_data
     difference_y_data = list()
-    for kitchen_data, load_cell_data in (zip(kitchen_x_data, load_cell_y_data)):
+    for kitchen_data, load_cell_data in (zip(lin_x, lin_y)):
         difference_y_data.append((load_cell_data-kitchen_data)*100)
 
-    plt.plot(kitchen_x_data, difference_y_data, marker='.', linestyle='-')
-    for i in range(len(kitchen_x_data) - 1):
-        dy = load_cell_y_data[i+1] - load_cell_y_data[i]
+    plt.plot(error_x_data, difference_y_data, marker='.', linestyle='-')
+    for i in range(len(error_x_data) - 1):
+        dy = lin_y[i+1] - lin_y[i]
         if dy > 0:
             dy = 1
         if dy < 0:
             dy = -1
-        plt.quiver(kitchen_x_data[i], difference_y_data[i], 0.001, dy,
+        plt.quiver(error_x_data[i], difference_y_data[i], 0.001, dy,
                   headwidth=2, headlength=5, color='black')
-    plt.title('% Error vs. normalized reference scale mass\n'
-              '(~100g - ~4kg)')
+    plt.title('% Error vs. reference scale mass')
     plt.ylabel('% error')
-    plt.xlabel('normalized reference scale mass')
+    plt.xlabel('Reference mass (grams)')
     fig.tight_layout()
     plt.show()
 

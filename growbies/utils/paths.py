@@ -37,9 +37,11 @@ class Paths(Enum):
     # /growbies
     GROWBIES = ROOT / 'growbies'
     GROWBIES_EXEC = GROWBIES / 'exec'
+    GROWBIES_HUMAN_INPUT = GROWBIES / 'human_input'
     GROWBIES_MONITOR = GROWBIES / 'monitor'
     GROWBIES_PLOT = GROWBIES / 'plot'
-    GROWBIES_HUMAN_INPUT = GROWBIES / 'human_input'
+    GROWBIES_SAMPLE = GROWBIES / 'sample'
+
 
 
     # /venv

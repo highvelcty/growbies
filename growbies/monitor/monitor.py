@@ -1,8 +1,8 @@
-from typing import Optional
 import logging
 import time
 
 from growbies.arduino.arduino import Arduino
+from growbies.sample.sample import COLUMN_STR
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
@@ -25,10 +25,10 @@ def _continue_stream(sess: Session):
                 outf.seek(idx + 1)
                 break
             if idx == 0:
-                outf.write('timestamp,load_cell_scale,kitchen_scale\n')
+                outf.write(COLUMN_STR)
+                # outf.write('timestamp,load_cell_scale,kitchen_scale\n')
                 break
         outf.truncate()
-
 
 def main(sess: Session):
     arduino_serial = Arduino()
@@ -36,9 +36,6 @@ def main(sess: Session):
     # Note: logging is intentionally avoided this retry loop. This is because the errors being
     # handled are likely due to temporary unavailability of the host file system. Logging also
     # accesses the file system and would further complicate the matter.
-
-    arduino_serial.set_scale(1)
-    arduino_serial.tare()
 
     with ContextElapsedTime() as elapsed_time:
         sampling_retry = 0
@@ -58,18 +55,23 @@ def main(sess: Session):
 
                     # Sample
                     ts = get_utc_iso_ts_str()
-                    # sample = arduino_serial.read_average()
-                    sample = arduino_serial.get_units()
+                    samples = list()
+                    for channel in range(CHANNELS):
+                        arduino_serial.set_channel(channel)
+                        samples.append(arduino_serial.read_average())
 
-                    if sample is None:
-                        sampling_retry += 1
-                    if sample is not None:
+                    if all(samples):
                         sampling_retry = 0
-                        out_str = f'{ts},{sample},'
+                        out_str = f'{ts}'
+                        for sample in samples:
+                            out_str += f',{sample}'
                         with FileLock(), open(sess.path_to_data, 'a+') as outf:
                             outf.write(f'{out_str}\n')
                         print(f'{str(elapsed_time)}: {out_str}')
                         iteration += 1
+                    else:
+                        # One or more samples came back as None
+                        sampling_retry += 1
 
                     time.sleep(POLLING_SEC)
             except OSError:

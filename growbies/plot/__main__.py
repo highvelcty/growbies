@@ -22,6 +22,7 @@ if path is not None:
 
 _ = Session()
 # plot.velo_vs_scale()
-plot.csv(path)
+# plot.bucket_test(path)
+plot.time_plot(path)
 # plot.csv_difference(path)
 # plot.resister_divider()
