@@ -43,6 +43,8 @@ Notice that the error is very high at lighter loads. Particularly after the bowl
 It was discovered that the flexing of the base on which the distributed bridge scale as installed
 was causing the high error.
 
+.. note:: The arrows on the plots indicate whether the bowl is being filled or emptied with water.
+
 Distributed Full Bridge Scale With Improved Platform
 ----------------------------------------------------
 A platform made out of structurally stiff particle board was created to minimize the flexing
