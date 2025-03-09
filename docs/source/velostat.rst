@@ -1,8 +1,8 @@
-Velostat Pressure Sensing Investigation (January 2025)
-======================================================
+Velostat Pressure Sensing (January 2025)
+========================================
 
-In late 2024, into early 2025, an investigation was made into the possibility of using velostat
-as a means for cost effective load sensing.
+In late 2024, into early 2025, an exploration was made into the possibility of using velostat as
+a means for cost effective load sensing.
 
 The resistance of velostat changes with pressure. When sandwiched between conductive material, it
 can be used as a pressure sensor.

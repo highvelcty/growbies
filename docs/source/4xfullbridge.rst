@@ -1,6 +1,6 @@
 Load Cell Scale (March 2025)
 ============================
-An investigation was made into using load cells as a means for mass measurement in an
+An exploration was made into using load cells as a means for mass measurement in an
 agricultural context.
 
 Distributed Full Bridge Scale

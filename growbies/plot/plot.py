@@ -54,16 +54,20 @@ def _extract_x_data_and_y_datas(path: Path) -> \
     return x_data, y_datas, ref_x_data, ref_y_data
 
 
-def time_plot(path: Path):
+def time_plot(path: Path, *,
+              normalize: bool = True):
     x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
 
     ### Time #######################################################################################
     title = 'Normalized Scale Over Time'
-    _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data)
+    _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data,
+               normalize=normalize)
 
 def _time_plot(title: str,
                timestamps: list[datetime], channel_datas: list[list[int]],
-               ref_timestamps: Optional[list[datetime]], ref_scale_data: Optional[list[int]]):
+               ref_timestamps: Optional[list[datetime]], ref_scale_data: Optional[list[int]],
+               *,
+               normalize: bool = True):
     fig: plt.Figure = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot()
@@ -84,14 +88,23 @@ def _time_plot(title: str,
         summed_channel_data.append(total)
 
     for channel, y_data in enumerate(channel_datas):
-        plt.plot(timestamps, normalize_list(y_data), label=f'Channel {channel}')
-    plt.plot(timestamps, normalize_list(summed_channel_data), marker='^', label='Sum')
+        plt.plot(timestamps,
+                 normalize_list(y_data) if normalize else y_data,
+                 label=f'Channel {channel}')
+    plt.plot(timestamps,
+             normalize_list(summed_channel_data) if normalize else summed_channel_data,
+             marker='.', label='Sum')
     if ref_timestamps:
-        plt.plot(ref_timestamps, normalize_list(ref_scale_data), marker='o', label='Reference')
+        plt.plot(ref_timestamps,
+                 normalize_list(ref_scale_data) if normalize else ref_scale_data,
+                 marker='o', label='Reference')
     plt.legend()
 
     ax.set_xticks(x_ticks, x_tick_labels, rotation=90)
-    plt.ylabel('normalized mass')
+    if normalize:
+        plt.ylabel('normalized mass')
+    else:
+        plt.ylabel('mass (unit-less)')
     plt.title(title)
     fig.tight_layout()
     plt.show()
