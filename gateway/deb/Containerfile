@@ -1,0 +1,12 @@
+FROM debian:latest
+
+# Install
+RUN \
+    apt update -y && \
+    apt install dh-make -y && \
+    apt install debmake -y && \
+    apt install build-essential -y
+
+RUN \
+    mkdir /code
+

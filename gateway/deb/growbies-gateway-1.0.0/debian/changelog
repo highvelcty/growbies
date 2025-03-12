@@ -1,0 +1,7 @@
+growbies-gateway (1.0.0) UNRELEASED; urgency=low
+
+  * Initial Release. Closes: #12345
+  * This is my first Debian package.
+  * Adjusted the Makefile to fix $(DESTDIR) problems.
+
+-- Eric Meyer <ericallenmeyer@gmail.com>  Wed, 12 Mar 2025 01:50:54 +0000

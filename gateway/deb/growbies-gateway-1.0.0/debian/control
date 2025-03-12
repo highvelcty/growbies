@@ -1,0 +1,12 @@
+Source: growbies-gateway
+Version: 1.0.0
+Section: unknown
+Priority: optional
+Maintainer: Eric Meyer <ericallenmeyer@gmail.com>
+Build-Depends: debhelper (>=13), debhelper-compat (=13)
+Standards-Version: 4.0.0
+Homepage: <growbies.net>
+
+Package: growbies-gateway
+Architecture: any
+Description: The gateway for the growbies platform.
