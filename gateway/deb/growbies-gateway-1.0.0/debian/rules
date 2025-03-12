@@ -1,4 +1,10 @@
 #!/usr/bin/make -f
 
+build:
+	./debian/build.sh
+
+install:
+	./debian/install.sh;
+
 %:
-	dh $@
+	dh "$@"

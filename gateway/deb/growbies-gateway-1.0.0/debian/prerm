@@ -1,0 +1,5 @@
+#!/bin/bash
+
+source /usr/lib/growbies-gateway/install_vars.sh
+
+rm -rf "${PATH_OUT_VENV}"

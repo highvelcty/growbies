@@ -8,5 +8,6 @@ RUN \
     apt install build-essential -y
 
 RUN \
-    mkdir /code
+    mkdir /code && \
+    cd code
 

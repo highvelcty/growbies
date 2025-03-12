@@ -31,7 +31,8 @@ tests:
 	./run_tests.sh
 
 ### Utilities ######################################################################################
-$(PATH_DIST): $(PATH_GROWBIES)
+#$(PATH_DIST): $(PATH_GROWBIES)
+$(PATH_DIST):
 	( \
 		python -m build \
 	)
