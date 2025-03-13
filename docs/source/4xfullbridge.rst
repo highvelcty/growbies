@@ -163,7 +163,7 @@ is a picture taken following a 160 gram harvest:
 .. image:: binary/4xfull-bridge_first_lettuce.png
 
 Here is the scale data over about nine days. The data is a bit noisy due to noise on the serial
-lines that will be rectified in the next prototype.
+lines that will be fixed in the next prototype.
 
 .. image:: binary/4xfull-bridge_first_lettuce_9days.png
 
@@ -181,7 +181,7 @@ It is interesting to see the jagged signal on harvest. This is due to the time i
 method to harvest; i.e. a pocket knife and careful cutting.
 
 Summary:
-Although the data is noisy, this will be rectified in future prototypes. The signal for
+Although the data is noisy, this will be fixed in future prototypes. The signal for
 watering is clear and strong. The harvest is also great to see. Unexpectedly, insights into how
 the plant uptakes water with the lights on/off was observed. The rate of mass loss with the
 lights off is lower than with the lights on. This indicates that the lettuce plants up-take and
