@@ -59,7 +59,7 @@ def time_plot(path: Path, *,
     x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
 
     ### Time #######################################################################################
-    title = 'Normalized Scale Over Time'
+    title = 'Normalized Scale Over Time' if normalize else 'Scale ADC Over Time'
     _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data,
                normalize=normalize)
 
@@ -87,6 +87,18 @@ def _time_plot(title: str,
             total += channel_data[idx]
         summed_channel_data.append(total)
 
+    # filter noise
+    indices_to_remove = list()
+    for idx, value in enumerate(summed_channel_data):
+        if value > 971400 or value < 805800:
+            indices_to_remove.append(idx)
+    for idx in reversed(indices_to_remove):
+        for channel_data in channel_datas:
+            del channel_data[idx]
+        del summed_channel_data[idx]
+        del timestamps[idx]
+
+    # Plot
     for channel, y_data in enumerate(channel_datas):
         plt.plot(timestamps,
                  normalize_list(y_data) if normalize else y_data,
@@ -104,7 +116,7 @@ def _time_plot(title: str,
     if normalize:
         plt.ylabel('normalized mass')
     else:
-        plt.ylabel('mass (unit-less)')
+        plt.ylabel('mass (ADC)')
     plt.title(title)
     fig.tight_layout()
     plt.show()

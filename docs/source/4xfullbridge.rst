@@ -155,5 +155,37 @@ at this value, then it could be assumed that it is not in contact with the surfa
 the system could then be calculated by summing the load points that are in contact with the
 surface.
 
+Growing Data
+~~~~~~~~~~~~
+A tray of lettuce was grown while taking mass measurements via the 4xfull-bridge prototype. Here
+is a picture taken following a 160 gram harvest:
+
+.. image:: binary/4xfull-bridge_first_lettuce.png
+
+Here is the scale data over about nine days. The data is a bit noisy due to noise on the serial
+lines that will be rectified in the next prototype.
+
+.. image:: binary/4xfull-bridge_first_lettuce_9days.png
+
+Here is a close up of the summed channel data with interesting features labeled.
+
+.. image:: binary/4xfull-bridge_first_lettuce_features.png
+
+More close ups:
+
+.. image:: binary/4xfull-bridge_first_lettuce_features_2.png
+
+.. image:: binary/4xfull-bridge_first_lettuce_features_3.png
+
+It is interesting to see the jagged signal on harvest. This is due to the time it took and the
+method to harvest; i.e. a pocket knife and careful cutting.
+
+Summary:
+Although the data is noisy, this will be rectified in future prototypes. The signal for
+watering is clear and strong. The harvest is also great to see. Unexpectedly, insights into how
+the plant uptakes water with the lights on/off was observed. The rate of mass loss with the
+lights off is lower than with the lights on. This indicates that the lettuce plants up-take and
+effervesce water more with the lights on. Likely, this can be correlated to plant growth in
+future data analyses.
 
 .. _load_cell_img_src: https://www.amazon.com/Wishiot-Weighing-Half-Bridge-Bracket-Amplifier/dp/B0DCK48BSK/ref=sr_1_1_pp?crid=1M4SCPQH7IHNL&dib=eyJ2IjoiMSJ9.H2BGsNLxWSujcVh_o5Rzhqr1ofoX2lAqqf9WvkcZlLioVNqQNcsk1bB7E6QlttbleRD8uMBWqcdkAgpmapkLVcwk9sJ0qyoocBickENVBZZTrHr2iPM4hMEWk_NgSikAup8hcluY-BLO3J4Nx9mT0sOMQIzoWD-wyXjNlummE4i6iCvk8MBQgn0Yj56KlRKtOb7mz1Hc3Hv8WI7Y78YwbiHw86E3NmDx_z5VCTaAfIk.2RF6w0P8kBYXJzUFz35uBZLFe-D5kgYF96haZkUd4TY&dib_tag=se&keywords=load+cell&qid=1741122139&sprefix=load+cell%2Caps%2C134&sr=8-1
