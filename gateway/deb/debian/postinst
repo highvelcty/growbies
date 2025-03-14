@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 path_to_install_vars="${DESTDIR}/usr/lib/growbies-gateway/install_vars.sh"
 
 source "${path_to_install_vars}"

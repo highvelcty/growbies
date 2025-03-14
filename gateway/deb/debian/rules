@@ -3,8 +3,11 @@
 build:
 	./debian/build.sh
 
+clean:
+	dh_clean
+
 install:
-	./debian/install.sh;
+	./debian/install.sh
 
 %:
 	dh "$@"

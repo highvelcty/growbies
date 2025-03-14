@@ -1,9 +1,13 @@
 container_name = gateway_build
 git_root := $(shell git rev-parse --show-toplevel)
-path_to_build_sh = /code/gateway/deb/build.sh
 run_cmd = podman run --tty --interactive --volume=${git_root}:/code ${container_name}
 
 default: package
+
+clean: container
+	( \
+		${run_cmd} debian/rules clean; \
+	)
 
 container:
 	( \
@@ -17,5 +21,7 @@ enter: container
 
 package: container
 	( \
-		podman run --volume=${git_root}:/code ${container_name} ${path_to_build_sh}; \
+		${run_cmd} debuild -b \
+		--no-sign \
+		--lintian-opts --allow-root; \
 	)

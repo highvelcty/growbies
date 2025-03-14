@@ -1,13 +1,21 @@
 FROM debian:latest
 
-# Install
+ARG PKG_BUILD_DIR=/code/gateway/deb
+ARG TMP_DIR=/tmp/pkg
+
+# Install generic build dependencies
 RUN \
     apt update -y && \
     apt install dh-make -y && \
     apt install debmake -y && \
     apt install build-essential -y
 
+# Install package specific build dependencies
+RUN mkdir ${TMP_DIR}
+COPY . ${TMP_DIR}
 RUN \
-    mkdir /code && \
-    cd code
+    apt-get build-dep -y ${TMP_DIR} && \
+    rm -rf ${TMP_DIR}
 
+VOLUME /code
+WORKDIR /code/gateway/deb
