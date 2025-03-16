@@ -41,6 +41,7 @@ class Paths(Enum):
     GROWBIES_MONITOR = GROWBIES / 'monitor'
     GROWBIES_PLOT = GROWBIES / 'plot'
     GROWBIES_SAMPLE = GROWBIES / 'sample'
+    GROWBIES_SERVICE = GROWBIES / 'service'
 
 
 

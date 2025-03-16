@@ -5,7 +5,7 @@ import shlex
 import sys
 
 from . import __doc__ as pkg_doc
-from . import exec, human_input, monitor, plot, sample
+from . import exec, human_input, monitor, plot, sample, service
 from .utils.paths import Paths
 
 
@@ -17,12 +17,13 @@ class Level1Cmd(StrEnum):
     MONITOR = Paths.GROWBIES_MONITOR.value.name
     PLOT = Paths.GROWBIES_PLOT.value.name
     SAMPLE = Paths.GROWBIES_SAMPLE.value.name
+    SERVICE = Paths.GROWBIES_SERVICE.value.name
 
 parser = ArgumentParser(description=pkg_doc,
                         formatter_class=RawTextHelpFormatter)
 sub = parser.add_subparsers(dest=CMD, required=True)
 
-for pkg in (exec, human_input, monitor, plot, sample):
+for pkg in (exec, human_input, monitor, plot, sample, service):
     sub.add_parser(pkg.__name__.split('.')[-1], help=pkg.__doc__, add_help=False)
 
 ns, args = parser.parse_known_args(sys.argv[1:])
