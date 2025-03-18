@@ -1,4 +1,4 @@
-container_name = gateway_build
+container_name = growbies_build
 git_root := $(shell git rev-parse --show-toplevel)
 run_cmd = podman run --tty --interactive --volume=${git_root}:/code ${container_name}
 

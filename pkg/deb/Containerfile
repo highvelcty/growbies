@@ -1,6 +1,6 @@
 FROM debian:latest
 
-ARG PKG_BUILD_DIR=/code/gateway/deb
+ARG PKG_BUILD_DIR=/code/pkg/deb
 ARG TMP_DIR=/tmp/pkg
 
 # Install generic build dependencies
@@ -18,4 +18,4 @@ RUN \
     rm -rf ${TMP_DIR}
 
 VOLUME /code
-WORKDIR /code/gateway/deb
+WORKDIR /code/pkg/deb

@@ -1,4 +1,4 @@
-Source: growbies-gateway
+Source: growbies
 Section: utils
 Priority: optional
 Maintainer: Eric Meyer <ericallenmeyer@gmail.com>
@@ -6,8 +6,8 @@ Build-Depends: debhelper (>=13), debhelper-compat (=13), python3.11, python3.11-
 Standards-Version: 4.0.0
 Homepage: https://growbies.net
 
-Package: growbies-gateway
+Package: growbies
 Architecture: all
 Depends: python3.11, python3.11-venv
-Description:Gateway for the growbies platform.
+Description:Communication gateway for the growbies platform.
  This package is installed as a systemd service.

@@ -1,4 +1,4 @@
-"""This package defines the background gateway service."""
+"""This package defines the gateway service."""
 from enum import StrEnum
 
 from growbies.constants import APPNAME

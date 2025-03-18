@@ -7,6 +7,14 @@ dist/
 venv/
 *.egg-info/
 
+# Debian build artifacts
+pkg/deb/debian/growbies/
+pkg/deb/debian/tmp/
+pkg/deb/debian/.debhelper/
+pkg/deb/debian/*.substvars
+pkg/deb/debian/files
+pkg/growbies_*
+
 # testing coverage
 .coverage
 .coverage.*
