@@ -6,7 +6,7 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from growbies.utils import timestamp
-from growbies.utils.paths import Paths
+from growbies.utils.paths import RepoPaths
 
 
 class StdoutFilter(logging.Filter):
@@ -30,7 +30,7 @@ BACKUP_COUNT = 2
 
 def start(path: Path, file_level: int = logging.DEBUG, stdout_level: int = logging.DEBUG) \
         -> logging.Logger:
-    logger = logging.getLogger(Paths.ROOT.value.resolve().name)
+    logger = logging.getLogger(RepoPaths.ROOT.value.resolve().name)
     logger.setLevel(logging.DEBUG)
 
     fmt = logging.Formatter(f'|%(asctime)s{timestamp.UTC_Z} '

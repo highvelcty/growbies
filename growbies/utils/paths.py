@@ -2,28 +2,30 @@ import os
 from enum import Enum
 from pathlib import Path
 
-_ROOT = Path(__file__).parent.parent.parent.resolve()
-if _ROOT.is_relative_to(os.getcwd()):
-    _ROOT = _ROOT.relative_to(os.getcwd())
+from growbies import constants
+
+_REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
+if _REPO_ROOT.is_relative_to(os.getcwd()):
+    _REPO_ROOT = _REPO_ROOT.relative_to(os.getcwd())
 
 
-class Paths(Enum):
-    # /
-    ROOT = _ROOT
+class RepoPaths(Enum):
+    # .
+    ROOT = _REPO_ROOT
     DOT_COVERAGE = ROOT / '.coverage'
     DOT_ENV = ROOT / '.env'
     MAKE_FILE = ROOT / 'Makefile'
     README_MD = ROOT / 'README.md'
     RUN_TESTS_SH = ROOT / 'run_tests.sh'
 
-    # /build
+    # ./build
     BUILD = ROOT / 'build'
     BUILD_PATHS_ENV = BUILD / 'paths.env'
 
-    # /dist
+    # ./dist
     DIST = ROOT / 'dist'
 
-    # /htmlcov
+    # ./htmlcov
     HTMLCOV = ROOT / 'htmlcov'
     HTMLCOV_INDEX = HTMLCOV / 'index.html'
 
@@ -44,15 +46,8 @@ class Paths(Enum):
     GROWBIES_SERVICE = GROWBIES / 'service'
 
 
-
-    # /venv
-    VENV = ROOT / 'venv'
-
-    # /venv/bin
-    VENV_BIN = VENV / 'bin'
-    VENV_BIN_ACTIVATE = VENV_BIN / 'activate'
-
-    # /venv/extras
-    VENV_EXTRAS = VENV / 'extras'
-    VENV_EXTRAS_BUILD = VENV_EXTRAS / 'BUILD'
-    VENV_EXTRAS_TESTS = VENV_EXTRAS / 'TESTS'
+class InstallPaths(Enum):
+    VAR_LIB_GROWBIES = Path(f'/var/lib/{constants.APPNAME.lower()}')
+    VAR_LIB_GROWBIES_LOCK = VAR_LIB_GROWBIES / 'lock'
+    VAR_LIB_GROWBIES_LOCK_Q = VAR_LIB_GROWBIES_LOCK / 'cmd_queue.pkl'
+    VAR_LIB_GROWBIES_LOCK_SERVICE = VAR_LIB_GROWBIES_LOCK / 'service.lock'

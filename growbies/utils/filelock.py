@@ -1,11 +1,11 @@
 from pathlib import Path
 import fcntl
 
-from growbies.utils.paths import Paths
+from growbies.utils.paths import RepoPaths
 
 
 class FileLock(object):
-    def __init__(self, path: Path = Paths.FILELOCK.value):
+    def __init__(self, path: Path = RepoPaths.FILELOCK.value):
         self._path = path
         self._fd = None
 

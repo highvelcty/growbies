@@ -1,5 +1,7 @@
 #!/usr/bin/make -f
 
+# Todo: Source the growbies paths.env file for sharing path definitions.
+
 build:
 	./debian/build.sh
 

@@ -1,1 +1,1 @@
-"""This package defines the background gateway service."""
+"""Associate a reference scale sample with a scale under test sample."""

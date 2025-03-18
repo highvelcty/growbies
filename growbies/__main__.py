@@ -6,18 +6,18 @@ import sys
 
 from . import __doc__ as pkg_doc
 from . import exec, human_input, monitor, plot, sample, service
-from .utils.paths import Paths
+from .utils.paths import RepoPaths
 
 
 CMD = 'cmd'
 
 class Level1Cmd(StrEnum):
-    EXECUTE = Paths.GROWBIES_EXEC.value.name
-    HUMAN_INPUT = Paths.GROWBIES_HUMAN_INPUT.value.name
-    MONITOR = Paths.GROWBIES_MONITOR.value.name
-    PLOT = Paths.GROWBIES_PLOT.value.name
-    SAMPLE = Paths.GROWBIES_SAMPLE.value.name
-    SERVICE = Paths.GROWBIES_SERVICE.value.name
+    EXECUTE = RepoPaths.GROWBIES_EXEC.value.name
+    HUMAN_INPUT = RepoPaths.GROWBIES_HUMAN_INPUT.value.name
+    MONITOR = RepoPaths.GROWBIES_MONITOR.value.name
+    PLOT = RepoPaths.GROWBIES_PLOT.value.name
+    SAMPLE = RepoPaths.GROWBIES_SAMPLE.value.name
+    SERVICE = RepoPaths.GROWBIES_SERVICE.value.name
 
 parser = ArgumentParser(description=pkg_doc,
                         formatter_class=RawTextHelpFormatter)

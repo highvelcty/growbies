@@ -3,7 +3,7 @@ from enum import StrEnum
 
 from . import __doc__ as pkg_doc
 from .sample import main
-from growbies.utils.paths import Paths
+from growbies.utils.paths import RepoPaths
 from growbies import Session
 
 class Param(StrEnum):
@@ -18,7 +18,7 @@ tags = getattr(ns_args, Param.TAG)
 if tags is None:
     parser.error('Tag parameter must not be None.')
 
-for path in Paths.OUTPUT.value.iterdir():
+for path in RepoPaths.OUTPUT.value.iterdir():
     found_tags = list()
     for tag in tags:
         if tag in path.name:

@@ -4,8 +4,8 @@
 git_root := $(shell git rev-parse --show-toplevel)
 
 # This will dump the paths from the package into a form that can be used by Makefile
+# and then source the output, sharing the path definitions
 $(shell python3 -m build_lib.export_paths || false)
-
 
 # This will effectively source the paths from the package.
 include build/paths.env
