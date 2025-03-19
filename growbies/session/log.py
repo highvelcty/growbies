@@ -30,7 +30,7 @@ BACKUP_COUNT = 2
 
 def start(path: Path, file_level: int = logging.DEBUG, stdout_level: int = logging.DEBUG) \
         -> logging.Logger:
-    logger = logging.getLogger(RepoPaths.ROOT.value.resolve().name)
+    logger = logging.getLogger(RepoPaths.REPO_ROOT.value.resolve().name)
     logger.setLevel(logging.DEBUG)
 
     fmt = logging.Formatter(f'|%(asctime)s{timestamp.UTC_Z} '

@@ -5,7 +5,7 @@ import sys
 
 from . import __doc__ as pkg_doc
 from . import plot
-from growbies import Session
+from growbies.session import Session
 
 class Param(StrEnum):
     PATH = 'path'

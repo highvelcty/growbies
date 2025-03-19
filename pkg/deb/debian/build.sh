@@ -2,6 +2,7 @@
 
 set -ex
 
+# Export absolute paths
 make --environment-overrides export_paths -C "${REPO_ROOT}"
 source "${PATHS_ENV}"
 

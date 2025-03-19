@@ -2,6 +2,7 @@
 
 set -ex
 
+# Export relative paths
 make export_paths -C "${REPO_ROOT}"
 source "${PATH_DEBIAN_TMP_BUILD_PATHS_ENV}"
 

@@ -1,8 +1,7 @@
 .PHONY: tests
 .SILENT: help
 
-# This will dump the paths from the package into a form that can be used by Makefile
-# and then source the output, sharing the path definitions.
+# Export relative paths. Relative to the root of the repository
 REPO_ROOT := '.'
 $(shell REPO_ROOT=${REPO_ROOT} python3 -m build_lib.export_paths || false)
 include build/paths.env
@@ -31,7 +30,7 @@ tests:
 	./run_tests.sh
 
 ### Utilities ######################################################################################
-$(PATH_DIST):
+$(PATH_DIST): $(PATH_GROWBIES)
 	( \
 		python -m build \
 	)

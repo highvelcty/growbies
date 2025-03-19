@@ -4,25 +4,20 @@ import os
 
 from growbies import constants
 from growbies.utils import subprocess_utils
+from growbies.utils.environment import Environment
 
 
-_REPO_ROOT = os.environ.get('REPO_ROOT')
+_REPO_ROOT = os.environ.get(Environment.REPO_ROOT)
 if _REPO_ROOT is None:
     _REPO_ROOT = subprocess_utils.get_git_repo_root()
 else:
     _REPO_ROOT = Path(_REPO_ROOT)
 
-# import sys
-# sys.stderr.write(f'emey _REPO_ROOT: {_REPO_ROOT}\n')
 
 class RepoPaths(Enum):
     # .
     REPO_ROOT = _REPO_ROOT
     DOT_COVERAGE = REPO_ROOT / '.coverage'
-    DOT_ENV = REPO_ROOT / '.env'
-    MAKE_FILE = REPO_ROOT / 'Makefile'
-    README_MD = REPO_ROOT / 'README.md'
-    RUN_TESTS_SH = REPO_ROOT / 'run_tests.sh'
 
     # ./build
     BUILD = REPO_ROOT / 'build'
@@ -59,9 +54,6 @@ class RepoPaths(Enum):
     PKG_DEB_DEBIAN = PKG_DEB / 'debian'
 
 
-# import sys
-# sys.stderr.write(f'emey REPO_ROOT: {RepoPaths.REPO_ROOT.value}\n')
-
 class InstallPaths(Enum):
     # /usr/lib
     USR_LIB = Path('/usr/lib')
@@ -84,8 +76,9 @@ class InstallPaths(Enum):
 
 class DebianPaths(Enum):
     # .
-    # DEBIAN_ROOT = RepoPaths.PKG_DEB_DEBIAN.value
     DEBIAN_ROOT = RepoPaths.PKG_DEB_DEBIAN.value
+    DEBIAN_BUILD_SH = DEBIAN_ROOT / 'build.sh'
+    DEBIAN_INSTALL_SH = DEBIAN_ROOT / 'install.sh'
 
     # ./src
     DEBIAN_TMP = DEBIAN_ROOT / 'tmp'
