@@ -2,9 +2,6 @@
 
 set -ex
 
-#cd /code
-source "${PATHS_ENV}"
-
 make export_paths -C "${REPO_ROOT}"
 source "${PATH_DEBIAN_TMP_BUILD_PATHS_ENV}"
 
@@ -24,7 +21,4 @@ dh_installdirs "${PATH_VAR_LIB_GROWBIES_LOCK}"
 dh_install "${PATH_DIST}"/*.whl "${PATH_USR_LIB_GROWBIES}"
 dh_install "${PATH_BUILD_PATHS_ENV}" "${PATH_USR_LIB_GROWBIES}"
 dh_install "${PATH_PKG_BASH_SRC_GROWBIES}" "${PATH_USR_BIN}"
-
-#dh_install "${PATH_DEBIAN_TMP_OPT_GROWBIES}"/* "${PATH_USR_LIB_GROWBIES}"
-#dh_install "${PATH_DEBIAN_TMP_USR_BIN_GROWBIES}" "${PATH_USR_BIN}"
 
