@@ -1,17 +1,23 @@
 container_name = growbies_build
+
 git_root := $(shell git rev-parse --show-toplevel)
-run_cmd = podman run --tty --interactive --volume=${git_root}:/code ${container_name}
+INTERNAL_REPO_ROOT = /code
+run_cmd = podman run --tty --interactive \
+	--volume=${git_root}:${INTERNAL_REPO_ROOT} \
+	${container_name}
 
 default: package
 
 clean: container
 	( \
-		${run_cmd} debian/rules clean; \
+		${run_cmd} debian/rules -e clean; \
 	)
 
 container:
 	( \
-		podman build --tag ${container_name} .; \
+		podman build \
+		 	--env REPO_ROOT=${INTERNAL_REPO_ROOT} \
+			--tag ${container_name} .; \
 	)
 
 enter: container
@@ -21,7 +27,7 @@ enter: container
 
 package: container
 	( \
-		${run_cmd} debuild -b \
+		${run_cmd} debuild --preserve-env -b \
 		--no-sign \
 		--lintian-opts --allow-root; \
 	)

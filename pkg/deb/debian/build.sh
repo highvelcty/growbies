@@ -2,21 +2,26 @@
 
 set -ex
 
-source "${PATH_REPO_ROOT}/build/paths.env"
+make --environment-overrides export_paths -C "${REPO_ROOT}"
+source "${PATHS_ENV}"
 
-# Stage/copy supporting files into the debian directory for inclusion by the "install"
-# rule; i.e. only files found in the debian directory can be included by the "install" rule.
+# Copy the repository, excluding the directory tree containing this file, into a directory within
+# the debian directory.
 mkdir -p "${PATH_DEBIAN_TMP}"
+pushd "${REPO_ROOT}"
+tar cf - --exclude="$(basename "${PATH_PKG_DEB}")" . | (cd "${PATH_DEBIAN_TMP}" && tar xf -)
+popd
+
+# Create a virtual environment for building the python package to be installed
 ${PATH_DEBIAN_BASE_PYTHON} -m venv "${PATH_DEBIAN_VENV}"
 source "${PATH_DEBIAN_VENV_ACTIVATE}"
-pip install "${PATH_REPO_ROOT}"[BUILD]
-make -C "${PATH_REPO_ROOT}"
-cp "${PATH_DIST}"/*.whl "${PATH_DEBIAN_TMP}"
-cp "${PATH_BUILD_PATHS_ENV}" "${PATH_DEBIAN_TMP}"
+pip install "${PATH_DEBIAN_TMP}"[BUILD]
+make -C "${PATH_DEBIAN_TMP}"
 
-# Install the changelog and compress it, per DEBIANian requirements
-dh_installchangelogs
-dh_compress
+#mkdir -p "${PATH_DEBIAN_TMP_USR_LIB_GROWBIES}"~
+#cp "${PATH_DIST}"/*.whl "${PATH_DEBIAN_TMP_USR_LIB_GROWBIES}"
+#cp "${PATH_BUILD_PATHS_ENV}" "${PATH_DEBIAN_TMP_USR_LIB_GROWBIES}"
+#
+#mkdir -p "${PATH_DEBIAN_TMP_USR_BIN_GROWBIES}"
+#cp "${PATH_PKG_BASH_SRC_GROWBIES}" "${PATH_DEBIAN_TMP_USR_BIN_GROWBIES}"
 
-# Install the copyright
-dh_installdocs

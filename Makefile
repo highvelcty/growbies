@@ -3,7 +3,8 @@
 
 # This will dump the paths from the package into a form that can be used by Makefile
 # and then source the output, sharing the path definitions.
-$(shell python3 -m build_lib.export_paths || false)
+REPO_ROOT := '.'
+$(shell REPO_ROOT=${REPO_ROOT} python3 -m build_lib.export_paths || false)
 include build/paths.env
 
 ### Interface ######################################################################################
@@ -21,13 +22,15 @@ clean:
 
 coverage: $(PATH_DOT_COVERAGE)
 
+export_paths:
+	echo "Paths exported by way of Makefile execution."
+
 package: $(PATH_DIST)
 
 tests:
 	./run_tests.sh
 
 ### Utilities ######################################################################################
-#$(PATH_DIST): $(PATH_GROWBIES)
 $(PATH_DIST):
 	( \
 		python -m build \

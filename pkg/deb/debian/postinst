@@ -7,3 +7,6 @@ source "${DESTDIR}/usr/lib/growbies/paths.env"
 ${PATH_DEBIAN_BASE_PYTHON} -m venv "${PATH_USR_LIB_GROWBIES_VENV}"
 source "${PATH_USR_LIB_GROWBIES_VENV_ACTIVATE}"
 pip install "${PATH_USR_LIB_GROWBIES}"/*.whl
+rm "${PATH_USR_LIB_GROWBIES}"/*.whl
+
+

@@ -11,11 +11,13 @@ RUN \
     apt install build-essential -y
 
 # Install package specific build dependencies
-RUN mkdir ${TMP_DIR}
-COPY . ${TMP_DIR}
+RUN mkdir -p ${TMP_DIR}/debian
+COPY ./debian/control ${TMP_DIR}/debian
 RUN \
     apt-get build-dep -y ${TMP_DIR} && \
     rm -rf ${TMP_DIR}
 
-VOLUME /code
-WORKDIR /code/pkg/deb
+ENV REPO_ROOT=${REPO_ROOT}
+ENV PATHS_ENV=${REPO_ROOT}/build/paths.env
+VOLUME ${REPO_ROOT}
+WORKDIR ${REPO_ROOT}/pkg/deb
