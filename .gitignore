@@ -19,7 +19,7 @@ pkg/growbies_*
 .coverage
 .coverage.*
 htmlcov/
-output/
-
+output/*
+!output/.gitkeep
 # IDE
 .idea

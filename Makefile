@@ -9,15 +9,11 @@ include build/paths.env
 ### Interface ######################################################################################
 default: package
 
-clean:
-	( \
-		rm -rf $(PATH_DOT_COVERAGE).*; \
-		rm -rf $(PATH_BUILD); \
-		rm -rf $(PATH_DIST); \
-		rm -rf $(PATH_HTMLCOV); \
-		rm -rf $(PATH_VENV); \
-		rm -rf *.egg-info; \
-	)
+clean: clean_pkg
+	 git clean -xfd --exclude ${PATH_OUTPUT}
+
+clean_pkg:
+	git clean -xfd -f ${PATH_PKG}
 
 coverage: $(PATH_DOT_COVERAGE)
 

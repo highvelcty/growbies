@@ -7,16 +7,10 @@ run_cmd = podman run --tty --interactive \
 	--volume=${REPO_ROOT}:${INTERNAL_REPO_ROOT} \
 	${container_name}
 
-path_to_build_package = $(dpkg-parsechangelog -S Source)
-
 default: package
 
 clean:
-	( \
-		rm -f debian/*.substvars; \
-		rm -rf debian/files; \
-#		rm -rf "debian/${path_to_build_package}"; \
-	)
+	make clean_pkg -C ${REPO_ROOT}
 
 container:
 	( \
