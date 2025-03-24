@@ -12,14 +12,14 @@ default: package
 clean:
 	make clean_pkg -C ${REPO_ROOT}
 
-container:
+image:
 	( \
 		podman build \
 		 	--env REPO_ROOT=${INTERNAL_REPO_ROOT} \
 			--tag ${container_name} .; \
 	)
 
-enter: container
+enter: image
 	( \
 		${run_cmd} /bin/bash; \
 	)
@@ -27,7 +27,7 @@ enter: container
 export_paths:
 	make --environment-overrides export_paths -C "${REPO_ROOT}"
 
-package: container export_paths
+package: image export_paths
 	( \
 		${run_cmd} debuild --preserve-env -b \
 		--no-sign \

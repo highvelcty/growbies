@@ -1,0 +1,11 @@
+[Unit]
+Description=Growbies Gateway Service
+After=network.target
+
+[Service]
+ExecStart=/usr/sbin/growbies service start
+ExecStop=/usr/sbin/growbies service stop
+SuccessExitStatus=0
+
+[Install]
+WantedBy=multi-user.target
