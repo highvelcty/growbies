@@ -24,7 +24,7 @@ def _truncate_for_new_data(outf: TextIO):
                 return False
 
 def add_value_to_last_line(path: Path, value: int):
-    with (FileLock(), open(path, 'a+') as outf):
+    with FileLock(path, 'a+') as outf:
         if _truncate_for_new_data(outf):
             outf.write(f',{value}\n')
             print(f"{INDENT}{value} written to last row's column.")

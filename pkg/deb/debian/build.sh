@@ -3,14 +3,13 @@
 set -ex
 
 # Export absolute paths
-make --environment-overrides export_paths -C "${REPO_ROOT}"
+make --environment-overrides export_paths -C "${INERNAL_REPO_ROOT}"
 source "${PATHS_ENV}"
 
-# Copy the repository, excluding the directory tree containing this file, into a directory within
-# the debian directory.
+# Copy the repository, excluding the directory containing this script to avoid a circular copy.
 mkdir -p "${PATH_DEBIAN_TMP}"
 pushd "${REPO_ROOT}"
-tar cf - --exclude="$(basename "${PATH_PKG_DEB}")" . | (cd "${PATH_DEBIAN_TMP}" && tar xf -)
+tar cf - --exclude="$(basename "${PATH_PKG_DEB_DEBIAN}")" . | (cd "${PATH_DEBIAN_TMP}" && tar xf -)
 popd
 
 # Create a virtual environment for building the python package to be installed

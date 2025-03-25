@@ -2,16 +2,17 @@
 
 .PHONY: export_paths
 
-include ${REPO_ROOT}/build/paths.env
+include ${PATHS_ENV}
 
 build:
-	./debian/build.sh
+	echo "emey emey emey: ${PATHS_ENV}"
+#	./${PATH_DEBIAN_BUILD_SH}
 
 clean:
 	dh_clean
 
 install:
-	./debian/install.sh
+#	./${PATH_DEBIAN_INSTALL_SH}
 
 %:
 	dh "$@"

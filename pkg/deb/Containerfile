@@ -1,24 +1,37 @@
 FROM debian:latest
 
-ARG PKG_BUILD_DIR=/code/pkg/deb
-ARG TMP_DIR=/tmp/pkg
-
 # Install generic build dependencies
 RUN \
     apt update -y && \
     apt install dh-make -y && \
     apt install debmake -y && \
-    apt install build-essential -y
+    apt install build-essential -y && \
+    apt install -y systemd
 
-# Install package specific build dependencies
-RUN mkdir -p ${TMP_DIR}/debian
-COPY ./debian/control ${TMP_DIR}/debian
-RUN \
-    apt-get build-dep -y ${TMP_DIR} && \
-    rm -rf ${TMP_DIR}
+WORKDIR ${REPO_ROOT}
+
+# # Copy the package to be built into the image
+# COPY . /code
+# # For some reason the above command did not copy the tmp directory. Possibly to avoid a circular
+# # copy? anyways, this seems to patch that..
+# COPY debian/tmp /code/tmp
+
+COPY . .
+# RUN tar xf debian/tmp/source.tar debian/tmp/
+# ADD debian/tmp/source.tar /code
+
+# COPY debian/tmp/build/paths.env /code
+
+# RUN \
+#     # Install package specific build dependencies
+#     apt-get build-dep -y . && \
+#     # Build the package
+#     debuild --preserve-env -b --no-sign --lintian-opts --allow-root
+
 
 ENV REPO_ROOT=${REPO_ROOT}
-ENV PATHS_ENV=${REPO_ROOT}/build/paths.env
-VOLUME ${REPO_ROOT}
-WORKDIR ${REPO_ROOT}/pkg/deb
+ENV PATHS_ENV=${REPO_ROOT}/tmp/build/paths.env
+# WORKDIR ${INTERNAL_REPO_ROOT}/pkg/deb
 
+# CMD [ "/usr/lib/systemd/systemd" ]
+CMD [ "/usr/lib/growbies/init.sh" ]

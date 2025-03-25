@@ -5,18 +5,19 @@ import os
 import pickle
 import time
 
-from . import Cmd
+from . import Op
+from growbies.utils.filelock import FileLock
 from growbies.utils.paths import InstallPaths
 
 logger = logging.getLogger(__name__)
 
 
 class CmdHdr(object):
-    _cmd: Cmd = None
+    _op: Op = None
 
     @property
-    def cmd(self) -> Cmd:
-        return self._cmd
+    def op(self) -> Op:
+        return self._op
 
 
 class BaseCmd(CmdHdr):
@@ -25,7 +26,7 @@ TBaseCmd = TypeVar('TBaseCmd', bound=BaseCmd)
 
 
 class StopCmd(BaseCmd):
-    _cmd = Cmd.STOP
+    _op = Op.STOP
 
 
 class Queue(object):
@@ -37,35 +38,53 @@ class Queue(object):
         self._cached_mtime = 0
 
     def put(self, item: TBaseCmd):
-        with open(self.PATH, 'w+') as file:
-            with flock(file.fileno(), LOCK_EX):
-                # noinspection PyTypeChecker
+        contents = list()
+        with open(self.PATH, 'ab+') as file:
+            file.seek(0)
+            try:
                 contents: list[TBaseCmd] = pickle.load(file)
-                contents.append(item)
-                file.seek(0)
-                file.truncate()
-                # noinspection PyTypeChecker
-                pickle.dump(contents, file)
+            except EOFError:
+                pass
+            contents.append(item)
+            file.seek(0)
+            file.truncate()
+            # noinspection PyTypeChecker
+            pickle.dump(contents, file)
 
     def get(self) -> list[TBaseCmd]:
+        contents = list()
         while True:
             current_mtime = os.stat(self.PATH).st_mtime
             if self._cached_mtime == current_mtime:
+                logger.error('emey polling')
                 time.sleep(self.QUEUE_POLLING_INTERVAL_SEC)
             else:
-                with open(self.PATH, 'r') as file:
-                    # noinspection PyTypeChecker
-                    contents: list[TBaseCmd] = pickle.load(file)
-                if contents:
-                    return contents
+                with FileLock(self.PATH, 'ab+') as file:
+                    file.seek(0)
+                    try:
+                        contents: list[TBaseCmd] = pickle.load(file)
+                    except EOFError:
+                        pass
+                    file.seek(0)
+                    file.truncate()
+
+                self._cached_mtime = os.stat(self.PATH).st_mtime
+                break
+
+        return contents
 
 
 def main():
     queue = Queue()
-    while True:
-        cmd = queue.get()
-
-        if cmd == Cmd.STOP:
-            break
-        else:
-            logger.error(f'Unknown command {cmd} received.')
+    done = False
+    try:
+        while not done:
+            for cmd in queue.get():
+                if cmd.op == Op.STOP:
+                    done = True
+                    break
+                else:
+                    logger.error(f'Unknown command {cmd} received.')
+    except KeyboardInterrupt:
+        queue.put(StopCmd())
+        main()

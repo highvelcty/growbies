@@ -15,7 +15,7 @@ CHANNELS = 4
 logger = logging.getLogger(__name__)
 
 def _continue_stream(sess: Session):
-    with FileLock(), open(sess.path_to_data, 'a+') as outf:
+    with FileLock(sess.path_to_data, 'a+') as outf:
         idx = outf.tell()
         while True:
             idx = max(0, idx - 1)
@@ -65,7 +65,7 @@ def main(sess: Session):
                         out_str = f'{ts}'
                         for sample in samples:
                             out_str += f',{sample}'
-                        with FileLock(), open(sess.path_to_data, 'a+') as outf:
+                        with FileLock(sess.path_to_data, 'a+') as outf:
                             outf.write(f'{out_str}\n')
                         print(f'{str(elapsed_time)}: {out_str}')
                         iteration += 1
