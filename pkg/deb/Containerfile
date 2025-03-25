@@ -8,11 +8,8 @@ RUN \
     apt install build-essential -y && \
     apt install -y systemd
 
-ARG CWD=/code
-WORKDIR ${CWD}
-ENV REL_PATH_SRC=debian/src
-ENV PATH_SRC=${CWD}/${REL_PATH_SRC}
-
+WORKDIR /code
+ENV PATH_SRC=debian/src
 ENV PATHS_ENV=${PATH_SRC}/build/paths.env
 
 COPY . .

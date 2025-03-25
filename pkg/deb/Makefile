@@ -4,7 +4,11 @@ REPO_ROOT := $(shell git rev-parse --show-toplevel || true)
 
 run_cmd = podman run --tty --interactive --rm
 
+#$(shell make export_paths -C ../..)
+
 default: image
+
+
 
 image:
 	make deb_src_copy -C "${REPO_ROOT}"

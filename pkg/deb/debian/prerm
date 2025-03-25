@@ -2,6 +2,7 @@
 
 set -e
 
-source "/usr/lib/growbies/paths.env"
+source /usr/lib/growbies/paths.env
 
 rm -rf "${PATH_USR_LIB_GROWBIES_VENV}"
+

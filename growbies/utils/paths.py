@@ -1,18 +1,7 @@
 from enum import Enum
 from pathlib import Path
-import os
 
 from growbies import constants
-from growbies.utils import subprocess_utils
-from growbies.utils.environment import Environment
-
-
-# _REPO_ROOT = os.environ.get(Environment.REPO_ROOT)
-#
-# if _REPO_ROOT is None:
-#     _REPO_ROOT = subprocess_utils.get_git_repo_root()
-# else:
-#     _REPO_ROOT = Path(_REPO_ROOT)
 
 class RepoPaths(Enum):
     # .
@@ -25,10 +14,6 @@ class RepoPaths(Enum):
 
     # ./dist
     DIST = REPO_ROOT / 'dist'
-
-    # ./htmlcov
-    HTMLCOV = REPO_ROOT / 'htmlcov'
-    HTMLCOV_INDEX = HTMLCOV / 'index.html'
 
     # ./.idea
     DOT_IDEA = REPO_ROOT / '.idea'
@@ -53,9 +38,9 @@ class RepoPaths(Enum):
     PKG = REPO_ROOT / 'pkg'
     PKG_BASH_SRC = PKG / 'bash_src'
     PKG_BASH_SRC_GROWBIES = PKG_BASH_SRC / 'growbies'
-    PKG_BASH_SRC_INIT_SH = PKG_BASH_SRC / 'init.sh'
     PKG_DEB = PKG / 'deb'
     PKG_DEB_DEBIAN = PKG_DEB / 'debian'
+    PKG_DEB_DEBIAN_SRC = PKG_DEB_DEBIAN / 'src'
 
 
 class InstallPaths(Enum):
@@ -80,21 +65,10 @@ class InstallPaths(Enum):
 
 class DebianPaths(Enum):
     # .
-    DEBIAN_ROOT = RepoPaths.PKG_DEB_DEBIAN.value
+    DEBIAN_ROOT = Path(RepoPaths.PKG_DEB_DEBIAN.value.name)
     DEBIAN_BUILD_SH = DEBIAN_ROOT / 'build.sh'
     DEBIAN_INSTALL_SH = DEBIAN_ROOT / 'install.sh'
     DEBIAN_SRC = DEBIAN_ROOT / 'src'
-    DEBIAN_SOURCE_TAR = DEBIAN_ROOT / 'source.tar'
-
-    # ./tmp
-    DEBIAN_TMP = DEBIAN_ROOT / 'tmp'
-    DEBIAN_TMP_BUILD_PATHS_ENV = DEBIAN_TMP / 'build/paths.env'
-    DEBIAN_TMP_USR_LIB_GROWBIES = DEBIAN_TMP / 'opt/growbies'
-    DEBIAN_TMP_USR_BIN_GROWBIES = DEBIAN_TMP / 'usr/local/bin'
-
-    # ./venv
-    DEBIAN_VENV = DEBIAN_ROOT / 'venv'
-    DEBIAN_VENV_ACTIVATE = DEBIAN_VENV / 'bin/activate'
 
     # command
     DEBIAN_BASE_PYTHON = 'python3.11'

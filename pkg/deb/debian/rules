@@ -1,13 +1,16 @@
 #!/usr/bin/make -f
 
+#include debian/src/build/paths.env
+include ${PATHS_ENV}
+
 build:
-	./debian/build.sh
+	./"${PATH_DEBIAN_BUILD_SH}"
 
 clean:
 	dh_clean
 
 install:
-	./debian/install.sh
+	./"${PATH_DEBIAN_INSTALL_SH}"
 
 %:
 	dh "$@"
