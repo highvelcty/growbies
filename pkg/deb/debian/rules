@@ -1,17 +1,17 @@
 #!/usr/bin/make -f
 
-.PHONY: export_paths
-
 include ${PATHS_ENV}
 
 build:
-	echo "emey emey emey: ${PATHS_ENV}"
+	echo "emey build ${PATH_USR_LIB}"
+
 #	./${PATH_DEBIAN_BUILD_SH}
 
 clean:
 	dh_clean
 
 install:
+	echo "emey install"
 #	./${PATH_DEBIAN_INSTALL_SH}
 
 %:

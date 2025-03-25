@@ -20,7 +20,7 @@ clean_pkg:
 
 coverage: $(PATH_DOT_COVERAGE)
 
-deb_src_copy: ${PATH_DEBIAN_TMP}
+deb_src_copy: ${PATH_DEBIAN_SRC}
 
 export_paths:
 	echo "Paths exported by way of Makefile execution."
@@ -43,15 +43,11 @@ $(PATH_DOT_COVERAGE):
 		coverage report; \
 	)
 
-${PATH_DEBIAN_TMP}: $(PATH_GROWBIES)
+${PATH_DEBIAN_SRC}: $(PATH_GROWBIES)
 	( \
-		mkdir -p ${PATH_DEBIAN_TMP}; \
-		tar  --exclude=${PATH_OUTPUT} --exclude=${PATH_DEBIAN_TMP} --exclude='.[^/]*' \
-		-cf ${PATH_DEBIAN_TMP_SOURCE_TAR} .; \
-		touch ${PATH_DEBIAN_TMP}; \
+		mkdir -p ${PATH_DEBIAN_SRC}; \
+		tar  --exclude=${PATH_OUTPUT} --exclude=pkg --exclude='.[^/]*' \
+		-cf - . | tar xf - -C ${PATH_DEBIAN_SRC}; \
+		touch ${PATH_DEBIAN_SRC}; \
 	)
 
-
-
-#tar cf - --exclude="${PATH_PKG_DEB_DEBIAN}" . | \
-#(pushd "${PATH_DEBIAN_TMP}" &&	tar xf - && popd); \

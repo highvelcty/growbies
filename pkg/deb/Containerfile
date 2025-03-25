@@ -10,28 +10,16 @@ RUN \
 
 WORKDIR ${REPO_ROOT}
 
-# # Copy the package to be built into the image
-# COPY . /code
-# # For some reason the above command did not copy the tmp directory. Possibly to avoid a circular
-# # copy? anyways, this seems to patch that..
-# COPY debian/tmp /code/tmp
-
 COPY . .
-# RUN tar xf debian/tmp/source.tar debian/tmp/
-# ADD debian/tmp/source.tar /code
 
-# COPY debian/tmp/build/paths.env /code
-
-# RUN \
-#     # Install package specific build dependencies
-#     apt-get build-dep -y . && \
-#     # Build the package
-#     debuild --preserve-env -b --no-sign --lintian-opts --allow-root
+RUN \
+    # Install package specific build dependencies
+    apt-get build-dep -y . && \
+    # Build the package
+    debuild --preserve-env -b --no-sign --lintian-opts --allow-root
 
 
 ENV REPO_ROOT=${REPO_ROOT}
-ENV PATHS_ENV=${REPO_ROOT}/tmp/build/paths.env
-# WORKDIR ${INTERNAL_REPO_ROOT}/pkg/deb
+ENV PATHS_ENV=${REPO_ROOT}/debian/src/build/paths.env
 
-# CMD [ "/usr/lib/systemd/systemd" ]
-CMD [ "/usr/lib/growbies/init.sh" ]
+CMD [ "/usr/lib/systemd/systemd" ]

@@ -83,10 +83,11 @@ class DebianPaths(Enum):
     DEBIAN_ROOT = RepoPaths.PKG_DEB_DEBIAN.value
     DEBIAN_BUILD_SH = DEBIAN_ROOT / 'build.sh'
     DEBIAN_INSTALL_SH = DEBIAN_ROOT / 'install.sh'
+    DEBIAN_SRC = DEBIAN_ROOT / 'src'
+    DEBIAN_SOURCE_TAR = DEBIAN_ROOT / 'source.tar'
 
-    # ./src
+    # ./tmp
     DEBIAN_TMP = DEBIAN_ROOT / 'tmp'
-    DEBIAN_TMP_SOURCE_TAR = DEBIAN_TMP / 'source.tar'
     DEBIAN_TMP_BUILD_PATHS_ENV = DEBIAN_TMP / 'build/paths.env'
     DEBIAN_TMP_USR_LIB_GROWBIES = DEBIAN_TMP / 'opt/growbies'
     DEBIAN_TMP_USR_BIN_GROWBIES = DEBIAN_TMP / 'usr/local/bin'
