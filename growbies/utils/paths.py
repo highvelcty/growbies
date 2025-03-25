@@ -7,16 +7,16 @@ from growbies.utils import subprocess_utils
 from growbies.utils.environment import Environment
 
 
-_REPO_ROOT = os.environ.get(Environment.REPO_ROOT)
-
-if _REPO_ROOT is None:
-    _REPO_ROOT = subprocess_utils.get_git_repo_root()
-else:
-    _REPO_ROOT = Path(_REPO_ROOT)
+# _REPO_ROOT = os.environ.get(Environment.REPO_ROOT)
+#
+# if _REPO_ROOT is None:
+#     _REPO_ROOT = subprocess_utils.get_git_repo_root()
+# else:
+#     _REPO_ROOT = Path(_REPO_ROOT)
 
 class RepoPaths(Enum):
     # .
-    REPO_ROOT = _REPO_ROOT
+    REPO_ROOT = Path('.')
     DOT_COVERAGE = REPO_ROOT / '.coverage'
 
     # ./build

@@ -1,18 +1,13 @@
 #!/usr/bin/make -f
 
-include ${PATHS_ENV}
-
 build:
-	echo "emey build ${PATH_USR_LIB}"
-
-#	./${PATH_DEBIAN_BUILD_SH}
+	./debian/build.sh
 
 clean:
 	dh_clean
 
 install:
-	echo "emey install"
-#	./${PATH_DEBIAN_INSTALL_SH}
+	./debian/install.sh
 
 %:
 	dh "$@"

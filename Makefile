@@ -46,8 +46,10 @@ $(PATH_DOT_COVERAGE):
 ${PATH_DEBIAN_SRC}: $(PATH_GROWBIES)
 	( \
 		mkdir -p ${PATH_DEBIAN_SRC}; \
-		tar  --exclude=${PATH_OUTPUT} --exclude=pkg --exclude='.[^/]*' \
+		tar  --exclude=${PATH_OUTPUT} --exclude=${PKG_DEB_DEBIAN} --exclude='.[^/]*' \
 		-cf - . | tar xf - -C ${PATH_DEBIAN_SRC}; \
+		# Need to touch the directory because it is the directory mtime that triggers Makefile and
+		# mkdir -p will not update mtime if it exists.
 		touch ${PATH_DEBIAN_SRC}; \
 	)
 
