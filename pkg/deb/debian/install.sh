@@ -1,8 +1,8 @@
 #!/bin/bash
 
-set -ex
-
 source "${PATHS_ENV}"
+
+set -ex
 
 # Install the changelog and compress it, per debian requirements
 dh_installchangelogs

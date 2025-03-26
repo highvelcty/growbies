@@ -13,15 +13,8 @@ src_watch_ext = ${src_watch}
 src_watch_ext += $(shell find ${PATH_PKG_BASH_SRC} -type f -name '*')
 
 ### Interface ######################################################################################
-
-emey:
-	@echo ${src_watch_ext} || /dev/null
-
-clean: clean_pkg
+clean:
 	 git clean -xfd --exclude ${PATH_OUTPUT} --exclude ${PATH_DOT_IDEA}
-
-clean_pkg:
-	git clean -xfd -f ${PATH_PKG}
 
 coverage: $(PATH_DOT_COVERAGE)
 

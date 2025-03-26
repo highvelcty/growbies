@@ -8,11 +8,10 @@ RUN \
     apt install build-essential -y && \
     apt install -y systemd
 
-WORKDIR /code
+ARG PATH_CODE="/code"
+WORKDIR ${PATH_CODE}
 ENV PATH_SRC=debian/src
 ENV PATHS_ENV=${PATH_SRC}/build/paths.env
-
-COPY . .
 
 RUN \
     # Install package specific build dependencies

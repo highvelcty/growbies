@@ -1,5 +1,5 @@
 from argparse import ArgumentParser, RawTextHelpFormatter
-import fcntl
+import errno
 import logging
 import sys
 
@@ -27,7 +27,12 @@ queue = service.Queue()
 
 if Op.START == cmd:
     path_to_service_lock_file = InstallPaths.VAR_LIB_GROWBIES_LOCK_SERVICE.value
-    with FileLock(InstallPaths.VAR_LIB_GROWBIES_LOCK_SERVICE.value, 'w') as lock:
-        service.main()
+    try:
+        with FileLock(InstallPaths.VAR_LIB_GROWBIES_LOCK_SERVICE.value, 'w') as lock:
+            service.main()
+    except BlockingIOError as err:
+        if err.errno == errno.EAGAIN:
+            logger.error('Unable to exclusively lock the service main loop file. Most likely, '
+                         'another process has it.')
 elif Op.STOP == cmd:
     queue.put(service.StopCmd())

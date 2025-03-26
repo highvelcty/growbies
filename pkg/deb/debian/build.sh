@@ -1,8 +1,7 @@
 #!/bin/bash
 
-set -ex
-
 source "${PATHS_ENV}"
+set -ex
 cd "${PATH_SRC}"
 
 # Create a virtual environment for building the python package to be installed
