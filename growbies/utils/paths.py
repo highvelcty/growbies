@@ -38,6 +38,7 @@ class RepoPaths(Enum):
     PKG = REPO_ROOT / 'pkg'
     PKG_BASH_SRC = PKG / 'bash_src'
     PKG_BASH_SRC_GROWBIES = PKG_BASH_SRC / 'growbies'
+    PKG_BASH_SRC_INIT_SH = PKG_BASH_SRC / 'init.sh'
     PKG_DEB = PKG / 'deb'
     PKG_DEB_DEBIAN = PKG_DEB / 'debian'
     PKG_DEB_DEBIAN_SRC = PKG_DEB_DEBIAN / 'src'
