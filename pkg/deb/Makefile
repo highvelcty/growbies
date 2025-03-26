@@ -1,4 +1,4 @@
-default: package-dist
+default: package
 container_name = growbies_build
 
 INTERNAL_WORKDIR = /code
@@ -25,13 +25,14 @@ enter:
 export_paths:
 	make --environment-overrides export_paths -C "${REPO_ROOT}"
 
-package-dist:
-package-repo:
-package-%: image
+package: image
+	( \
+	path=$$(basename ${PATH_PKG_DEB_DIST}); \
 	${run_cmd} ${container_name} \
-		bash -c "mv /growbies*.deb ${*} && \
-				 cd ${*} \
+		bash -c "mv /growbies*.deb $${path} && \
+				 cd $${path} \
 				 && dpkg-scanpackages --multiversion . | xz > Packages.xz;"; \
+	)
 
 
 start:
