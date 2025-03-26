@@ -1,3 +1,4 @@
+default: package-dist
 container_name = growbies_build
 
 INTERNAL_WORKDIR = /code
@@ -10,12 +11,13 @@ include $(REPO_ROOT)/build/paths.env
 run_cmd = podman run --tty --interactive --rm \
 	--volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR}
 
-default: package
-
 image:
 	make deb_src_copy -C "${REPO_ROOT}"
-	podman build --volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR} --tag ${container_name} \
-	--build-arg PATH_CODE=${INTERNAL_WORKDIR} .
+	podman build \
+		--volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR} \
+		--tag ${container_name} \
+		--build-arg PATH_CODE=${INTERNAL_WORKDIR} \
+		.
 
 enter:
 	podman exec -it ${container_name} /bin/bash
@@ -23,13 +25,14 @@ enter:
 export_paths:
 	make --environment-overrides export_paths -C "${REPO_ROOT}"
 
-package: image
-	( \
-		${run_cmd} ${container_name} \
-			bash -c "mv /growbies*.deb repo && \
-					 cd repo \
-					 && dpkg-scanpackages --multiversion . | xz > Packages.xz;"; \
-	)
+package-dist:
+package-repo:
+package-%: image
+	${run_cmd} ${container_name} \
+		bash -c "mv /growbies*.deb ${*} && \
+				 cd ${*} \
+				 && dpkg-scanpackages --multiversion . | xz > Packages.xz;"; \
+
 
 start:
 	${run_cmd} --detach --name ${container_name} ${container_name}

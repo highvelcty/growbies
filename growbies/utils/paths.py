@@ -41,6 +41,7 @@ class RepoPaths(Enum):
     PKG_DEB = PKG / 'deb'
     PKG_DEB_DEBIAN = PKG_DEB / 'debian'
     PKG_DEB_DEBIAN_SRC = PKG_DEB_DEBIAN / 'src'
+    PKG_DEB_DIST = PKG_DEB / 'dist'
     PKG_DEB_REPO = PKG_DEB / 'repo'
 
 
