@@ -29,14 +29,5 @@ if Op.START == cmd:
     path_to_service_lock_file = InstallPaths.VAR_LIB_GROWBIES_LOCK_SERVICE.value
     with FileLock(InstallPaths.VAR_LIB_GROWBIES_LOCK_SERVICE.value, 'w') as lock:
         service.main()
-
-
-    # with open(path_to_service_lock_file, 'w') as service_lock_file:
-    #     try:
-    #         with fcntl.flock(service_lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB):
-    #             service.main()
-    #     except BlockingIOError as err:
-    #         logger.exception(f'Unable to obtain exclusive lock file at '
-    #                          f'"{path_to_service_lock_file}"')
 elif Op.STOP == cmd:
     queue.put(service.StopCmd())

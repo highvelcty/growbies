@@ -11,7 +11,6 @@ RUN \
 WORKDIR /code
 ENV PATH_SRC=debian/src
 ENV PATHS_ENV=${PATH_SRC}/build/paths.env
-ARG INIT_SH=${PATH_SRC}/pkg/bash_src/init.sh
 
 COPY . .
 
@@ -20,8 +19,7 @@ RUN \
     apt-get build-dep -y . && \
     # Build the package
     debuild --preserve-env -b --no-sign --lintian-opts --allow-root && \
-    apt install /growbies*.deb
+    apt install /growbies*.deb && \
+    systemctl enable growbies
 
-CMD ${INIT_SH}
-
-# CMD [ "/usr/lib/systemd/systemd" ]
+CMD [ "/usr/lib/systemd/systemd" ]

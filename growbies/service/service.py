@@ -1,4 +1,3 @@
-from fcntl import flock, LOCK_EX
 from typing import TypeVar
 import logging
 import os
@@ -37,26 +36,18 @@ class Queue(object):
         self.PATH.touch(exist_ok=True)
         self._cached_mtime = 0
 
-    def put(self, item: TBaseCmd):
-        contents = list()
-        with open(self.PATH, 'ab+') as file:
-            file.seek(0)
-            try:
-                contents: list[TBaseCmd] = pickle.load(file)
-            except EOFError:
-                pass
-            contents.append(item)
-            file.seek(0)
-            file.truncate()
-            # noinspection PyTypeChecker
-            pickle.dump(contents, file)
+    def flush(self):
+        with FileLock(self.PATH, 'w'):
+            pass
 
     def get(self) -> list[TBaseCmd]:
         contents = list()
+        iteration = 0
         while True:
             current_mtime = os.stat(self.PATH).st_mtime
             if self._cached_mtime == current_mtime:
-                logger.error('emey polling')
+                logger.error(f'emey {iteration}')
+                iteration += 1
                 time.sleep(self.QUEUE_POLLING_INTERVAL_SEC)
             else:
                 with FileLock(self.PATH, 'ab+') as file:
@@ -73,9 +64,24 @@ class Queue(object):
 
         return contents
 
+    def put(self, item: TBaseCmd):
+        contents = list()
+        # with open(self.PATH, 'ab+') as file:
+        with FileLock(self.PATH, 'ab+') as file:
+            file.seek(0)
+            try:
+                contents: list[TBaseCmd] = pickle.load(file)
+            except EOFError:
+                pass
+            contents.append(item)
+            file.seek(0)
+            file.truncate()
+            # noinspection PyTypeChecker
+            pickle.dump(contents, file)
 
 def main():
     queue = Queue()
+    queue.flush()
     done = False
     try:
         while not done:
