@@ -4,7 +4,7 @@
 default: package
 
 build/paths.env: build_lib/export_paths.py
-	python $<
+	PYTHONPATH=$(CURDIR) python $<
 
 include build/paths.env
 
@@ -21,7 +21,7 @@ coverage: $(PATH_DOT_COVERAGE)
 deb_src_copy: ${PATH_PKG_DEB_DEBIAN_SRC}
 
 export_paths:
-	echo "Paths exported by way of Makefile execution."
+	@echo "Paths exported by way of Makefile execution."
 
 package: $(PATH_DIST) $(src_watch)
 

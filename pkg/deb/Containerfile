@@ -18,7 +18,7 @@ RUN \
     apt-get build-dep -y . && \
     # Build the package
     debuild --preserve-env -b --no-sign --lintian-opts --allow-root && \
-    apt install /growbies*.deb && \
+    apt install -y /growbies*.deb && \
     systemctl enable growbies
 
 CMD [ "/usr/lib/systemd/systemd" ]

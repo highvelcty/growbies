@@ -1,5 +1,7 @@
 default: package
-container_name = growbies_build
+
+# ?= means to assign only if undefined
+CONTAINER ?= growbies_build
 
 INTERNAL_WORKDIR = /code
 REPO_ROOT := $(shell git rev-parse --show-toplevel || true)
@@ -15,12 +17,12 @@ image:
 	make deb_src_copy -C "${REPO_ROOT}"
 	podman build \
 		--volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR} \
-		--tag ${container_name} \
+		--tag ${CONTAINER} \
 		--build-arg PATH_CODE=${INTERNAL_WORKDIR} \
 		.
 
 enter:
-	podman exec -it ${container_name} /bin/bash
+	podman exec -it ${CONTAINER} /bin/bash
 
 export_paths:
 	make --environment-overrides export_paths -C "${REPO_ROOT}"
@@ -28,15 +30,16 @@ export_paths:
 package: image
 	( \
 	path=$$(basename ${PATH_PKG_DEB_DIST}); \
-	${run_cmd} ${container_name} \
-		bash -c "mv /growbies*.deb $${path} && \
+	${run_cmd} ${CONTAINER} \
+		bash -c "mkdir -p $${path} && \
+		         mv /growbies*.deb $${path}/ && \
 				 cd $${path} \
 				 && dpkg-scanpackages --multiversion . | xz > Packages.xz;"; \
 	)
 
 
 start:
-	${run_cmd} --detach --name ${container_name} ${container_name}
+	${run_cmd} --detach --name ${CONTAINER} ${CONTAINER}
 
 stop:
-	podman container exec -it ${container_name} systemctl halt
+	podman container exec -it ${CONTAINER} systemctl halt
