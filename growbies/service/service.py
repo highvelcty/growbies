@@ -42,12 +42,9 @@ class Queue(object):
 
     def get(self) -> list[TBaseCmd]:
         contents = list()
-        iteration = 0
         while True:
             current_mtime = os.stat(self.PATH).st_mtime
             if self._cached_mtime == current_mtime:
-                logger.error(f'emey {iteration}')
-                iteration += 1
                 time.sleep(self.QUEUE_POLLING_INTERVAL_SEC)
             else:
                 with FileLock(self.PATH, 'ab+') as file:

@@ -104,10 +104,9 @@ void Growbies::execute(PacketHdr* packet_hdr) {
         send_packet(resp);
     }
     else if (packet_hdr->type == CMD_SET_CHANNEL) {
-        RespVoid resp;
         CmdSetChannel* cmd = (CmdSetChannel*)slip_buf->buf;
         if (!check_and_respond_to_deserialization_underflow(*cmd)){
-            RespFloat resp;
+            RespVoid resp;
             this->channel = cmd->channel;
             this->begin();
             send_packet(resp);

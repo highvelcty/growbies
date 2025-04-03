@@ -3,6 +3,7 @@ import logging
 import time
 
 from .transport import ArduinoTransport
+from .datalink import Slip
 from .structs import command
 
 logger = logging.getLogger(__name__)
@@ -100,9 +101,7 @@ class Arduino(ArduinoTransport):
 
     def wait_for_ready(self):
         cmd = command.CmdLoopback()
-        resp: Optional[command.RespVoid] = (
-            self.execute(cmd,
-                         retries=self.READY_RETRIES))
+        resp: Optional[command.RespVoid] = self.execute(cmd, retries=self.READY_RETRIES)
         if resp is None:
             raise ConnectionError(f'Arduino serial port was not ready with {self.READY_RETRIES} '
                                   f'retries, {self.READY_RETRY_DELAY_SEC} second delay per retry.')

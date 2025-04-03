@@ -21,7 +21,8 @@ def normalize_list(data):
 def _extract_x_data_and_y_datas(path: Path) -> \
         tuple[list[datetime],
               list[list[int]],
-              list[datetime], list[int]]:
+              list[datetime],
+              list[int]]:
     labels = None
     x_data: list[datetime] = list()
     y_datas: list[list[int]] = list()
@@ -67,7 +68,8 @@ def _time_plot(title: str,
                timestamps: list[datetime], channel_datas: list[list[int]],
                ref_timestamps: Optional[list[datetime]], ref_scale_data: Optional[list[int]],
                *,
-               normalize: bool = True):
+               normalize: bool = True,
+               invert_sum: bool = True):
     fig: plt.Figure = plt.figure()
     ax = fig.add_subplot(111)
     ax.plot()
@@ -84,19 +86,23 @@ def _time_plot(title: str,
     for idx in range(len(channel_datas[0])):
         total = 0
         for channel_data in channel_datas:
-            total += channel_data[idx]
+            if invert_sum:
+                total -= channel_data[idx]
+            else:
+                total += channel_data[idx]
         summed_channel_data.append(total)
 
-    # filter noise
+    # Filter for particle board prototype
+    # Commented out 2025_04_02
     indices_to_remove = list()
-    for idx, value in enumerate(summed_channel_data):
-        if value > 971400 or value < 805800:
-            indices_to_remove.append(idx)
-    for idx in reversed(indices_to_remove):
-        for channel_data in channel_datas:
-            del channel_data[idx]
-        del summed_channel_data[idx]
-        del timestamps[idx]
+    # for idx, value in enumerate(summed_channel_data):
+    #     if value > 971400 or value < 805800:
+    #         indices_to_remove.append(idx)
+    # for idx in reversed(indices_to_remove):
+    #     for channel_data in channel_datas:
+    #         del channel_data[idx]
+    #     del summed_channel_data[idx]
+    #     del timestamps[idx]
 
     # Plot
     for channel, y_data in enumerate(channel_datas):
@@ -121,13 +127,14 @@ def _time_plot(title: str,
     fig.tight_layout()
     plt.show()
 
-def bucket_test(path: Path):
+def bucket_test(path: Path, *,
+                invert_sum: bool = True):
     x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
 
     ### Time #######################################################################################
-    title = ('Experiment: Water bowl fill/empty 1 times\n'
-             'Test scale: 4xfull bridge with 4x HX711\n'
-             'Context: Grow box with shaky shelving, offset mass')
+    title = ('Experiment: Water bowl fill/empty 2 times.\n'
+             'Test scale: 3d print load cell mounts glued to 20"x10" tray.\n'
+             'Context: Concrete floor, reference scale in stack, centered mass.')
     _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data)
 
     ### Linearity ##################################################################################
@@ -136,7 +143,10 @@ def bucket_test(path: Path):
     for idx in range(len(y_datas[0])):
         total = 0
         for channel_data in y_datas:
-            total += channel_data[idx]
+            if invert_sum:
+                total -= channel_data[idx]
+            else:
+                total += channel_data[idx]
         summed_channel_data.append(total)
 
     test_y_data = list()
@@ -157,7 +167,7 @@ def bucket_test(path: Path):
         plt.quiver(lin_x[i], lin_y[i], 0.001, dy,
                   headwidth=2, headlength=5, color='black')
 
-    plt.title('Test scale vs. reference scale\n(~200g - ~4kg)')
+    plt.title('Test scale vs. reference scale\n(0g - ~5kg)')
     plt.ylabel(f'Normalized test scale mass')
     plt.xlabel('Normalized reference scale mass')
 
@@ -167,8 +177,8 @@ def bucket_test(path: Path):
     ### Error ######################################################################################
     error_x_data = ref_y_data
     difference_y_data = list()
-    for kitchen_data, load_cell_data in (zip(lin_x, lin_y)):
-        difference_y_data.append((load_cell_data-kitchen_data)*100)
+    for ref_data, load_cell_data in (zip(lin_x, lin_y)):
+        difference_y_data.append((load_cell_data-ref_data)*100)
 
     plt.plot(error_x_data, difference_y_data, marker='.', linestyle='-')
     for i in range(len(error_x_data) - 1):

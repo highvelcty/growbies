@@ -13,6 +13,7 @@ from growbies.utils.bufstr import BufStr
 
 class ArduinoNetwork(ArduinoDatalink, ABC):
     CHECKSUM_BYTES = 2
+    POLLING_SEC = 0.01
     DEBUG_NETWORK_READ = False
     DEBUG_NETWORK_WRITE = False
 
@@ -56,6 +57,8 @@ class ArduinoNetwork(ArduinoDatalink, ABC):
                     else:
                         logger.error('Network layer packet checksum underflow.')
                         return None
+            else:
+                time.sleep(self.POLLING_SEC)
         else:
             logger.error(f'Network layer timeout of {read_timeout_sec} seconds waiting for a '
                          f'valid packet.')
