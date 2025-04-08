@@ -58,7 +58,8 @@ def main(sess: Session):
                     samples = list()
                     for channel in range(CHANNELS):
                         arduino_serial.set_channel(channel)
-                        samples.append(arduino_serial.read_average())
+                        # emey, remove this hard coded 1 here
+                        samples.append(arduino_serial.read_average(20))
 
                     if all(samples):
                         sampling_retry = 0

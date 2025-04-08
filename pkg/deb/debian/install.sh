@@ -19,10 +19,10 @@ dh_installdirs "${PATH_VAR_LIB_GROWBIES_LOCK}"
 
 
 # Install files
-dh_install "${PATH_SRC}/${PATH_DIST}"/*.whl "${PATH_USR_LIB_GROWBIES}"
-dh_install "${PATH_SRC}/${PATH_BUILD_PATHS_ENV}" "${PATH_USR_LIB_GROWBIES}"
-dh_install "${PATH_SRC}/${PATH_PKG_BASH_SRC_GROWBIES}" "${PATH_USR_BIN}"
+dh_install "${PATH_DEBIAN_SRC}/${PATH_DIST}"/*.whl "${PATH_USR_LIB_GROWBIES}"
+dh_install "${PATH_DEBIAN_SRC}/${PATH_BUILD_PATHS_ENV}" "${PATH_USR_LIB_GROWBIES}"
+dh_install "${PATH_DEBIAN_SRC}/${PATH_PKG_BASH_SRC_GROWBIES}" "${PATH_USR_BIN}"
 
 # Install systemd service
 dh_installsystemd
-
+dh_systemd_enable

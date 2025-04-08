@@ -8,6 +8,6 @@ Homepage: https://growbies.net
 
 Package: growbies
 Architecture: all
-Depends: python3.11, python3.11-venv, postgresql
+Depends: postgresql, python3.11, python3.11-venv, systemd
 Description:Communication gateway for the growbies platform.
  This package is installed as a systemd service.

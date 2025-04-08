@@ -64,13 +64,37 @@ def time_plot(path: Path, *,
     _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data,
                normalize=normalize)
 
+def measure_noise(path: Path):
+    x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
+    trim_idx = 0
+    max_val = 1324900
+    min_val = 1287000
+
+    summed_channel_data = list()
+    for idx in range(trim_idx, trim_idx + len(y_datas[0][trim_idx:])):
+        total = 0
+        for y_data in y_datas:
+            total -= y_data[idx]
+        summed_channel_data.append(total)
+
+    noise_count = 0
+    for val in summed_channel_data:
+        if val > max_val or val < min_val:
+            noise_count += 1
+    signal_count = len(summed_channel_data) - noise_count
+    print(f'emey signal count / noise count: {signal_count} / {noise_count}: '
+          f'{noise_count/sum(summed_channel_data)*100}')
+
+    plt.plot(x_data[trim_idx:], summed_channel_data, marker='.')
+    plt.show()
+
 def _time_plot(title: str,
                timestamps: list[datetime], channel_datas: list[list[int]],
                ref_timestamps: Optional[list[datetime]], ref_scale_data: Optional[list[int]],
                *,
                normalize: bool = True,
                invert_sum: bool = True):
-    fig: plt.Figure = plt.figure()
+    fig: plt.Figure = plt.figure(figsize=(21,17))
     ax = fig.add_subplot(111)
     ax.plot()
     # noinspection PyTypeHints
@@ -125,6 +149,7 @@ def _time_plot(title: str,
         plt.ylabel('mass (ADC)')
     plt.title(title)
     fig.tight_layout()
+    # plt.subplots_adjust(bottom=.3)
     plt.show()
 
 def bucket_test(path: Path, *,

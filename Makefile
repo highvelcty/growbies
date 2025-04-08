@@ -42,6 +42,7 @@ $(PATH_DOT_COVERAGE):
 
 ${PATH_PKG_DEB_DEBIAN_SRC}: $(src_watch_ext)
 	( \
+		rm -rf ${PATH_PKG_DEB_DEBIAN_SRC}; \
 		mkdir -p ${PATH_PKG_DEB_DEBIAN_SRC}; \
 		tar  --exclude=${PATH_OUTPUT} --exclude=${PATH_PKG_DEB_DEBIAN} --exclude='.[^/]*' \
 		-cf - . | tar xf - -C ${PATH_PKG_DEB_DEBIAN_SRC}; \

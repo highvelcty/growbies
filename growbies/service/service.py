@@ -63,7 +63,6 @@ class Queue(object):
 
     def put(self, item: TBaseCmd):
         contents = list()
-        # with open(self.PATH, 'ab+') as file:
         with FileLock(self.PATH, 'ab+') as file:
             file.seek(0)
             try:
@@ -73,7 +72,6 @@ class Queue(object):
             contents.append(item)
             file.seek(0)
             file.truncate()
-            # noinspection PyTypeChecker
             pickle.dump(contents, file)
 
 def main():

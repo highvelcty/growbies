@@ -31,12 +31,11 @@ package: image
 	( \
 	path=$$(basename ${PATH_PKG_DEB_DIST}); \
 	${run_cmd} ${CONTAINER} \
-		bash -c "mkdir -p $${path} && \
+		bash -c "mkdir -p $${path}   && \
 		         mv /growbies*.deb $${path}/ && \
 				 cd $${path} \
 				 && dpkg-scanpackages --multiversion . | xz > Packages.xz;"; \
 	)
-
 
 start:
 	${run_cmd} --detach --name ${CONTAINER} ${CONTAINER}

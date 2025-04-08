@@ -2,7 +2,7 @@
 
 source "${PATHS_ENV}"
 set -ex
-cd "${PATH_SRC}"
+cd "${PATH_DEBIAN_SRC}"
 
 # Create a virtual environment for building the python package to be installed
 ${PATH_DEBIAN_BASE_PYTHON} -m venv venv

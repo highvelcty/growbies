@@ -8,6 +8,9 @@ class RepoPaths(Enum):
     REPO_ROOT = Path('.')
     DOT_COVERAGE = REPO_ROOT / '.coverage'
 
+    # ./.idea
+    DOT_IDEA = REPO_ROOT / '.idea'
+
     # ./build
     BUILD = REPO_ROOT / 'build'
     BUILD_PATHS_ENV = BUILD / 'paths.env'
@@ -15,15 +18,9 @@ class RepoPaths(Enum):
     # ./dist
     DIST = REPO_ROOT / 'dist'
 
-    # ./.idea
-    DOT_IDEA = REPO_ROOT / '.idea'
-
-    # ./output
-    OUTPUT = REPO_ROOT / 'output'
-    DEFAULT_OUTPUT_DIR = OUTPUT / 'default'
-    DEFAULT_LOG = OUTPUT / 'log.log'
-    DEFAULT_DATA = DEFAULT_OUTPUT_DIR / 'data.csv'
-    FILELOCK = OUTPUT / 'file.lock'
+    # ./db
+    DB = REPO_ROOT / 'db'
+    DB_INIT_SH = DB / 'init.sh'
 
     # ./growbies
     GROWBIES = REPO_ROOT / 'growbies'
@@ -33,6 +30,13 @@ class RepoPaths(Enum):
     GROWBIES_PLOT = GROWBIES / 'plot'
     GROWBIES_SAMPLE = GROWBIES / 'sample'
     GROWBIES_SERVICE = GROWBIES / 'service'
+
+    # ./output
+    OUTPUT = REPO_ROOT / 'output'
+    DEFAULT_OUTPUT_DIR = OUTPUT / 'default'
+    DEFAULT_LOG = OUTPUT / 'log.log'
+    DEFAULT_DATA = DEFAULT_OUTPUT_DIR / 'data.csv'
+    FILELOCK = OUTPUT / 'file.lock'
 
     # ./pkg
     PKG = REPO_ROOT / 'pkg'
@@ -71,6 +75,8 @@ class DebianPaths(Enum):
     DEBIAN_BUILD_SH = DEBIAN_ROOT / 'build.sh'
     DEBIAN_INSTALL_SH = DEBIAN_ROOT / 'install.sh'
     DEBIAN_SRC = DEBIAN_ROOT / 'src'
+    DEBIAN_DB = DEBIAN_SRC / RepoPaths.DB.value
+    DEBIAN_DB_INIT_SH = DEBIAN_DB / RepoPaths.DB_INIT_SH.value
 
     # command
     DEBIAN_BASE_PYTHON = 'python3.11'
