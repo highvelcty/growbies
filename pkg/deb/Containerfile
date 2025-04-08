@@ -17,14 +17,9 @@ RUN \
     apt-get build-dep -y . && \
     # Build the package
     debuild --preserve-env -b --no-sign --lintian-opts --allow-root && \
-    apt install -y /growbies*.deb
-#     systemctl enable growbies
-
-# RUN \
-#     . ${PATHS_ENV} && \
-#     cd ${PATH_DEBIAN_DB} && \
-#     ./$(basename ${PATH_DEBIAN_DB_INIT_SH})
-#     echo "emey emey: ${PATH_DEBIAN_DB}" && \
-#     echo "emey script: $(basename ${PATH_DEBIAN_DB_INIT_SH})" \
+    apt install -y /growbies*.deb && \
+    systemctl enable growbies-config && \
+    systemctl enable growbies && \
+    systemctl enable postgresql
 
 CMD [ "/usr/lib/systemd/systemd" ]

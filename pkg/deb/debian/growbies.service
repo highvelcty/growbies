@@ -1,6 +1,7 @@
 [Unit]
-Description=Growbies Gateway Service
-After=network.target
+Description=Growbies Service
+Requires=growbies-config.service
+After=network.target growbies-config.service
 
 [Service]
 ExecStart=/usr/bin/growbies service start

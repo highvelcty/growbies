@@ -53,6 +53,8 @@ class InstallPaths(Enum):
     # /usr/lib
     USR_LIB = Path('/usr/lib')
     USR_LIB_GROWBIES = USR_LIB / constants.APPNAME.lower()
+    # /var/opt/db
+    USR_LIB_GROWBIES_DB = USR_LIB_GROWBIES / 'db'
     USR_LIB_GROWBIES_VENV = USR_LIB_GROWBIES / 'venv'
     USR_LIB_GROWBIES_VENV_ACTIVATE = USR_LIB_GROWBIES_VENV / 'bin/activate'
 
@@ -75,8 +77,6 @@ class DebianPaths(Enum):
     DEBIAN_BUILD_SH = DEBIAN_ROOT / 'build.sh'
     DEBIAN_INSTALL_SH = DEBIAN_ROOT / 'install.sh'
     DEBIAN_SRC = DEBIAN_ROOT / 'src'
-    DEBIAN_DB = DEBIAN_SRC / RepoPaths.DB.value
-    DEBIAN_DB_INIT_SH = DEBIAN_DB / RepoPaths.DB_INIT_SH.value
 
     # command
     DEBIAN_BASE_PYTHON = 'python3.11'

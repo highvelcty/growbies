@@ -12,5 +12,5 @@ su postgres -c \
    createdb growbies --owner=$(whoami) 2>/dev/null || true && \
    echo 'Created database: ${DB_NAME}'"
 
-psql -f init_tables.sql
+psql -d ${DB_NAME} -f init_tables.sql
 
