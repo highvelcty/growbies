@@ -25,6 +25,8 @@ class RepoPaths(Enum):
     # ./growbies
     GROWBIES = REPO_ROOT / 'growbies'
     GROWBIES_DB = GROWBIES / 'db'
+    GROWBIES_DB_SQL = GROWBIES_DB / 'sql'
+    GROWBIES_DB_SQL_INIT_TABLES = GROWBIES_DB_SQL / 'init_tables.sql'
     GROWBIES_EXEC = GROWBIES / 'exec'
     GROWBIES_HUMAN_INPUT = GROWBIES / 'human_input'
     GROWBIES_MONITOR = GROWBIES / 'monitor'

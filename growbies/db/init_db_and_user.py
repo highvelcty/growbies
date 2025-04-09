@@ -9,7 +9,7 @@ from . import constants
 from growbies.constants import APPNAME
 
 def _add_trusted_user_to_pg_conf(path_to_conf):
-    to_be_added = f"""\
+    to_be_inserted = f"""\
 
 # {APPNAME}
 local   {constants.DB_USER}        {constants.DB_NAME}                                trust
@@ -23,10 +23,16 @@ local   {constants.DB_USER}        {constants.DB_NAME}                          
             if re.search(fr'local\s+{constants.DB_NAME}\s+{constants.DB_USER}\s+trust', line):
                 return
 
-    buffer.append(to_be_added)
+    columns = ['type', 'database', 'user', 'address', 'method']
+    for idx, line in enumerate(buffer):
+        line = line.lower()
+        tokens = line.split()
+        if all(c in tokens for c in columns):
+            buffer.insert(idx+1, to_be_inserted)
+            break
+
     with open(path_to_conf, 'w') as outf:
         outf.write(''.join(buffer))
-
 
 def _create_stuff(cmd: str):
     proc = _run_as_user(cmd, constants.ADMIN_DB_USER)
