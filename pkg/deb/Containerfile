@@ -2,24 +2,20 @@ FROM debian:latest
 
 ARG PATH_CODE
 WORKDIR ${PATH_CODE}
-ENV PATHS_ENV=${PATH_CODE}/debian/src/build/paths.env
+ARG PATH_SRC=${PATH_CODE}/debian/src
+ENV PATHS_ENV=${PATH_SRC}/build/paths.env
 
-# Install generic build dependencies
+# Install  build dependencies
 RUN \
     apt update -y && \
     apt install dh-make -y && \
     apt install debmake -y && \
-    apt install build-essential -y
+    apt install build-essential -y && \
+    # Install package specific build dependencies
+    apt-get build-dep -y .
 
 # Build and install
 RUN \
-    # Install package specific build dependencies
-    apt-get build-dep -y . && \
-    # Build the package
-    debuild --preserve-env -b --no-sign --lintian-opts --allow-root && \
-    apt install -y /growbies*.deb && \
-    systemctl enable growbies-config && \
-    systemctl enable growbies && \
-    systemctl enable postgresql
+    REPO_ROOT=${PATH_SRC} make internal_build
 
 CMD [ "/usr/lib/systemd/systemd" ]

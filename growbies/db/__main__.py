@@ -12,11 +12,11 @@ class SubCmd(StrEnum):
     INIT = 'init'
 
     @classmethod
-    def get_help_str(cls, sub_cmd: 'SubCmd') -> str:
-        if sub_cmd == cls.INIT:
+    def get_help_str(cls, sub_cmd_: 'SubCmd') -> str:
+        if sub_cmd_ == cls.INIT:
             return f'Initialize the {APPNAME} local database.'
         else:
-            raise ValueError(f'Database sub-command "{sub_cmd}" does not exist')
+            raise ValueError(f'Database sub-command "{sub_cmd_}" does not exist')
 
 parser = ArgumentParser(description=pkg_doc, formatter_class=RawTextHelpFormatter)
 sub = parser.add_subparsers(dest=SUBCMD, required=True)

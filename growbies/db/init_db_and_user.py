@@ -92,4 +92,4 @@ def init_db_and_user():
     _create_db()
     path_to_conf = _get_pg_hba_conf_path()
     _add_trusted_user_to_pg_conf(path_to_conf)
-    _restart_service()
+    # _restart_service() # emey, this is causing a hang in the one shot config service execution.

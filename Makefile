@@ -9,8 +9,7 @@ build/paths.env: build_lib/export_paths.py
 include build/paths.env
 
 src_watch = $(shell find ${PATH_GROWBIES} -name '*' ! -path '*__pycache__*')
-src_watch_ext = ${src_watch}
-src_watch_ext += $(shell find ${PATH_PKG_BASH_SRC} -type f -name '*')
+src_watch += $(shell find ${PATH_PKG_BASH_SRC} -type f -name '*')
 
 ### Interface ######################################################################################
 clean:
@@ -40,11 +39,13 @@ $(PATH_DOT_COVERAGE):
 		coverage report; \
 	)
 
-${PATH_PKG_DEB_DEBIAN_SRC}: $(src_watch_ext)
+${PATH_PKG_DEB_DEBIAN_SRC}: $(src_watch)
 	( \
 		rm -rf ${PATH_PKG_DEB_DEBIAN_SRC}; \
 		mkdir -p ${PATH_PKG_DEB_DEBIAN_SRC}; \
-		tar  --exclude=${PATH_OUTPUT} --exclude=${PATH_PKG_DEB_DEBIAN} --exclude='.[^/]*' \
+		tar  --exclude=${PATH_OUTPUT} --exclude=${PATH_PKG_DEB} \
+			--exclude='.[^/]*' \
+			--exclude='*__pycache__' \
 		-cf - . | tar xf - -C ${PATH_PKG_DEB_DEBIAN_SRC}; \
 		touch ${PATH_PKG_DEB_DEBIAN_SRC}; \
 	)

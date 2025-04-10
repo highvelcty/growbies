@@ -3,6 +3,8 @@ from pathlib import Path
 
 from growbies import constants
 
+_REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
+
 class RepoPaths(Enum):
     # .
     REPO_ROOT = Path('.')
@@ -17,10 +19,6 @@ class RepoPaths(Enum):
 
     # ./dist
     DIST = REPO_ROOT / 'dist'
-
-    # ./db
-    DB = REPO_ROOT / 'db'
-    DB_INIT_SH = DB / 'init.sh'
 
     # ./growbies
     GROWBIES = REPO_ROOT / 'growbies'
@@ -51,6 +49,9 @@ class RepoPaths(Enum):
     PKG_DEB_DIST = PKG_DEB / 'dist'
     PKG_DEB_REPO = PKG_DEB / 'repo'
 
+    @classmethod
+    def abs(cls, path: 'RepoPaths'):
+        return _REPO_ROOT / path.value
 
 class InstallPaths(Enum):
     # /usr/lib
@@ -80,6 +81,8 @@ class DebianPaths(Enum):
     DEBIAN_BUILD_SH = DEBIAN_ROOT / 'build.sh'
     DEBIAN_INSTALL_SH = DEBIAN_ROOT / 'install.sh'
     DEBIAN_SRC = DEBIAN_ROOT / 'src'
+    DEBIAN_SRC_GROWBIES = DEBIAN_SRC / RepoPaths.GROWBIES.value
+    DEBIAN_SRC_PKG_BASH_SRC = DEBIAN_SRC / RepoPaths.PKG_BASH_SRC.value
 
     # command
     DEBIAN_BASE_PYTHON = 'python3.11'

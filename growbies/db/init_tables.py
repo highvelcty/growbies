@@ -7,7 +7,7 @@ from growbies.utils.paths import RepoPaths
 
 def _create_tables(conn: connection):
     with conn.cursor() as cursor:
-        with open(RepoPaths.GROWBIES_DB_SQL_INIT_TABLES.value, 'r') as inf:
+        with open(RepoPaths.abs(RepoPaths.GROWBIES_DB_SQL_INIT_TABLES), 'r') as inf:
             cursor.execute(inf.read())
         conn.commit()
 
