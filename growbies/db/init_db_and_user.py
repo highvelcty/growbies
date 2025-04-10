@@ -83,8 +83,8 @@ def _get_pg_hba_conf_path():
                 return path
     raise FileNotFoundError(f'Unable to resolve the path to the postgres configuration file.')
 
-def _restart_service():
-    cmd = f'systemctl restart {constants.RDBMS_SERVICE}'
+def _reload_service():
+    cmd = f'systemctl reload {constants.RDBMS_SERVICE}'
     subprocess.run(shlex.split(cmd), check=True)
 
 def init_db_and_user():
@@ -92,4 +92,4 @@ def init_db_and_user():
     _create_db()
     path_to_conf = _get_pg_hba_conf_path()
     _add_trusted_user_to_pg_conf(path_to_conf)
-    # _restart_service() # emey, this is causing a hang in the one shot config service execution.
+    _reload_service()

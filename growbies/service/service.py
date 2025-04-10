@@ -5,6 +5,7 @@ import pickle
 import time
 
 from . import Op
+from growbies.db.init_tables import init_tables
 from growbies.utils.filelock import FileLock
 from growbies.utils.paths import InstallPaths
 
@@ -75,6 +76,7 @@ class Queue(object):
             pickle.dump(contents, file)
 
 def main():
+    init_tables()
     queue = Queue()
     queue.flush()
     done = False
