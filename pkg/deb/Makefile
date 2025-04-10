@@ -19,7 +19,7 @@ PATH_DIST = $(shell basename ${PATH_PKG_DEB_DIST})
 run_cmd = podman run --tty --interactive --rm \
 	--volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR}
 
-external_build: $(PATH_DIST)
+external_build: start $(PATH_DIST)
 	make deb_src_copy -C "${REPO_ROOT}"
 	$(MAKE) ${PATH_DIST}
 
@@ -32,9 +32,6 @@ internal_build:
 		cd ${PATH_DIST}; \
 		dpkg-scanpackages --multiversion . | xz > Packages.xz; \
 		apt reinstall -y ./growbies*.deb; \
-		systemctl enable growbies; \
-		systemctl enable growbies; \
-		systemctl enable postgresql; \
 	)
 
 package:

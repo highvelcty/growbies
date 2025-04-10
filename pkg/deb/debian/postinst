@@ -9,3 +9,9 @@ ${PATH_DEBIAN_BASE_PYTHON} -m venv "${PATH_USR_LIB_GROWBIES_VENV}"
 source "${PATH_USR_LIB_GROWBIES_VENV_ACTIVATE}"
 pip install "${PATH_USR_LIB_GROWBIES}"/*.whl --force-reinstall
 rm "${PATH_USR_LIB_GROWBIES}"/*.whl
+
+systemctl enable growbies
+if systemd-notify --booted; then
+  systemctl restart growbies
+fi
+

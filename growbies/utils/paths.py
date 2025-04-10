@@ -13,12 +13,21 @@ class RepoPaths(Enum):
     # ./.idea
     DOT_IDEA = REPO_ROOT / '.idea'
 
+    # ./archive
+    ARCHIVE = REPO_ROOT / 'archive'
+
     # ./build
     BUILD = REPO_ROOT / 'build'
     BUILD_PATHS_ENV = BUILD / 'paths.env'
 
+    # ./build_lib
+    BUILD_LIB = REPO_ROOT / 'build_lib'
+
     # ./dist
     DIST = REPO_ROOT / 'dist'
+
+    # ./docs
+    DOCS = REPO_ROOT / 'docs'
 
     # ./growbies
     GROWBIES = REPO_ROOT / 'growbies'
@@ -48,6 +57,9 @@ class RepoPaths(Enum):
     PKG_DEB_DEBIAN_SRC = PKG_DEB_DEBIAN / 'src'
     PKG_DEB_DIST = PKG_DEB / 'dist'
     PKG_DEB_REPO = PKG_DEB / 'repo'
+
+    # ./tests
+    TESTS = REPO_ROOT / 'tests'
 
     @classmethod
     def abs(cls, path: 'RepoPaths'):
