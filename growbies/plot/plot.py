@@ -82,10 +82,27 @@ def measure_noise(path: Path):
         if val > max_val or val < min_val:
             noise_count += 1
     signal_count = len(summed_channel_data) - noise_count
-    print(f'emey signal count / noise count: {signal_count} / {noise_count}: '
+    print(f'signal count / noise count: {signal_count} / {noise_count}: '
           f'{noise_count/sum(summed_channel_data)*100}')
 
     plt.plot(x_data[trim_idx:], summed_channel_data, marker='.')
+    plt.show()
+
+def single_channel(path: Path):
+    x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
+
+    y_data = y_datas[0]
+    noise_count = 0
+    signal_count = 0
+    for point in y_data:
+        if point < -650000 or point > -620000:
+            noise_count += 1
+        else:
+            signal_count += 1
+
+    print(f'SNR: {noise_count}/{signal_count} = {noise_count/signal_count}')
+
+    plt.plot(x_data, y_data)
     plt.show()
 
 def _time_plot(title: str,

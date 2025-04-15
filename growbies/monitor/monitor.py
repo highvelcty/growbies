@@ -56,10 +56,11 @@ def main(sess: Session):
                     # Sample
                     ts = get_utc_iso_ts_str()
                     samples = list()
-                    for channel in range(CHANNELS):
+                    # for channel in range(CHANNELS): # emey return this
+                    for channel in range(3,4):
                         arduino_serial.set_channel(channel)
                         # emey, remove this hard coded 1 here
-                        samples.append(arduino_serial.read_average(20))
+                        samples.append(arduino_serial.read_average(1))
 
                     if all(samples):
                         sampling_retry = 0

@@ -22,10 +22,10 @@ CREATE TABLE IF NOT EXISTS endpoint (
 );
 
 
---INSERT INTO account VALUES ('emey_account');
---INSERT INTO gateway values ('emey_account', 'emey_gateway');
---INSERT INTO device values ('emey_gateway', 'emey_device');
---INSERT INTO endpoint values ('emey_device', 'emey_endpoint');
+--INSERT INTO account VALUES ('somme_account');
+--INSERT INTO gateway values ('somme_account', 'somme_gateway');
+--INSERT INTO device values ('somme_gateway', 'somme_device');
+--INSERT INTO endpoint values ('somme_device', 'somme_endpoint');
 --CREATE TABLE IF NOT EXISTS mass_fast_buffer (ts TIMESTAMP PRIMARY KEY, data0 float);
 --CREATE TABLE IF NOT EXISTS mass_mid_buffer (ts TIMESTAMP PRIMARY KEY, data0 float);
 --CREATE TABLE IF NOT EXISTS mass_slow_buffer (ts TIMESTAMP PRIMARY KEY, data0 float);

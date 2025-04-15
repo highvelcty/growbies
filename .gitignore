@@ -22,5 +22,10 @@ pkg/growbies_*
 htmlcov/
 output/*
 !output/.gitkeep
+
 # IDE
 .idea
+
+
+# Platformio
+.pio/*

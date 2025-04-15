@@ -26,4 +26,6 @@ _ = Session()
 # plot.time_plot(path, normalize=False)
 # plot.csv_difference(path)
 # plot.resister_divider()
-plot.measure_noise(path)
+# plot.measure_noise(path)
+
+plot.single_channel(path)

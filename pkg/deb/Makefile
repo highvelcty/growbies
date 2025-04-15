@@ -43,7 +43,8 @@ package:
 		.
 
 ${PATH_DIST}: $(src_watch)
-	podman container exec -it --env REPO_ROOT=/code/debian/src ${CONTAINER} make internal_build
+	podman container exec -it --env REPO_ROOT=${INTERNAL_WORKDIR}/${PATH_DEBIAN_SRC} ${CONTAINER} \
+		make internal_build
 
 enter: start
 	podman exec -it ${CONTAINER} /bin/bash
@@ -51,7 +52,6 @@ enter: start
 restart:
 	( \
 		if podman container exists ${CONTAINER}; then \
-		  echo "emey restarting"; \
 		  podman restart ${CONTAINER}; \
 		else \
 		  $(MAKE) start; \
