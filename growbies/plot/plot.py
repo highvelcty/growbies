@@ -95,12 +95,13 @@ def single_channel(path: Path):
     noise_count = 0
     signal_count = 0
     for point in y_data:
-        if point < -650000 or point > -620000:
+        if point < -670000 or point > -350000:
             noise_count += 1
         else:
             signal_count += 1
 
-    print(f'SNR: {noise_count}/{signal_count} = {noise_count/signal_count}')
+    print(f'Error Rate %: ({noise_count}/{signal_count})*100 = '
+          f'{(noise_count/signal_count)*100}%')
 
     plt.plot(x_data, y_data)
     plt.show()
@@ -295,7 +296,6 @@ def csv_difference(path: Optional[Path] = None):
     plt.show()
 
     print(f'average: {sum(multiplier_y_data)/len(multiplier_y_data)}')
-
 
 def main2():
     import matplotlib.pyplot as plt

@@ -1,7 +1,7 @@
 #include "constants.h"
 #include "growbies.h"
-#include "protocol/datalink.h"
-#include "protocol/network.h"
+// #include "protocol/datalink.h"
+// #include "protocol/network.h"
 
 
 void setup() {

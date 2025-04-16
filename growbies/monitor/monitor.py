@@ -7,7 +7,7 @@ from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
 
-POLLING_SEC = 1
+POLLING_SEC = 0.01
 OSERROR_RETRIES = 5
 OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5
@@ -59,8 +59,7 @@ def main(sess: Session):
                     # for channel in range(CHANNELS): # emey return this
                     for channel in range(3,4):
                         arduino_serial.set_channel(channel)
-                        # emey, remove this hard coded 1 here
-                        samples.append(arduino_serial.read_average(1))
+                        samples.append(arduino_serial.read_average(3))
 
                     if all(samples):
                         sampling_retry = 0

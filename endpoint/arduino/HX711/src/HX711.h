@@ -39,8 +39,9 @@ class HX711
 		void begin(byte dout, byte pd_sck, byte gain = 128);
 
 		// Check if HX711 is ready
-		// from the datasheet: When output data is not ready for retrieval, digital output pin DOUT is high. Serial clock
-		// input PD_SCK should be low. When DOUT goes to low, it indicates data is ready for retrieval.
+		// from the datasheet: When output data is not ready for retrieval, digital output pin DOUT
+		// is high. Serial clock input PD_SCK should be low. When DOUT goes to low, it indicates
+		// data is ready for retrieval.
 		bool is_ready();
 
 		// Wait for the HX711 to become ready
@@ -53,26 +54,25 @@ class HX711
 		// depending on the parameter, the channel is also set to either A or B
 		void set_gain(byte gain = 128);
 
-		// waits for the chip to be ready and returns a reading
+		// Read a sample - this does not wait for ready. It is left to the caller to wait for ready.
 		long read();
 
 		// returns an average reading; times = how many times to read
 		long read_average(byte times = 10);
 
-		// Reads data with a sliding median window filter to remove bit corruption noise.
-		long read_median_filter(byte times);
-
-		// returns (read_average() - OFFSET), that is the current value without the tare weight; times = how many readings to do
+		// returns (read_median() - OFFSET), that is the current value without the tare weight;
+		// times = how many readings to do
 		double get_value(byte times = 1);
 
-		// returns get_value() divided by SCALE, that is the raw value divided by a value obtained via calibration
-		// times = how many readings to do
+		// returns get_value() divided by SCALE, that is the raw value divided by a value obtained
+		// via calibration.  times = how many readings to do
 		float get_units(byte times = 1);
 
 		// set the OFFSET value for tare weight; times = how many times to read the tare value
 		void tare(byte times = 10);
 
-		// set the SCALE value; this value is used to convert the raw data to "human readable" data (measure units)
+		// set the SCALE value; this value is used to convert the raw data to "human readable" data
+		// (measure units)
 		void set_scale(float scale = 1.f);
 
 		// get the current SCALE

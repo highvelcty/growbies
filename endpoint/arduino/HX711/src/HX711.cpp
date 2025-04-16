@@ -9,7 +9,7 @@
 **/
 #include <Arduino.h>
 #include "HX711.h"
-#include "utils/sort.h"
+#include "constants.h"
 
 #define ARDUINO_MINI_PRO_3V3_8MHZ
 #define SCK_TOGGLE_DELAY_MICROSECONDS 1
@@ -111,9 +111,9 @@ void HX711::set_gain(byte gain) {
 }
 
 long HX711::read() {
-
-	// Wait for the chip to become ready.
-	wait_ready();
+    if (!this->wait_ready_retry(WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS)){
+        return ERROR_HX711_NOT_READY;
+    }
 
 	// Define structures for reading data into.
 	unsigned long value = 0;
@@ -243,45 +243,6 @@ long HX711::read_average(byte times) {
 		delay(0);
 	}
 	return sum / times;
-}
-
-long HX711::read_median_filter(byte times) {
-    // This method helps reduce serial bit errors likely caused by timing.
-    long candidate;
-    long median;
-    long samples[times] = {0};
-    long sum = 0;
-    float bad_sample_threshold = 0.25;
-
-	// Read samples
-	for (byte sample = 0; sample < times; ++sample) {
-		samples[sample] = read();
-	}
-
-    // Sort
-    insertion_sort(samples, times);
-
-    // Find median
-    byte middle = times / 2;
-    if (times % 2) {
-        // Odd - simply take the middle number
-        median = samples[middle + 1];
-    }
-    else {
-        // Even - average the middle two numbers
-        median = (samples[middle] + samples[middle + 1]) / 2;
-    }
-
-    // Filter
-    for (byte sample = 0; sample < times; ++sample) {
-        candidate = samples[sample];
-        if (((float)abs(median - candidate) / (float)median) < bad_sample_threshold){
-            sum += candidate;
-        }
-    }
-
-    // Average
-    return sum / times;
 }
 
 double HX711::get_value(byte times) {

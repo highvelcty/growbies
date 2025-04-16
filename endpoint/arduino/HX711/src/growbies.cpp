@@ -1,6 +1,5 @@
-#include "command.h"
-#include "constants.h"
 #include "growbies.h"
+#include "utils/sort.h"
 
 Growbies* growbies = new Growbies();
 
@@ -28,17 +27,17 @@ void Growbies::execute(PacketHdr* packet_hdr) {
         send_slip(slip_buf->buf, slip_buf->buf_len());
         send_slip_end();
     }
-    else if (packet_hdr->type == CMD_READ_AVERAGE) {
-        CmdReadAverage* cmd = (CmdReadAverage*)slip_buf->buf;
+    else if (packet_hdr->type == CMD_READ_MEDIAN_FILTER_AVG) {
+        CmdReadMedianFilterAvg* cmd = (CmdReadMedianFilterAvg*)slip_buf->buf;
         if (!check_and_respond_to_deserialization_underflow(*cmd)){
             RespLong resp;
-
-            if (wait_and_read_average(cmd->times, resp.data)){
-                send_packet(resp);
+            resp.data = this->read_median_filter_avg(cmd->times);
+            if (resp.data == ERROR_HX711_NOT_READY){
+                RespError error_response;
+                error_response.error = (Error)resp.data;
+                send_packet(error_response);
             }
             else {
-                RespError resp;
-                resp.error = ERROR_HX711_NOT_READY;
                 send_packet(resp);
             }
          }
@@ -58,13 +57,13 @@ void Growbies::execute(PacketHdr* packet_hdr) {
         CmdGetUnits* cmd = (CmdGetUnits*)slip_buf->buf;
         if (!check_and_respond_to_deserialization_underflow(*cmd)){
             RespLong resp;
-
-            if (wait_and_get_units(cmd->times, resp.data)){
-                send_packet(resp);
+            resp.data = this->get_units(cmd->times);
+            if (resp.data == ERROR_HX711_NOT_READY){
+                RespError error_response;
+                error_response.error = (Error)resp.data;
+                send_packet(error_response);
             }
-            else{
-                RespError resp;
-                resp.error = ERROR_HX711_NOT_READY;
+            else {
                 send_packet(resp);
             }
         }
@@ -124,18 +123,41 @@ void Growbies::execute(PacketHdr* packet_hdr) {
     }
 }
 
-bool Growbies::wait_and_get_units(uint8_t times, long& data) {
-    if (this->wait_ready_retry(WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS)){
-        data = this->get_units(times);
-        return true;
-    }
-    return false;
-}
+long Growbies::read_median_filter_avg(byte times, int threshold) {
+    // This method helps reduce serial bit errors likely caused by timing.
+    long median;
+    byte middle;
+    long sample;
+    long samples[times] = {0};
+    long sum = 0;
+    int sum_count = 0;
 
-bool Growbies::wait_and_read_average(uint8_t times, long& data) {
-    if (this->wait_ready_retry(WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS)){
-        data = this->read_average(times);
-        return true;
+	// Read samples
+	for (byte idx = 0; idx < times; ++idx) {
+        samples[idx] = this->read();
+	}
+
+    // Sort
+    insertion_sort(samples, times);
+
+    // Find median
+    middle = times / 2;
+    if (times % 2) {
+        // Odd - simply take the middle number
+        median = samples[middle];
     }
-    return false;
+    else {
+        // Even - average the middle two numbers
+        median = (samples[middle - 1] + samples[middle]) / 2;
+    }
+
+    // Average and return samples that fall within a threshold
+    for (byte idx = 0; idx < times; ++idx) {
+        sample = samples[idx];
+        if (abs(median - sample) <= threshold) {
+            sum += sample;
+            ++sum_count;
+        }
+    }
+    return sum / sum_count;
 }
