@@ -1,8 +1,4 @@
-from unittest import TestCase
-import ctypes
-
 from growbies.arduino import datalink
-from growbies.arduino.structs.packet import Packet, PacketHeader
 
 from .base import BaseMockArduino as BaseMockArduino, BaseTest
 

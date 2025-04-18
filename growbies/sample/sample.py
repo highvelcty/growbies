@@ -23,7 +23,7 @@ def main(sess: Session):
         samples = list()
         for channel in range(4):
             ser.set_channel(channel)
-            samples.append(ser.read_average())
+            samples.append(ser.read_median_filter_avg())
         ts = get_utc_iso_ts_str()
 
         # Output data to file

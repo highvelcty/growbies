@@ -1,9 +1,8 @@
 from typing import cast
 import ctypes
 
-from growbies.arduino.structs.packet import Packet
+from growbies.arduino.structs.command import Packet
 from growbies.arduino import datalink, network
-from growbies.utils.bufstr import BufStr
 
 from .base import BaseTest, BaseMockArduino
 

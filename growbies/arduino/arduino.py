@@ -71,8 +71,8 @@ class Arduino(ArduinoTransport):
         cmd = command.CmdPowerDown()
         _: command.RespVoid = self.execute(cmd)
 
-    def read_average(self, times: int = command.CmdReadAverage.DEFAULT_TIMES) -> int:
-        cmd = command.CmdReadAverage(times=times)
+    def read_median_filter_avg(self, times: int = command.CmdReadMedianFilterAvg.DEFAULT_TIMES) -> int:
+        cmd = command.CmdReadMedianFilterAvg(times=times)
         resp: command.RespLong = self.execute(cmd)
         return resp.data
 

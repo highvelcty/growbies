@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Optional, Type, TypeVar, Union
+from typing import ByteString, cast, Optional, Type, TypeVar, Union
 import ctypes
 import logging
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 class CmdType(IntEnum):
     LOOPBACK = 0
-    READ_AVERAGE = 1
+    READ_MEDIAN_FILTER_AVG = 1
     SET_GAIN = 2
     GET_VALUE = 3
     GET_UNITS = 4
@@ -31,22 +31,25 @@ class RespType(IntEnum):
     LONG = 2
     FLOAT = 3
     DOUBLE = 4
+    MASS_DATA_POINT = 5
     ERROR = 0xFFFF
 
     @classmethod
-    def get_struct(cls, type_: 'RespType') -> Optional[Type['TBaseResponse']]:
-        if type_ == cls.VOID:
+    def get_struct(cls, packet: 'Packet') -> Optional[Type['TBaseResponse']]:
+        if packet.header.type == cls.VOID:
             return RespVoid
-        elif type_ == cls.BYTE:
+        elif packet.header.type == cls.BYTE:
             return RespByte
-        elif type_ == cls.LONG:
+        elif packet.header.type == cls.LONG:
             return RespLong
-        elif type_ == cls.FLOAT:
+        elif packet.header.type == cls.FLOAT:
             return RespFloat
-        elif type_ == cls.DOUBLE:
+        elif packet.header.type == cls.DOUBLE:
             return RespDouble
-        elif type_ == cls.ERROR:
+        elif packet.header.type == cls.ERROR:
             return RespError
+        elif packet.header.type == cls.MASS_DATA_POINT:
+            return RespMassDataPoint.from_packet(packet)
 
 
 class Error(IntEnum):
@@ -54,6 +57,7 @@ class Error(IntEnum):
     ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW = 1
     ERROR_UNRECOGNIZED_COMMAND = 2
     ERROR_HX711_NOT_READY = 3
+
 
 class Gain(IntEnum):
     GAIN_32 = 32
@@ -81,6 +85,44 @@ class PacketHeader(ctypes.Structure):
     def __str__(self):
         return str(BufStr(memoryview(self).cast('B')))
 
+
+class Packet(object):
+    MIN_SIZE_IN_BYTES = ctypes.sizeof(PacketHeader)
+
+    class Field:
+        HEADER = 'header'
+        DATA = 'data'
+
+    @classmethod
+    def make(cls, source: Union[ByteString, int]) -> Optional['Packet']:
+        if isinstance(source, int):
+            source = bytearray(source)
+        buf_len = len(source)
+        data_len = buf_len - cls.MIN_SIZE_IN_BYTES
+        class NewPacket(Packet, ctypes.Structure):
+            _fields_ = [
+                (cls.Field.HEADER, PacketHeader),
+                (cls.Field.DATA, ctypes.c_uint8 * data_len) # noqa - false positive pycharm 2025
+            ]
+            _pack_ = 1
+
+        if buf_len < Packet.MIN_SIZE_IN_BYTES:
+            logger.error(f'Buffer underflow for deserializing to {Packet.__class__}. '
+                         f'Expected at least {Packet.MIN_SIZE_IN_BYTES} bytes, '
+                         f'observed {buf_len} bytes.')
+            return None
+
+        packet = NewPacket.from_buffer(cast(bytes, source))
+
+        return packet
+
+    @property
+    def header(self) -> PacketHeader:
+        return getattr(self, self.Field.HEADER)
+
+    @property
+    def data(self) -> ctypes.Array[ctypes.c_uint8]:
+        return getattr(self, self.Field.DATA)
 
 class BaseCommand(PacketHeader):
     pass
@@ -128,9 +170,9 @@ class CmdGetChannel(BaseCommand):
         super().__init__(*args, **kw)
 
 
-class CmdReadAverage(BaseCmdWithTimesParam):
+class CmdReadMedianFilterAvg(BaseCmdWithTimesParam):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.READ_AVERAGE
+        kw[self.Field.TYPE] = CmdType.READ_MEDIAN_FILTER_AVG
         super().__init__(*args, **kw)
 
 
@@ -202,7 +244,6 @@ class CmdSetChannel(BaseCommand):
         kw.setdefault(self.Field.CHANNEL, self.DEFAULT_CHANNEL)
         kw[self.Field.TYPE] = CmdType.SET_CHANNEL
         super().__init__(*args, **kw)
-
 
 
 class CmdSetScale(BaseCommand):
@@ -329,6 +370,7 @@ class RespDouble(BaseRespWithData):
         kw[self.Field.TYPE] = RespType.DOUBLE
         super().__init__(*args, **kw)
 
+
 class RespError(BaseResponse):
     class Field(BaseResponse.Field):
         ERROR = 'error'
@@ -348,3 +390,27 @@ class RespError(BaseResponse):
     @error.setter
     def error(self, value: Error):
         super().error = value
+
+class MassDataPoint(ctypes.Structure):
+    class Field(BaseResponse.Field):
+        DATA = 'data'
+        ERROR_COUNT = 'error_count'
+        READY = 'ready'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.DATA, ctypes.c_int32),
+        (Field.ERROR_COUNT, ctypes.c_uint8),
+        (Field.READY, ctypes.c_uint8, 1)
+    ]
+
+class RespMassDataPoint(BaseResponse):
+    class Field(BaseResponse.Field):
+        SENSOR = 'sensor'
+
+    @classmethod
+    def from_packet(cls, packet: 'Packet'):
+        cls._fields_ = [
+            ('sensor', MassDataPoint * (len(packet.data) // ctypes.sizeof(MassDataPoint))),
+        ]
+        return cls()

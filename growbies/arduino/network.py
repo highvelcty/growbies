@@ -7,7 +7,7 @@ import time
 logger = logging.getLogger(__name__)
 
 from .datalink import ArduinoDatalink
-from .structs.packet import Packet
+from .structs.command import Packet
 from growbies.utils.bufstr import BufStr
 
 
