@@ -3,10 +3,11 @@ from typing import ByteString
 
 
 class BufStr(UserString):
-    def __init__(self, buf: ByteString, indent: int  = 0):
+    def __init__(self, buf: ByteString, *, indent: int = 0, title: str = ''):
         hex_str_list = []
         ascii_str_list = []
         indent_str = ' ' * indent
+
         str_list = [''.join((
             indent_str,
             '0x         00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F                  ')),
@@ -14,6 +15,9 @@ class BufStr(UserString):
                 indent_str,
                 '---------|-------------------------------------------------|-----------------'))
         ]
+
+        if title:
+            str_list.insert(0, title)
 
         for ii in range(len(buf)):
             if not ii % 16:

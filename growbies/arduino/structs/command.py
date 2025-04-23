@@ -49,7 +49,9 @@ class RespType(IntEnum):
         elif packet.header.type == cls.ERROR:
             return RespError
         elif packet.header.type == cls.MASS_DATA_POINT:
-            return RespMassDataPoint.from_packet(packet)
+            return RespMassDataPoint.make_class(packet)
+
+        logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
 
 
 class Error(IntEnum):
@@ -65,7 +67,25 @@ class Gain(IntEnum):
     GAIN_128 = 128
 
 
-class PacketHeader(ctypes.Structure):
+class BaseStructure(ctypes.Structure):
+    @classmethod
+    def qualname(cls):
+        return cls.__qualname__
+
+    def __str__(self):
+        return str(BufStr(memoryview(self).cast('B'),
+                          title=self.qualname()))
+TBaseStructure = TypeVar('TBaseStructure', bound=BaseStructure)
+
+
+class BasePacket(BaseStructure):
+    @classmethod
+    def from_packet(cls, packet: 'Packet') -> Optional['TBasePacket']:
+        return cls.from_buffer(packet)
+TBasePacket = TypeVar('TBasePacket', bound=BasePacket)
+
+
+class PacketHeader(BaseStructure):
     class Field:
         TYPE = 'type'
 
@@ -82,11 +102,8 @@ class PacketHeader(ctypes.Structure):
     def type(self, value: [CmdType, RespType]):
         super().type = value
 
-    def __str__(self):
-        return str(BufStr(memoryview(self).cast('B')))
 
-
-class Packet(object):
+class Packet(BasePacket):
     MIN_SIZE_IN_BYTES = ctypes.sizeof(PacketHeader)
 
     class Field:
@@ -99,12 +116,13 @@ class Packet(object):
             source = bytearray(source)
         buf_len = len(source)
         data_len = buf_len - cls.MIN_SIZE_IN_BYTES
-        class NewPacket(Packet, ctypes.Structure):
+        class _Packet(Packet):
+            _pack_ = 1
             _fields_ = [
                 (cls.Field.HEADER, PacketHeader),
                 (cls.Field.DATA, ctypes.c_uint8 * data_len) # noqa - false positive pycharm 2025
             ]
-            _pack_ = 1
+
 
         if buf_len < Packet.MIN_SIZE_IN_BYTES:
             logger.error(f'Buffer underflow for deserializing to {Packet.__class__}. '
@@ -112,7 +130,7 @@ class Packet(object):
                          f'observed {buf_len} bytes.')
             return None
 
-        packet = NewPacket.from_buffer(cast(bytes, source))
+        packet = _Packet.from_buffer(cast(bytes, source))
 
         return packet
 
@@ -123,6 +141,7 @@ class Packet(object):
     @property
     def data(self) -> ctypes.Array[ctypes.c_uint8]:
         return getattr(self, self.Field.DATA)
+
 
 class BaseCommand(PacketHeader):
     pass
@@ -147,7 +166,7 @@ class BaseCmdWithTimesParam(BaseCommand):
         TIMES = 'times'
 
     _fields_ = [
-        # How many times the HX711 should read for each sample.
+        # How many samples to read from the HX711 per data point.
         (Field.TIMES, ctypes.c_uint8)
     ]
 
@@ -391,26 +410,46 @@ class RespError(BaseResponse):
     def error(self, value: Error):
         super().error = value
 
+
 class MassDataPoint(ctypes.Structure):
     class Field(BaseResponse.Field):
         DATA = 'data'
         ERROR_COUNT = 'error_count'
         READY = 'ready'
+        RESERVED1 = 'reserved1'
+        RESERVED2 = 'reserved2'
 
     _pack_ = 1
     _fields_ = [
         (Field.DATA, ctypes.c_int32),
         (Field.ERROR_COUNT, ctypes.c_uint8),
-        (Field.READY, ctypes.c_uint8, 1)
+        (Field.READY, ctypes.c_uint8, 1),
+        (Field.RESERVED1, ctypes.c_uint8, 7),
+        (Field.RESERVED2, ctypes.c_uint16),
     ]
+
 
 class RespMassDataPoint(BaseResponse):
     class Field(BaseResponse.Field):
         SENSOR = 'sensor'
 
     @classmethod
-    def from_packet(cls, packet: 'Packet'):
-        cls._fields_ = [
-            ('sensor', MassDataPoint * (len(packet.data) // ctypes.sizeof(MassDataPoint))),
-        ]
-        return cls()
+    def make_class(cls, packet: 'Packet') -> Type['RespMassDataPoint']:
+        class _RespMassDataPoint(RespMassDataPoint):
+            _num_sensors = (len(packet.data) // ctypes.sizeof(MassDataPoint))
+            _fields_ = [
+                (cls.Field.SENSOR, MassDataPoint * _num_sensors),
+            ]
+            _pack_ = 1
+
+
+            @classmethod
+            def qualname(cls):
+                return f'{RespMassDataPoint.__qualname__} ({cls._num_sensors}x sensors):'
+
+        return _RespMassDataPoint
+
+
+    @classmethod
+    def from_packet(cls, packet) -> Optional['RespMassDataPoint']:
+        return cls.make_class(packet).from_buffer(packet)

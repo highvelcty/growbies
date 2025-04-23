@@ -6,18 +6,27 @@ import ctypes
 import logging
 
 from .structs.command import Packet, RespType, TBaseCommand, TBaseResponse
+from growbies.utils.bufstr import BufStr
 
 logger = logging.getLogger(__name__)
 
 
 class ArduinoTransport(ArduinoNetwork, ABC):
+    DEBUG_TRANSPORT_READ = True
+    DEBUG_TRANSPORT_WRITE = False
+
     def _send_cmd(self, cmd: TBaseCommand):
+        if self.DEBUG_TRANSPORT_WRITE:
+            print(BufStr(memoryview(cmd).cast('B'), title='Transport Write:'))
+
         self._send_packet(memoryview(cmd).cast('B'))
 
     def _recv_resp(self, *,
                    read_timeout_sec = ArduinoNetwork.DEFAULT_READ_TIMEOUT_SEC) \
             -> Optional[TBaseResponse]:
         packet = self._recv_packet(read_timeout_sec=read_timeout_sec)
+        if self.DEBUG_TRANSPORT_READ and packet is not None:
+            print(BufStr(memoryview(packet).cast('B'), title='Transport Read:'))
         if packet is None:
             return None
         return self._get_resp(packet)

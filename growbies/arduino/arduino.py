@@ -3,7 +3,6 @@ import logging
 import time
 
 from .transport import ArduinoTransport
-from .datalink import Slip
 from .structs import command
 
 logger = logging.getLogger(__name__)
@@ -71,10 +70,12 @@ class Arduino(ArduinoTransport):
         cmd = command.CmdPowerDown()
         _: command.RespVoid = self.execute(cmd)
 
-    def read_median_filter_avg(self, times: int = command.CmdReadMedianFilterAvg.DEFAULT_TIMES) -> int:
+    def read_median_filter_avg(self,
+                               times: int = command.CmdReadMedianFilterAvg.DEFAULT_TIMES) \
+            -> command.RespMassDataPoint:
         cmd = command.CmdReadMedianFilterAvg(times=times)
-        resp: command.RespLong = self.execute(cmd)
-        return resp.data
+        resp: command.RespMassDataPoint = self.execute(cmd, read_timeout_sec=10)
+        return resp
 
     def reset_communication(self):
         for _ in range(self.RESET_COMMUNICATION_LOOPS):

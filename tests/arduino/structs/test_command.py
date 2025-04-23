@@ -5,18 +5,18 @@ from growbies.arduino.structs import command
 from growbies.utils.bufstr import BufStr
 
 class TestRespMassDataPoint(TestCase):
+
+    def setUp(self):
+        self.num_sensors = 4
+        self.packet = command.Packet.make(ctypes.sizeof(command.PacketHeader) +
+                                          ctypes.sizeof(command.MassDataPoint) * self.num_sensors)
     def test(self):
-        num_sensors = 4
-        packet = command.Packet.make(ctypes.sizeof(command.PacketHeader) +
-                                     ctypes.sizeof(command.MassDataPoint) * num_sensors)
-        resp_mass_data_point = command.RespMassDataPoint.from_packet(packet)
+        resp_mass_data_point = command.RespMassDataPoint.from_packet(self.packet)
+
+        self.assertEqual(ctypes.sizeof(self.packet),
+                         ctypes.sizeof(resp_mass_data_point))
 
 
-        for sensor in resp_mass_data_point.sensor:
-            print(BufStr(ctypes.string_at(
-                ctypes.byref(sensor),
-                ctypes.sizeof(sensor))))
 
-        print(BufStr(ctypes.string_at(
-            ctypes.byref(resp_mass_data_point),
-            ctypes.sizeof(resp_mass_data_point))))
+        # Test that multiple structures can be created.
+        _ = command.RespMassDataPoint.from_packet(self.packet)
