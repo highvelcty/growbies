@@ -51,10 +51,6 @@ class Arduino(ArduinoTransport):
         known_weight = self.get_units(times=self.MANUAL_CALIBRATION_SAMPLES)
         self.set_scale(value / known_weight)
 
-    def get_channel(self) -> int:
-        resp: command.RespByte = self.execute(command.CmdGetChannel())
-        return resp.data
-
     def get_scale(self) -> float:
         return self.execute(command.CmdGetScale()).data
 
@@ -86,9 +82,6 @@ class Arduino(ArduinoTransport):
                 bytes_in_waiting = self.in_waiting
                 if bytes_in_waiting:
                     _ = self.read(bytes_in_waiting)
-
-    def set_channel(self, channel: int):
-        self.execute(command.CmdSetChannel(channel=channel))
 
     def set_gain(self, gain: command.CmdSetGain.Gain):
         self.execute(command.CmdSetGain(gain=gain))

@@ -21,8 +21,6 @@ class CmdType(IntEnum):
     GET_OFFSET = 9
     POWER_DOWN = 10
     POWER_UP = 11
-    SET_CHANNEL = 12
-    GET_CHANNEL = 13
 
 
 class RespType(IntEnum):
@@ -183,12 +181,6 @@ class BaseCmdWithTimesParam(BaseCommand):
         super().times = value
 
 
-class CmdGetChannel(BaseCommand):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.GET_CHANNEL
-        super().__init__(*args, **kw)
-
-
 class CmdReadMedianFilterAvg(BaseCmdWithTimesParam):
     def __init__(self, *args, **kw):
         kw[self.Field.TYPE] = CmdType.READ_MEDIAN_FILTER_AVG
@@ -238,30 +230,6 @@ class CmdGetUnits(BaseCmdWithTimesParam):
 class CmdTare(BaseCmdWithTimesParam):
     def __init__(self, *args, **kw):
         kw[self.Field.TYPE] = CmdType.TARE
-        super().__init__(*args, **kw)
-
-
-class CmdSetChannel(BaseCommand):
-    DEFAULT_CHANNEL = 0
-
-    class Field(BaseCommand.Field):
-        CHANNEL = 'channel'
-
-    _fields_ = [
-        (Field.CHANNEL, ctypes.c_uint8)
-    ]
-
-    @property
-    def channel(self) -> int:
-        return super().channel
-
-    @channel.setter
-    def channel(self, value: int):
-        super().channel = value
-
-    def __init__(self, *args, **kw):
-        kw.setdefault(self.Field.CHANNEL, self.DEFAULT_CHANNEL)
-        kw[self.Field.TYPE] = CmdType.SET_CHANNEL
         super().__init__(*args, **kw)
 
 
