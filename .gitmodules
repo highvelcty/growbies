@@ -1,4 +1,0 @@
-[submodule "endpoint/arduino/LCD_I2C"]
-	path = endpoint/arduino/LCD_I2C
-	url = git@github.com:highvelcty/LCD_I2C.git
-	branch = growbies
