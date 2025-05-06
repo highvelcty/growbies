@@ -5,3 +5,8 @@
 [submodule "endpoint/arduino/HX711"]
 	path = endpoint/arduino/HX711
 	url = git@github.com:highvelcty/HX711.git
+	branch = growbies
+[submodule "endpoint/arduino/LCD_I2C"]
+	path = endpoint/arduino/LCD_I2C
+	url = git@github.com:highvelcty/LCD_I2C.git
+	branch = growbies
