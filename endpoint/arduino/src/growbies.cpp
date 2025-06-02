@@ -30,6 +30,7 @@ void Growbies::begin(){
     for(int sensor = 0; sensor < this->sensor_count; ++sensor) {
         pinMode(get_HX711_dout_pin(sensor), INPUT_PULLUP);
     }
+    digitalWrite(ARDUINO_HX711_SCK, LOW);
 }
 
 void Growbies::execute(PacketHdr* packet_hdr) {
@@ -121,9 +122,17 @@ void Growbies::execute(PacketHdr* packet_hdr) {
     }
 }
 
+void Growbies::power_on() {
+    digitalWrite(ARDUINO_HX711_SCK, LOW);
+}
+void Growbies::power_off() {
+    digitalWrite(ARDUINO_HX711_SCK, HIGH);
+}
+
 bool Growbies::read(){
     if (!this->wait_all_ready_retry(WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS)){
-        return false;
+        ; // MEYERE
+//        return false;
     }
 
     shift_all_in();
@@ -226,7 +235,7 @@ void Growbies::shift_all_in() {
     uint32_t a_bit;
     uint8_t ii;
     uint8_t sensor;
-    uint8_t pind;
+    uint8_t pinb;
 
     for (sensor = 0; sensor < this->sensor_count; ++sensor) {
         this->mass_data_points[sensor].mass = 0;
@@ -240,15 +249,15 @@ void Growbies::shift_all_in() {
 
             // This is a time critical block
             delayMicroseconds(HX711_SCK_RISE_TO_DOUT_READY_MICROSECONDS);
-            // Read pins 0-7
-            pind = PIND;
+            // Read pins 8-13
+            pinb = PINB;
             delayMicroseconds(HX711_SCK_HIGH_MICROSECONDS);
             digitalWrite(ARDUINO_HX711_SCK, LOW);
 
             // This time intensive task needs to happen after pulling SCK low so as to not perturb
             // time sensitive section when SCK is high.
             for (sensor = 0; sensor < this->sensor_count; ++sensor) {
-                a_bit = (bool)(pind & (1 << get_HX711_dout_pin(sensor)));
+                a_bit = (bool)(pinb & get_HX711_dout_port_bit(sensor));
                 this->mass_data_points[sensor].mass |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
 
@@ -288,17 +297,17 @@ bool Growbies::wait_all_ready_retry(const int retries, const unsigned long delay
 	bool all_ready = true;
 	bool ready;
 	int sensor;
-	byte pind;
+	byte pinb;
 	int retry_count = 0;
 
 	do {
         // Check for readiness from all sensors
-        // Read pins 0-7
-        pind = PIND;
+        // Read pins 8-13
+        pinb = PINB;
         all_ready = true;
 	    for (sensor = 0; sensor < this->sensor_count; ++sensor) {
 	        // The sensor is ready when the data line is low.
-	        ready = (bool)((pind & (1 << get_HX711_dout_pin(sensor)))) == LOW;
+	        ready = (bool)(pinb & get_HX711_dout_port_bit(sensor)) == LOW;
 	        this->mass_data_points[sensor].ready = ready;
 	        all_ready &= ready;
         }

@@ -28,4 +28,4 @@ output/*
 
 
 # Platformio
-.pio/*
+endpoint/arduino/.pio/*

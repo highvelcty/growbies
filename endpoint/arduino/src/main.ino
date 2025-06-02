@@ -1,6 +1,8 @@
 #include "constants.h"
 #include "growbies.h"
+#include <LCD_I2C.h>
 
+LCD_I2C lcd(0x27, 16, 2); // Default address of most PCF8574 modules, change according
 
 void setup() {
     slip_buf->reset();
@@ -9,19 +11,31 @@ void setup() {
     //   to the 8MHz clock providing nearest baudrates of 115942 or 114285, whereas the closest
     //   baudrates for 8MHz for 57600 baud is 57554 or 57971.
     Serial.begin(57600);
+//     lcd.begin();
     growbies->begin();
+
+//     lcd.backlight();
+//     lcd.clear();
+//     lcd.print("     Hello"); // You can make spaces using well... spaces
+//     lcd.setCursor(5, 1); // Or setting the cursor in the desired position.
+//     lcd.print("World!");
+
 }
 
 
 void loop() {
+
     PacketHdr* packet_hdr;
 
     while (!Serial.available()){
         delay(MAIN_POLLING_LOOP_INTERVAL_MS);
+        continue;
     }
+
     if (recv_slip(Serial.read())){
         packet_hdr = recv_packet();
         if (packet_hdr != NULL) {
+            digitalWrite(LED_BUILTIN, HIGH);
             growbies->execute(packet_hdr);
         }
         slip_buf->reset();

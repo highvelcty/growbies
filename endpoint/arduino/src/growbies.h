@@ -42,6 +42,8 @@ class Growbies {
         uint32_t* threshold;
 
 		const byte static default_times = 3;
+		void power_on();
+		void power_off();
 		bool read();
 
 		// Reads data from the chip the requested number of times. The median is found and then all

@@ -9,12 +9,17 @@ const int WAIT_READY_RETRIES = 100;
 const int WAIT_READY_RETRY_DELAY_MS = 10;
 
 enum ArduinoDigitalPins : const int {
-    ARDUINO_HX711_SCK = 2,
-    ARDUINO_HX711_BASE_DOUT = 3,
+    ARDUINO_PORT_B_BASE_PIN = 8,
+    ARDUINO_HX711_SCK = 12,
+    ARDUINO_HX711_BASE_DOUT = ARDUINO_PORT_B_BASE_PIN,
 };
 
 inline int get_HX711_dout_pin(int sensor){
     return ARDUINO_HX711_BASE_DOUT + sensor;
+}
+
+inline int get_HX711_dout_port_bit(int sensor){
+    return (1 << (get_HX711_dout_pin(sensor) - ARDUINO_PORT_B_BASE_PIN));
 }
 
 enum Cmd: uint16_t {
