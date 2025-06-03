@@ -29,6 +29,10 @@ class RepoPaths(Enum):
     # ./docs
     DOCS = REPO_ROOT / 'docs'
 
+    # ./endpoint
+    ENDPOINT = REPO_ROOT / 'endpoint'
+    ENDPOINT_ARDUINO = ENDPOINT / 'arduino'
+
     # ./growbies
     GROWBIES = REPO_ROOT / 'growbies'
     GROWBIES_DB = GROWBIES / 'db'
