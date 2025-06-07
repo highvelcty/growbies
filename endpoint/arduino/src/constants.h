@@ -14,6 +14,11 @@ enum ArduinoDigitalPins : const int {
     ARDUINO_HX711_BASE_DOUT = ARDUINO_PORT_B_BASE_PIN,
 };
 
+enum ArduinoAnalogPins : const int {
+    A4_HW_I2C_SDA = 0xA4,
+    A5_HW_I2C_SCL = 0xA5,
+};
+
 inline int get_HX711_dout_pin(int sensor){
     return ARDUINO_HX711_BASE_DOUT + sensor;
 }

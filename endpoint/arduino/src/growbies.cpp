@@ -8,21 +8,18 @@
 Growbies* growbies = new Growbies();
 
 Growbies::Growbies(int sensor_count, byte gain) : sensor_count(sensor_count), gain(gain){
-    this->outbuf = new byte[this->outbuf_size];
-    memset(this->outbuf, 0, this->outbuf_size);
+//    this->outbuf = new byte[this->outbuf_size];
+//    memset(this->outbuf, 0, this->outbuf_size);
     this->mass_data_points = (MassDataPoint*)&outbuf[sizeof(PacketHdr)];
 
     this->offset = new long[this->sensor_count];
     this->scale = new float[this->sensor_count];
-    this->threshold = new uint32_t[this->sensor_count];
-    this->set_threshold(this->default_threshold);
 }
 
 Growbies::~Growbies() {
-    delete[] this->outbuf;
+//    delete[] this->outbuf;
     delete[] this->offset;
     delete[] this->scale;
-    delete[] this->threshold;
 }
 
 void Growbies::begin(){
@@ -187,7 +184,7 @@ void Growbies::read_median_filter_avg(const byte times) {
         // Average and return samples that fall within a threshold
         for (sensor_sample = 0; sensor_sample < times; ++sensor_sample) {
             sample = sensor_samples[sensor][sensor_sample];
-            if (abs(median - sample) <= threshold[sensor]) {
+            if (abs(median - sample) <= this->default_threshold) {
                 sum += sample;
                 ++sum_count;
             }
@@ -216,18 +213,6 @@ void Growbies::set_offset(long* offset) {
 void Growbies::set_scale(float* scale) {
     for (int sensor = 0; sensor < this->sensor_count; ++sensor) {
         this->scale[sensor] = offset[sensor];
-    }
-}
-
-void Growbies::set_threshold(uint32_t* threshold){
-    for (int sensor = 0; sensor < this->sensor_count; ++sensor) {
-        this->threshold[sensor] = threshold[sensor];
-    }
-}
-
-void Growbies::set_threshold(uint32_t threshold){
-    for (int sensor = 0; sensor < this->sensor_count; ++sensor) {
-        this->threshold[sensor] = threshold;
     }
 }
 

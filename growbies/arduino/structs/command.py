@@ -396,6 +396,10 @@ class MassDataPoint(ctypes.Structure):
         (Field.RESERVED2, ctypes.c_uint16),
     ]
 
+    @property
+    def data(self) -> int:
+        return self[self.Field.DATA]
+
 
 class RespMassDataPoint(BaseResponse):
     class Field(BaseResponse.Field):

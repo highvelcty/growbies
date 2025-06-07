@@ -1,4 +1,4 @@
-#ifndef growbies_h
+ #ifndef growbies_h
 #define growbies_h
 
 #include "command.h"
@@ -33,27 +33,24 @@ class Growbies {
     private:
         // Output buffer and symbol mapping
         const int static outbuf_size = 512;
-        byte* outbuf;
-        MassDataPoint* mass_data_points;
+        const int static default_threshold = 10000;
+        const byte static default_times = 3;
 
+//        byte* outbuf;
+        byte static outbuf[outbuf_size];
+        MassDataPoint* mass_data_points;
         long* offset;
         float* scale;
-        const uint32_t default_threshold = 10000;
-        uint32_t* threshold;
-
-		const byte static default_times = 3;
 		void power_on();
 		void power_off();
 		bool read();
 
 		// Reads data from the chip the requested number of times. The median is found and then all
-		// samples that are within the median +/- a 24 DAC threshold are averaged and returned.
+		// samples that are within the median +/- a DAC threshold are averaged and returned.
 		void read_median_filter_avg(const byte times = default_times);
 		void read_with_units(const byte times = default_times);
 		void set_offset(long* offset);
 		void set_scale(float* scale);
-		void set_threshold(uint32_t* threshold);
-		void set_threshold(uint32_t threshold);
 		void shift_all_in();
 		void tare(const byte times = default_times);
 		bool wait_all_ready_retry(const int retries, const unsigned long delay_ms);

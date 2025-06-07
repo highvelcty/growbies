@@ -111,7 +111,7 @@ def _time_plot(title: str,
                ref_timestamps: Optional[list[datetime]], ref_scale_data: Optional[list[int]],
                *,
                normalize: bool = True,
-               invert_sum: bool = True):
+               invert_sum: bool = False):
     fig: plt.Figure = plt.figure(figsize=(21,17))
     ax = fig.add_subplot(111)
     ax.plot()

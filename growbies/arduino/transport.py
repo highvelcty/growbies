@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class ArduinoTransport(ArduinoNetwork, ABC):
-    DEBUG_TRANSPORT_READ = True
+    DEBUG_TRANSPORT_READ = False
     DEBUG_TRANSPORT_WRITE = False
 
     def _send_cmd(self, cmd: TBaseCommand):
