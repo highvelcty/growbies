@@ -7,6 +7,7 @@ const int CHAN_SELECT_DELAY_MS = 1;
 const int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
 const int WAIT_READY_RETRIES = 100;
 const int WAIT_READY_RETRY_DELAY_MS = 10;
+const int EEPROM_BYTES = 1024;
 
 enum ArduinoDigitalPins : const int {
     ARDUINO_PORT_B_BASE_PIN = 8,

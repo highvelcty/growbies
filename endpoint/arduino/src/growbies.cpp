@@ -1,6 +1,10 @@
-#include <util/atomic.h>
+#include <assert.h>
+#include <EEPROM.h>
 #include <new> // Required for placement new
+#include <util/atomic.h>
 
+#include "constants.h"
+#include "eeprom.h"
 #include "growbies.h"
 #include "utils/sort.h"
 
@@ -8,18 +12,18 @@
 Growbies* growbies = new Growbies();
 
 Growbies::Growbies(int sensor_count, byte gain) : sensor_count(sensor_count), gain(gain){
-//    this->outbuf = new byte[this->outbuf_size];
-//    memset(this->outbuf, 0, this->outbuf_size);
+    assert(sizeof(EEPROMStruct) < EEPROM_BYTES);
+
+    this->outbuf = new byte[this->outbuf_size];
+    memset(this->outbuf, 0, this->outbuf_size);
     this->mass_data_points = (MassDataPoint*)&outbuf[sizeof(PacketHdr)];
 
     this->offset = new long[this->sensor_count];
-    this->scale = new float[this->sensor_count];
 }
 
 Growbies::~Growbies() {
-//    delete[] this->outbuf;
+    delete[] this->outbuf;
     delete[] this->offset;
-    delete[] this->scale;
 }
 
 void Growbies::begin(){
@@ -80,22 +84,22 @@ void Growbies::execute(PacketHdr* packet_hdr) {
             send_packet(resp);
          }
     }
-//    else if (packet_hdr->type == CMD_SET_SCALE) {
-//        CmdSetScale* cmd = (CmdSetScale*)slip_buf->buf;
-//        if (validate_packet(*cmd)) {
-//            RespVoid resp;
-//            this->set_scale(cmd->scale);
-//            send_packet(resp);
-//         }
-//    }
-//    else if (packet_hdr->type == CMD_GET_SCALE) {
-//        CmdGetScale* cmd = (CmdGetScale*)slip_buf->buf;
-//        if (validate_packet(*cmd)) {
-//            RespFloat resp;
-//            resp.data = this->get_scale();
-//            send_packet(resp);
-//         }
-//    }
+    else if (packet_hdr->type == CMD_SET_SCALE) {
+        CmdSetScale* cmd = (CmdSetScale*)slip_buf->buf;
+        if (validate_packet(*cmd)) {
+            RespVoid resp;
+            this->set_scale(cmd->scale);
+            send_packet(resp);
+         }
+    }
+    else if (packet_hdr->type == CMD_GET_SCALE) {
+        CmdGetScale* cmd = (CmdGetScale*)slip_buf->buf;
+        if (validate_packet(*cmd)) {
+            RespFloat* resp = new (this->outbuf) RespFloat;
+            resp->data = this->get_scale();
+            send_packet(*this->outbuf, sizeof(RespFloat));
+         }
+    }
 //    else if (packet_hdr->type == CMD_POWER_UP) {
 //        CmdPowerUp* cmd = (CmdPowerUp*)slip_buf->buf;
 //        if (validate_packet(*cmd)) {
@@ -119,25 +123,36 @@ void Growbies::execute(PacketHdr* packet_hdr) {
     }
 }
 
+float Growbies::get_scale() {
+    EEPROMStruct eeprom_struct;
+    EEPROM.get(0, eeprom_struct);
+    return eeprom_struct.scale;
+}
+
 void Growbies::power_on() {
     digitalWrite(ARDUINO_HX711_SCK, LOW);
 }
 void Growbies::power_off() {
     digitalWrite(ARDUINO_HX711_SCK, HIGH);
+    delayMicroseconds(HX711_POWER_OFF_DELAY);
 }
 
 bool Growbies::read(){
+    this->power_on();
     if (!this->wait_all_ready_retry(WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS)){
         ; // MEYERE
 //        return false;
     }
 
-    shift_all_in();
+    this->shift_all_in();
+    this->power_off();
     return true;
 }
 
 void Growbies::read_median_filter_avg(const byte times) {
-    // This method filters serial bit errors often caused by timing.
+    // Reads data from the chip the requested number of times. The median is found and then all
+    // samples that are within the median +/- a DAC threshold are averaged and returned.
+
     long median;
     byte middle;
     long sample;
@@ -181,7 +196,7 @@ void Growbies::read_median_filter_avg(const byte times) {
             median = (sensor_samples[sensor][middle - 1] + sensor_samples[sensor][middle]) / 2;
         }
 
-        // Average and return samples that fall within a threshold
+        // Average samples that fall within a threshold
         for (sensor_sample = 0; sensor_sample < times; ++sensor_sample) {
             sample = sensor_samples[sensor][sensor_sample];
             if (abs(median - sample) <= this->default_threshold) {
@@ -200,7 +215,7 @@ void Growbies::read_with_units(const byte times) {
     this->read_median_filter_avg(times);
     for (int sensor = 0; sensor < this->sensor_count; ++sensor) {
         this->mass_data_points[sensor].mass = \
-            (this->mass_data_points[sensor].mass - this->offset[sensor]) / this->scale[sensor];
+            (this->mass_data_points[sensor].mass - this->offset[sensor]) / this->scale;
     }
 }
 
@@ -210,10 +225,11 @@ void Growbies::set_offset(long* offset) {
     }
 }
 
-void Growbies::set_scale(float* scale) {
-    for (int sensor = 0; sensor < this->sensor_count; ++sensor) {
-        this->scale[sensor] = offset[sensor];
-    }
+void Growbies::set_scale(float scale) {
+    EEPROMStruct eeprom_struct;
+    EEPROM.get(0, eeprom_struct);
+    eeprom_struct.scale = scale;
+    EEPROM.put(0, eeprom_struct);
 }
 
 void Growbies::shift_all_in() {
@@ -229,14 +245,13 @@ void Growbies::shift_all_in() {
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         delayMicroseconds(HX711_READY_TO_SCK_RISE_MICROSECONDS);
         for (ii = 0; ii < HX711_DAC_BITS; ++ii) {
-            // Read in a byte, most significant bit first
+            // Read in a byte,   most significant bit first
             digitalWrite(ARDUINO_HX711_SCK, HIGH);
 
             // This is a time critical block
             delayMicroseconds(HX711_SCK_RISE_TO_DOUT_READY_MICROSECONDS);
             // Read pins 8-13
             pinb = PINB;
-            delayMicroseconds(HX711_SCK_HIGH_MICROSECONDS);
             digitalWrite(ARDUINO_HX711_SCK, LOW);
 
             // This time intensive task needs to happen after pulling SCK low so as to not perturb
@@ -245,17 +260,6 @@ void Growbies::shift_all_in() {
                 a_bit = (bool)(pinb & get_HX711_dout_port_bit(sensor));
                 this->mass_data_points[sensor].mass |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
-
-            // Not enough delay here causes serial errors
-            delayMicroseconds(HX711_SCK_LOW_MICROSECONDS);
-        }
-
-        // Set the gain for the next read.
-        for (ii = 0; ii < this->gain; ++ii) {
-            digitalWrite(ARDUINO_HX711_SCK, HIGH);
-            delayMicroseconds(HX711_SCK_HIGH_MICROSECONDS);
-            digitalWrite(ARDUINO_HX711_SCK, LOW);
-            delayMicroseconds(HX711_SCK_LOW_MICROSECONDS);
         }
     }
 

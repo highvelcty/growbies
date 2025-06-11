@@ -150,7 +150,7 @@ def _time_plot(title: str,
     for channel, y_data in enumerate(channel_datas):
         plt.plot(timestamps,
                  normalize_list(y_data) if normalize else y_data,
-                 label=f'Channel {channel}')
+                 label=f'Sensor {channel}')
     plt.plot(timestamps,
              normalize_list(summed_channel_data) if normalize else summed_channel_data,
              marker='.', label='Sum')
@@ -171,7 +171,7 @@ def _time_plot(title: str,
     plt.show()
 
 def bucket_test(path: Path, *,
-                invert_sum: bool = True):
+                invert_sum: bool = False):
     x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
 
     ### Time #######################################################################################

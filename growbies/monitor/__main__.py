@@ -3,6 +3,7 @@ from enum import StrEnum
 from pathlib import Path
 import sys
 from growbies.session import Session
+from growbies.utils.paths import RepoPaths
 
 from . import __doc__ as pkg_doc
 from .monitor import main
@@ -13,19 +14,21 @@ class Param(StrEnum):
 
 parser = ArgumentParser(description=pkg_doc)
 parser.add_argument(f'--{Param.TAG}', action='append', help='Session tags')
-parser.add_argument(f'--{Param.PATH}',
-                     help='Path to session output to begin or resume.')
 
 ns_args = parser.parse_args(sys.argv[1:])
 tags = getattr(ns_args, Param.TAG)
-path = getattr(ns_args, Param.PATH)
 
-if path is None:
-    if tags is None:
-        path_or_tags = None
-    else:
-        path_or_tags = tags
+if tags is None:
+    sess = Session()
 else:
-    path_or_tags = Path(path)
+    for path in RepoPaths.OUTPUT.value.iterdir():
+        for tag in tags:
+            if tag not in path.name:
+                break
+        else:
+            sess = Session(path)
+            break
+    else:
+        sess = Session(tags)
 
-main(Session(path_or_tags))
+main(sess)

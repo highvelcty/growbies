@@ -7,7 +7,7 @@ from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
 
-POLLING_SEC = 0.01
+POLLING_SEC = .01
 OSERROR_RETRIES = 5
 OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5
