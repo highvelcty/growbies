@@ -14,6 +14,7 @@ class Arduino(ArduinoTransport):
     RESET_COMMUNICATION_LOOPS = 3
     RESET_COMMUNICATION_LOOP_DELAY = 0.33
     MANUAL_CALIBRATION_SAMPLES = 25
+    SET_BASE_OFFSET_TIMEOUT_SEC = 15
 
     def execute(self, cmd: command.TBaseCommand, *,
                 retries: int = EXEC_RETRIES,
@@ -37,6 +38,7 @@ class Arduino(ArduinoTransport):
                 return resp
         else:
             logger.error(f'Execution layer retries exhausted executing command:\n{cmd}')
+            return None
 
     def manual_calibration(self):
         self.set_scale()
@@ -51,20 +53,16 @@ class Arduino(ArduinoTransport):
         known_weight = self.get_units(times=self.MANUAL_CALIBRATION_SAMPLES)
         self.set_scale(value / known_weight)
 
+    def get_base_offset(self) -> list[int]:
+        resp: command.RespGetBaseOffset = self.execute(command.CmdGetBaseOffset())
+        return resp.offset
+
     def get_scale(self) -> float:
         return self.execute(command.CmdGetScale()).data
 
     def get_units(self, times: int = command.CmdGetUnits.DEFAULT_TIMES) -> int:
         resp: command.RespLong = self.execute(command.CmdGetUnits(times=times))
         return resp.data
-
-    def power_up(self):
-        cmd = command.CmdPowerUp()
-        _: command.RespVoid = self.execute(cmd)
-
-    def power_down(self):
-        cmd = command.CmdPowerDown()
-        _: command.RespVoid = self.execute(cmd)
 
     def read_median_filter_avg(self,
                                times: int = command.CmdReadMedianFilterAvg.DEFAULT_TIMES) \
@@ -83,8 +81,8 @@ class Arduino(ArduinoTransport):
                 if bytes_in_waiting:
                     _ = self.read(bytes_in_waiting)
 
-    def set_gain(self, gain: command.CmdSetGain.Gain):
-        self.execute(command.CmdSetGain(gain=gain))
+    def set_base_offset(self):
+        self.execute(command.CmdSetBaseOffset(), read_timeout_sec=self.SET_BASE_OFFSET_TIMEOUT_SEC)
 
     def set_scale(self, scale: float = command.CmdSetScale.DEFAULT_SCALE):
         self.execute(command.CmdSetScale(scale=scale))

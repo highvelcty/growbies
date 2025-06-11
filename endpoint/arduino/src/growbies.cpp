@@ -49,39 +49,20 @@ void Growbies::execute(PacketHdr* packet_hdr) {
                         sizeof(RespMassDataPoint) + (sizeof(MassDataPoint)*this->sensor_count));
          }
     }
-
-//    else if (packet_hdr->type == CMD_SET_GAIN) {
-//        CmdSetGain* cmd = (CmdSetGain*)slip_buf->buf;
-//        if (validate_packet(*cmd)) {
-//            RespVoid resp;
-//            this->set_gain(cmd->gain);
-//            // The first read after setting the gain applies the gain. The value returned looks
-//            // off from experimentation and is discarded.
-//            this->read();
-//            send_packet(resp);
-//         }
-//    }
-//    else if (packet_hdr->type == CMD_GET_UNITS) {
-//        CmdGetUnits* cmd = (CmdGetUnits*)slip_buf->buf;
-//        if (validate_packet(*cmd)) {
-//            RespLong resp;
-//            resp.data = this->get_units(cmd->times);
-//            if (resp.data == ERROR_HX711_NOT_READY){
-//                RespError error_response;
-//                error_response.error = (Error)resp.data;
-//                send_packet(error_response);
-//            }
-//            else {
-//                send_packet(resp);
-//            }
-//        }
-//    }
-    else if (packet_hdr->type == CMD_TARE) {
-        CmdTare* cmd = (CmdTare*)slip_buf->buf;
+    else if (packet_hdr->type == CMD_GET_BASE_OFFSET) {
+        CmdGetBaseOffset* cmd = (CmdGetBaseOffset*)slip_buf->buf;
         if (validate_packet(*cmd)) {
-            RespVoid resp;
-            this->tare(cmd->times);
-            send_packet(resp);
+            RespGetBaseOffset* resp = new (this->outbuf) RespGetBaseOffset;
+            get_base_offset(resp);
+            send_packet(*this->outbuf, (sizeof(RespGetBaseOffset)));
+        }
+    }
+    else if (packet_hdr->type == CMD_GET_SCALE) {
+        CmdGetScale* cmd = (CmdGetScale*)slip_buf->buf;
+        if (validate_packet(*cmd)) {
+            RespFloat* resp = new (this->outbuf) RespFloat;
+            resp->data = this->get_scale();
+            send_packet(*this->outbuf, sizeof(RespFloat));
          }
     }
     else if (packet_hdr->type == CMD_SET_SCALE) {
@@ -92,34 +73,39 @@ void Growbies::execute(PacketHdr* packet_hdr) {
             send_packet(resp);
          }
     }
-    else if (packet_hdr->type == CMD_GET_SCALE) {
-        CmdGetScale* cmd = (CmdGetScale*)slip_buf->buf;
+    else if (packet_hdr->type == CMD_SET_BASE_OFFSET) {
+        CmdSetBaseOffset* cmd = (CmdSetBaseOffset*)slip_buf->buf;
+        if(validate_packet(*cmd)) {
+            RespVoid resp;
+            this->set_base_offset();
+            send_packet(resp);
+        }
+    }
+    else if (packet_hdr->type == CMD_TARE) {
+        CmdTare* cmd = (CmdTare*)slip_buf->buf;
         if (validate_packet(*cmd)) {
-            RespFloat* resp = new (this->outbuf) RespFloat;
-            resp->data = this->get_scale();
-            send_packet(*this->outbuf, sizeof(RespFloat));
+            RespVoid resp;
+            this->tare(cmd->times);
+            send_packet(resp);
          }
     }
-//    else if (packet_hdr->type == CMD_POWER_UP) {
-//        CmdPowerUp* cmd = (CmdPowerUp*)slip_buf->buf;
-//        if (validate_packet(*cmd)) {
-//            RespVoid resp;
-//            this->power_up();
-//            send_packet(resp);
-//        }
-//    }
-//    else if (packet_hdr->type == CMD_POWER_DOWN) {
-//        CmdPowerDown* cmd = (CmdPowerDown*)slip_buf->buf;
-//        if (validate_packet(*cmd)) {
-//            RespVoid resp;
-//            this->power_down();
-//            send_packet(resp);
-//        }
-//    }
     else{
         RespError resp;
         resp.error = ERROR_UNRECOGNIZED_COMMAND;
         send_packet(resp);
+    }
+}
+
+void Growbies::get_base_offset(RespGetBaseOffset* resp_get_base_offset) {
+    EEPROMStruct eeprom_struct;
+    EEPROM.get(0, eeprom_struct);
+    for (int sensor = 0; sensor < MAX_NUMBER_OF_MASS_SENSORS; ++sensor){
+        if (sensor < this->sensor_count) {
+            resp_get_base_offset->offset[sensor] = eeprom_struct.offset[sensor];
+        }
+        else{
+            resp_get_base_offset->offset[sensor] = INT32_MAX;
+        }
     }
 }
 
@@ -162,7 +148,8 @@ void Growbies::read_median_filter_avg(const byte times) {
     int sum_count;
 
     long sensor_samples[this->sensor_count][times] = {0};
-
+    RespGetBaseOffset base_offset;
+    get_base_offset(&base_offset);
 
     // Initialize
     memset(this->mass_data_points, 0, sizeof(MassDataPoint) * this->sensor_count);
@@ -207,7 +194,7 @@ void Growbies::read_median_filter_avg(const byte times) {
                 ++this->mass_data_points[sensor].error_count;
             }
         }
-        this->mass_data_points[sensor].mass = sum / sum_count;
+        this->mass_data_points[sensor].mass = (sum / sum_count) - base_offset.offset[sensor];
     }
 }
 
@@ -217,6 +204,22 @@ void Growbies::read_with_units(const byte times) {
         this->mass_data_points[sensor].mass = \
             (this->mass_data_points[sensor].mass - this->offset[sensor]) / this->scale;
     }
+}
+
+void Growbies::set_base_offset() {
+    EEPROMStruct eeprom_struct;
+    EEPROM.get(0, eeprom_struct);
+    for (int sensor = 0; sensor < this->sensor_count; ++sensor){
+        eeprom_struct.offset[sensor] = 0;
+    }
+    EEPROM.put(0, eeprom_struct);
+
+    this->read_median_filter_avg(this->set_base_offset_times);
+
+    for (int sensor = 0; sensor < this->sensor_count; ++sensor){
+        eeprom_struct.offset[sensor] = this->mass_data_points[sensor].mass;
+    }
+    EEPROM.put(0, eeprom_struct);
 }
 
 void Growbies::set_offset(long* offset) {

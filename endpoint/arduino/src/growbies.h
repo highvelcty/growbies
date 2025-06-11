@@ -31,18 +31,21 @@ class Growbies {
         const int static outbuf_size = 512;
         const int static default_threshold = 10000;
         const byte static default_times = 3;
+        const byte static set_base_offset_times = 10;
         float scale = 1.0;
 
         byte* outbuf;
         MassDataPoint* mass_data_points;
         long* offset;
 
+		void get_base_offset(RespGetBaseOffset* resp_get_base_offset);
 		float get_scale();
 		void power_on();
 		void power_off();
 		bool read();
 		void read_median_filter_avg(const byte times = default_times);
 		void read_with_units(const byte times = default_times);
+		void set_base_offset();
 		void set_offset(long* offset);
 		void set_scale(float scale);
 		void shift_all_in();

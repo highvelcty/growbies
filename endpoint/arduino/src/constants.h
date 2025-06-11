@@ -4,6 +4,7 @@
 const int BITS_PER_BYTE = 8;
 
 const int CHAN_SELECT_DELAY_MS = 1;
+const int MAX_NUMBER_OF_MASS_SENSORS = 5;
 const int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
 const int WAIT_READY_RETRIES = 100;
 const int WAIT_READY_RETRY_DELAY_MS = 10;
@@ -31,7 +32,6 @@ inline int get_HX711_dout_port_bit(int sensor){
 enum Cmd: uint16_t {
     CMD_LOOPBACK = 0,
     CMD_READ_MEDIAN_FILTER_AVG = 1,
-    CMD_SET_GAIN = 2,
     CMD_GET_VALUE = 3,
     CMD_GET_UNITS = 4,
     CMD_TARE = 5,
@@ -39,8 +39,8 @@ enum Cmd: uint16_t {
     CMD_GET_SCALE = 7,
     CMD_SET_OFFSET = 8,
     CMD_GET_OFFSET = 9,
-    CMD_POWER_DOWN = 10,
-    CMD_POWER_UP = 11,
+    CMD_SET_BASE_OFFSET = 10,
+    CMD_GET_BASE_OFFSET = 11
 };
 
 enum RespType: uint16_t {
@@ -50,6 +50,7 @@ enum RespType: uint16_t {
     RESP_TYPE_FLOAT = 3,
     RESP_TYPE_DOUBLE = 4,
     RESP_MASS_DATA_POINT = 5,
+    RESP_BASE_OFFSET = 6,
     RESP_TYPE_ERROR = 0xFFFF,
 };
 

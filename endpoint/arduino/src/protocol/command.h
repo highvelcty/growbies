@@ -11,27 +11,21 @@ struct BaseCmdWithTimesParam : BaseCmd {
     uint8_t times;
 };
 
-
 // --- Commands
-struct CmdReadMedianFilterAvg : BaseCmdWithTimesParam {};
-
-struct CmdSetGain : BaseCmd {
-    uint8_t gain;
-};
+struct CmdGetBaseOffset: BaseCmd {};
+struct CmdGetScale : BaseCmd {};
 
 struct CmdGetUnits : BaseCmdWithTimesParam {};
 
-struct CmdTare : BaseCmdWithTimesParam {};
+struct CmdReadMedianFilterAvg : BaseCmdWithTimesParam {};
+
+struct CmdSetBaseOffset: BaseCmd {};
 
 struct CmdSetScale : BaseCmd {
     float scale;
 };
 
-struct CmdGetScale : BaseCmd {};
-
-struct CmdPowerUp : BaseCmd {};
-
-struct CmdPowerDown : BaseCmd {};
+struct CmdTare : BaseCmdWithTimesParam {};
 
 // --- Base Responses
 struct BaseResp : PacketHdr {
@@ -68,6 +62,11 @@ struct RespError : BaseResp {
 };
 
 // --- Cmd Responses
+struct RespGetBaseOffset : BaseResp {
+    int32_t offset[MAX_NUMBER_OF_MASS_SENSORS];
+    RespGetBaseOffset(): BaseResp(RESP_BASE_OFFSET) {};
+};
+
 struct MassDataPoint {
     long mass;
     byte error_count;

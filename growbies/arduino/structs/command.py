@@ -3,15 +3,18 @@ from typing import ByteString, cast, Optional, Type, TypeVar, Union
 import ctypes
 import logging
 
+from growbies import constants
 from growbies.utils.bufstr import BufStr
+
 
 logger = logging.getLogger(__name__)
 
 
+MAX_NUMBER_OF_MASS_SENSORS = 5
+
 class CmdType(IntEnum):
     LOOPBACK = 0
     READ_MEDIAN_FILTER_AVG = 1
-    SET_GAIN = 2
     GET_VALUE = 3
     GET_UNITS = 4
     TARE = 5
@@ -19,8 +22,8 @@ class CmdType(IntEnum):
     GET_SCALE = 7
     SET_OFFSET = 8
     GET_OFFSET = 9
-    POWER_DOWN = 10
-    POWER_UP = 11
+    SET_BASE_OFFSET = 10
+    GET_BASE_OFFSET = 11
 
 
 class RespType(IntEnum):
@@ -30,6 +33,7 @@ class RespType(IntEnum):
     FLOAT = 3
     DOUBLE = 4
     MASS_DATA_POINT = 5
+    BASE_OFFSET = 6,
     ERROR = 0xFFFF
 
     @classmethod
@@ -48,9 +52,11 @@ class RespType(IntEnum):
             return RespError
         elif packet.header.type == cls.MASS_DATA_POINT:
             return RespMassDataPoint.make_class(packet)
+        elif packet.header.type == cls.BASE_OFFSET:
+            return RespGetBaseOffset
 
         logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
-
+        return None
 
 class Error(IntEnum):
     NONE = 0
@@ -187,32 +193,10 @@ class CmdReadMedianFilterAvg(BaseCmdWithTimesParam):
         super().__init__(*args, **kw)
 
 
-class CmdSetGain(BaseCommand):
-    class Gain(IntEnum):
-        GAIN_32 = 32
-        GAIN_64 = 64
-        GAIN_128 = 128
-    DEFAULT_GAIN = Gain.GAIN_128
-
-    class Field(BaseCommand.Field):
-        GAIN = 'gain'
-
-    _fields_ = [
-        (Field.GAIN, ctypes.c_uint8)
-    ]
-
+class CmdGetBaseOffset(BaseCommand):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.SET_GAIN
-        kw.setdefault(self.Field.GAIN, self.DEFAULT_GAIN)
+        kw[self.Field.TYPE] = CmdType.GET_BASE_OFFSET
         super().__init__(*args, **kw)
-
-    @property
-    def gain(self) -> int:
-        return super().gain
-
-    @gain.setter
-    def gain(self, value: int):
-        super().gain = value
 
 
 class CmdGetValue(BaseCmdWithTimesParam):
@@ -263,6 +247,12 @@ class CmdGetScale(BaseCommand):
         super().__init__(*args, **kw)
 
 
+class CmdSetBaseOffset(BaseCommand):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = CmdType.SET_BASE_OFFSET
+        super().__init__(*args, **kw)
+
+
 class CmdSetOffset(BaseCommand):
     DEFAULT_OFFSET = 0
 
@@ -291,18 +281,6 @@ class CmdSetOffset(BaseCommand):
 class CmdGetOffset(BaseCommand):
     def __init__(self, *args, **kw):
         kw[self.Field.TYPE] = CmdType.GET_OFFSET
-        super().__init__(*args, **kw)
-
-
-class CmdPowerDown(BaseCommand):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.POWER_DOWN
-        super().__init__(*args, **kw)
-
-
-class CmdPowerUp(BaseCommand):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.POWER_UP
         super().__init__(*args, **kw)
 
 
@@ -379,11 +357,25 @@ class RespError(BaseResponse):
         super().error = value
 
 
+class RespGetBaseOffset(BaseResponse):
+    class Field(BaseResponse.Field):
+        OFFSET = '_offset'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.OFFSET, ctypes.c_int32 * MAX_NUMBER_OF_MASS_SENSORS)
+    ]
+
+    @property
+    def offset(self) -> list[int]:
+        return [offset for offset in getattr(self, self.Field.OFFSET) if offset !=
+                constants.INT32_MAX]
+
 class MassDataPoint(ctypes.Structure):
     class Field(BaseResponse.Field):
-        DATA = 'data'
-        ERROR_COUNT = 'error_count'
-        READY = 'ready'
+        DATA = '_data'
+        ERROR_COUNT = '_error_count'
+        READY = '_ready'
         RESERVED1 = 'reserved1'
         RESERVED2 = 'reserved2'
 
@@ -398,7 +390,15 @@ class MassDataPoint(ctypes.Structure):
 
     @property
     def data(self) -> int:
-        return self[self.Field.DATA]
+        return getattr(self, self.Field.DATA)
+
+    @property
+    def error_count(self) -> int:
+        return getattr(self, self.Field.ERROR_COUNT)
+
+    @property
+    def ready(self) -> bool:
+        return getattr(self, self.Field.READY)
 
 
 class RespMassDataPoint(BaseResponse):
