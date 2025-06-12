@@ -1,9 +1,7 @@
- #ifndef growbies_h
+#ifndef growbies_h
 #define growbies_h
 
-#include "constants.h"
 #include "protocol/command.h"
-#include "protocol/network.h"
 
 const int HX711_DAC_BITS = 24;
 
@@ -17,40 +15,32 @@ enum HX711SerialDelay {
 class Growbies {
     public:
         const int sensor_count;
-        byte gain;
 
-
-        Growbies(int sensor_count = 4, byte gain = 128);
-        ~Growbies();
-
-        void execute(PacketHdr* packet_hdr);
+        Growbies(int sensor_count = 4);
         void begin();
 
+        void execute(PacketHdr* packet_hdr);
+
+
     private:
-        // Output buffer and symbol mapping
-        const int static outbuf_size = 512;
         const int static default_threshold = 10000;
         const byte static default_times = 3;
-        const byte static set_base_offset_times = 10;
-        float scale = 1.0;
+        const byte static get_tare_times = 10;
 
-        byte* outbuf;
-        MassDataPoint* mass_data_points;
-        long* offset;
+        byte outbuf[512] = {};
 
-		void get_base_offset(RespGetBaseOffset* resp_get_base_offset);
 		float get_scale();
-		void power_on();
-		void power_off();
-		bool read();
-		void read_median_filter_avg(const byte times = default_times);
-		void read_with_units(const byte times = default_times);
-		void set_base_offset();
-		void set_offset(long* offset);
 		void set_scale(float scale);
-		void shift_all_in();
-		void tare(const byte times = default_times);
-		bool wait_all_ready_retry(const int retries, const unsigned long delay_ms);
+		void get_tare(RespGetTare* resp_get_tare);
+		void set_tare();
+		void power_off();
+		void power_on();
+		void sample(MassDataPoint* mass_data_points);
+		void read_dac(MassDataPoint* mass_data_points, const byte times = default_times);
+		void read_grams(MassDataPoint* mass_data_points, const byte times = default_times);
+		void shift_all_in(MassDataPoint* mass_data_points);
+		bool wait_all_ready_retry(MassDataPoint* mass_data_points,
+		    const int retries, const unsigned long delay_ms);
 };
 
 template <typename PacketType>

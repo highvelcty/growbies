@@ -6,25 +6,18 @@ import logging
 from growbies import constants
 from growbies.utils.bufstr import BufStr
 
-
 logger = logging.getLogger(__name__)
-
 
 MAX_NUMBER_OF_MASS_SENSORS = 5
 
 class CmdType(IntEnum):
     LOOPBACK = 0
-    READ_MEDIAN_FILTER_AVG = 1
-    GET_VALUE = 3
-    GET_UNITS = 4
-    TARE = 5
-    SET_SCALE = 6
-    GET_SCALE = 7
-    SET_OFFSET = 8
-    GET_OFFSET = 9
-    SET_BASE_OFFSET = 10
-    GET_BASE_OFFSET = 11
-
+    READ_DAC = 1
+    READ_GRAMS = 2
+    GET_SCALE = 3
+    SET_SCALE = 4
+    GET_TARE = 5
+    SET_TARE = 6
 
 class RespType(IntEnum):
     VOID = 0
@@ -33,7 +26,7 @@ class RespType(IntEnum):
     FLOAT = 3
     DOUBLE = 4
     MASS_DATA_POINT = 5
-    BASE_OFFSET = 6,
+    GET_TARE = 6,
     ERROR = 0xFFFF
 
     @classmethod
@@ -52,8 +45,8 @@ class RespType(IntEnum):
             return RespError
         elif packet.header.type == cls.MASS_DATA_POINT:
             return RespMassDataPoint.make_class(packet)
-        elif packet.header.type == cls.BASE_OFFSET:
-            return RespGetBaseOffset
+        elif packet.header.type == cls.GET_TARE:
+            return RespGetTare
 
         logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
         return None
@@ -62,13 +55,6 @@ class Error(IntEnum):
     NONE = 0
     ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW = 1
     ERROR_UNRECOGNIZED_COMMAND = 2
-    ERROR_HX711_NOT_READY = 3
-
-
-class Gain(IntEnum):
-    GAIN_32 = 32
-    GAIN_64 = 64
-    GAIN_128 = 128
 
 
 class BaseStructure(ctypes.Structure):
@@ -187,35 +173,20 @@ class BaseCmdWithTimesParam(BaseCommand):
         super().times = value
 
 
-class CmdReadMedianFilterAvg(BaseCmdWithTimesParam):
+class CmdReadDAC(BaseCmdWithTimesParam):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.READ_MEDIAN_FILTER_AVG
+        kw[self.Field.TYPE] = CmdType.READ_DAC
         super().__init__(*args, **kw)
 
-
-class CmdGetBaseOffset(BaseCommand):
+class CmdReadGrams(BaseCmdWithTimesParam):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.GET_BASE_OFFSET
+        kw[self.Field.TYPE] = CmdType.READ_GRAMS
         super().__init__(*args, **kw)
 
-
-class CmdGetValue(BaseCmdWithTimesParam):
+class CmdGetTare(BaseCommand):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.GET_VALUE
+        kw[self.Field.TYPE] = CmdType.GET_TARE
         super().__init__(*args, **kw)
-
-
-class CmdGetUnits(BaseCmdWithTimesParam):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.GET_UNITS
-        super().__init__(*args, **kw)
-
-
-class CmdTare(BaseCmdWithTimesParam):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.TARE
-        super().__init__(*args, **kw)
-
 
 class CmdSetScale(BaseCommand):
     DEFAULT_SCALE = 1.0
@@ -247,42 +218,10 @@ class CmdGetScale(BaseCommand):
         super().__init__(*args, **kw)
 
 
-class CmdSetBaseOffset(BaseCommand):
+class CmdSetTare(BaseCommand):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.SET_BASE_OFFSET
+        kw[self.Field.TYPE] = CmdType.SET_TARE
         super().__init__(*args, **kw)
-
-
-class CmdSetOffset(BaseCommand):
-    DEFAULT_OFFSET = 0
-
-    class Field(BaseCommand.Field):
-        OFFSET = 'offset'
-
-    _fields_ = [
-        # A "long" in arduino uno is the same as a signed 32-bit integer
-        (Field.OFFSET, ctypes.c_int32)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.SET_OFFSET
-        kw.setdefault(self.Field.OFFSET, self.DEFAULT_OFFSET)
-        super().__init__(*args, **kw)
-
-    @property
-    def offset(self) -> int:
-        return super().offset
-
-    @offset.setter
-    def offset(self, value: int):
-        super().offset = value
-
-
-class CmdGetOffset(BaseCommand):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.GET_OFFSET
-        super().__init__(*args, **kw)
-
 
 class RespVoid(BaseResponse):
     def __init__(self, *args, **kw):
@@ -357,7 +296,7 @@ class RespError(BaseResponse):
         super().error = value
 
 
-class RespGetBaseOffset(BaseResponse):
+class RespGetTare(BaseResponse):
     class Field(BaseResponse.Field):
         OFFSET = '_offset'
 

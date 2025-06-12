@@ -40,34 +40,28 @@ class Arduino(ArduinoTransport):
             logger.error(f'Execution layer retries exhausted executing command:\n{cmd}')
             return None
 
-    def manual_calibration(self):
-        self.set_scale()
-        self.tare()
-        while True:
-            value = input('Place a known weight and enter grams here:')
-            try:
-                value = int(value)
-                break
-            except ValueError:
-                print('Invalid integer, please try again.')
-        known_weight = self.get_units(times=self.MANUAL_CALIBRATION_SAMPLES)
-        self.set_scale(value / known_weight)
-
-    def get_base_offset(self) -> list[int]:
-        resp: command.RespGetBaseOffset = self.execute(command.CmdGetBaseOffset())
+    def get_tare(self) -> list[int]:
+        resp: command.RespGetTare = self.execute(command.CmdGetTare())
         return resp.offset
+
+    def set_tare(self):
+        self.execute(command.CmdSetTare(), read_timeout_sec=self.SET_BASE_OFFSET_TIMEOUT_SEC)
 
     def get_scale(self) -> float:
         return self.execute(command.CmdGetScale()).data
 
-    def get_units(self, times: int = command.CmdGetUnits.DEFAULT_TIMES) -> int:
-        resp: command.RespLong = self.execute(command.CmdGetUnits(times=times))
-        return resp.data
+    def set_scale(self, scale: float = command.CmdSetScale.DEFAULT_SCALE):
+        self.execute(command.CmdSetScale(scale=scale))
 
-    def read_median_filter_avg(self,
-                               times: int = command.CmdReadMedianFilterAvg.DEFAULT_TIMES) \
+    def read_dac(self, times: int = command.CmdReadDAC.DEFAULT_TIMES) \
             -> command.RespMassDataPoint:
-        cmd = command.CmdReadMedianFilterAvg(times=times)
+        cmd = command.CmdReadDAC(times=times)
+        resp: command.RespMassDataPoint = self.execute(cmd, read_timeout_sec=10)
+        return resp
+
+    def read_grams(self, times: int = command.CmdReadDAC.DEFAULT_TIMES) \
+            -> command.RespMassDataPoint:
+        cmd = command.CmdReadGrams(times=times)
         resp: command.RespMassDataPoint = self.execute(cmd, read_timeout_sec=10)
         return resp
 
@@ -80,16 +74,6 @@ class Arduino(ArduinoTransport):
                 bytes_in_waiting = self.in_waiting
                 if bytes_in_waiting:
                     _ = self.read(bytes_in_waiting)
-
-    def set_base_offset(self):
-        self.execute(command.CmdSetBaseOffset(), read_timeout_sec=self.SET_BASE_OFFSET_TIMEOUT_SEC)
-
-    def set_scale(self, scale: float = command.CmdSetScale.DEFAULT_SCALE):
-        self.execute(command.CmdSetScale(scale=scale))
-
-    def tare(self, times: int = command.CmdTare.DEFAULT_TIMES):
-        self.execute(command.CmdTare(times=times))
-
 
     def wait_for_ready(self):
         cmd = command.CmdLoopback()

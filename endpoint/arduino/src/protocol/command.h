@@ -1,8 +1,34 @@
 #ifndef command_h
 #define command_h
 
-#include "constants.h"
 #include "protocol/network.h"
+
+enum Cmd: uint16_t {
+    CMD_LOOPBACK = 0,
+    CMD_READ_DAC = 1,
+    CMD_READ_GRAMS = 2,
+    CMD_GET_SCALE = 3,
+    CMD_SET_SCALE = 4,
+    CMD_GET_TARE = 5,
+    CMD_SET_TARE = 6,
+};
+
+enum RespType: uint16_t {
+    RESP_TYPE_VOID = 0,
+    RESP_TYPE_BYTE = 1,
+    RESP_TYPE_LONG = 2,
+    RESP_TYPE_FLOAT = 3,
+    RESP_TYPE_DOUBLE = 4,
+    RESP_MASS_DATA_POINT = 5,
+    RESP_GET_TARE = 6,
+    RESP_TYPE_ERROR = 0xFFFF,
+};
+
+enum Error: long {
+    ERROR_NONE = 0,
+    ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW = 1,
+    ERROR_UNRECOGNIZED_COMMAND = 2,
+};
 
 // --- Base Commands
 struct BaseCmd : PacketHdr {};
@@ -12,20 +38,14 @@ struct BaseCmdWithTimesParam : BaseCmd {
 };
 
 // --- Commands
-struct CmdGetBaseOffset: BaseCmd {};
+struct CmdReadDAC : BaseCmdWithTimesParam {};
+struct CmdReadGrams : BaseCmdWithTimesParam {};
 struct CmdGetScale : BaseCmd {};
-
-struct CmdGetUnits : BaseCmdWithTimesParam {};
-
-struct CmdReadMedianFilterAvg : BaseCmdWithTimesParam {};
-
-struct CmdSetBaseOffset: BaseCmd {};
-
+struct CmdGetTare: BaseCmd {};
 struct CmdSetScale : BaseCmd {
     float scale;
 };
-
-struct CmdTare : BaseCmdWithTimesParam {};
+struct CmdSetTare: BaseCmd {};
 
 // --- Base Responses
 struct BaseResp : PacketHdr {
@@ -62,9 +82,9 @@ struct RespError : BaseResp {
 };
 
 // --- Cmd Responses
-struct RespGetBaseOffset : BaseResp {
+struct RespGetTare : BaseResp {
     int32_t offset[MAX_NUMBER_OF_MASS_SENSORS];
-    RespGetBaseOffset(): BaseResp(RESP_BASE_OFFSET) {};
+    RespGetTare(): BaseResp(RESP_GET_TARE) {};
 };
 
 struct MassDataPoint {

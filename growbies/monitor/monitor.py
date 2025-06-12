@@ -56,7 +56,7 @@ def main(sess: Session):
 
 
                     ts = get_utc_iso_ts_str()
-                    data = arduino_serial.read_median_filter_avg(3)
+                    data = arduino_serial.read_grams(1)
 
                     out_str = (f'{ts}, {data.sensor[0].data}, {data.sensor[1].data}, '
                                f'{data.sensor[2].data}, {data.sensor[3].data}')
