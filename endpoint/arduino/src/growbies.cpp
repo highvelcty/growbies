@@ -214,7 +214,7 @@ void Growbies::read_dac(MassDataPoint* mass_data_points, const byte times) {
 }
 
 void Growbies::read_grams(MassDataPoint* mass_data_points, const byte times){
-    float total_mass;
+    float total_mass = 0.0;
     RespGetTare tare;
     get_tare(&tare);
 
