@@ -56,35 +56,13 @@ def main(sess: Session):
 
 
                     ts = get_utc_iso_ts_str()
-                    data = arduino_serial.read_grams(1)
+                    data = arduino_serial.read_grams(3)
 
                     out_str = (f'{ts}, {data.sensor[0].data}, {data.sensor[1].data}, '
                                f'{data.sensor[2].data}, {data.sensor[3].data}')
                     with FileLock(sess.path_to_data, 'a+') as outf:
                         outf.write(f'{out_str}\n')
                     print(out_str)
-
-
-                    # # Sample
-                    # ts = get_utc_iso_ts_str()
-                    # samples = list()
-                    # # for channel in range(CHANNELS): # emey return this
-                    # for channel in range(3,4):
-                    #     arduino_serial.set_channel(channel)
-                    #     samples.append(arduino_serial.read_average(3))
-                    #
-                    # if all(samples):
-                    #     sampling_retry = 0
-                    #     out_str = f'{ts}'
-                    #     for sample in samples:
-                    #         out_str += f',{sample}'
-                    #     with FileLock(sess.path_to_data, 'a+') as outf:
-                    #         outf.write(f'{out_str}\n')
-                    #     print(f'{str(elapsed_time)}: {out_str}')
-                    #     iteration += 1
-                    # else:
-                    #     # One or more samples came back as None
-                    #     sampling_retry += 1
 
                     time.sleep(POLLING_SEC)
             except OSError:

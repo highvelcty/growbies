@@ -83,12 +83,12 @@ struct RespError : BaseResp {
 
 // --- Cmd Responses
 struct RespGetTare : BaseResp {
-    int32_t offset[MAX_NUMBER_OF_MASS_SENSORS];
+    float offset[MAX_NUMBER_OF_MASS_SENSORS];
     RespGetTare(): BaseResp(RESP_GET_TARE) {};
 };
 
 struct MassDataPoint {
-    long mass;
+    float mass;
     byte error_count;
     byte ready : 1;
     byte  reserved : 7;

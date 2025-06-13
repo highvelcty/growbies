@@ -25,7 +25,7 @@ class Growbies {
     private:
         const int static default_threshold = 10000;
         const byte static default_times = 3;
-        const byte static get_tare_times = 10;
+        const byte static get_tare_times = default_times;
 
         byte outbuf[512] = {};
 

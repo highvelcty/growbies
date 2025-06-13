@@ -1,1 +1,1 @@
-void insertion_sort(long* arr, int size);
+void insertion_sort(float* arr, int size);

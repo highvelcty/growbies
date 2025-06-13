@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <EEPROM.h>
+#include <float.h>
 #include <new> // Required for placement new
 #include <util/atomic.h>
 
@@ -112,7 +113,7 @@ void Growbies::get_tare(RespGetTare* resp_get_tare) {
             resp_get_tare->offset[sensor] = eeprom_struct.offset[sensor];
         }
         else{
-            resp_get_tare->offset[sensor] = INT32_MAX;
+            resp_get_tare->offset[sensor] = FLT_MAX;
         }
     }
 }
@@ -123,10 +124,6 @@ void Growbies::set_tare() {
         (MassDataPoint*)malloc(sizeof(MassDataPoint) * this->sensor_count);
 
     EEPROM.get(0, eeprom_struct);
-    for (int sensor = 0; sensor < this->sensor_count; ++sensor){
-        eeprom_struct.offset[sensor] = 0;
-    }
-    EEPROM.put(0, eeprom_struct);
 
     this->read_dac(mass_data_points, this->get_tare_times);
 
@@ -158,24 +155,25 @@ void Growbies::read_dac(MassDataPoint* mass_data_points, const byte times) {
     // Reads data from the chip the requested number of times. The median is found and then all
     // samples that are within the median +/- a DAC threshold are averaged and returned.
 
-    long median;
+    float median;
     byte middle;
-    long sample;
+    float sample;
+    int sample_idx;
     int sensor;
     byte sensor_sample;
-    long sum;
+    float sum;
     int sum_count;
 
-    long sensor_samples[this->sensor_count][times] = {0};
+    float sensor_samples[this->sensor_count][times] = {0.0};
 
     // Initialize
     memset(mass_data_points, 0, sizeof(MassDataPoint) * this->sensor_count);
 
 	// Read samples
-	for (sample = 0; sample < times; ++sample) {
+	for (sample_idx = 0; sample_idx < times; ++sample_idx) {
         this->sample(mass_data_points);
         for (sensor = 0; sensor < this->sensor_count; ++sensor){
-            sensor_samples[sensor][sample] = mass_data_points[sensor].mass;
+            sensor_samples[sensor][sample_idx] = mass_data_points[sensor].mass;
         }
 	}
 
@@ -233,6 +231,8 @@ void Growbies::shift_all_in(MassDataPoint* mass_data_points) {
     uint8_t sensor;
     uint8_t pinb;
 
+    long long_mass_data_points[this->sensor_count] = {0};
+
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         delayMicroseconds(HX711_READY_TO_SCK_RISE_MICROSECONDS);
         for (ii = 0; ii < HX711_DAC_BITS; ++ii) {
@@ -249,15 +249,17 @@ void Growbies::shift_all_in(MassDataPoint* mass_data_points) {
             // time sensitive section when SCK is high.
             for (sensor = 0; sensor < this->sensor_count; ++sensor) {
                 a_bit = (bool)(pinb & get_HX711_dout_port_bit(sensor));
-                mass_data_points[sensor].mass |= (a_bit << (HX711_DAC_BITS - 1 - ii));
+                long_mass_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
         }
     }
 
     for (sensor = 0; sensor < this->sensor_count; ++sensor) {
-        if (mass_data_points[sensor].mass & (1UL << (HX711_DAC_BITS - 1))) {
-            mass_data_points[sensor].mass |= (0xFFUL << HX711_DAC_BITS);
+        if (long_mass_data_points[sensor] & (1UL << (HX711_DAC_BITS - 1))) {
+            long_mass_data_points[sensor] |= (0xFFUL << HX711_DAC_BITS);
         }
+
+        mass_data_points[sensor].mass = (float)long_mass_data_points[sensor];
     }
 }
 

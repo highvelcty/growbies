@@ -9,6 +9,7 @@ from growbies.utils.bufstr import BufStr
 logger = logging.getLogger(__name__)
 
 MAX_NUMBER_OF_MASS_SENSORS = 5
+C_FLOAT_MAX = 3.4028234663852886e+38
 
 class CmdType(IntEnum):
     LOOPBACK = 0
@@ -302,13 +303,13 @@ class RespGetTare(BaseResponse):
 
     _pack_ = 1
     _fields_ = [
-        (Field.OFFSET, ctypes.c_int32 * MAX_NUMBER_OF_MASS_SENSORS)
+        (Field.OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS)
     ]
 
     @property
     def offset(self) -> list[int]:
         return [offset for offset in getattr(self, self.Field.OFFSET) if offset !=
-                constants.INT32_MAX]
+                C_FLOAT_MAX]
 
 class MassDataPoint(ctypes.Structure):
     class Field(BaseResponse.Field):
@@ -320,7 +321,7 @@ class MassDataPoint(ctypes.Structure):
 
     _pack_ = 1
     _fields_ = [
-        (Field.DATA, ctypes.c_int32),
+        (Field.DATA, ctypes.c_float),
         (Field.ERROR_COUNT, ctypes.c_uint8),
         (Field.READY, ctypes.c_uint8, 1),
         (Field.RESERVED1, ctypes.c_uint8, 7),

@@ -14,7 +14,7 @@ class Arduino(ArduinoTransport):
     RESET_COMMUNICATION_LOOPS = 3
     RESET_COMMUNICATION_LOOP_DELAY = 0.33
     MANUAL_CALIBRATION_SAMPLES = 25
-    SET_BASE_OFFSET_TIMEOUT_SEC = 15
+    SET_TARE_TIMEOUT_SECONDS = 30
 
     def execute(self, cmd: command.TBaseCommand, *,
                 retries: int = EXEC_RETRIES,
@@ -45,7 +45,7 @@ class Arduino(ArduinoTransport):
         return resp.offset
 
     def set_tare(self):
-        self.execute(command.CmdSetTare(), read_timeout_sec=self.SET_BASE_OFFSET_TIMEOUT_SEC)
+        self.execute(command.CmdSetTare(), read_timeout_sec=self.SET_TARE_TIMEOUT_SECONDS)
 
     def get_scale(self) -> float:
         return self.execute(command.CmdGetScale()).data
