@@ -6,10 +6,12 @@
 const int HX711_DAC_BITS = 24;
 
 enum HX711SerialDelay {
-    HX711_READY_TO_SCK_RISE_MICROSECONDS = 3,
-    HX711_SCK_RISE_TO_DOUT_READY_MICROSECONDS = 3,
-    HX711_POWER_OFF_DELAY = 64 * 2 // The specification says 64uS with SCK high will power down.
-                                   // Double this to be sure.
+    HX711_BIT_BANG_DELAY = 3,
+
+    // The specification says 64uS with SCK high will power down. Double this to be sure.
+    //
+    // Additionally, this is used for power on delay to allow for settling of in rush current
+    HX711_POWER_DELAY = 64 * 2
 };
 
 class Growbies {
@@ -24,8 +26,8 @@ class Growbies {
 
     private:
         const int static default_threshold = 10000;
-        const byte static default_times = 3;
-        const byte static get_tare_times = default_times;
+        const byte static default_times = 5;
+        const byte static get_tare_times = 15;
 
         byte outbuf[512] = {};
 

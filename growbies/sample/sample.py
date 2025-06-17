@@ -22,7 +22,7 @@ def main(sess: Session):
         # Sample scale under test
         samples = list()
         ts = get_utc_iso_ts_str()
-        data = arduino.read_dac(3)
+        data = arduino.read_grams(3)
 
         # Initialize output file if necessary
         if not sess.path_to_data.exists():
@@ -30,7 +30,7 @@ def main(sess: Session):
                 outf.write(COLUMN_STR)
 
         # Write out data to file
-        out_str = (f'{ts},{data.sensor[0].data},{data.sensor[1].data},'
-                   f'{data.sensor[2].data},{data.sensor[3].data},{ref_mass}')
+        out_str = (f'{ts},{data.sensor[0].mass},{data.sensor[1].mass},'
+                   f'{data.sensor[2].mass},{data.sensor[3].mass},{ref_mass}')
         with open(sess.path_to_data, 'a+') as outf:
             outf.write(f'{out_str}\n')

@@ -21,7 +21,7 @@ void Growbies::begin(){
     for(int sensor = 0; sensor < this->sensor_count; ++sensor) {
         pinMode(get_HX711_dout_pin(sensor), INPUT_PULLUP);
     }
-    digitalWrite(ARDUINO_HX711_SCK, LOW);
+    this->power_off();
 }
 
 void Growbies::execute(PacketHdr* packet_hdr) {
@@ -137,18 +137,17 @@ void Growbies::set_tare() {
 
 void Growbies::power_off() {
     digitalWrite(ARDUINO_HX711_SCK, HIGH);
-    delayMicroseconds(HX711_POWER_OFF_DELAY);
+    delayMicroseconds(HX711_POWER_DELAY);
 }
 
 void Growbies::power_on() {
     digitalWrite(ARDUINO_HX711_SCK, LOW);
+    delayMicroseconds(HX711_POWER_DELAY);
 }
 
 void Growbies::sample(MassDataPoint* mass_data_points){
-    this->power_on();
     this->wait_all_ready_retry(mass_data_points, WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS);
     this->shift_all_in(mass_data_points);
-    this->power_off();
 }
 
 void Growbies::read_dac(MassDataPoint* mass_data_points, const byte times) {
@@ -170,12 +169,14 @@ void Growbies::read_dac(MassDataPoint* mass_data_points, const byte times) {
     memset(mass_data_points, 0, sizeof(MassDataPoint) * this->sensor_count);
 
 	// Read samples
+	this->power_on();
 	for (sample_idx = 0; sample_idx < times; ++sample_idx) {
         this->sample(mass_data_points);
         for (sensor = 0; sensor < this->sensor_count; ++sensor){
             sensor_samples[sensor][sample_idx] = mass_data_points[sensor].mass;
         }
 	}
+	this->power_off();
 
     // Filter and average
     for (sensor = 0; sensor < this->sensor_count; ++sensor) {
@@ -234,13 +235,13 @@ void Growbies::shift_all_in(MassDataPoint* mass_data_points) {
     long long_mass_data_points[this->sensor_count] = {0};
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-        delayMicroseconds(HX711_READY_TO_SCK_RISE_MICROSECONDS);
         for (ii = 0; ii < HX711_DAC_BITS; ++ii) {
+            delayMicroseconds(HX711_BIT_BANG_DELAY);
             // Read in a byte, most significant bit first
             digitalWrite(ARDUINO_HX711_SCK, HIGH);
 
             // This is a time critical block
-            delayMicroseconds(HX711_SCK_RISE_TO_DOUT_READY_MICROSECONDS);
+            delayMicroseconds(HX711_BIT_BANG_DELAY);
             // Read pins 8-13
             pinb = PINB;
             digitalWrite(ARDUINO_HX711_SCK, LOW);
@@ -252,6 +253,13 @@ void Growbies::shift_all_in(MassDataPoint* mass_data_points) {
                 long_mass_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
         }
+
+        // One more pulse to set the 128 gain
+        delayMicroseconds(HX711_BIT_BANG_DELAY);
+        digitalWrite(ARDUINO_HX711_SCK, HIGH);
+        delayMicroseconds(HX711_BIT_BANG_DELAY);
+        digitalWrite(ARDUINO_HX711_SCK, LOW);
+        delayMicroseconds(HX711_BIT_BANG_DELAY);
     }
 
     for (sensor = 0; sensor < this->sensor_count; ++sensor) {

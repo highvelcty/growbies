@@ -25,7 +25,7 @@ def _extract_x_data_and_y_datas(path: Path) -> \
               list[int]]:
     labels = None
     x_data: list[datetime] = list()
-    y_datas: list[list[int]] = list()
+    y_datas: list[list[float]] = list()
     ref_x_data: list[datetime] = list()
     ref_y_data: list[int] = list()
     with open(path, 'r') as inf:
@@ -46,7 +46,7 @@ def _extract_x_data_and_y_datas(path: Path) -> \
 
                 for channel, channel_data in enumerate(data):
                     channel_data = channel_data.strip()
-                    y_datas[channel].append(int(channel_data))
+                    y_datas[channel].append(float(channel_data))
 
                 if ref_data is not None:
                     ref_x_data.append(dt)
@@ -178,7 +178,7 @@ def bucket_test(path: Path, *,
     title = ('Experiment: Water bowl fill/empty 2 times.\n'
              'Test scale: 3d print load cell mounts glued to 20"x10" tray.\n'
              'Context: Concrete floor, reference scale in stack, centered mass.')
-    _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data)
+    _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data, invert_sum=invert_sum)
 
     ### Linearity ##################################################################################
     fig: plt.Figure = plt.figure()

@@ -313,7 +313,7 @@ class RespGetTare(BaseResponse):
 
 class MassDataPoint(ctypes.Structure):
     class Field(BaseResponse.Field):
-        DATA = '_data'
+        MASS = '_mass'
         ERROR_COUNT = '_error_count'
         READY = '_ready'
         RESERVED1 = 'reserved1'
@@ -321,7 +321,7 @@ class MassDataPoint(ctypes.Structure):
 
     _pack_ = 1
     _fields_ = [
-        (Field.DATA, ctypes.c_float),
+        (Field.MASS, ctypes.c_float),
         (Field.ERROR_COUNT, ctypes.c_uint8),
         (Field.READY, ctypes.c_uint8, 1),
         (Field.RESERVED1, ctypes.c_uint8, 7),
@@ -329,8 +329,8 @@ class MassDataPoint(ctypes.Structure):
     ]
 
     @property
-    def data(self) -> int:
-        return getattr(self, self.Field.DATA)
+    def mass(self) -> float:
+        return getattr(self, self.Field.MASS)
 
     @property
     def error_count(self) -> int:

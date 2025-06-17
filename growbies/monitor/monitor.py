@@ -7,7 +7,7 @@ from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
 
-POLLING_SEC = .01
+POLLING_SEC = 1
 OSERROR_RETRIES = 5
 OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5
@@ -58,10 +58,13 @@ def main(sess: Session):
                     ts = get_utc_iso_ts_str()
                     data = arduino_serial.read_grams(3)
 
-                    out_str = (f'{ts}, {data.sensor[0].data}, {data.sensor[1].data}, '
-                               f'{data.sensor[2].data}, {data.sensor[3].data}')
+                    total = sum(data.sensor[ii].mass for ii in range(4))
+                    file_str = (f'{ts}, {data.sensor[0].mass}, {data.sensor[1].mass}, '
+                               f'{data.sensor[2].mass}, {data.sensor[3].mass}')
+                    out_str = (f'{ts}, {data.sensor[0].mass:.2f}, {data.sensor[1].mass:.2f}, '
+                               f'{data.sensor[2].mass:.2f}, {data.sensor[3].mass:.2f}, {total:.2f}')
                     with FileLock(sess.path_to_data, 'a+') as outf:
-                        outf.write(f'{out_str}\n')
+                        outf.write(f'{file_str}\n')
                     print(out_str)
 
                     time.sleep(POLLING_SEC)
