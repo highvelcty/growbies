@@ -6,10 +6,3 @@ A feedback-control, based on networks of things and machine learning, for agricu
 
 `Source Repository <https://github.com/highvelcty/growbies>`_
 
-Stories
-=======
-
-.. toctree::
-    velostat
-    4xfullbridge
-
