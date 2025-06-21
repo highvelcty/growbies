@@ -7,7 +7,7 @@ from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
 
-POLLING_SEC = 1
+POLLING_SEC = 0.5
 OSERROR_RETRIES = 5
 OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5
@@ -63,6 +63,7 @@ def main(sess: Session):
                                f'{data.sensor[2].mass}, {data.sensor[3].mass}')
                     out_str = (f'{ts}, {data.sensor[0].mass:.2f}, {data.sensor[1].mass:.2f}, '
                                f'{data.sensor[2].mass:.2f}, {data.sensor[3].mass:.2f}, {total:.2f}')
+
                     with FileLock(sess.path_to_data, 'a+') as outf:
                         outf.write(f'{file_str}\n')
                     print(out_str)

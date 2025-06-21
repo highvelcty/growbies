@@ -60,7 +60,7 @@ def time_plot(path: Path, *,
     x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
 
     ### Time #######################################################################################
-    title = 'Normalized Scale Over Time' if normalize else 'Scale ADC Over Time'
+    title = 'Normalized Mass Over Time' if normalize else 'Mass Over Time'
     _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data,
                normalize=normalize)
 
@@ -164,7 +164,7 @@ def _time_plot(title: str,
     if normalize:
         plt.ylabel('normalized mass')
     else:
-        plt.ylabel('mass (ADC)')
+        plt.ylabel('mass (grams)')
     plt.title(title)
     fig.tight_layout()
     # plt.subplots_adjust(bottom=.3)

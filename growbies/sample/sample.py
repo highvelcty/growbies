@@ -22,7 +22,7 @@ def main(sess: Session):
         # Sample scale under test
         samples = list()
         ts = get_utc_iso_ts_str()
-        data = arduino.read_grams(3)
+        data = arduino.read_grams(8)
 
         # Initialize output file if necessary
         if not sess.path_to_data.exists():
