@@ -31,6 +31,11 @@ enum Error: long {
     ERROR_UNRECOGNIZED_COMMAND = 2,
 };
 
+enum Phase: uint8_t {
+    PHASE_A = 0,
+    PHASE_B = 1
+};
+
 // --- Base Commands
 struct BaseCmd : PacketHdr {};
 

@@ -64,7 +64,7 @@ void Growbies::execute(PacketHdr* packet_hdr) {
         CmdSetPhase* cmd = (CmdSetPhase*)slip_buf->buf;
         if (validate_packet(*cmd)) {
             new (this->outbuf) RespVoid;
-            if (cmd->phase == 0) {
+            if (cmd->phase == PHASE_A) {
                 this->set_phase_a();
             }
             else {

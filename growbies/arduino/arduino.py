@@ -42,12 +42,12 @@ class Arduino(ArduinoTransport):
 
     def set_phase_a(self):
         cmd = command.CmdSetPhase()
-        cmd.phase = 0
+        cmd.phase = command.Phase.A
         self.execute(cmd)
 
     def set_phase_b(self):
         cmd = command.CmdSetPhase()
-        cmd.phase = 1
+        cmd.phase = command.Phase.B
         self.execute(cmd)
 
     def get_scale(self) -> float:

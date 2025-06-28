@@ -58,6 +58,9 @@ class Error(IntEnum):
     ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW = 1
     ERROR_UNRECOGNIZED_COMMAND = 2
 
+class Phase(IntEnum):
+    A = 0
+    B = 1
 
 class BaseStructure(ctypes.Structure):
     @classmethod
