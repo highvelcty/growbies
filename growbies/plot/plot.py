@@ -134,6 +134,7 @@ def _time_plot(title: str,
                 total += channel_data[idx]
         summed_channel_data.append(total)
 
+
     # Filter for particle board prototype
     # Commented out 2025_04_02
     indices_to_remove = list()

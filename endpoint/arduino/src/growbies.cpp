@@ -273,10 +273,10 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
 //    float total_mass = 0.0;
     get_tare(&tare);
 
-#if CHANNEL_B_TEMPERATURE
+#if TEMPERATURE_CHANNEL_B
     // Temperature
     this->set_gain(HX711_GAIN_32);
-    this->read_dac(this->data_points, times);
+    this->read_dac(this->data_points, times, HX711_GAIN_32);
     for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
         multi_data_points[sensor_idx].temperature.data = \
         this->data_points[sensor_idx].data;
@@ -288,7 +288,7 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
     set_phase_a();
 #endif
 
-#if CHANNEL_B_TEMPERATURE
+#if TEMPERATURE_CHANNEL_B
     this->set_gain(HX711_GAIN_128);
 #endif
 

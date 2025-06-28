@@ -64,7 +64,8 @@ def main(sess: Session):
                     # out_str = (f'{ts}, {data.sensor[0].mass:.2f}, {data.sensor[1].mass:.2f}, '
                     #            f'{data.sensor[2].mass:.2f}, {data.sensor[3].mass:.2f}, {total:.2f}')
                     out_str = (f'{ts}, {data.sensor[0].mass.data}, {data.sensor[1].mass.data}, '
-                               f'{data.sensor[2].mass.data}, {data.sensor[3].mass.data}')
+                               f'{data.sensor[2].mass.data}, {data.sensor[3].mass.data}, '
+                               f'{data.sensor[1].temperature.data}')
                     file_str = out_str
 
                     with FileLock(sess.path_to_data, 'a+') as outf:
