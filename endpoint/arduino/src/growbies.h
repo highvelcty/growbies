@@ -14,6 +14,20 @@ enum HX711SerialDelay {
     HX711_POWER_DELAY = 64 * 2
 };
 
+typedef enum HX711Gain {
+    HX711_GAIN_128 = 128,
+    HX711_GAIN_64 = 64,
+    HX711_GAIN_32 = 32
+} HX711Gain;
+
+typedef enum Unit : uint16_t {
+    // Bitfield
+    UNIT_GRAMS       = 0x0001,
+    UNIT_DAC         = 0x0002,
+    UNIT_FAHRENHEIT  = 0x0004,
+    UNIT_CELSIUS     = 0x0008,
+} Units;
+
 class Growbies {
     public:
         const int sensor_count;
@@ -30,18 +44,24 @@ class Growbies {
         const byte static get_tare_times = 15;
 
         byte outbuf[512] = {};
+        DataPoint data_points[MAX_HX711_DEVICES];
 
+        void set_phase_a();
+        void set_phase_b();
 		float get_scale();
 		void set_scale(float scale);
 		void get_tare(RespGetTare* resp_get_tare);
 		void set_tare();
+		void set_gain(HX711Gain gain);
 		void power_off();
 		void power_on();
-		void sample(MassDataPoint* mass_data_points);
-		void read_dac(MassDataPoint* mass_data_points, const byte times = default_times);
-		void read_grams(MassDataPoint* mass_data_points, const byte times = default_times);
-		void shift_all_in(MassDataPoint* mass_data_points);
-		bool wait_all_ready_retry(MassDataPoint* mass_data_points,
+		void sample(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
+		void read_dac(DataPoint* data_points, const byte times = default_times,
+		              const HX711Gain gain = HX711_GAIN_128);
+		void read_units(MultiDataPoint* data_points, const byte times = default_times,
+		                Unit units = (Unit)(UNIT_GRAMS | UNIT_FAHRENHEIT));
+		void shift_all_in(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
+		bool wait_all_ready_retry(DataPoint* data_points,
 		    const int retries, const unsigned long delay_ms);
 };
 
@@ -64,6 +84,8 @@ bool validate_packet(const PacketType& packet) {
     result = check_and_respond_to_deserialization_underflow(packet);
     return result;
 }
+
+float get_total_mass_offset(RespGetTare tare, int sensor_idx);
 
 extern Growbies* growbies;
 

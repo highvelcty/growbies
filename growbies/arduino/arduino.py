@@ -40,12 +40,15 @@ class Arduino(ArduinoTransport):
             logger.error(f'Execution layer retries exhausted executing command:\n{cmd}')
             return None
 
-    def get_tare(self) -> list[int]:
-        resp: command.RespGetTare = self.execute(command.CmdGetTare())
-        return resp.offset
+    def set_phase_a(self):
+        cmd = command.CmdSetPhase()
+        cmd.phase = command.Phase.A
+        self.execute(cmd)
 
-    def set_tare(self):
-        self.execute(command.CmdSetTare(), read_timeout_sec=self.SET_TARE_TIMEOUT_SECONDS)
+    def set_phase_b(self):
+        cmd = command.CmdSetPhase()
+        cmd.phase = command.Phase.B
+        self.execute(cmd)
 
     def get_scale(self) -> float:
         return self.execute(command.CmdGetScale()).data
@@ -53,16 +56,23 @@ class Arduino(ArduinoTransport):
     def set_scale(self, scale: float = command.CmdSetScale.DEFAULT_SCALE):
         self.execute(command.CmdSetScale(scale=scale))
 
+    def get_tare(self) -> tuple[list[float], list[float], list[float]]:
+        resp: command.RespGetTare = self.execute(command.CmdGetTare())
+        return resp.mass_a_offset, resp.mass_b_offset, resp.temperature_offset
+
+    def set_tare(self):
+        self.execute(command.CmdSetTare(), read_timeout_sec=self.SET_TARE_TIMEOUT_SECONDS)
+
     def read_dac(self, times: int = command.CmdReadDAC.DEFAULT_TIMES) \
-            -> command.RespMassDataPoint:
+            -> command.RespMultiDataPoint:
         cmd = command.CmdReadDAC(times=times)
-        resp: command.RespMassDataPoint = self.execute(cmd, read_timeout_sec=10)
+        resp: command.RespMultiDataPoint = self.execute(cmd, read_timeout_sec=10)
         return resp
 
-    def read_grams(self, times: int = command.CmdReadDAC.DEFAULT_TIMES) \
-            -> command.RespMassDataPoint:
-        cmd = command.CmdReadGrams(times=times)
-        resp: command.RespMassDataPoint = self.execute(cmd, read_timeout_sec=10)
+    def read_units(self, times: int = command.CmdReadUnits.DEFAULT_TIMES) \
+            -> command.RespMultiDataPoint:
+        cmd = command.CmdReadUnits(times=times)
+        resp: command.RespMultiDataPoint = self.execute(cmd, read_timeout_sec=10)
         return resp
 
     def reset_communication(self):

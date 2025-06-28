@@ -56,13 +56,16 @@ def main(sess: Session):
 
 
                     ts = get_utc_iso_ts_str()
-                    data = arduino_serial.read_grams(3)
+                    data = arduino_serial.read_units()
 
-                    total = sum(data.sensor[ii].mass for ii in range(4))
-                    file_str = (f'{ts}, {data.sensor[0].mass}, {data.sensor[1].mass}, '
-                               f'{data.sensor[2].mass}, {data.sensor[3].mass}')
-                    out_str = (f'{ts}, {data.sensor[0].mass:.2f}, {data.sensor[1].mass:.2f}, '
-                               f'{data.sensor[2].mass:.2f}, {data.sensor[3].mass:.2f}, {total:.2f}')
+                    # total = sum(data.sensor[ii].mass for ii in range(4))
+                    # file_str = (f'{ts}, {data.sensor[0].mass}, {data.sensor[1].mass}, '
+                    #            f'{data.sensor[2].mass}, {data.sensor[3].mass}')
+                    # out_str = (f'{ts}, {data.sensor[0].mass:.2f}, {data.sensor[1].mass:.2f}, '
+                    #            f'{data.sensor[2].mass:.2f}, {data.sensor[3].mass:.2f}, {total:.2f}')
+                    out_str = (f'{ts}, {data.sensor[0].mass.data}, {data.sensor[1].mass.data}, '
+                               f'{data.sensor[2].mass.data}, {data.sensor[3].mass.data}')
+                    file_str = out_str
 
                     with FileLock(sess.path_to_data, 'a+') as outf:
                         outf.write(f'{file_str}\n')

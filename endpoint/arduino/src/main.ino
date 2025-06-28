@@ -12,6 +12,9 @@ void setup() {
     Serial.begin(57600);
     growbies->begin();
     display->begin();
+
+    pinMode(ARDUINO_EXCITATION_A, OUTPUT);
+    pinMode(ARDUINO_EXCITATION_B, OUTPUT);
 }
 
 void loop() {

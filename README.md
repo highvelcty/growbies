@@ -6,6 +6,11 @@ In development.
 
 ![growbies.png](docs/source/binary/growbies.png)
 
+Credits
+=======
+
+- https://github.com/bogde/HX711/
+
 Python Virtual Environment
 ==========================
 Create a virtual environment with:

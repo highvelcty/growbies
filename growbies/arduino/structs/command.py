@@ -14,11 +14,12 @@ C_FLOAT_MAX = 3.4028234663852886e+38
 class CmdType(IntEnum):
     LOOPBACK = 0
     READ_DAC = 1
-    READ_GRAMS = 2
+    READ_UNITS = 2
     GET_SCALE = 3
     SET_SCALE = 4
     GET_TARE = 5
     SET_TARE = 6
+    SET_PHASE = 7
 
 class RespType(IntEnum):
     VOID = 0
@@ -45,7 +46,7 @@ class RespType(IntEnum):
         elif packet.header.type == cls.ERROR:
             return RespError
         elif packet.header.type == cls.MASS_DATA_POINT:
-            return RespMassDataPoint.make_class(packet)
+            return RespMultiDataPoint.make_class(packet)
         elif packet.header.type == cls.GET_TARE:
             return RespGetTare
 
@@ -57,6 +58,9 @@ class Error(IntEnum):
     ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW = 1
     ERROR_UNRECOGNIZED_COMMAND = 2
 
+class Phase(IntEnum):
+    A = 0
+    B = 1
 
 class BaseStructure(ctypes.Structure):
     @classmethod
@@ -179,10 +183,30 @@ class CmdReadDAC(BaseCmdWithTimesParam):
         kw[self.Field.TYPE] = CmdType.READ_DAC
         super().__init__(*args, **kw)
 
-class CmdReadGrams(BaseCmdWithTimesParam):
+class CmdReadUnits(BaseCmdWithTimesParam):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.READ_GRAMS
+        kw[self.Field.TYPE] = CmdType.READ_UNITS
         super().__init__(*args, **kw)
+
+class CmdSetPhase(BaseCommand):
+    class Field(BaseCommand.Field):
+        PHASE = '_phase'
+
+    _fields_ = [
+        (Field.PHASE, ctypes.c_uint16),
+    ]
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = CmdType.SET_PHASE
+        super().__init__(*args, **kw)
+
+    @property
+    def phase(self) -> int:
+        return getattr(self, self.Field.PHASE)
+
+    @phase.setter
+    def phase(self, value: int):
+        setattr(self, self.Field.PHASE, value)
 
 class CmdGetTare(BaseCommand):
     def __init__(self, *args, **kw):
@@ -299,21 +323,36 @@ class RespError(BaseResponse):
 
 class RespGetTare(BaseResponse):
     class Field(BaseResponse.Field):
-        OFFSET = '_offset'
+        MASS_A_OFFSET = '_mass_a_offset'
+        MASS_B_OFFSET = '_mass_b_offset'
+        TEMPERATURE_OFFSET = '_temperature_offset'
 
     _pack_ = 1
     _fields_ = [
-        (Field.OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS)
+        (Field.MASS_A_OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS),
+        (Field.MASS_B_OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS),
+        (Field.TEMPERATURE_OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS)
     ]
 
     @property
-    def offset(self) -> list[int]:
-        return [offset for offset in getattr(self, self.Field.OFFSET) if offset !=
+    def mass_a_offset(self) -> list[float]:
+        return [offset for offset in getattr(self, self.Field.MASS_A_OFFSET) if offset !=
                 C_FLOAT_MAX]
 
-class MassDataPoint(ctypes.Structure):
+    @property
+    def mass_b_offset(self) -> list[float]:
+        return [offset for offset in getattr(self, self.Field.MASS_B_OFFSET) if offset !=
+                C_FLOAT_MAX]
+
+    @property
+    def temperature_offset(self) -> list[float]:
+        return [offset for offset in getattr(self, self.Field.TEMPERATURE_OFFSET) if offset !=
+                C_FLOAT_MAX]
+
+
+class DataPoint(ctypes.Structure):
     class Field(BaseResponse.Field):
-        MASS = '_mass'
+        DATA = '_data'
         ERROR_COUNT = '_error_count'
         READY = '_ready'
         RESERVED1 = 'reserved1'
@@ -321,7 +360,7 @@ class MassDataPoint(ctypes.Structure):
 
     _pack_ = 1
     _fields_ = [
-        (Field.MASS, ctypes.c_float),
+        (Field.DATA, ctypes.c_float),
         (Field.ERROR_COUNT, ctypes.c_uint8),
         (Field.READY, ctypes.c_uint8, 1),
         (Field.RESERVED1, ctypes.c_uint8, 7),
@@ -329,8 +368,8 @@ class MassDataPoint(ctypes.Structure):
     ]
 
     @property
-    def mass(self) -> float:
-        return getattr(self, self.Field.MASS)
+    def data(self) -> float:
+        return getattr(self, self.Field.DATA)
 
     @property
     def error_count(self) -> int:
@@ -341,27 +380,83 @@ class MassDataPoint(ctypes.Structure):
         return getattr(self, self.Field.READY)
 
 
-class RespMassDataPoint(BaseResponse):
+class MultiDataPoint(ctypes.Structure):
+    class Field(BaseResponse.Field):
+        MASS_A = '_mass_a'
+        MASS_B = '_mass_b'
+        MASS = '_mass'
+        TEMPERATURE_A = '_temperature_a'
+        TEMPERATURE_B = '_temperature_b'
+        TEMPERATURE = '_temperature'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.MASS_A, DataPoint),
+        (Field.MASS_B, DataPoint),
+        (Field.MASS, DataPoint),
+        (Field.TEMPERATURE_A, DataPoint),
+        (Field.TEMPERATURE_B, DataPoint),
+        (Field.TEMPERATURE, DataPoint),
+    ]
+
+    @property
+    def mass_a(self) -> DataPoint:
+        return getattr(self, self.Field.MASS_A)
+
+    @property
+    def mass_b(self) -> DataPoint:
+        return getattr(self, self.Field.MASS_B)
+
+    @property
+    def mass(self) -> DataPoint:
+        return getattr(self, self.Field.MASS)
+
+    @property
+    def temperature_a(self) -> DataPoint:
+        return getattr(self, self.Field.TEMPERATURE_A)
+
+    @property
+    def temperature_b(self) -> DataPoint:
+        return getattr(self, self.Field.TEMPERATURE_B)
+
+    @property
+    def temperature(self) -> DataPoint:
+        return getattr(self, self.Field.TEMPERATURE)
+
+    def __str__(self):
+        str_list = list()
+        for key, _ in self._fields_:
+            str_list.append(f'{key}: {getattr(self, key).data}')
+        return '\n'.join(str_list)
+
+
+class RespMultiDataPoint(BaseResponse):
     class Field(BaseResponse.Field):
         SENSOR = 'sensor'
 
     @classmethod
-    def make_class(cls, packet: 'Packet') -> Type['RespMassDataPoint']:
-        class _RespMassDataPoint(RespMassDataPoint):
-            _num_sensors = (len(packet.data) // ctypes.sizeof(MassDataPoint))
+    def make_class(cls, packet: 'Packet') -> Type['RespMultiDataPoint']:
+        class _RespMassDataPoint(RespMultiDataPoint):
+            _num_sensors = (len(packet.data) // ctypes.sizeof(MultiDataPoint))
             _fields_ = [
-                (cls.Field.SENSOR, MassDataPoint * _num_sensors),
+                (cls.Field.SENSOR, MultiDataPoint * _num_sensors),
             ]
             _pack_ = 1
 
 
             @classmethod
             def qualname(cls):
-                return f'{RespMassDataPoint.__qualname__} ({cls._num_sensors}x sensors):'
+                return f'{RespMultiDataPoint.__qualname__} ({cls._num_sensors}x sensors):'
+
+            def __str__(self):
+                str_list = []
+                for sensor in range(self._num_sensors):
+                    str_list.append(str(getattr(self, self.Field.SENSOR)[sensor]))
+                return '\n'.join(str_list)
 
         return _RespMassDataPoint
 
 
     @classmethod
-    def from_packet(cls, packet) -> Optional['RespMassDataPoint']:
+    def from_packet(cls, packet) -> Optional['RespMultiDataPoint']:
         return cls.make_class(packet).from_buffer(packet)

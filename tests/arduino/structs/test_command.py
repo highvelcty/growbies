@@ -9,9 +9,9 @@ class TestRespMassDataPoint(TestCase):
     def setUp(self):
         self.num_sensors = 4
         self.packet = command.Packet.make(ctypes.sizeof(command.PacketHeader) +
-                                          ctypes.sizeof(command.MassDataPoint) * self.num_sensors)
+                                          ctypes.sizeof(command.MultiDataPoint) * self.num_sensors)
     def test(self):
-        resp_mass_data_point = command.RespMassDataPoint.from_packet(self.packet)
+        resp_mass_data_point = command.RespMultiDataPoint.from_packet(self.packet)
 
         self.assertEqual(ctypes.sizeof(self.packet),
                          ctypes.sizeof(resp_mass_data_point))
@@ -19,4 +19,4 @@ class TestRespMassDataPoint(TestCase):
 
 
         # Test that multiple structures can be created.
-        _ = command.RespMassDataPoint.from_packet(self.packet)
+        _ = command.RespMultiDataPoint.from_packet(self.packet)

@@ -19,7 +19,7 @@ class ArduinoDatalink(ABC, BaseArduinoSerial):
 
     DEFAULT_READ_TIMEOUT_SEC = 3
 
-    RECV_BUF_BYTES = 64
+    RECV_BUF_BYTES = 4096
 
     _recv_buf = bytearray(RECV_BUF_BYTES)
     _recv_buf_idx = 0
