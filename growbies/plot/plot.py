@@ -169,7 +169,7 @@ def _time_plot(title: str,
         plt.plot(timestamps,
                  normalize_list(y_data) if normalize else y_data,
                  label=f'Sensor {channel}')
-    plt.plot(timestamps, # meyere
+    plt.plot(timestamps,
              normalize_list(summed_channel_data) if normalize else summed_channel_data,
              marker='.', label='Sum')
     if ref_timestamps:
