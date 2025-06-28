@@ -5,6 +5,7 @@
 #include <util/atomic.h>
 
 #include "constants.h"
+#include "flags.h"
 #include "growbies.h"
 #include "lib/eeprom.h"
 #include "lib/display.h"
@@ -21,8 +22,13 @@ void Growbies::begin(){
     for(int sensor = 0; sensor < this->sensor_count; ++sensor) {
         pinMode(get_HX711_dout_pin(sensor), INPUT_PULLUP);
     }
+#if AC_EXCITATION
     this->set_phase_a();
+#endif
+
+#if POWER_CONTROL
     this->power_off();
+#endif
 }
 
 void Growbies::execute(PacketHdr* packet_hdr) {
@@ -43,7 +49,7 @@ void Growbies::execute(PacketHdr* packet_hdr) {
          }
     }
     else if (packet_hdr->type == CMD_READ_UNITS) {
-        CmdReadGrams* cmd = (CmdReadGrams*)slip_buf->buf;
+        CmdReadUnits* cmd = (CmdReadUnits*)slip_buf->buf;
         if (validate_packet(*cmd)) {
             // This constructs at location
             new (this->outbuf) RespMultiDataPoint;
@@ -151,16 +157,23 @@ void Growbies::get_tare(RespGetTare* resp_get_tare) {
 void Growbies::set_tare() {
     EEPROMStruct eeprom_struct;
     int sensor_idx = 0;
-    MultiDataPoint* multi_data_points = (MultiDataPoint*)malloc(sizeof(MultiDataPoint) *
-        this->sensor_count);
+    int num_bytes = sizeof(MultiDataPoint) * this->sensor_count;
+    MultiDataPoint* multi_data_points = (MultiDataPoint*)malloc(num_bytes);
+    memset(multi_data_points, 0, num_bytes);
 
     EEPROM.get(0, eeprom_struct);
 
     this->read_units(multi_data_points, this->get_tare_times, UNIT_DAC);
     for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-        eeprom_struct.temperature_offset[sensor_idx] = this->data_points[sensor_idx].data;
-        eeprom_struct.mass_a_offset[sensor_idx] = this->data_points[sensor_idx].data;
-        eeprom_struct.mass_b_offset[sensor_idx] = this->data_points[sensor_idx].data;
+    #if AC_EXCITATION
+        eeprom_struct.mass_a_offset[sensor_idx] = \
+            multi_data_points[sensor_idx].mass_a.data;
+        eeprom_struct.mass_b_offset[sensor_idx] = \
+            multi_data_points[sensor_idx].mass_b.data;
+    #else
+        eeprom_struct.mass_a_offset[sensor_idx] = \
+            multi_data_points[sensor_idx].mass.data;
+    #endif
     }
 
     EEPROM.put(0, eeprom_struct);
@@ -206,14 +219,18 @@ void Growbies::read_dac(DataPoint* data_points, const byte times, const HX711Gai
     memset(data_points, 0, sizeof(DataPoint) * this->sensor_count);
 
 	// Read samples
+#if POWER_CONTROL
 	this->power_on();
+#endif
 	for (sample_idx = 0; sample_idx < times; ++sample_idx) {
         this->sample(data_points, gain);
         for (sensor = 0; sensor < this->sensor_count; ++sensor){
             sensor_samples[sensor][sample_idx] = data_points[sensor].data;
         }
 	}
+#if POWER_CONTROL
 	this->power_off();
+#endif
 
     // Filter and average
     for (sensor = 0; sensor < this->sensor_count; ++sensor) {
@@ -256,6 +273,7 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
 //    float total_mass = 0.0;
     get_tare(&tare);
 
+#if CHANNEL_B_TEMPERATURE
     // Temperature
     this->set_gain(HX711_GAIN_32);
     this->read_dac(this->data_points, times);
@@ -263,48 +281,65 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
         multi_data_points[sensor_idx].temperature.data = \
         this->data_points[sensor_idx].data;
     }
+#endif
 
     // Mass - Phase A
+#if AC_EXCITATION
     set_phase_a();
+#endif
+
+#if CHANNEL_B_TEMPERATURE
     this->set_gain(HX711_GAIN_128);
+#endif
+
     this->read_dac(this->data_points, times);
     for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-        multi_data_points[sensor_idx].mass_A.data = this->data_points[sensor_idx].data;
+    #if AC_EXCITATION
+        multi_data_points[sensor_idx].mass_a.data = this->data_points[sensor_idx].data;
+    #else
+        multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
+    #endif
+
     }
 
+#if AC_EXCITATION
     // Mass - Phase B
     set_phase_b();
     this->read_dac(this->data_points, times);
     for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-        multi_data_points[sensor_idx].mass_B.data = this->data_points[sensor_idx].data;
+        multi_data_points[sensor_idx].mass_b.data = this->data_points[sensor_idx].data;
     }
 
     // Totals
     for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-        multi_data_points[sensor_idx].mass.data = \
-            ((multi_data_points[sensor_idx].mass_A.data
-            - multi_data_points[sensor_idx].mass_B.data) / 2);
-    }
+            multi_data_points[sensor_idx].mass.data = \
+                ((multi_data_points[sensor_idx].mass_a.data
+                - multi_data_points[sensor_idx].mass_b.data) / 2);
+     }
+#endif
 
     // Units
     if (units & UNIT_GRAMS) {
         for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-            multi_data_points[sensor_idx].mass_A.data = \
-                (multi_data_points[sensor_idx].mass_A.data - tare.mass_a_offset[sensor_idx])
-                / get_scale();
+        #if AC_EXCITATION
+            multi_data_points[sensor_idx].mass_a.data = \
+                (multi_data_points[sensor_idx].mass_a.data - tare.mass_a_offset[sensor_idx])
+                / this->get_scale();
 
-            multi_data_points[sensor_idx].mass_B.data = \
-                (multi_data_points[sensor_idx].mass_B.data - tare.mass_b_offset[sensor_idx])
-                / get_scale();
+            multi_data_points[sensor_idx].mass_b.data = \
+                (multi_data_points[sensor_idx].mass_b.data - tare.mass_b_offset[sensor_idx])
+                / this->get_scale();
 
             multi_data_points[sensor_idx].mass.data = \
                 (multi_data_points[sensor_idx].mass.data
                 - get_total_mass_offset(tare, sensor_idx))
-                / get_scale();
+                / this->get_scale();
+        #else
+            multi_data_points[sensor_idx].mass.data = \
+                (multi_data_points[sensor_idx].mass.data
+                - tare.mass_a_offset[sensor_idx]) / this->get_scale();
+        #endif
 
-            multi_data_points[sensor_idx].temperature.data = \
-                (multi_data_points[sensor_idx].temperature.data
-                - tare.temperature_offset[sensor_idx]);
         }
     }
 
@@ -313,6 +348,8 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
 }
 
 void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
+    //
+    //
     uint32_t a_bit;
     uint8_t ii;
     uint8_t sensor;

@@ -40,7 +40,7 @@ struct BaseCmdWithTimesParam : BaseCmd {
 
 // --- Commands
 struct CmdReadDAC : BaseCmdWithTimesParam {};
-struct CmdReadGrams : BaseCmdWithTimesParam {};
+struct CmdReadUnits : BaseCmdWithTimesParam {};
 struct CmdSetPhase : BaseCmd {
     uint16_t phase;
 };
@@ -102,11 +102,11 @@ struct DataPoint {
 };
 
 struct MultiDataPoint {
-    DataPoint mass_A;
-    DataPoint mass_B;
+    DataPoint mass_a;
+    DataPoint mass_b;
     DataPoint mass;
-    DataPoint temperature_A;
-    DataPoint temperature_B;
+    DataPoint temperature_a;
+    DataPoint temperature_b;
     DataPoint temperature;
 };
 

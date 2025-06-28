@@ -14,7 +14,7 @@ C_FLOAT_MAX = 3.4028234663852886e+38
 class CmdType(IntEnum):
     LOOPBACK = 0
     READ_DAC = 1
-    READ_GRAMS = 2
+    READ_UNITS = 2
     GET_SCALE = 3
     SET_SCALE = 4
     GET_TARE = 5
@@ -180,9 +180,9 @@ class CmdReadDAC(BaseCmdWithTimesParam):
         kw[self.Field.TYPE] = CmdType.READ_DAC
         super().__init__(*args, **kw)
 
-class CmdReadGrams(BaseCmdWithTimesParam):
+class CmdReadUnits(BaseCmdWithTimesParam):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.READ_GRAMS
+        kw[self.Field.TYPE] = CmdType.READ_UNITS
         super().__init__(*args, **kw)
 
 class CmdSetPhase(BaseCommand):
@@ -420,6 +420,12 @@ class MultiDataPoint(ctypes.Structure):
     def temperature(self) -> DataPoint:
         return getattr(self, self.Field.TEMPERATURE)
 
+    def __str__(self):
+        str_list = list()
+        for key, _ in self._fields_:
+            str_list.append(f'{key}: {getattr(self, key).data}')
+        return '\n'.join(str_list)
+
 
 class RespMultiDataPoint(BaseResponse):
     class Field(BaseResponse.Field):
@@ -438,6 +444,12 @@ class RespMultiDataPoint(BaseResponse):
             @classmethod
             def qualname(cls):
                 return f'{RespMultiDataPoint.__qualname__} ({cls._num_sensors}x sensors):'
+
+            def __str__(self):
+                str_list = []
+                for sensor in range(self._num_sensors):
+                    str_list.append(str(getattr(self, self.Field.SENSOR)[sensor]))
+                return '\n'.join(str_list)
 
         return _RespMassDataPoint
 

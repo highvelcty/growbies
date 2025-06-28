@@ -32,7 +32,7 @@ class Growbies {
     public:
         const int sensor_count;
 
-        Growbies(int sensor_count = 1);
+        Growbies(int sensor_count = 4);
         void begin();
 
         void execute(PacketHdr* packet_hdr);

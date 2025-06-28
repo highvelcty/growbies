@@ -69,9 +69,9 @@ class Arduino(ArduinoTransport):
         resp: command.RespMultiDataPoint = self.execute(cmd, read_timeout_sec=10)
         return resp
 
-    def read_grams(self, times: int = command.CmdReadDAC.DEFAULT_TIMES) \
+    def read_units(self, times: int = command.CmdReadUnits.DEFAULT_TIMES) \
             -> command.RespMultiDataPoint:
-        cmd = command.CmdReadGrams(times=times)
+        cmd = command.CmdReadUnits(times=times)
         resp: command.RespMultiDataPoint = self.execute(cmd, read_timeout_sec=10)
         return resp
 

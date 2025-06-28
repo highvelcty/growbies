@@ -147,31 +147,31 @@ def _time_plot(title: str,
     #     del timestamps[idx]
 
     # Plot
-    mass_a, mass_b, mass_total = channel_datas[0:3]
+    # mass_a, mass_b, mass_total = channel_datas[0:3]
+    #
+    # if len(channel_datas) >= 4:
+    #     temperature = channel_datas[3]
+    # else:
+    #     temperature = None
+    #
+    # diff = list()
+    # for mass_idx, mass in enumerate(mass_a):
+    #     diff.append(mass - mass_total[mass_idx])
+    #
+    # plt.plot(timestamps, mass_a, label=f'Mass A')
+    # plt.plot(timestamps, list(map(lambda x:-x, mass_b)), label=f'-Mass B')
+    # plt.plot(timestamps, diff, label='diff')
+    # plt.plot(timestamps, mass_total, label=f'Total Mass')
+    # if temperature is not None:
+    #     plt.plot(timestamps, temperature, label=f'Temperature')
 
-    if len(channel_datas) >= 4:
-        temperature = channel_datas[3]
-    else:
-        temperature = None
-
-    diff = list()
-    for mass_idx, mass in enumerate(mass_a):
-        diff.append(mass - mass_total[mass_idx])
-
-    plt.plot(timestamps, mass_a, label=f'Mass A')
-    plt.plot(timestamps, list(map(lambda x:-x, mass_b)), label=f'-Mass B')
-    plt.plot(timestamps, diff, label='diff')
-    plt.plot(timestamps, mass_total, label=f'Total Mass')
-    if temperature is not None:
-        plt.plot(timestamps, temperature, label=f'Temperature')
-
-    # for channel, y_data in enumerate(channel_datas):  # meyere
-    #     plt.plot(timestamps,
-    #              normalize_list(y_data) if normalize else y_data,
-    #              label=f'Sensor {channel}')
-    # plt.plot(timestamps, # meyere
-    #          normalize_list(summed_channel_data) if normalize else summed_channel_data,
-    #          marker='.', label='Sum')
+    for channel, y_data in enumerate(channel_datas):
+        plt.plot(timestamps,
+                 normalize_list(y_data) if normalize else y_data,
+                 label=f'Sensor {channel}')
+    plt.plot(timestamps, # meyere
+             normalize_list(summed_channel_data) if normalize else summed_channel_data,
+             marker='.', label='Sum')
     if ref_timestamps:
         plt.plot(ref_timestamps,
                  normalize_list(ref_scale_data) if normalize else ref_scale_data,

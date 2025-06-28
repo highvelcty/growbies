@@ -62,3 +62,4 @@ class ArduinoNetwork(ArduinoDatalink, ABC):
         else:
             logger.error(f'Network layer timeout of {read_timeout_sec} seconds waiting for a '
                          f'valid packet.')
+            return None
