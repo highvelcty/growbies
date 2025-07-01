@@ -170,9 +170,9 @@ def _time_plot(title: str,
         plt.plot(timestamps,
                  normalize_list(y_data) if normalize else y_data,
                  label=f'Sensor {channel}')
-    plt.plot(timestamps,
-             normalize_list(summed_channel_data) if normalize else summed_channel_data,
-             marker='.', label='Sum')
+    # plt.plot(timestamps,
+    #          normalize_list(summed_channel_data) if normalize else summed_channel_data,
+    #          marker='.', label='Sum')
     if ref_timestamps:
         plt.plot(ref_timestamps,
                  normalize_list(ref_scale_data) if normalize else ref_scale_data,
@@ -187,6 +187,36 @@ def _time_plot(title: str,
     plt.title(title)
     fig.tight_layout()
     # plt.subplots_adjust(bottom=.3)
+    plt.show()
+
+def thermal_test(path: Path, normalize=False):
+
+    x_data, y_datas, _, __ = _extract_x_data_and_y_datas(path)
+
+    ### Time Plot ##################################################################################
+    _time_plot('Thermal Cycle Test', x_data, y_datas, None, None, normalize=normalize)
+
+    ### Linearity ##################################################################################
+    fig: plt.Figure = plt.figure()
+    if normalize:
+        lin_x = normalize_list(y_datas[0])
+        lin_y = normalize_list(y_datas[1])
+    else:
+        lin_x = y_datas[0]
+        lin_y = y_datas[1]
+
+    plt.plot(lin_x, lin_y, marker='.', linestyle='-')
+    step = 25
+    for i in range(0, len(lin_x) - step, step):
+        dy = lin_y[i+step] - lin_y[i]
+        if dy > 0:
+            dy = 1
+        if dy < 0:
+            dy = -1
+        plt.quiver(lin_x[i], lin_y[i], 0.001, dy,
+                  headwidth=2, headlength=5, color='black')
+
+    fig.tight_layout()
     plt.show()
 
 def bucket_test(path: Path, *,

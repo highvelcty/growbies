@@ -2,8 +2,7 @@ from growbies.arduino import Arduino
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str
 
-COLUMN_STR = ('Timestamp,sensor_0 mass,sensor_1 mass,sensor_2 mass,sensor_3 mass,'
-              'sensor_4 temperature, reference mass (grams)\n')
+COLUMN_STR = ('Timestamp,sensor_0 mass,sensor_1 temperature, reference mass (grams)\n')
 
 def main(sess: Session):
     arduino = Arduino()

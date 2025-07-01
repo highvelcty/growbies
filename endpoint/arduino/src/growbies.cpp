@@ -171,8 +171,19 @@ void Growbies::set_tare() {
         eeprom_struct.mass_b_offset[sensor_idx] = \
             multi_data_points[sensor_idx].mass_b.data;
     #else
-        eeprom_struct.mass_a_offset[sensor_idx] = \
-            multi_data_points[sensor_idx].mass.data;
+        #if TEMPERATURE_CHANNEL_A
+            if (sensor_idx == TEMPERATURE_SENSOR){
+                eeprom_struct.temperature_offset[sensor_idx] = \
+                    multi_data_points[sensor_idx].temperature.data;
+            }
+            else{
+                eeprom_struct.mass_a_offset[sensor_idx] = \
+                    multi_data_points[sensor_idx].mass.data;
+            }
+        #else
+            eeprom_struct.mass_a_offset[sensor_idx] = \
+                multi_data_points[sensor_idx].mass.data;
+        #endif
     #endif
     }
 
@@ -297,7 +308,16 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
     #if AC_EXCITATION
         multi_data_points[sensor_idx].mass_a.data = this->data_points[sensor_idx].data;
     #else
-        multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
+        #if TEMPERATURE_CHANNEL_A
+            if (sensor_idx == TEMPERATURE_SENSOR) {
+                multi_data_points[sensor_idx].temperature.data = this->data_points[sensor_idx].data;
+            }
+            else{
+                multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
+            }
+        #else
+            multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
+        #endif
     #endif
 
     }
