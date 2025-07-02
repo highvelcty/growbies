@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 MAX_NUMBER_OF_MASS_SENSORS = 5
 C_FLOAT_MAX = 3.4028234663852886e+38
+COEFFICIENT_COUNT = 2
 
 class CmdType(IntEnum):
     LOOPBACK = 0
@@ -20,6 +21,8 @@ class CmdType(IntEnum):
     GET_TARE = 5
     SET_TARE = 6
     SET_PHASE = 7
+    GET_TEMPERATURE_COEFFICIENT = 8
+    SET_TEMPERATURE_COEFFICIENT = 9
 
 class RespType(IntEnum):
     VOID = 0
@@ -28,7 +31,8 @@ class RespType(IntEnum):
     FLOAT = 3
     DOUBLE = 4
     MASS_DATA_POINT = 5
-    GET_TARE = 6,
+    GET_TARE = 6
+    GET_TEMPERATURE_COEFFICIENT = 7
     ERROR = 0xFFFF
 
     @classmethod
@@ -49,6 +53,8 @@ class RespType(IntEnum):
             return RespMultiDataPoint.make_class(packet)
         elif packet.header.type == cls.GET_TARE:
             return RespGetTare
+        elif packet.header.type == cls.GET_TEMPERATURE_COEFFICIENT:
+            return RespGetTemperatureCoefficient
 
         logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
         return None
@@ -213,6 +219,11 @@ class CmdGetTare(BaseCommand):
         kw[self.Field.TYPE] = CmdType.GET_TARE
         super().__init__(*args, **kw)
 
+class CmdGetScale(BaseCommand):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = CmdType.GET_SCALE
+        super().__init__(*args, **kw)
+
 class CmdSetScale(BaseCommand):
     DEFAULT_SCALE = 1.0
 
@@ -237,15 +248,35 @@ class CmdSetScale(BaseCommand):
         super().__init__(*args, **kw)
 
 
-class CmdGetScale(BaseCommand):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.GET_SCALE
-        super().__init__(*args, **kw)
-
-
 class CmdSetTare(BaseCommand):
     def __init__(self, *args, **kw):
         kw[self.Field.TYPE] = CmdType.SET_TARE
+        super().__init__(*args, **kw)
+
+class CmdGetTemperatureCoefficient(BaseCommand):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = CmdType.GET_TEMPERATURE_COEFFICIENT
+        super().__init__(*args, **kw)
+
+class CmdSetTemperatureCoefficient(BaseCommand):
+    class Field(BaseCommand.Field):
+        COEFFICIENT = '_coefficient'
+
+    _fields_ = [
+        (Field.COEFFICIENT, ctypes.c_float * COEFFICIENT_COUNT)
+    ]
+
+    @property
+    def coefficient(self) -> list[float]:
+        return [getattr(self, self.Field.COEFFICIENT)[idx] for idx in range(COEFFICIENT_COUNT)]
+
+    @coefficient.setter
+    def coefficient(self, values: list[float]):
+        for idx, value in enumerate(values):
+            getattr(self, self.Field.COEFFICIENT)[idx] = value
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = CmdType.SET_TEMPERATURE_COEFFICIENT
         super().__init__(*args, **kw)
 
 class RespVoid(BaseResponse):
@@ -323,31 +354,30 @@ class RespError(BaseResponse):
 
 class RespGetTare(BaseResponse):
     class Field(BaseResponse.Field):
-        MASS_A_OFFSET = '_mass_a_offset'
-        MASS_B_OFFSET = '_mass_b_offset'
-        TEMPERATURE_OFFSET = '_temperature_offset'
+        MASS_OFFSET = '_mass_offset'
 
     _pack_ = 1
     _fields_ = [
-        (Field.MASS_A_OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS),
-        (Field.MASS_B_OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS),
-        (Field.TEMPERATURE_OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS)
+        (Field.MASS_OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS),
     ]
 
     @property
-    def mass_a_offset(self) -> list[float]:
-        return [offset for offset in getattr(self, self.Field.MASS_A_OFFSET) if offset !=
+    def mass_offset(self) -> list[float]:
+        return [offset for offset in getattr(self, self.Field.MASS_OFFSET) if offset !=
                 C_FLOAT_MAX]
 
-    @property
-    def mass_b_offset(self) -> list[float]:
-        return [offset for offset in getattr(self, self.Field.MASS_B_OFFSET) if offset !=
-                C_FLOAT_MAX]
+class RespGetTemperatureCoefficient(BaseResponse):
+    class Field(BaseResponse.Field):
+        COEFFICIENT = '_coefficient'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.COEFFICIENT, ctypes.c_float * COEFFICIENT_COUNT),
+    ]
 
     @property
-    def temperature_offset(self) -> list[float]:
-        return [offset for offset in getattr(self, self.Field.TEMPERATURE_OFFSET) if offset !=
-                C_FLOAT_MAX]
+    def coefficient(self) -> list[float]:
+        return list(getattr(self, self.Field.COEFFICIENT))
 
 
 class DataPoint(ctypes.Structure):
@@ -382,42 +412,17 @@ class DataPoint(ctypes.Structure):
 
 class MultiDataPoint(ctypes.Structure):
     class Field(BaseResponse.Field):
-        MASS_A = '_mass_a'
-        MASS_B = '_mass_b'
         MASS = '_mass'
-        TEMPERATURE_A = '_temperature_a'
-        TEMPERATURE_B = '_temperature_b'
         TEMPERATURE = '_temperature'
 
     _pack_ = 1
     _fields_ = [
-        (Field.MASS_A, DataPoint),
-        (Field.MASS_B, DataPoint),
         (Field.MASS, DataPoint),
-        (Field.TEMPERATURE_A, DataPoint),
-        (Field.TEMPERATURE_B, DataPoint),
         (Field.TEMPERATURE, DataPoint),
     ]
-
-    @property
-    def mass_a(self) -> DataPoint:
-        return getattr(self, self.Field.MASS_A)
-
-    @property
-    def mass_b(self) -> DataPoint:
-        return getattr(self, self.Field.MASS_B)
-
     @property
     def mass(self) -> DataPoint:
         return getattr(self, self.Field.MASS)
-
-    @property
-    def temperature_a(self) -> DataPoint:
-        return getattr(self, self.Field.TEMPERATURE_A)
-
-    @property
-    def temperature_b(self) -> DataPoint:
-        return getattr(self, self.Field.TEMPERATURE_B)
 
     @property
     def temperature(self) -> DataPoint:

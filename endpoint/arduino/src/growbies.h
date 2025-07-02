@@ -1,6 +1,7 @@
 #ifndef growbies_h
 #define growbies_h
 
+#include "flags.h"
 #include "protocol/command.h"
 
 const int HX711_DAC_BITS = 24;
@@ -32,7 +33,7 @@ class Growbies {
     public:
         const int sensor_count;
 
-        Growbies(int sensor_count = 2);
+        Growbies(int sensor_count = 1);
         void begin();
 
         void execute(PacketHdr* packet_hdr);
@@ -52,6 +53,8 @@ class Growbies {
 		void set_scale(float scale);
 		void get_tare(RespGetTare* resp_get_tare);
 		void set_tare();
+		void get_temperature_coefficient(TemperatureCoefficient coefficient);
+		void set_temperature_coefficient(TemperatureCoefficient coefficient);
 		void set_gain(HX711Gain gain);
 		void power_off();
 		void power_on();
@@ -84,8 +87,6 @@ bool validate_packet(const PacketType& packet) {
     result = check_and_respond_to_deserialization_underflow(packet);
     return result;
 }
-
-float get_total_mass_offset(RespGetTare tare, int sensor_idx);
 
 extern Growbies* growbies;
 

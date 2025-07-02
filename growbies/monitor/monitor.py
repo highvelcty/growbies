@@ -56,7 +56,7 @@ def main(sess: Session):
 
 
                     ts = get_utc_iso_ts_str()
-                    data = arduino_serial.read_units()
+                    data = arduino_serial.read_dac()
 
                     # total = sum(data.sensor[ii].mass for ii in range(4))
                     # file_str = (f'{ts}, {data.sensor[0].mass}, {data.sensor[1].mass}, '
@@ -66,8 +66,10 @@ def main(sess: Session):
                     # out_str = (f'{ts}, {data.sensor[0].mass.data}, {data.sensor[1].mass.data}, '
                     #            f'{data.sensor[2].mass.data}, {data.sensor[3].mass.data}, '
                     #            f'{data.sensor[1].temperature.data}')
-                    out_str = (f'{ts}, {data.sensor[1].mass.data}, '
-                               f'{data.sensor[0].temperature.data}')
+                    # out_str = (f'{ts}, {data.sensor[0].mass.data}, '
+                    #            f'{data.sensor[0].temperature.data}')
+                    out_str = (f'{ts}, {data.sensor[0].mass.data},'
+                               f' {data.sensor[0].temperature.data}')
                     file_str = out_str
 
                     with FileLock(sess.path_to_data, 'a+') as outf:

@@ -111,7 +111,8 @@ def _time_plot(title: str,
                ref_timestamps: Optional[list[datetime]], ref_scale_data: Optional[list[int]],
                *,
                normalize: bool = True,
-               invert_sum: bool = False):
+               invert_sum: bool = False,
+               sensor_labels: Optional[list] = None):
     fig: plt.Figure = plt.figure(figsize=(21,17))
     ax = fig.add_subplot(111)
     ax.plot()
@@ -166,10 +167,13 @@ def _time_plot(title: str,
     # if temperature is not None:
     #     plt.plot(timestamps, temperature, label=f'Temperature')
 
-    for channel, y_data in enumerate(channel_datas):
+    if sensor_labels is None:
+        sensor_labels = [f'Sensor {idx}' for idx in range(len(channel_datas))]
+
+    for sensor_idx, y_data in enumerate(channel_datas):
         plt.plot(timestamps,
                  normalize_list(y_data) if normalize else y_data,
-                 label=f'Sensor {channel}')
+                 label=sensor_labels[sensor_idx])
     # plt.plot(timestamps,
     #          normalize_list(summed_channel_data) if normalize else summed_channel_data,
     #          marker='.', label='Sum')
@@ -194,7 +198,8 @@ def thermal_test(path: Path, normalize=False):
     x_data, y_datas, _, __ = _extract_x_data_and_y_datas(path)
 
     ### Time Plot ##################################################################################
-    _time_plot('Thermal Cycle Test', x_data, y_datas, None, None, normalize=normalize)
+    _time_plot('Thermal Cycle Test', x_data, y_datas, None, None, normalize=normalize,
+               sensor_labels=['Mass', 'Temperature'])
 
     ### Linearity ##################################################################################
     fig: plt.Figure = plt.figure()

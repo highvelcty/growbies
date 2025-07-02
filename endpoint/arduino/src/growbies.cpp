@@ -105,6 +105,22 @@ void Growbies::execute(PacketHdr* packet_hdr) {
             send_packet(resp);
         }
     }
+    else if (packet_hdr->type == CMD_GET_TEMPERATURE_COEFFICIENT) {
+        CmdGetTemperatureCoefficient* cmd = (CmdGetTemperatureCoefficient*)slip_buf->buf;
+        if(validate_packet(*cmd)) {
+            RespGetTemperatureCoefficient resp;
+            this->get_temperature_coefficient(resp.coefficient);
+            send_packet(resp);
+        }
+    }
+    else if (packet_hdr->type == CMD_SET_TEMPERATURE_COEFFICIENT) {
+        CmdSetTemperatureCoefficient* cmd = (CmdSetTemperatureCoefficient*)slip_buf->buf;
+        if(validate_packet(*cmd)) {
+            RespVoid resp;
+            this->set_temperature_coefficient(cmd->coefficient);
+            send_packet(resp);
+        }
+    }
     else{
         RespError resp;
         resp.error = ERROR_UNRECOGNIZED_COMMAND;
@@ -142,14 +158,20 @@ void Growbies::get_tare(RespGetTare* resp_get_tare) {
     EEPROM.get(0, eeprom_struct);
     for (int sensor = 0; sensor < MAX_HX711_DEVICES; ++sensor){
         if (sensor < this->sensor_count) {
+        #if AC_EXCITATION
             resp_get_tare->mass_a_offset[sensor] = eeprom_struct.mass_a_offset[sensor];
             resp_get_tare->mass_b_offset[sensor] = eeprom_struct.mass_b_offset[sensor];
-            resp_get_tare->temperature_offset[sensor] = eeprom_struct.temperature_offset[sensor];
+        #else
+            resp_get_tare->mass_offset[sensor] = eeprom_struct.mass_offset[sensor];
+        #endif
         }
         else{
+        #if AC_EXCITATION
             resp_get_tare->mass_a_offset[sensor] = FLT_MAX;
             resp_get_tare->mass_b_offset[sensor] = FLT_MAX;
-            resp_get_tare->temperature_offset[sensor] = FLT_MAX;
+        #else
+            resp_get_tare->mass_offset[sensor] = FLT_MAX;
+        #endif
         }
     }
 }
@@ -171,25 +193,31 @@ void Growbies::set_tare() {
         eeprom_struct.mass_b_offset[sensor_idx] = \
             multi_data_points[sensor_idx].mass_b.data;
     #else
-        #if TEMPERATURE_CHANNEL_A
-            if (sensor_idx == TEMPERATURE_SENSOR){
-                eeprom_struct.temperature_offset[sensor_idx] = \
-                    multi_data_points[sensor_idx].temperature.data;
-            }
-            else{
-                eeprom_struct.mass_a_offset[sensor_idx] = \
-                    multi_data_points[sensor_idx].mass.data;
-            }
-        #else
-            eeprom_struct.mass_a_offset[sensor_idx] = \
-                multi_data_points[sensor_idx].mass.data;
-        #endif
+        eeprom_struct.mass_offset[sensor_idx] = multi_data_points[sensor_idx].mass.data;
     #endif
     }
 
     EEPROM.put(0, eeprom_struct);
 
     free(multi_data_points);
+}
+
+void Growbies::get_temperature_coefficient(TemperatureCoefficient coefficient) {
+    EEPROMStruct eeprom_struct;
+    EEPROM.get(0, eeprom_struct);
+    for (int idx = 0; idx < TEMPERATURE_COEFFICIENT_COUNT; ++idx) {
+        coefficient[idx] = eeprom_struct.temperature_coefficient[idx];
+    }
+    EEPROM.put(0, eeprom_struct);
+}
+
+void Growbies::set_temperature_coefficient(TemperatureCoefficient coefficient) {
+    EEPROMStruct eeprom_struct;
+    EEPROM.get(0, eeprom_struct);
+    for (int idx = 0; idx < TEMPERATURE_COEFFICIENT_COUNT; ++idx) {
+        eeprom_struct.temperature_coefficient[idx] = coefficient[idx];
+    }
+    EEPROM.put(0, eeprom_struct);
 }
 
 void Growbies::set_gain(HX711Gain gain) {
@@ -280,9 +308,11 @@ void Growbies::read_dac(DataPoint* data_points, const byte times, const HX711Gai
 void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, const Unit units){
     int sensor_idx;
     RespGetTare tare;
+    TemperatureCoefficient temperature_coefficient;
 
 //    float total_mass = 0.0;
     get_tare(&tare);
+    get_temperature_coefficient(temperature_coefficient);
 
 #if TEMPERATURE_CHANNEL_B
     // Temperature
@@ -291,6 +321,12 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
     for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
         multi_data_points[sensor_idx].temperature.data = \
         this->data_points[sensor_idx].data;
+    }
+#endif
+
+#if TEMPERATURE_ANALOG_INPUT
+    for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
+        multi_data_points[sensor_idx].temperature.data = analogRead(TEMPERATURE_ANALOG_PIN);
     }
 #endif
 
@@ -308,18 +344,8 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
     #if AC_EXCITATION
         multi_data_points[sensor_idx].mass_a.data = this->data_points[sensor_idx].data;
     #else
-        #if TEMPERATURE_CHANNEL_A
-            if (sensor_idx == TEMPERATURE_SENSOR) {
-                multi_data_points[sensor_idx].temperature.data = this->data_points[sensor_idx].data;
-            }
-            else{
-                multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
-            }
-        #else
-            multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
-        #endif
+        multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
     #endif
-
     }
 
 #if AC_EXCITATION
@@ -357,9 +383,15 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
         #else
             multi_data_points[sensor_idx].mass.data = \
                 (multi_data_points[sensor_idx].mass.data
-                - tare.mass_a_offset[sensor_idx]) / this->get_scale();
+                - tare.mass_offset[sensor_idx]) / this->get_scale();
         #endif
 
+        #if TEMPERATURE_ANALOG_INPUT
+            multi_data_points[sensor_idx].temperature.data = \
+                ((temperature_coefficient[0]
+                  * multi_data_points[sensor_idx].temperature.data)
+                 + temperature_coefficient[1]);
+        #endif
         }
     }
 
@@ -456,8 +488,4 @@ bool Growbies::wait_all_ready_retry(DataPoint* data_points,
 	} while ((retry_count <= retries) && (!all_ready));
 
 	return all_ready;
-}
-
-float get_total_mass_offset(RespGetTare tare, int sensor_idx) {
-    return (tare.mass_a_offset[sensor_idx] - tare.mass_b_offset[sensor_idx]) / 2;
 }

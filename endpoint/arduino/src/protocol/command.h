@@ -1,6 +1,7 @@
 #ifndef command_h
 #define command_h
 
+#include "flags.h"
 #include "protocol/network.h"
 
 enum Cmd: uint16_t {
@@ -12,6 +13,8 @@ enum Cmd: uint16_t {
     CMD_GET_TARE = 5,
     CMD_SET_TARE = 6,
     CMD_SET_PHASE = 7,
+    CMD_GET_TEMPERATURE_COEFFICIENT = 8,
+    CMD_SET_TEMPERATURE_COEFFICIENT = 9,
 };
 
 enum RespType: uint16_t {
@@ -22,6 +25,7 @@ enum RespType: uint16_t {
     RESP_TYPE_DOUBLE = 4,
     RESP_MULTI_DATA_POINT = 5,
     RESP_GET_TARE = 6,
+    RESP_GET_TEMPERATURE_COEFFICIENT = 7,
     RESP_TYPE_ERROR = 0xFFFF,
 };
 
@@ -36,12 +40,16 @@ enum Phase: uint8_t {
     PHASE_B = 1
 };
 
+
 // --- Base Commands
 struct BaseCmd : PacketHdr {};
 
 struct BaseCmdWithTimesParam : BaseCmd {
     uint8_t times;
 };
+
+// --- Base Types
+typedef float TemperatureCoefficient[TEMPERATURE_COEFFICIENT_COUNT];
 
 // --- Commands
 struct CmdReadDAC : BaseCmdWithTimesParam {};
@@ -50,12 +58,15 @@ struct CmdSetPhase : BaseCmd {
     uint16_t phase;
 };
 struct CmdGetScale : BaseCmd {};
-struct CmdGetTare: BaseCmd {};
 struct CmdSetScale : BaseCmd {
     float scale;
 };
+struct CmdGetTare: BaseCmd {};
 struct CmdSetTare: BaseCmd {};
-
+struct CmdGetTemperatureCoefficient: BaseCmd {};
+struct CmdSetTemperatureCoefficient: BaseCmd {
+    TemperatureCoefficient coefficient;
+};
 // --- Base Responses
 struct BaseResp : PacketHdr {
     BaseResp(RespType resp_type) : PacketHdr(resp_type) {};
@@ -92,10 +103,18 @@ struct RespError : BaseResp {
 
 // --- Cmd Responses
 struct RespGetTare : BaseResp {
+#if AC_EXCITATION
     float mass_a_offset[MAX_HX711_DEVICES];
     float mass_b_offset[MAX_HX711_DEVICES];
-    float temperature_offset[MAX_HX711_DEVICES];
+#else
+    float mass_offset[MAX_HX711_DEVICES];
+#endif
     RespGetTare(): BaseResp(RESP_GET_TARE) {};
+};
+
+struct RespGetTemperatureCoefficient: BaseResp {
+    TemperatureCoefficient coefficient;
+    RespGetTemperatureCoefficient(): BaseResp(RESP_GET_TEMPERATURE_COEFFICIENT) {};
 };
 
 struct DataPoint {
@@ -107,11 +126,15 @@ struct DataPoint {
 };
 
 struct MultiDataPoint {
+#if AC_EXCITATION
     DataPoint mass_a;
     DataPoint mass_b;
+#endif
     DataPoint mass;
+#if AC_EXCITATION
     DataPoint temperature_a;
     DataPoint temperature_b;
+#endif
     DataPoint temperature;
 };
 

@@ -1,12 +1,20 @@
 #ifndef constants_h
 #define constants_h
 
+#include <pins_arduino.h>
+#include "flags.h"
+
+
 const int MAX_HX711_DEVICES = 5;
 const int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
 const int WAIT_READY_RETRIES = 100;
 const int WAIT_READY_RETRY_DELAY_MS = 10;
 const int SET_PHASE_DELAY_MS = 10;
 const int EEPROM_BYTES = 1024;
+const uint8_t TEMPERATURE_COEFFICIENT_COUNT = 2;
+#if TEMPERATURE_ANALOG_INPUT
+const int TEMPERATURE_ANALOG_PIN = A3;
+#endif
 
 enum ArduinoDigitalPins : const int {
     ARDUINO_EXCITATION_A = 5,

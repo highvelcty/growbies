@@ -56,12 +56,22 @@ class Arduino(ArduinoTransport):
     def set_scale(self, scale: float = command.CmdSetScale.DEFAULT_SCALE):
         self.execute(command.CmdSetScale(scale=scale))
 
-    def get_tare(self) -> tuple[list[float], list[float], list[float]]:
+    def get_tare(self) -> list[float]:
         resp: command.RespGetTare = self.execute(command.CmdGetTare())
-        return resp.mass_a_offset, resp.mass_b_offset, resp.temperature_offset
+        return resp.mass_offset
 
     def set_tare(self):
         self.execute(command.CmdSetTare(), read_timeout_sec=self.SET_TARE_TIMEOUT_SECONDS)
+
+    def get_temperature_coefficient(self) -> list[float]:
+        resp: command.RespGetTemperatureCoefficient = \
+            self.execute(command.CmdGetTemperatureCoefficient())
+        return resp.coefficient
+
+    def set_temperature_coefficient(self, *values: float):
+        cmd = command.CmdSetTemperatureCoefficient()
+        cmd.coefficient = values
+        self.execute(cmd)
 
     def read_dac(self, times: int = command.CmdReadDAC.DEFAULT_TIMES) \
             -> command.RespMultiDataPoint:
