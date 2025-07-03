@@ -1,38 +1,37 @@
 from enum import IntEnum
-from typing import ByteString, cast, Optional, Type, TypeVar, Union
+from typing import ByteString, cast, Optional, NewType, Type, TypeVar, Union
 import ctypes
 import logging
 
-from growbies import constants
 from growbies.utils.bufstr import BufStr
+from growbies.utils.report import format_float_table
 
 logger = logging.getLogger(__name__)
 
-MAX_NUMBER_OF_MASS_SENSORS = 5
-C_FLOAT_MAX = 3.4028234663852886e+38
+# --- Constants ------------------------------------------------------------------------------------
 COEFFICIENT_COUNT = 2
+TARE_COUNT = 1
+MASS_SENSOR_COUNT = 1
+TEMPERATURE_SENSOR_COUNT = 1
 
-class CmdType(IntEnum):
+# --- Base Classes ---------------------------------------------------------------------------------
+class Command(IntEnum):
     LOOPBACK = 0
-    READ_DAC = 1
-    READ_UNITS = 2
-    GET_SCALE = 3
-    SET_SCALE = 4
-    GET_TARE = 5
-    SET_TARE = 6
-    SET_PHASE = 7
-    GET_TEMPERATURE_COEFFICIENT = 8
-    SET_TEMPERATURE_COEFFICIENT = 9
+    GET_EEPROM = 1
+    SET_EEPROM = 2
+    READ_DAC = 3
+    READ_UNITS = 4
+    SET_PHASE = 5
 
-class RespType(IntEnum):
+class Response(IntEnum):
     VOID = 0
     BYTE = 1
     LONG = 2
     FLOAT = 3
     DOUBLE = 4
-    MASS_DATA_POINT = 5
-    GET_TARE = 6
-    GET_TEMPERATURE_COEFFICIENT = 7
+    MULTI_DATA_POINT = 5
+    GET_EEPROM = 6
+    GET_TARE = 7
     ERROR = 0xFFFF
 
     @classmethod
@@ -49,12 +48,10 @@ class RespType(IntEnum):
             return RespDouble
         elif packet.header.type == cls.ERROR:
             return RespError
-        elif packet.header.type == cls.MASS_DATA_POINT:
+        elif packet.header.type == cls.MULTI_DATA_POINT:
             return RespMultiDataPoint.make_class(packet)
-        elif packet.header.type == cls.GET_TARE:
-            return RespGetTare
-        elif packet.header.type == cls.GET_TEMPERATURE_COEFFICIENT:
-            return RespGetTemperatureCoefficient
+        elif packet.header.type == cls.GET_EEPROM:
+            return RespGetEEPROM
 
         logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
         return None
@@ -68,6 +65,7 @@ class Phase(IntEnum):
     A = 0
     B = 1
 
+# --- Base Classes ---------------------------------------------------------------------------------
 class BaseStructure(ctypes.Structure):
     @classmethod
     def qualname(cls):
@@ -96,11 +94,11 @@ class PacketHeader(BaseStructure):
     ]
 
     @property
-    def type(self) -> Union[CmdType, RespType]:
+    def type(self) -> Union[Command, Response]:
         return super().type.value
 
     @type.setter
-    def type(self, value: [CmdType, RespType]):
+    def type(self, value: [Command, Response]):
         super().type = value
 
 
@@ -157,7 +155,7 @@ TBaseResponse = TypeVar('TBaseResponse', bound=BaseResponse)
 class CmdLoopback(BaseCommand):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        self.type = CmdType.LOOPBACK
+        self.type = Command.LOOPBACK
 
 
 class BaseCmdWithTimesParam(BaseCommand):
@@ -184,200 +182,88 @@ class BaseCmdWithTimesParam(BaseCommand):
         super().times = value
 
 
-class CmdReadDAC(BaseCmdWithTimesParam):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.READ_DAC
-        super().__init__(*args, **kw)
-
-class CmdReadUnits(BaseCmdWithTimesParam):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.READ_UNITS
-        super().__init__(*args, **kw)
-
-class CmdSetPhase(BaseCommand):
-    class Field(BaseCommand.Field):
-        PHASE = '_phase'
-
-    _fields_ = [
-        (Field.PHASE, ctypes.c_uint16),
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.SET_PHASE
-        super().__init__(*args, **kw)
-
-    @property
-    def phase(self) -> int:
-        return getattr(self, self.Field.PHASE)
-
-    @phase.setter
-    def phase(self, value: int):
-        setattr(self, self.Field.PHASE, value)
-
-class CmdGetTare(BaseCommand):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.GET_TARE
-        super().__init__(*args, **kw)
-
-class CmdGetScale(BaseCommand):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.GET_SCALE
-        super().__init__(*args, **kw)
-
-class CmdSetScale(BaseCommand):
-    DEFAULT_SCALE = 1.0
-
-    class Field(BaseCommand.Field):
-        SCALE = 'scale'
-
-    _fields_ = [
-        (Field.SCALE, ctypes.c_float)
-    ]
-
-    @property
-    def scale(self) -> float:
-        return super().scale
-
-    @scale.setter
-    def scale(self, value: float):
-        super().scale = value
-
-    def  __init__(self, *args, **kw):
-        kw.setdefault(self.Field.SCALE, self.DEFAULT_SCALE)
-        kw[self.Field.TYPE] = CmdType.SET_SCALE
-        super().__init__(*args, **kw)
-
-
-class CmdSetTare(BaseCommand):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.SET_TARE
-        super().__init__(*args, **kw)
-
-class CmdGetTemperatureCoefficient(BaseCommand):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.GET_TEMPERATURE_COEFFICIENT
-        super().__init__(*args, **kw)
-
-class CmdSetTemperatureCoefficient(BaseCommand):
-    class Field(BaseCommand.Field):
-        COEFFICIENT = '_coefficient'
-
-    _fields_ = [
-        (Field.COEFFICIENT, ctypes.c_float * COEFFICIENT_COUNT)
-    ]
-
-    @property
-    def coefficient(self) -> list[float]:
-        return [getattr(self, self.Field.COEFFICIENT)[idx] for idx in range(COEFFICIENT_COUNT)]
-
-    @coefficient.setter
-    def coefficient(self, values: list[float]):
-        for idx, value in enumerate(values):
-            getattr(self, self.Field.COEFFICIENT)[idx] = value
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = CmdType.SET_TEMPERATURE_COEFFICIENT
-        super().__init__(*args, **kw)
-
-class RespVoid(BaseResponse):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = RespType.VOID
-        super().__init__(*args, **kw)
-
-
-class BaseRespWithData(BaseResponse):
-    class Field(BaseResponse.Field):
-        DATA = 'data'
-
-
-class RespByte(BaseRespWithData):
-    _fields_ = [
-        (BaseRespWithData.Field.DATA, ctypes.c_uint8)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = RespType.BYTE
-        super().__init__(*args, **kw)
-
-
-class RespLong(BaseRespWithData):
-    _fields_ = [
-        (BaseRespWithData.Field.DATA, ctypes.c_int32)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = RespType.LONG
-        super().__init__(*args, **kw)
-
-
-class RespFloat(BaseRespWithData):
-    _fields_ = [
-        (BaseRespWithData.Field.DATA, ctypes.c_float)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = RespType.FLOAT
-        super().__init__(*args, **kw)
-
-
-class RespDouble(BaseRespWithData):
-    """Arduino uno has 4 byte double, the same as a float."""
-    _fields_ = [
-        (BaseRespWithData.Field.DATA, ctypes.c_float)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = RespType.DOUBLE
-        super().__init__(*args, **kw)
-
-
-class RespError(BaseResponse):
-    class Field(BaseResponse.Field):
-        ERROR = 'error'
-
-    _fields_ = [
-        (Field.ERROR, ctypes.c_uint32)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = RespType.ERROR
-        super().__init__(*args, **kw)
-
-    @property
-    def error(self) -> Error:
-        return super().error
-
-    @error.setter
-    def error(self, value: Error):
-        super().error = value
-
-
-class RespGetTare(BaseResponse):
-    class Field(BaseResponse.Field):
-        MASS_OFFSET = '_mass_offset'
+# --- Misc Structures # ----------------------------------------------------------------------------
+class EEPROM(ctypes.Structure):
+    class Field:
+        MASS_COEFFICIENT = '_mass_coefficient'
+        TEMPERATURE_COEFFICIENT = '_temperature_coefficient'
+        TARE = '_tare'
 
     _pack_ = 1
     _fields_ = [
-        (Field.MASS_OFFSET, ctypes.c_float * MAX_NUMBER_OF_MASS_SENSORS),
+        (Field.MASS_COEFFICIENT, ctypes.c_float * MASS_SENSOR_COUNT * COEFFICIENT_COUNT),
+        (Field.TEMPERATURE_COEFFICIENT,
+         ctypes.c_float * TEMPERATURE_SENSOR_COUNT * COEFFICIENT_COUNT),
+        (Field.TARE,
+         ctypes.c_float * MASS_SENSOR_COUNT * TARE_COUNT)
     ]
 
+    def set_sensor_data(self, field, sensor: int, *values):
+        if field == self.Field.MASS_COEFFICIENT:
+            base_values = self.mass_coefficient
+        elif field == self.Field.TEMPERATURE_COEFFICIENT:
+            base_values = self.temperature_coefficient
+        elif field == self.Field.TARE:
+            base_values = self.tare
+        else:
+            raise Exception('Invalid field type.')
+
+        for idx, row in enumerate(base_values):
+            row[sensor] = values[idx]
+
+        if field == self.Field.MASS_COEFFICIENT:
+            self.mass_coefficient = base_values
+        elif field == self.Field.TEMPERATURE_COEFFICIENT:
+            self.temperature_coefficient = base_values
+        elif field == self.Field.TARE:
+            self.tare = base_values
+
     @property
-    def mass_offset(self) -> list[float]:
-        return [offset for offset in getattr(self, self.Field.MASS_OFFSET) if offset !=
-                C_FLOAT_MAX]
+    def mass_coefficient(self) -> list[list[float]]:
+        ctypes_2d_array = getattr(self, self.Field.MASS_COEFFICIENT)
+        return _get_ctypes_2d_array(ctypes_2d_array)
 
-class RespGetTemperatureCoefficient(BaseResponse):
-    class Field(BaseResponse.Field):
-        COEFFICIENT = '_coefficient'
-
-    _pack_ = 1
-    _fields_ = [
-        (Field.COEFFICIENT, ctypes.c_float * COEFFICIENT_COUNT),
-    ]
+    @mass_coefficient.setter
+    def mass_coefficient(self, values: list[list[float]]):
+        ctypes_2d_array = getattr(self, self.Field.MASS_COEFFICIENT)
+        _set_ctypes_2d_array(ctypes_2d_array, values)
 
     @property
-    def coefficient(self) -> list[float]:
-        return list(getattr(self, self.Field.COEFFICIENT))
+    def temperature_coefficient(self) -> list[list[float]]:
+        ctypes_2d_array = getattr(self, self.Field.TEMPERATURE_COEFFICIENT)
+        return _get_ctypes_2d_array(ctypes_2d_array)
+
+    @temperature_coefficient.setter
+    def temperature_coefficient(self, values: list[list[float]]):
+        ctypes_2d_array = getattr(self, self.Field.TEMPERATURE_COEFFICIENT)
+        _set_ctypes_2d_array(ctypes_2d_array, values)
+
+    @property
+    def tare(self) -> list[list[float]]:
+        ctypes_2d_array = getattr(self, self.Field.TARE)
+        return _get_ctypes_2d_array(ctypes_2d_array)
+
+    @tare.setter
+    def tare(self, values: list[list[float]]):
+        ctypes_2d_array = getattr(self, self.Field.TARE)
+        _set_ctypes_2d_array(ctypes_2d_array, values)
+
+    def __str__(self):
+        str_list = [
+            'Mass Coefficient:',
+            format_float_table(self.mass_coefficient,
+                [f'Sensor %d' % idx for idx in range(len(self.mass_coefficient[0]))]),
+            '',
+            'Temperature Coefficient:',
+            format_float_table(self.temperature_coefficient,
+                [f'Sensor %d' % idx for idx in range(len(self.temperature_coefficient[0]))]),
+            '',
+            'Tare:',
+            format_float_table(self.tare,
+                               [f'Sensor %d' % idx for idx in
+                                range(len(self.tare[0]))])
+        ]
+        return '\n'.join(str_list)
 
 
 class DataPoint(ctypes.Structure):
@@ -435,6 +321,160 @@ class MultiDataPoint(ctypes.Structure):
         return '\n'.join(str_list)
 
 
+# --- Commands -------------------------------------------------------------------------------------
+class CmdGetEEPRROM(BaseCommand):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Command.GET_EEPROM
+        super().__init__(*args, **kw)
+
+class CmdSetEEPRROM(BaseCommand):
+    class Field(BaseCommand.Field):
+        EEPROM = '_eeprom'
+
+    _fields_ = [
+        (Field.EEPROM, EEPROM)
+
+    ]
+
+    @property
+    def eeprom(self) -> EEPROM:
+        return getattr(self, self.Field.EEPROM)
+
+    @eeprom.setter
+    def eeprom(self, eeprom: EEPROM):
+        setattr(self, self.Field.EEPROM, eeprom)
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Command.SET_EEPROM
+        super().__init__(*args, **kw)
+
+
+class CmdGetTare(BaseCommand):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Command.GET_TARE
+        super().__init__(*args, **kw)
+
+class CmdReadDAC(BaseCmdWithTimesParam):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Command.READ_DAC
+        super().__init__(*args, **kw)
+
+
+class CmdReadUnits(BaseCmdWithTimesParam):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Command.READ_UNITS
+        super().__init__(*args, **kw)
+
+
+class CmdSetPhase(BaseCommand):
+    class Field(BaseCommand.Field):
+        PHASE = '_phase'
+
+    _fields_ = [
+        (Field.PHASE, ctypes.c_uint16),
+    ]
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Command.SET_PHASE
+        super().__init__(*args, **kw)
+
+    @property
+    def phase(self) -> int:
+        return getattr(self, self.Field.PHASE)
+
+    @phase.setter
+    def phase(self, value: int):
+        setattr(self, self.Field.PHASE, value)
+
+
+# --- Responses ------------------------------------------------------------------------------------
+class RespVoid(BaseResponse):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Response.VOID
+        super().__init__(*args, **kw)
+
+
+class BaseRespWithData(BaseResponse):
+    class Field(BaseResponse.Field):
+        DATA = 'data'
+
+
+class RespByte(BaseRespWithData):
+    _fields_ = [
+        (BaseRespWithData.Field.DATA, ctypes.c_uint8)
+    ]
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Response.BYTE
+        super().__init__(*args, **kw)
+
+
+class RespLong(BaseRespWithData):
+    _fields_ = [
+        (BaseRespWithData.Field.DATA, ctypes.c_int32)
+    ]
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Response.LONG
+        super().__init__(*args, **kw)
+
+
+class RespFloat(BaseRespWithData):
+    _fields_ = [
+        (BaseRespWithData.Field.DATA, ctypes.c_float)
+    ]
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Response.FLOAT
+        super().__init__(*args, **kw)
+
+
+class RespDouble(BaseRespWithData):
+    """Arduino uno has 4 byte double, the same as a float."""
+    _fields_ = [
+        (BaseRespWithData.Field.DATA, ctypes.c_float)
+    ]
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Response.DOUBLE
+        super().__init__(*args, **kw)
+
+
+class RespError(BaseResponse):
+    class Field(BaseResponse.Field):
+        ERROR = 'error'
+
+    _fields_ = [
+        (Field.ERROR, ctypes.c_uint32)
+    ]
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Response.ERROR
+        super().__init__(*args, **kw)
+
+    @property
+    def error(self) -> Error:
+        return super().error
+
+    @error.setter
+    def error(self, value: Error):
+        super().error = value
+
+
+class RespGetEEPROM(BaseResponse):
+    class Field(BaseResponse.Field):
+        EEPROM = '_eeprom'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.EEPROM, EEPROM)
+    ]
+
+    @property
+    def eeprom(self) -> EEPROM:
+        return getattr(self, self.Field.EEPROM)
+
+
 class RespMultiDataPoint(BaseResponse):
     class Field(BaseResponse.Field):
         SENSOR = 'sensor'
@@ -465,3 +505,12 @@ class RespMultiDataPoint(BaseResponse):
     @classmethod
     def from_packet(cls, packet) -> Optional['RespMultiDataPoint']:
         return cls.make_class(packet).from_buffer(packet)
+
+# --- Protected functions --------------------------------------------------------------------------
+def _set_ctypes_2d_array(array, values: list[list[float]]):
+    for row_idx, row in enumerate(values):
+        for column_idx, value in enumerate(row):
+            array[row_idx][column_idx] = value
+
+def _get_ctypes_2d_array(array):
+    return [list(array[idx]) for idx in range(len(array))]

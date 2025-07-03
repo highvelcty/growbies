@@ -5,7 +5,7 @@ from .network import ArduinoNetwork
 import ctypes
 import logging
 
-from .structs.command import Packet, RespType, TBaseCommand, TBaseResponse
+from .structs.command import Packet, Response, TBaseCommand, TBaseResponse
 from growbies.utils.bufstr import BufStr
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class ArduinoTransport(ArduinoNetwork, ABC):
 
     @staticmethod
     def _get_resp(packet: Packet) -> Optional[TBaseResponse]:
-        resp_struct = RespType.get_struct(packet)
+        resp_struct = Response.get_struct(packet)
         if resp_struct is None:
             logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
             return None

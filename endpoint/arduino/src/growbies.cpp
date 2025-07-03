@@ -13,18 +13,15 @@
 
 Growbies* growbies = new Growbies();
 
-Growbies::Growbies(int sensor_count) : sensor_count(sensor_count){
+Growbies::Growbies() {
     assert(sizeof(EEPROMStruct) < EEPROM_BYTES);
 }
 
 void Growbies::begin(){
     pinMode(ARDUINO_HX711_SCK, OUTPUT);
-    for(int sensor = 0; sensor < this->sensor_count; ++sensor) {
+    for(int sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
         pinMode(get_HX711_dout_pin(sensor), INPUT_PULLUP);
     }
-#if AC_EXCITATION
-    this->set_phase_a();
-#endif
 
 #if POWER_CONTROL
     this->power_off();
@@ -45,7 +42,7 @@ void Growbies::execute(PacketHdr* packet_hdr) {
                 new (this->outbuf + sizeof(RespMultiDataPoint)) MultiDataPoint;
             this->read_units(multi_data_points, cmd->times, UNIT_DAC);
             send_packet(*this->outbuf,
-                        sizeof(RespMultiDataPoint) + (sizeof(MultiDataPoint)*this->sensor_count));
+                        sizeof(RespMultiDataPoint) + (sizeof(MultiDataPoint)*MASS_SENSOR_COUNT));
          }
     }
     else if (packet_hdr->type == CMD_READ_UNITS) {
@@ -57,7 +54,7 @@ void Growbies::execute(PacketHdr* packet_hdr) {
                 new (this->outbuf + sizeof(RespMultiDataPoint)) MultiDataPoint;
             this->read_units(multi_data_points, cmd->times);
             send_packet(*this->outbuf,
-                        sizeof(RespMultiDataPoint) + (sizeof(MultiDataPoint)*this->sensor_count));
+                        sizeof(RespMultiDataPoint) + (sizeof(MultiDataPoint)*MASS_SENSOR_COUNT));
          }
     }
     else if (packet_hdr->type == CMD_SET_PHASE) {
@@ -73,58 +70,26 @@ void Growbies::execute(PacketHdr* packet_hdr) {
             send_packet(*this->outbuf, sizeof(RespVoid));
          }
     }
-    else if (packet_hdr->type == CMD_GET_SCALE) {
-        CmdGetScale* cmd = (CmdGetScale*)slip_buf->buf;
-        if (validate_packet(*cmd)) {
-            RespFloat* resp = new (this->outbuf) RespFloat;
-            resp->data = this->get_scale();
-            send_packet(*this->outbuf, sizeof(RespFloat));
-         }
-    }
-    else if (packet_hdr->type == CMD_GET_TARE) {
-        CmdGetTare* cmd = (CmdGetTare*)slip_buf->buf;
-        if (validate_packet(*cmd)) {
-            RespGetTare* resp = new (this->outbuf) RespGetTare;
-            get_tare(resp);
-            send_packet(*this->outbuf, (sizeof(RespGetTare)));
+    else if (packet_hdr->type == CMD_GET_EEPROM) {
+        CmdGetEEPROM* cmd = (CmdGetEEPROM*)slip_buf->buf;
+        if(validate_packet(*cmd)) {
+            RespGetEEPROM* resp = new (this->outbuf) RespGetEEPROM;
+            this->get_eeprom(resp->eeprom);
+            send_packet(*this->outbuf, sizeof(RespGetEEPROM));
         }
     }
-    else if (packet_hdr->type == CMD_SET_SCALE) {
-        CmdSetScale* cmd = (CmdSetScale*)slip_buf->buf;
-        if (validate_packet(*cmd)) {
-            RespVoid resp;
-            this->set_scale(cmd->scale);
-            send_packet(resp);
-         }
-    }
-    else if (packet_hdr->type == CMD_SET_TARE) {
-        CmdSetTare* cmd = (CmdSetTare*)slip_buf->buf;
+    else if (packet_hdr->type == CDM_SET_EEPROM) {
+        CmdSetEEPROM* cmd = (CmdSetEEPROM*)slip_buf->buf;
         if(validate_packet(*cmd)) {
-            RespVoid resp;
-            this->set_tare();
-            send_packet(resp);
-        }
-    }
-    else if (packet_hdr->type == CMD_GET_TEMPERATURE_COEFFICIENT) {
-        CmdGetTemperatureCoefficient* cmd = (CmdGetTemperatureCoefficient*)slip_buf->buf;
-        if(validate_packet(*cmd)) {
-            RespGetTemperatureCoefficient resp;
-            this->get_temperature_coefficient(resp.coefficient);
-            send_packet(resp);
-        }
-    }
-    else if (packet_hdr->type == CMD_SET_TEMPERATURE_COEFFICIENT) {
-        CmdSetTemperatureCoefficient* cmd = (CmdSetTemperatureCoefficient*)slip_buf->buf;
-        if(validate_packet(*cmd)) {
-            RespVoid resp;
-            this->set_temperature_coefficient(cmd->coefficient);
-            send_packet(resp);
+            new (this->outbuf) RespVoid;
+            this->set_eeprom(cmd->eeprom);
+            send_packet(*this->outbuf, sizeof(RespVoid));
         }
     }
     else{
-        RespError resp;
-        resp.error = ERROR_UNRECOGNIZED_COMMAND;
-        send_packet(resp);
+        RespError* resp = new (this->outbuf) RespError;
+        resp->error = ERROR_UNRECOGNIZED_COMMAND;
+        send_packet(resp, sizeof(RespError));
     }
 }
 
@@ -140,84 +105,12 @@ void Growbies::set_phase_b() {
     delay(SET_PHASE_DELAY_MS);
 }
 
-float Growbies::get_scale() {
-    EEPROMStruct eeprom_struct;
-    EEPROM.get(0, eeprom_struct);
-    return eeprom_struct.scale;
+void Growbies::get_eeprom(EEPROMStruct& eeprom) {
+    EEPROM.get(0, eeprom);
 }
 
-void Growbies::set_scale(float scale) {
-    EEPROMStruct eeprom_struct;
-    EEPROM.get(0, eeprom_struct);
-    eeprom_struct.scale = scale;
-    EEPROM.put(0, eeprom_struct);
-}
-
-void Growbies::get_tare(RespGetTare* resp_get_tare) {
-    EEPROMStruct eeprom_struct;
-    EEPROM.get(0, eeprom_struct);
-    for (int sensor = 0; sensor < MAX_HX711_DEVICES; ++sensor){
-        if (sensor < this->sensor_count) {
-        #if AC_EXCITATION
-            resp_get_tare->mass_a_offset[sensor] = eeprom_struct.mass_a_offset[sensor];
-            resp_get_tare->mass_b_offset[sensor] = eeprom_struct.mass_b_offset[sensor];
-        #else
-            resp_get_tare->mass_offset[sensor] = eeprom_struct.mass_offset[sensor];
-        #endif
-        }
-        else{
-        #if AC_EXCITATION
-            resp_get_tare->mass_a_offset[sensor] = FLT_MAX;
-            resp_get_tare->mass_b_offset[sensor] = FLT_MAX;
-        #else
-            resp_get_tare->mass_offset[sensor] = FLT_MAX;
-        #endif
-        }
-    }
-}
-
-void Growbies::set_tare() {
-    EEPROMStruct eeprom_struct;
-    int sensor_idx = 0;
-    int num_bytes = sizeof(MultiDataPoint) * this->sensor_count;
-    MultiDataPoint* multi_data_points = (MultiDataPoint*)malloc(num_bytes);
-    memset(multi_data_points, 0, num_bytes);
-
-    EEPROM.get(0, eeprom_struct);
-
-    this->read_units(multi_data_points, this->get_tare_times, UNIT_DAC);
-    for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-    #if AC_EXCITATION
-        eeprom_struct.mass_a_offset[sensor_idx] = \
-            multi_data_points[sensor_idx].mass_a.data;
-        eeprom_struct.mass_b_offset[sensor_idx] = \
-            multi_data_points[sensor_idx].mass_b.data;
-    #else
-        eeprom_struct.mass_offset[sensor_idx] = multi_data_points[sensor_idx].mass.data;
-    #endif
-    }
-
-    EEPROM.put(0, eeprom_struct);
-
-    free(multi_data_points);
-}
-
-void Growbies::get_temperature_coefficient(TemperatureCoefficient coefficient) {
-    EEPROMStruct eeprom_struct;
-    EEPROM.get(0, eeprom_struct);
-    for (int idx = 0; idx < TEMPERATURE_COEFFICIENT_COUNT; ++idx) {
-        coefficient[idx] = eeprom_struct.temperature_coefficient[idx];
-    }
-    EEPROM.put(0, eeprom_struct);
-}
-
-void Growbies::set_temperature_coefficient(TemperatureCoefficient coefficient) {
-    EEPROMStruct eeprom_struct;
-    EEPROM.get(0, eeprom_struct);
-    for (int idx = 0; idx < TEMPERATURE_COEFFICIENT_COUNT; ++idx) {
-        eeprom_struct.temperature_coefficient[idx] = coefficient[idx];
-    }
-    EEPROM.put(0, eeprom_struct);
+void Growbies::set_eeprom(EEPROMStruct& eeprom) {
+    EEPROM.put(0, eeprom);
 }
 
 void Growbies::set_gain(HX711Gain gain) {
@@ -252,10 +145,10 @@ void Growbies::read_dac(DataPoint* data_points, const byte times, const HX711Gai
     float sum;
     int sum_count;
 
-    float sensor_samples[this->sensor_count][times] = {0.0};
+    float sensor_samples[MASS_SENSOR_COUNT][times] = {0.0};
 
     // Initialize
-    memset(data_points, 0, sizeof(DataPoint) * this->sensor_count);
+    memset(data_points, 0, sizeof(DataPoint) * MASS_SENSOR_COUNT);
 
 	// Read samples
 #if POWER_CONTROL
@@ -263,7 +156,7 @@ void Growbies::read_dac(DataPoint* data_points, const byte times, const HX711Gai
 #endif
 	for (sample_idx = 0; sample_idx < times; ++sample_idx) {
         this->sample(data_points, gain);
-        for (sensor = 0; sensor < this->sensor_count; ++sensor){
+        for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor){
             sensor_samples[sensor][sample_idx] = data_points[sensor].data;
         }
 	}
@@ -272,7 +165,7 @@ void Growbies::read_dac(DataPoint* data_points, const byte times, const HX711Gai
 #endif
 
     // Filter and average
-    for (sensor = 0; sensor < this->sensor_count; ++sensor) {
+    for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
         sum = 0;
         sum_count = 0;
 
@@ -307,32 +200,22 @@ void Growbies::read_dac(DataPoint* data_points, const byte times, const HX711Gai
 
 void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, const Unit units){
     int sensor_idx;
-    RespGetTare tare;
-    TemperatureCoefficient temperature_coefficient;
-
-//    float total_mass = 0.0;
-    get_tare(&tare);
-    get_temperature_coefficient(temperature_coefficient);
+    EEPROMStruct eeprom_struct;
+    EEPROM.get(0, eeprom_struct);
 
 #if TEMPERATURE_CHANNEL_B
-    // Temperature
     this->set_gain(HX711_GAIN_32);
     this->read_dac(this->data_points, times, HX711_GAIN_32);
-    for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
+    for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
         multi_data_points[sensor_idx].temperature.data = \
         this->data_points[sensor_idx].data;
     }
 #endif
 
 #if TEMPERATURE_ANALOG_INPUT
-    for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
+    for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
         multi_data_points[sensor_idx].temperature.data = analogRead(TEMPERATURE_ANALOG_PIN);
     }
-#endif
-
-    // Mass - Phase A
-#if AC_EXCITATION
-    set_phase_a();
 #endif
 
 #if TEMPERATURE_CHANNEL_B
@@ -340,57 +223,24 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
 #endif
 
     this->read_dac(this->data_points, times);
-    for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-    #if AC_EXCITATION
-        multi_data_points[sensor_idx].mass_a.data = this->data_points[sensor_idx].data;
-    #else
+    for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
         multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
-    #endif
     }
-
-#if AC_EXCITATION
-    // Mass - Phase B
-    set_phase_b();
-    this->read_dac(this->data_points, times);
-    for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-        multi_data_points[sensor_idx].mass_b.data = this->data_points[sensor_idx].data;
-    }
-
-    // Totals
-    for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-            multi_data_points[sensor_idx].mass.data = \
-                ((multi_data_points[sensor_idx].mass_a.data
-                - multi_data_points[sensor_idx].mass_b.data) / 2);
-     }
-#endif
 
     // Units
     if (units & UNIT_GRAMS) {
-        for (sensor_idx = 0; sensor_idx < this->sensor_count; ++sensor_idx) {
-        #if AC_EXCITATION
-            multi_data_points[sensor_idx].mass_a.data = \
-                (multi_data_points[sensor_idx].mass_a.data - tare.mass_a_offset[sensor_idx])
-                / this->get_scale();
-
-            multi_data_points[sensor_idx].mass_b.data = \
-                (multi_data_points[sensor_idx].mass_b.data - tare.mass_b_offset[sensor_idx])
-                / this->get_scale();
-
+        for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
             multi_data_points[sensor_idx].mass.data = \
-                (multi_data_points[sensor_idx].mass.data
-                - get_total_mass_offset(tare, sensor_idx))
-                / this->get_scale();
-        #else
-            multi_data_points[sensor_idx].mass.data = \
-                (multi_data_points[sensor_idx].mass.data
-                - tare.mass_offset[sensor_idx]) / this->get_scale();
-        #endif
+                (((multi_data_points[sensor_idx].mass.data
+                   * eeprom_struct.mass_coefficient[sensor_idx][0])
+                  + eeprom_struct.mass_coefficient[sensor_idx][1])
+                 - eeprom_struct.tare[sensor_idx][this->tare_idx]);
 
         #if TEMPERATURE_ANALOG_INPUT
             multi_data_points[sensor_idx].temperature.data = \
-                ((temperature_coefficient[0]
+                ((eeprom_struct.temperature_coefficient[sensor_idx][0]
                   * multi_data_points[sensor_idx].temperature.data)
-                 + temperature_coefficient[1]);
+                 + eeprom_struct.temperature_coefficient[sensor_idx][1]);
         #endif
         }
     }
@@ -398,6 +248,7 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
 
 //    display->print_mass(total_mass);
 }
+
 
 void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
     //
@@ -407,7 +258,7 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
     uint8_t sensor;
     uint8_t pinb;
 
-    long long_data_points[this->sensor_count] = {0};
+    long long_data_points[MASS_SENSOR_COUNT] = {0};
 
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
         for (ii = 0; ii < HX711_DAC_BITS; ++ii) {
@@ -423,7 +274,7 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
 
             // This time intensive task needs to happen after pulling SCK low so as to not perturb
             // time sensitive section when SCK is high.
-            for (sensor = 0; sensor < this->sensor_count; ++sensor) {
+            for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
                 a_bit = (bool)(pinb & get_HX711_dout_port_bit(sensor));
                 long_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
@@ -450,7 +301,7 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
         }
     }
 
-    for (sensor = 0; sensor < this->sensor_count; ++sensor) {
+    for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
         if (long_data_points[sensor] & (1UL << (HX711_DAC_BITS - 1))) {
             long_data_points[sensor] |= (0xFFUL << HX711_DAC_BITS);
         }
@@ -473,7 +324,7 @@ bool Growbies::wait_all_ready_retry(DataPoint* data_points,
         // Read pins 8-13
         pinb = PINB;
         all_ready = true;
-	    for (sensor = 0; sensor < this->sensor_count; ++sensor) {
+	    for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
 	        // The sensor is ready when the data line is low.
 	        ready = (bool)(pinb & get_HX711_dout_port_bit(sensor)) == LOW;
 	        data_points[sensor].ready = ready;

@@ -29,40 +29,35 @@ typedef enum Unit : uint16_t {
     UNIT_CELSIUS     = 0x0008,
 } Units;
 
+
 class Growbies {
     public:
-        const int sensor_count;
-
-        Growbies(int sensor_count = 1);
+        Growbies();
         void begin();
 
         void execute(PacketHdr* packet_hdr);
 
-
     private:
         const int static default_threshold = 10000;
         const byte static default_times = 5;
-        const byte static get_tare_times = 15;
+        const byte static default_tare_times = 15;
+        uint8_t tare_idx = 0;
 
         byte outbuf[512] = {};
-        DataPoint data_points[MAX_HX711_DEVICES];
+        DataPoint data_points[MASS_SENSOR_COUNT];
 
-        void set_phase_a();
-        void set_phase_b();
-		float get_scale();
-		void set_scale(float scale);
-		void get_tare(RespGetTare* resp_get_tare);
-		void set_tare();
-		void get_temperature_coefficient(TemperatureCoefficient coefficient);
-		void set_temperature_coefficient(TemperatureCoefficient coefficient);
-		void set_gain(HX711Gain gain);
-		void power_off();
+        void get_eeprom(EEPROMStruct& eeprom_struct);
+        void power_off();
 		void power_on();
-		void sample(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
+        void sample(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
 		void read_dac(DataPoint* data_points, const byte times = default_times,
 		              const HX711Gain gain = HX711_GAIN_128);
 		void read_units(MultiDataPoint* data_points, const byte times = default_times,
 		                Unit units = (Unit)(UNIT_GRAMS | UNIT_FAHRENHEIT));
+        void set_eeprom(EEPROMStruct& eeprom_struct);
+        void set_gain(HX711Gain gain);
+        void set_phase_a();
+        void set_phase_b();
 		void shift_all_in(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
 		bool wait_all_ready_retry(DataPoint* data_points,
 		    const int retries, const unsigned long delay_ms);

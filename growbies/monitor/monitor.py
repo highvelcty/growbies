@@ -56,7 +56,7 @@ def main(sess: Session):
 
 
                     ts = get_utc_iso_ts_str()
-                    data = arduino_serial.read_dac()
+                    data = arduino_serial.read_units()
 
                     # total = sum(data.sensor[ii].mass for ii in range(4))
                     # file_str = (f'{ts}, {data.sensor[0].mass}, {data.sensor[1].mass}, '

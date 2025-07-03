@@ -14,7 +14,6 @@ class Arduino(ArduinoTransport):
     RESET_COMMUNICATION_LOOPS = 3
     RESET_COMMUNICATION_LOOP_DELAY = 0.33
     MANUAL_CALIBRATION_SAMPLES = 25
-    SET_TARE_TIMEOUT_SECONDS = 30
 
     def execute(self, cmd: command.TBaseCommand, *,
                 retries: int = EXEC_RETRIES,
@@ -50,27 +49,31 @@ class Arduino(ArduinoTransport):
         cmd.phase = command.Phase.B
         self.execute(cmd)
 
-    def get_scale(self) -> float:
-        return self.execute(command.CmdGetScale()).data
+    def get_eeprom(self) -> command.EEPROM:
+        resp: command.RespGetEEPROM = self.execute(command.CmdGetEEPRROM())
+        return resp.eeprom
 
-    def set_scale(self, scale: float = command.CmdSetScale.DEFAULT_SCALE):
-        self.execute(command.CmdSetScale(scale=scale))
+    def set_mass_coefficients(self, sensor: int, *coefficients):
+        eeprom = self.get_eeprom()
+        eeprom.set_sensor_data(command.EEPROM.Field.MASS_COEFFICIENT, sensor, *coefficients)
+        cmd = command.CmdSetEEPRROM()
+        cmd.eeprom = eeprom
+        self.execute(cmd)
 
-    def get_tare(self) -> list[float]:
-        resp: command.RespGetTare = self.execute(command.CmdGetTare())
-        return resp.mass_offset
+    def set_temperature_coefficients(self, sensor: int, *coefficients):
+        eeprom = self.get_eeprom()
+        eeprom.set_sensor_data(command.EEPROM.Field.TEMPERATURE_COEFFICIENT, sensor, *coefficients)
+        cmd = command.CmdSetEEPRROM()
+        cmd.eeprom = eeprom
+        self.execute(cmd)
 
-    def set_tare(self):
-        self.execute(command.CmdSetTare(), read_timeout_sec=self.SET_TARE_TIMEOUT_SECONDS)
-
-    def get_temperature_coefficient(self) -> list[float]:
-        resp: command.RespGetTemperatureCoefficient = \
-            self.execute(command.CmdGetTemperatureCoefficient())
-        return resp.coefficient
-
-    def set_temperature_coefficient(self, *values: float):
-        cmd = command.CmdSetTemperatureCoefficient()
-        cmd.coefficient = values
+    def set_tare(self, sensor: int, tare_idx: int, value):
+        eeprom = self.get_eeprom()
+        mod_values = eeprom.tare[sensor]
+        mod_values[tare_idx] = value
+        eeprom.set_sensor_data(command.EEPROM.Field.TARE, sensor, *mod_values)
+        cmd = command.CmdSetEEPRROM()
+        cmd.eeprom = eeprom
         self.execute(cmd)
 
     def read_dac(self, times: int = command.CmdReadDAC.DEFAULT_TIMES) \
