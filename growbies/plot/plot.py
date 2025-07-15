@@ -171,9 +171,10 @@ def _time_plot(title: str,
         sensor_labels = [f'Sensor {idx}' for idx in range(len(channel_datas))]
 
     for sensor_idx, y_data in enumerate(channel_datas):
-        plt.plot(timestamps,
-                 normalize_list(y_data) if normalize else y_data,
-                 label=sensor_labels[sensor_idx])
+            plt.plot(timestamps,
+                     normalize_list(y_data) if normalize else y_data,
+                     label=sensor_labels[sensor_idx])
+
     # plt.plot(timestamps,
     #          normalize_list(summed_channel_data) if normalize else summed_channel_data,
     #          marker='.', label='Sum')
