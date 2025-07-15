@@ -56,8 +56,6 @@ class Growbies {
 		                Unit units = (Unit)(UNIT_GRAMS | UNIT_FAHRENHEIT));
         void set_eeprom(EEPROMStruct& eeprom_struct);
         void set_gain(HX711Gain gain);
-        void set_phase_a();
-        void set_phase_b();
 		void shift_all_in(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
 		bool wait_all_ready_retry(DataPoint* data_points,
 		    const int retries, const unsigned long delay_ms);

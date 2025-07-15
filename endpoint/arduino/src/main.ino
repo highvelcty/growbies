@@ -13,8 +13,6 @@ void setup() {
     growbies->begin();
     display->begin();
 
-    pinMode(ARDUINO_EXCITATION_A, OUTPUT);
-    pinMode(ARDUINO_EXCITATION_B, OUTPUT);
 }
 
 void loop() {
@@ -28,7 +26,6 @@ void loop() {
     if (recv_slip(Serial.read())){
         packet_hdr = recv_packet();
         if (packet_hdr != NULL) {
-            digitalWrite(LED_BUILTIN, HIGH);
             growbies->execute(packet_hdr);
         }
         slip_buf->reset();

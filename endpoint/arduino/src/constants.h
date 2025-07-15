@@ -13,7 +13,6 @@ const uint8_t TARE_COUNT = 1;
 const int MASS_SENSOR_COUNT = 1;
 const int TEMPERATURE_SENSOR_COUNT = 1;
 
-const int SET_PHASE_DELAY_MS = 10;
 const int EEPROM_BYTES = 1024;
 
 #if TEMPERATURE_ANALOG_INPUT
@@ -21,11 +20,13 @@ const int TEMPERATURE_ANALOG_PIN = A3;
 #endif
 
 enum ArduinoDigitalPins : const int {
-    ARDUINO_EXCITATION_A = 5,
-    ARDUINO_EXCITATION_B = 6,
-    ARDUINO_PORT_B_BASE_PIN = 8,
-    ARDUINO_HX711_SCK = 12,
-    ARDUINO_HX711_BASE_DOUT = ARDUINO_PORT_B_BASE_PIN,
+#if ARDUINO_ARCH_AVR
+    STARTING_DOUT_PIN = 8,
+    HX711_SCK = 12,
+#elif ARDUINO_ARCH_ESP32
+    STARTING_DOUT_PIN = D9,
+    HX711_SCK = D8,
+#endif
 };
 
 enum ArduinoAnalogPins : const int {
@@ -39,11 +40,11 @@ enum SensorHw : const int {
 };
 
 inline int get_HX711_dout_pin(int sensor){
-    return ARDUINO_HX711_BASE_DOUT + sensor;
+    return STARTING_DOUT_PIN + sensor;
 }
 
 inline int get_HX711_dout_port_bit(int sensor){
-    return (1 << (get_HX711_dout_pin(sensor) - ARDUINO_PORT_B_BASE_PIN));
+    return (1 << (get_HX711_dout_pin(sensor) - STARTING_DOUT_PIN));
 }
 
 #endif /* constants_h */

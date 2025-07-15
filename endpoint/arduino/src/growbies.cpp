@@ -2,7 +2,6 @@
 #include <EEPROM.h>
 #include <float.h>
 #include <new> // Required for placement new
-#include <util/atomic.h>
 
 #include "constants.h"
 #include "flags.h"
@@ -11,6 +10,11 @@
 #include "lib/display.h"
 #include "utils/sort.h"
 
+//#if HAS_ATOMIC_BLOCK
+#if ARDUINO_ARCH_AVR
+#include <util/atomic.h>
+#endif
+
 Growbies* growbies = new Growbies();
 
 Growbies::Growbies() {
@@ -18,7 +22,7 @@ Growbies::Growbies() {
 }
 
 void Growbies::begin(){
-    pinMode(ARDUINO_HX711_SCK, OUTPUT);
+    pinMode(HX711_SCK, OUTPUT);
     for(int sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
         pinMode(get_HX711_dout_pin(sensor), INPUT_PULLUP);
     }
@@ -57,19 +61,6 @@ void Growbies::execute(PacketHdr* packet_hdr) {
                         sizeof(RespMultiDataPoint) + (sizeof(MultiDataPoint)*MASS_SENSOR_COUNT));
          }
     }
-    else if (packet_hdr->type == CMD_SET_PHASE) {
-        CmdSetPhase* cmd = (CmdSetPhase*)slip_buf->buf;
-        if (validate_packet(*cmd)) {
-            new (this->outbuf) RespVoid;
-            if (cmd->phase == PHASE_A) {
-                this->set_phase_a();
-            }
-            else {
-                this->set_phase_b();
-            }
-            send_packet(*this->outbuf, sizeof(RespVoid));
-         }
-    }
     else if (packet_hdr->type == CMD_GET_EEPROM) {
         CmdGetEEPROM* cmd = (CmdGetEEPROM*)slip_buf->buf;
         if(validate_packet(*cmd)) {
@@ -93,18 +84,6 @@ void Growbies::execute(PacketHdr* packet_hdr) {
     }
 }
 
-void Growbies::set_phase_a() {
-    digitalWrite(ARDUINO_EXCITATION_A, LOW);
-    digitalWrite(ARDUINO_EXCITATION_B, HIGH);
-    delay(SET_PHASE_DELAY_MS);
-}
-
-void Growbies::set_phase_b() {
-    digitalWrite(ARDUINO_EXCITATION_A, HIGH);
-    digitalWrite(ARDUINO_EXCITATION_B, LOW);
-    delay(SET_PHASE_DELAY_MS);
-}
-
 void Growbies::get_eeprom(EEPROMStruct& eeprom) {
     EEPROM.get(0, eeprom);
 }
@@ -118,12 +97,12 @@ void Growbies::set_gain(HX711Gain gain) {
 }
 
 void Growbies::power_off() {
-    digitalWrite(ARDUINO_HX711_SCK, HIGH);
+    digitalWrite(HX711_SCK, HIGH);
     delayMicroseconds(HX711_POWER_DELAY);
 }
 
 void Growbies::power_on() {
-    digitalWrite(ARDUINO_HX711_SCK, LOW);
+    digitalWrite(HX711_SCK, LOW);
     delayMicroseconds(HX711_POWER_DELAY);
 }
 
@@ -256,26 +235,38 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
     uint32_t a_bit;
     uint8_t ii;
     uint8_t sensor;
-    uint8_t pinb;
+#if ARDUINO_ARCH_AVR
+    uint8_t gpio_in_reg;
+#elif ARDUINO_ARCH_ESP32
+    uint32_t gpio_in_reg;
+#endif
 
     long long_data_points[MASS_SENSOR_COUNT] = {0};
 
+#if ARDUINO_ARCH_AVR
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+#elif ARDUINO_ARCH_ESP32
+    noInterrupts();
+#endif
         for (ii = 0; ii < HX711_DAC_BITS; ++ii) {
             delayMicroseconds(HX711_BIT_BANG_DELAY);
             // Read in a byte, most significant bit first
-            digitalWrite(ARDUINO_HX711_SCK, HIGH);
+            digitalWrite(HX711_SCK, HIGH);
 
             // This is a time critical block
             delayMicroseconds(HX711_BIT_BANG_DELAY);
+        #if ARDUINO_ARCH_AVR
             // Read pins 8-13
-            pinb = PINB;
-            digitalWrite(ARDUINO_HX711_SCK, LOW);
+            gpio_in_reg = PINB;
+        #elif ARDUINO_ARCH_ESP32
+            gpio_in_reg = 0;
+        #endif
+            digitalWrite(HX711_SCK, LOW);
 
             // This time intensive task needs to happen after pulling SCK low so as to not perturb
             // time sensitive section when SCK is high.
             for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
-                a_bit = (bool)(pinb & get_HX711_dout_port_bit(sensor));
+                a_bit = (bool)(gpio_in_reg & get_HX711_dout_port_bit(sensor));
                 long_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
         }
@@ -284,22 +275,26 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
         delayMicroseconds(HX711_BIT_BANG_DELAY);
         switch ( gain ) {
             case HX711_GAIN_32: // Channel "B"
-                digitalWrite(ARDUINO_HX711_SCK, HIGH);
+                digitalWrite(HX711_SCK, HIGH);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
-                digitalWrite(ARDUINO_HX711_SCK, LOW);
+                digitalWrite(HX711_SCK, LOW);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
             case HX711_GAIN_64: // Channel "A"
-                digitalWrite(ARDUINO_HX711_SCK, HIGH);
+                digitalWrite(HX711_SCK, HIGH);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
-                digitalWrite(ARDUINO_HX711_SCK, LOW);
+                digitalWrite(HX711_SCK, LOW);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
             case HX711_GAIN_128: // Channel "A"
-                digitalWrite(ARDUINO_HX711_SCK, HIGH);
+                digitalWrite(HX711_SCK, HIGH);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
-                digitalWrite(ARDUINO_HX711_SCK, LOW);
+                digitalWrite(HX711_SCK, LOW);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
         }
+#if ARDUINO_ARCH_AVR
     }
+#elif ARDUINO_ARCH_ESP32
+    interrupts();
+#endif
 
     for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
         if (long_data_points[sensor] & (1UL << (HX711_DAC_BITS - 1))) {
@@ -316,17 +311,25 @@ bool Growbies::wait_all_ready_retry(DataPoint* data_points,
 	bool all_ready = true;
 	bool ready;
 	int sensor;
-	byte pinb;
+#if ARDUINO_ARCH_AVR
+	uint8_t gpio_in_reg;
+#elif ARDUINO_ARCH_ESP32
+    uint32_t gpio_in_reg;
+#endif
 	int retry_count = 0;
 
 	do {
         // Check for readiness from all sensors
         // Read pins 8-13
-        pinb = PINB;
+    #if ARDUINO_ARCH_AVR
+        gpio_in_reg = PINB;
+    #elif ARDUINO_ARCH_ESP32
+        gpio_in_reg = 0;
+    #endif
         all_ready = true;
 	    for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
 	        // The sensor is ready when the data line is low.
-	        ready = (bool)(pinb & get_HX711_dout_port_bit(sensor)) == LOW;
+	        ready = (bool)(gpio_in_reg & get_HX711_dout_port_bit(sensor)) == LOW;
 	        data_points[sensor].ready = ready;
 	        all_ready &= ready;
         }
