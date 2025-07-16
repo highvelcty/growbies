@@ -7,6 +7,8 @@
 #define PACKET_CHECKSUM_BYTES 2
 #define PACKET_MIN_BYTES sizeof(PacketHdr) + PACKET_CHECKSUM_BYTES
 
+#pragma pack(1)
+
 struct PacketHdr {
     uint16_t type;
 

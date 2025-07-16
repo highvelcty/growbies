@@ -5,11 +5,10 @@
     #error "Unsupported architecture."
 #endif
 
-#define TEMPERATURE_CHANNEL_B 0
-#define TEMPERATURE_CHANNEL_A 0
 #define TEMPERATURE_ANALOG_INPUT 1
 #define POWER_CONTROL 1
-
+#define LED_INSTALLED 1
+#define FEATURE_LED (1 && LED_INSTALLED)
 
 
 #endif /* flags_h */

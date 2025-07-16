@@ -13,7 +13,11 @@ const uint8_t TARE_COUNT = 1;
 const int MASS_SENSOR_COUNT = 1;
 const int TEMPERATURE_SENSOR_COUNT = 1;
 
-const int EEPROM_BYTES = 1024;
+// Uno and mini pro are 1024 bytes.
+// ESP32C3 is 512 bytes.
+//
+// Selected here is least common denominator.
+const int EEPROM_BYTES = 512;
 
 #if TEMPERATURE_ANALOG_INPUT
 const int TEMPERATURE_ANALOG_PIN = A3;
@@ -22,10 +26,12 @@ const int TEMPERATURE_ANALOG_PIN = A3;
 enum ArduinoDigitalPins : const int {
 #if ARDUINO_ARCH_AVR
     STARTING_DOUT_PIN = 8,
-    HX711_SCK = 12,
+    HX711_SCK_PIN = 12,
+    LED_PIN = 13,
 #elif ARDUINO_ARCH_ESP32
-    STARTING_DOUT_PIN = D9,
-    HX711_SCK = D8,
+    STARTING_DOUT_PIN = D7,
+    HX711_SCK_PIN = D8,
+    LED_PIN = D9,
 #endif
 };
 

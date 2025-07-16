@@ -14,8 +14,8 @@ from growbies.utils.bufstr import BufStr
 class ArduinoNetwork(ArduinoDatalink, ABC):
     CHECKSUM_BYTES = 2
     POLLING_SEC = 0.01
-    DEBUG_NETWORK_READ = False
-    DEBUG_NETWORK_WRITE = False
+    DEBUG_NETWORK_READ = True
+    DEBUG_NETWORK_WRITE = True
 
     def _send_packet(self, buf: ByteString):
         checksum = ctypes.c_uint16()

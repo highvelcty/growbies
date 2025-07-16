@@ -10,7 +10,7 @@ class BaseArduinoSerial(object):
     DEBUG_DATALINK_READ = False
     DEBUG_DATALINK_WRITE = False
 
-    def __init__(self, *args, port='/dev/ttyUSB0', baudrate=57600, timeout=0.5, **kw):
+    def __init__(self, *args, port='/dev/ttyACM0', baudrate=57600, timeout=0.5, **kw):
         """
         The following settings seem to work with arduino uno, but it also seems that they don't
         need to be set explicitly::

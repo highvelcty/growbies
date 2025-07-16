@@ -5,6 +5,8 @@
 #include "lib/eeprom.h"
 #include "protocol/network.h"
 
+#pragma pack(1)
+
 enum Cmd: uint16_t {
     CMD_LOOPBACK = 0,
     CMD_GET_EEPROM = 1,

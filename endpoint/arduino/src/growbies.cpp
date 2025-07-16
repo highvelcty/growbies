@@ -22,7 +22,7 @@ Growbies::Growbies() {
 }
 
 void Growbies::begin(){
-    pinMode(HX711_SCK, OUTPUT);
+    pinMode(HX711_SCK_PIN, OUTPUT);
     for(int sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
         pinMode(get_HX711_dout_pin(sensor), INPUT_PULLUP);
     }
@@ -30,6 +30,11 @@ void Growbies::begin(){
 #if POWER_CONTROL
     this->power_off();
 #endif
+
+#if ARDUINO_ARCH_ESP32
+    EEPROM.begin(EEPROM_BYTES);
+#endif
+
 }
 
 void Growbies::execute(PacketHdr* packet_hdr) {
@@ -97,12 +102,12 @@ void Growbies::set_gain(HX711Gain gain) {
 }
 
 void Growbies::power_off() {
-    digitalWrite(HX711_SCK, HIGH);
+    digitalWrite(HX711_SCK_PIN, HIGH);
     delayMicroseconds(HX711_POWER_DELAY);
 }
 
 void Growbies::power_on() {
-    digitalWrite(HX711_SCK, LOW);
+    digitalWrite(HX711_SCK_PIN, LOW);
     delayMicroseconds(HX711_POWER_DELAY);
 }
 
@@ -182,23 +187,10 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
     EEPROMStruct eeprom_struct;
     EEPROM.get(0, eeprom_struct);
 
-#if TEMPERATURE_CHANNEL_B
-    this->set_gain(HX711_GAIN_32);
-    this->read_dac(this->data_points, times, HX711_GAIN_32);
-    for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
-        multi_data_points[sensor_idx].temperature.data = \
-        this->data_points[sensor_idx].data;
-    }
-#endif
-
 #if TEMPERATURE_ANALOG_INPUT
     for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
         multi_data_points[sensor_idx].temperature.data = analogRead(TEMPERATURE_ANALOG_PIN);
     }
-#endif
-
-#if TEMPERATURE_CHANNEL_B
-    this->set_gain(HX711_GAIN_128);
 #endif
 
     this->read_dac(this->data_points, times);
@@ -251,7 +243,7 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
         for (ii = 0; ii < HX711_DAC_BITS; ++ii) {
             delayMicroseconds(HX711_BIT_BANG_DELAY);
             // Read in a byte, most significant bit first
-            digitalWrite(HX711_SCK, HIGH);
+            digitalWrite(HX711_SCK_PIN, HIGH);
 
             // This is a time critical block
             delayMicroseconds(HX711_BIT_BANG_DELAY);
@@ -261,7 +253,7 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
         #elif ARDUINO_ARCH_ESP32
             gpio_in_reg = 0;
         #endif
-            digitalWrite(HX711_SCK, LOW);
+            digitalWrite(HX711_SCK_PIN, LOW);
 
             // This time intensive task needs to happen after pulling SCK low so as to not perturb
             // time sensitive section when SCK is high.
@@ -275,19 +267,19 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
         delayMicroseconds(HX711_BIT_BANG_DELAY);
         switch ( gain ) {
             case HX711_GAIN_32: // Channel "B"
-                digitalWrite(HX711_SCK, HIGH);
+                digitalWrite(HX711_SCK_PIN, HIGH);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
-                digitalWrite(HX711_SCK, LOW);
+                digitalWrite(HX711_SCK_PIN, LOW);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
             case HX711_GAIN_64: // Channel "A"
-                digitalWrite(HX711_SCK, HIGH);
+                digitalWrite(HX711_SCK_PIN, HIGH);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
-                digitalWrite(HX711_SCK, LOW);
+                digitalWrite(HX711_SCK_PIN, LOW);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
             case HX711_GAIN_128: // Channel "A"
-                digitalWrite(HX711_SCK, HIGH);
+                digitalWrite(HX711_SCK_PIN, HIGH);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
-                digitalWrite(HX711_SCK, LOW);
+                digitalWrite(HX711_SCK_PIN, LOW);
                 delayMicroseconds(HX711_BIT_BANG_DELAY);
         }
 #if ARDUINO_ARCH_AVR
