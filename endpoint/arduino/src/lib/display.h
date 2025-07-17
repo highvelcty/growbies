@@ -8,7 +8,7 @@
 class Display {
 
     public:
-        Display():u8x8(U8X8_PIN_NONE, A5_HW_I2C_SCL, A4_HW_I2C_SDA) {};
+        Display():u8x8(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {};
         void begin();
 
         void print_mass(float mass);

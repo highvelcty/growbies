@@ -23,21 +23,23 @@ const int EEPROM_BYTES = 512;
 const int TEMPERATURE_ANALOG_PIN = A3;
 #endif
 
-enum ArduinoDigitalPins : const int {
-#if ARDUINO_ARCH_AVR
-    STARTING_DOUT_PIN = 8,
+enum Pins : const int {
+#if HX711_PIN_CFG_0
+    DOUT_0_PIN = 8,
+    DOUT_1_PIN = 9,
+    DOUT_2_PIN = 10,
+    DOUT_3_PIN = 11,
     HX711_SCK_PIN = 12,
     LED_PIN = 13,
-#elif ARDUINO_ARCH_ESP32
-    STARTING_DOUT_PIN = D7,
+    HW_I2C_SDA_PIN = 0xA4,
+    HW_I2C_SCL_PIN = 0xA5,
+#elif HX711_PIN_CFG_1
+    DOUT_0_PIN = D7,
     HX711_SCK_PIN = D8,
     LED_PIN = D9,
+    HW_I2C_SDA_PIN = D4,
+    HW_I2C_SCL_PIN = D5,
 #endif
-};
-
-enum ArduinoAnalogPins : const int {
-    A4_HW_I2C_SDA = 0xA4,
-    A5_HW_I2C_SCL = 0xA5,
 };
 
 enum SensorHw : const int {
@@ -46,11 +48,19 @@ enum SensorHw : const int {
 };
 
 inline int get_HX711_dout_pin(int sensor){
-    return STARTING_DOUT_PIN + sensor;
+#if HX711_PIN_CFG_0
+    return DOUT_0_PIN + sensor;
+#elif HX711_PIN_CFG_1
+    return DOUT_0_PIN;
+#endif
 }
 
 inline int get_HX711_dout_port_bit(int sensor){
-    return (1 << (get_HX711_dout_pin(sensor) - STARTING_DOUT_PIN));
+#if HX711_PIN_CFG_0
+    return (1 << (get_HX711_dout_pin(sensor) - DOUT_0_PIN));
+#elif HX711_PIN_CFG_1
+    return (1 << get_HX711_dout_pin(sensor));
+#endif
 }
 
 #endif /* constants_h */

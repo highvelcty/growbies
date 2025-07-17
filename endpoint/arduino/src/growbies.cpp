@@ -24,7 +24,17 @@ Growbies::Growbies() {
 void Growbies::begin(){
     pinMode(HX711_SCK_PIN, OUTPUT);
     for(int sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
+    #if ARDUINO_ARCH_AVR
         pinMode(get_HX711_dout_pin(sensor), INPUT_PULLUP);
+    #elif ARDUINO_ARCH_ESP32
+        gpio_config_t io_conf;
+        io_conf.intr_type = GPIO_INTR_DISABLE; // Disable interrupts
+        io_conf.mode = GPIO_MODE_INPUT; // Set mode to input
+        io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE; // Disable pull-down resistors
+        io_conf.pull_up_en = GPIO_PULLUP_ENABLE; // Enable pull-up resistors (optional, depending on your circuit)
+        io_conf.pin_bit_mask = (1ULL << DOUT_0_PIN);
+        gpio_config(&io_conf);
+    #endif
     }
 
 #if POWER_CONTROL
@@ -80,6 +90,31 @@ void Growbies::execute(PacketHdr* packet_hdr) {
             new (this->outbuf) RespVoid;
             this->set_eeprom(cmd->eeprom);
             send_packet(*this->outbuf, sizeof(RespVoid));
+        }
+    }
+    else if (packet_hdr->type == CMD_POWER_ON_HX711) {
+        CmdPowerOnHx711* cmd = (CmdPowerOnHx711*)slip_buf->buf;
+        if(validate_packet(*cmd)) {
+            this->power_on();
+            new (this->outbuf) RespVoid;
+
+            send_packet(*this->outbuf, sizeof(RespVoid));
+        }
+    }
+    else if (packet_hdr->type == CMD_POWER_OFF_HX711) {
+        CmdPowerOffHx711* cmd = (CmdPowerOffHx711*)slip_buf->buf;
+        if(validate_packet(*cmd)) {
+            this->power_off();
+            new (this->outbuf) RespVoid;
+            send_packet(*this->outbuf, sizeof(RespVoid));
+        }
+    }
+    else if (packet_hdr->type == CMD_TEST) {
+        BaseCmd* cmd = (BaseCmd*)slip_buf->buf;
+        if(validate_packet(*cmd)) {
+            RespLong* resp = new (this->outbuf) RespLong;
+            resp->data = 0;
+            send_packet(*this->outbuf, sizeof(RespLong));
         }
     }
     else{
@@ -195,7 +230,10 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
 
     this->read_dac(this->data_points, times);
     for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
+        // meyere: this copy could be eliminated
         multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
+        multi_data_points[sensor_idx].mass.error_count = this->data_points[sensor_idx].error_count;
+        multi_data_points[sensor_idx].mass.ready = this->data_points[sensor_idx].ready;
     }
 
     // Units
@@ -216,7 +254,6 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
         }
     }
 
-
 //    display->print_mass(total_mass);
 }
 
@@ -230,7 +267,7 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
 #if ARDUINO_ARCH_AVR
     uint8_t gpio_in_reg;
 #elif ARDUINO_ARCH_ESP32
-    uint32_t gpio_in_reg;
+    uint32_t gpio_in_reg = 0;
 #endif
 
     long long_data_points[MASS_SENSOR_COUNT] = {0};
@@ -251,7 +288,7 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
             // Read pins 8-13
             gpio_in_reg = PINB;
         #elif ARDUINO_ARCH_ESP32
-            gpio_in_reg = 0;
+            gpio_in_reg = REG_READ(GPIO_IN_REG);
         #endif
             digitalWrite(HX711_SCK_PIN, LOW);
 
@@ -259,7 +296,7 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
             // time sensitive section when SCK is high.
             for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
                 a_bit = (bool)(gpio_in_reg & get_HX711_dout_port_bit(sensor));
-                long_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
+/                long_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
         }
 
@@ -316,12 +353,11 @@ bool Growbies::wait_all_ready_retry(DataPoint* data_points,
     #if ARDUINO_ARCH_AVR
         gpio_in_reg = PINB;
     #elif ARDUINO_ARCH_ESP32
-        gpio_in_reg = 0;
     #endif
         all_ready = true;
 	    for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
 	        // The sensor is ready when the data line is low.
-	        ready = (bool)(gpio_in_reg & get_HX711_dout_port_bit(sensor)) == LOW;
+	        ready = digitalRead(DOUT_0_PIN) == LOW;
 	        data_points[sensor].ready = ready;
 	        all_ready &= ready;
         }

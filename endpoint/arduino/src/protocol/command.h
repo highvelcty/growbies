@@ -14,6 +14,9 @@ enum Cmd: uint16_t {
     CMD_READ_DAC = 3,
     CMD_READ_UNITS = 4,
     CMD_SET_PHASE = 5,
+    CMD_POWER_ON_HX711 = 6,
+    CMD_POWER_OFF_HX711 = 7,
+    CMD_TEST = 0xFF
 };
 
 enum Response: uint16_t {
@@ -65,6 +68,8 @@ struct CmdGetEEPROM : BaseCmd {};
 struct CmdSetEEPROM : BaseCmd {
     EEPROMStruct eeprom;
 };
+struct CmdPowerOnHx711 : BaseCmd {};
+struct CmdPowerOffHx711 : BaseCmd {};
 struct CmdReadDAC : BaseCmdWithTimesParam {};
 struct CmdReadUnits : BaseCmdWithTimesParam {};
 struct CmdSetPhase : BaseCmd {

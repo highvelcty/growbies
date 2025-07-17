@@ -22,6 +22,9 @@ class Command(IntEnum):
     READ_DAC = 3
     READ_UNITS = 4
     SET_PHASE = 5
+    POWER_ON_HX711 = 6
+    POWER_OFF_HX711 = 7
+    TEST = 0xFF
 
 class Response(IntEnum):
     VOID = 0
@@ -150,12 +153,6 @@ TBaseCommand = TypeVar('TBaseCommand', bound=BaseCommand)
 class BaseResponse(PacketHeader):
     pass
 TBaseResponse = TypeVar('TBaseResponse', bound=BaseResponse)
-
-
-class CmdLoopback(BaseCommand):
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        self.type = Command.LOOPBACK
 
 
 class BaseCmdWithTimesParam(BaseCommand):
@@ -322,6 +319,12 @@ class MultiDataPoint(ctypes.Structure):
 
 
 # --- Commands -------------------------------------------------------------------------------------
+class CmdLoopback(BaseCommand):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self.type = Command.LOOPBACK
+
+
 class CmdGetEEPRROM(BaseCommand):
     def __init__(self, *args, **kw):
         kw[self.Field.TYPE] = Command.GET_EEPROM
@@ -349,9 +352,15 @@ class CmdSetEEPRROM(BaseCommand):
         super().__init__(*args, **kw)
 
 
-class CmdGetTare(BaseCommand):
+
+class CmdPowerOnHx711(BaseCommand):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.GET_TARE
+        kw[self.Field.TYPE] = Command.POWER_ON_HX711
+        super().__init__(*args, **kw)
+
+class CmdPowerOffHx711(BaseCommand):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = Command.POWER_OFF_HX711
         super().__init__(*args, **kw)
 
 class CmdReadDAC(BaseCmdWithTimesParam):
@@ -385,6 +394,11 @@ class CmdSetPhase(BaseCommand):
     @phase.setter
     def phase(self, value: int):
         setattr(self, self.Field.PHASE, value)
+
+class CmdTest(BaseCommand):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self.type = Command.TEST
 
 
 # --- Responses ------------------------------------------------------------------------------------

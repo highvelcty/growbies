@@ -53,6 +53,12 @@ class Arduino(ArduinoTransport):
         resp: command.RespGetEEPROM = self.execute(command.CmdGetEEPRROM())
         return resp.eeprom
 
+    def power_on_hx711(self) -> None:
+        self.execute(command.CmdPowerOnHx711())
+
+    def power_off_hx711(self) -> None:
+        self.execute(command.CmdPowerOffHx711())
+
     def set_mass_coefficients(self, sensor: int, *coefficients):
         eeprom = self.get_eeprom()
         eeprom.set_sensor_data(command.EEPROM.Field.MASS_COEFFICIENT, sensor, *coefficients)
@@ -97,6 +103,10 @@ class Arduino(ArduinoTransport):
                 bytes_in_waiting = self.in_waiting
                 if bytes_in_waiting:
                     _ = self.read(bytes_in_waiting)
+
+    def test(self):
+        resp: command.RespLong = self.execute(command.CmdTest())
+        return resp.data
 
     def wait_for_ready(self):
         cmd = command.CmdLoopback()

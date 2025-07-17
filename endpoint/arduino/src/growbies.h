@@ -51,14 +51,14 @@ class Growbies {
 		void power_on();
         void sample(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
 		void read_dac(DataPoint* data_points, const byte times = default_times,
-		              const HX711Gain gain = HX711_GAIN_128);
+            const HX711Gain gain = HX711_GAIN_128);
 		void read_units(MultiDataPoint* data_points, const byte times = default_times,
-		                Unit units = (Unit)(UNIT_GRAMS | UNIT_FAHRENHEIT));
+            Unit units = (Unit)(UNIT_GRAMS | UNIT_FAHRENHEIT));
         void set_eeprom(EEPROMStruct& eeprom_struct);
         void set_gain(HX711Gain gain);
 		void shift_all_in(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
-		bool wait_all_ready_retry(DataPoint* data_points,
-		    const int retries, const unsigned long delay_ms);
+		bool wait_all_ready_retry(DataPoint* data_points, const int retries,
+            const unsigned long delay_ms);
 };
 
 template <typename PacketType>
