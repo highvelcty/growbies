@@ -49,9 +49,9 @@ class Arduino(ArduinoTransport):
         cmd.phase = command.Phase.B
         self.execute(cmd)
 
-    def get_eeprom(self) -> command.EEPROM:
-        resp: command.RespGetEEPROM = self.execute(command.CmdGetEEPRROM())
-        return resp.eeprom
+    def get_calibration(self) -> command.Calibration:
+        resp: command.RespGetCalibration = self.execute(command.CmdGetCalibration())
+        return resp.calibration
 
     def power_on_hx711(self) -> None:
         self.execute(command.CmdPowerOnHx711())
@@ -60,26 +60,26 @@ class Arduino(ArduinoTransport):
         self.execute(command.CmdPowerOffHx711())
 
     def set_mass_coefficients(self, sensor: int, *coefficients):
-        eeprom = self.get_eeprom()
-        eeprom.set_sensor_data(command.EEPROM.Field.MASS_COEFFICIENT, sensor, *coefficients)
-        cmd = command.CmdSetEEPRROM()
-        cmd.eeprom = eeprom
+        calibration = self.get_calibration()
+        calibration.set_sensor_data(command.Calibration.Field.MASS_COEFFICIENT, sensor, *coefficients)
+        cmd = command.CmdSetCalibration()
+        cmd.calibration = calibration
         self.execute(cmd)
 
     def set_temperature_coefficients(self, sensor: int, *coefficients):
-        eeprom = self.get_eeprom()
-        eeprom.set_sensor_data(command.EEPROM.Field.TEMPERATURE_COEFFICIENT, sensor, *coefficients)
-        cmd = command.CmdSetEEPRROM()
-        cmd.eeprom = eeprom
+        calibration = self.get_calibration()
+        calibration.set_sensor_data(command.Calibration.Field.TEMPERATURE_COEFFICIENT, sensor, *coefficients)
+        cmd = command.CmdSetCalibration()
+        cmd.calibration = calibration
         self.execute(cmd)
 
     def set_tare(self, sensor: int, tare_idx: int, value):
-        eeprom = self.get_eeprom()
-        mod_values = eeprom.tare[sensor]
+        calibration = self.get_calibration()
+        mod_values = calibration.tare[sensor]
         mod_values[tare_idx] = value
-        eeprom.set_sensor_data(command.EEPROM.Field.TARE, sensor, *mod_values)
-        cmd = command.CmdSetEEPRROM()
-        cmd.eeprom = eeprom
+        calibration.set_sensor_data(command.Calibration.Field.TARE, sensor, *mod_values)
+        cmd = command.CmdSetCalibration()
+        cmd.calibration = calibration
         self.execute(cmd)
 
     def read_dac(self, times: int = command.CmdReadDAC.DEFAULT_TIMES) \

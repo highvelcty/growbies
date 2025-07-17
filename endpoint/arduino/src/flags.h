@@ -5,8 +5,8 @@
     #error "Unsupported architecture."
 #endif
 
-#define HX711_PIN_CFG_0 (0 && ARDUINO_ARCH_AVR)
-#define HX711_PIN_CFG_1 (1 && ARDUINO_ARCH_ESP32)
+#define HX711_PIN_CFG_0 ARDUINO_ARCH_AVR
+#define HX711_PIN_CFG_1 ARDUINO_ARCH_ESP32
 #if !(HX711_PIN_CFG_0 ^ HX711_PIN_CFG_1)
     #error "One and only one HX711 pin configuration must be selected."
 #endif

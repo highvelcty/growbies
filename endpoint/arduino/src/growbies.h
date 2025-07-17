@@ -46,7 +46,6 @@ class Growbies {
         byte outbuf[512] = {};
         DataPoint data_points[MASS_SENSOR_COUNT];
 
-        void get_eeprom(EEPROMStruct& eeprom_struct);
         void power_off();
 		void power_on();
         void sample(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
@@ -54,7 +53,6 @@ class Growbies {
             const HX711Gain gain = HX711_GAIN_128);
 		void read_units(MultiDataPoint* data_points, const byte times = default_times,
             Unit units = (Unit)(UNIT_GRAMS | UNIT_FAHRENHEIT));
-        void set_eeprom(EEPROMStruct& eeprom_struct);
         void set_gain(HX711Gain gain);
 		void shift_all_in(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
 		bool wait_all_ready_retry(DataPoint* data_points, const int retries,

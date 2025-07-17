@@ -13,11 +13,6 @@ const uint8_t TARE_COUNT = 1;
 const int MASS_SENSOR_COUNT = 1;
 const int TEMPERATURE_SENSOR_COUNT = 1;
 
-// Uno and mini pro are 1024 bytes.
-// ESP32C3 is 512 bytes.
-//
-// Selected here is least common denominator.
-const int EEPROM_BYTES = 512;
 
 #if TEMPERATURE_ANALOG_INPUT
 const int TEMPERATURE_ANALOG_PIN = A3;

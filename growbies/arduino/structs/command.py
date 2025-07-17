@@ -17,8 +17,8 @@ TEMPERATURE_SENSOR_COUNT = 1
 # --- Base Classes ---------------------------------------------------------------------------------
 class Command(IntEnum):
     LOOPBACK = 0
-    GET_EEPROM = 1
-    SET_EEPROM = 2
+    GET_CALIBRATION = 1
+    SET_CALIBRATION = 2
     READ_DAC = 3
     READ_UNITS = 4
     SET_PHASE = 5
@@ -33,7 +33,7 @@ class Response(IntEnum):
     FLOAT = 3
     DOUBLE = 4
     MULTI_DATA_POINT = 5
-    GET_EEPROM = 6
+    GET_CALIBRATION = 6
     GET_TARE = 7
     ERROR = 0xFFFF
 
@@ -53,8 +53,8 @@ class Response(IntEnum):
             return RespError
         elif packet.header.type == cls.MULTI_DATA_POINT:
             return RespMultiDataPoint.make_class(packet)
-        elif packet.header.type == cls.GET_EEPROM:
-            return RespGetEEPROM
+        elif packet.header.type == cls.GET_CALIBRATION:
+            return RespGetCalibration
 
         logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
         return None
@@ -180,7 +180,7 @@ class BaseCmdWithTimesParam(BaseCommand):
 
 
 # --- Misc Structures # ----------------------------------------------------------------------------
-class EEPROM(ctypes.Structure):
+class Calibration(ctypes.Structure):
     class Field:
         MASS_COEFFICIENT = '_mass_coefficient'
         TEMPERATURE_COEFFICIENT = '_temperature_coefficient'
@@ -325,30 +325,30 @@ class CmdLoopback(BaseCommand):
         self.type = Command.LOOPBACK
 
 
-class CmdGetEEPRROM(BaseCommand):
+class CmdGetCalibration(BaseCommand):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.GET_EEPROM
+        kw[self.Field.TYPE] = Command.GET_CALIBRATION
         super().__init__(*args, **kw)
 
-class CmdSetEEPRROM(BaseCommand):
+class CmdSetCalibration(BaseCommand):
     class Field(BaseCommand.Field):
-        EEPROM = '_eeprom'
+        CALIBRATION = '_calibration'
 
     _fields_ = [
-        (Field.EEPROM, EEPROM)
+        (Field.CALIBRATION, Calibration)
 
     ]
 
     @property
-    def eeprom(self) -> EEPROM:
-        return getattr(self, self.Field.EEPROM)
+    def calibration(self) -> Calibration:
+        return getattr(self, self.Field.CALIBRATION)
 
-    @eeprom.setter
-    def eeprom(self, eeprom: EEPROM):
-        setattr(self, self.Field.EEPROM, eeprom)
+    @calibration.setter
+    def calibration(self, calibration: Calibration):
+        setattr(self, self.Field.CALIBRATION, calibration)
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.SET_EEPROM
+        kw[self.Field.TYPE] = Command.SET_CALIBRATION
         super().__init__(*args, **kw)
 
 
@@ -475,18 +475,18 @@ class RespError(BaseResponse):
         super().error = value
 
 
-class RespGetEEPROM(BaseResponse):
+class RespGetCalibration(BaseResponse):
     class Field(BaseResponse.Field):
-        EEPROM = '_eeprom'
+        CALIBRATION = '_calibration'
 
     _pack_ = 1
     _fields_ = [
-        (Field.EEPROM, EEPROM)
+        (Field.CALIBRATION, Calibration)
     ]
 
     @property
-    def eeprom(self) -> EEPROM:
-        return getattr(self, self.Field.EEPROM)
+    def calibration(self) -> Calibration:
+        return getattr(self, self.Field.CALIBRATION)
 
 
 class RespMultiDataPoint(BaseResponse):

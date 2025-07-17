@@ -2,15 +2,15 @@
 #define command_h
 
 #include "flags.h"
-#include "lib/eeprom.h"
+#include "lib/persistent_store.h"
 #include "protocol/network.h"
 
 #pragma pack(1)
 
 enum Cmd: uint16_t {
     CMD_LOOPBACK = 0,
-    CMD_GET_EEPROM = 1,
-    CDM_SET_EEPROM = 2,
+    CMD_GET_CALIBRATION = 1,
+    CMD_SET_CALIBRATION = 2,
     CMD_READ_DAC = 3,
     CMD_READ_UNITS = 4,
     CMD_SET_PHASE = 5,
@@ -26,7 +26,7 @@ enum Response: uint16_t {
     RESP_FLOAT = 3,
     RESP_DOUBLE = 4,
     RESP_MULTI_DATA_POINT = 5,
-    RESP_GET_EEPROM = 6,
+    RESP_GET_CALIBRATION = 6,
     RESP_ERROR = 0xFFFF,
 };
 
@@ -64,9 +64,9 @@ struct MultiDataPoint {
 
 
 // --- Commands
-struct CmdGetEEPROM : BaseCmd {};
-struct CmdSetEEPROM : BaseCmd {
-    EEPROMStruct eeprom;
+struct CmdGetCalibration : BaseCmd {};
+struct CmdSetCalibration : BaseCmd {
+    CalibrationStruct calibration;
 };
 struct CmdPowerOnHx711 : BaseCmd {};
 struct CmdPowerOffHx711 : BaseCmd {};
@@ -110,9 +110,9 @@ struct RespError : BaseResp {
 };
 
 // --- Responses
-struct RespGetEEPROM : BaseResp {
-    EEPROMStruct eeprom;
-    RespGetEEPROM(): BaseResp(RESP_GET_EEPROM) {};
+struct RespGetCalibration : BaseResp {
+    CalibrationStruct calibration;
+    RespGetCalibration(): BaseResp(RESP_GET_CALIBRATION) {};
 };
 
 struct RespMultiDataPoint : BaseResp {

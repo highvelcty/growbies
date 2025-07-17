@@ -1,13 +1,11 @@
-#include <assert.h>
-#include <EEPROM.h>
 #include <float.h>
 #include <new> // Required for placement new
 
 #include "constants.h"
 #include "flags.h"
 #include "growbies.h"
-#include "lib/eeprom.h"
 #include "lib/display.h"
+#include "lib/persistent_store.h"
 #include "utils/sort.h"
 
 //#if HAS_ATOMIC_BLOCK
@@ -17,9 +15,7 @@
 
 Growbies* growbies = new Growbies();
 
-Growbies::Growbies() {
-    assert(sizeof(EEPROMStruct) < EEPROM_BYTES);
-}
+Growbies::Growbies() {}
 
 void Growbies::begin(){
     pinMode(HX711_SCK_PIN, OUTPUT);
@@ -40,11 +36,6 @@ void Growbies::begin(){
 #if POWER_CONTROL
     this->power_off();
 #endif
-
-#if ARDUINO_ARCH_ESP32
-    EEPROM.begin(EEPROM_BYTES);
-#endif
-
 }
 
 void Growbies::execute(PacketHdr* packet_hdr) {
@@ -76,19 +67,19 @@ void Growbies::execute(PacketHdr* packet_hdr) {
                         sizeof(RespMultiDataPoint) + (sizeof(MultiDataPoint)*MASS_SENSOR_COUNT));
          }
     }
-    else if (packet_hdr->type == CMD_GET_EEPROM) {
-        CmdGetEEPROM* cmd = (CmdGetEEPROM*)slip_buf->buf;
+    else if (packet_hdr->type == CMD_GET_CALIBRATION) {
+        CmdGetCalibration* cmd = (CmdGetCalibration*)slip_buf->buf;
         if(validate_packet(*cmd)) {
-            RespGetEEPROM* resp = new (this->outbuf) RespGetEEPROM;
-            this->get_eeprom(resp->eeprom);
-            send_packet(*this->outbuf, sizeof(RespGetEEPROM));
+            RespGetCalibration* resp = new (this->outbuf) RespGetCalibration;
+            calibration_store->get(resp->calibration);
+            send_packet(*this->outbuf, sizeof(RespGetCalibration));
         }
     }
-    else if (packet_hdr->type == CDM_SET_EEPROM) {
-        CmdSetEEPROM* cmd = (CmdSetEEPROM*)slip_buf->buf;
+    else if (packet_hdr->type == CMD_SET_CALIBRATION) {
+        CmdSetCalibration* cmd = (CmdSetCalibration*)slip_buf->buf;
         if(validate_packet(*cmd)) {
             new (this->outbuf) RespVoid;
-            this->set_eeprom(cmd->eeprom);
+            calibration_store->put(cmd->calibration);
             send_packet(*this->outbuf, sizeof(RespVoid));
         }
     }
@@ -122,14 +113,6 @@ void Growbies::execute(PacketHdr* packet_hdr) {
         resp->error = ERROR_UNRECOGNIZED_COMMAND;
         send_packet(resp, sizeof(RespError));
     }
-}
-
-void Growbies::get_eeprom(EEPROMStruct& eeprom) {
-    EEPROM.get(0, eeprom);
-}
-
-void Growbies::set_eeprom(EEPROMStruct& eeprom) {
-    EEPROM.put(0, eeprom);
 }
 
 void Growbies::set_gain(HX711Gain gain) {
@@ -219,8 +202,8 @@ void Growbies::read_dac(DataPoint* data_points, const byte times, const HX711Gai
 
 void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, const Unit units){
     int sensor_idx;
-    EEPROMStruct eeprom_struct;
-    EEPROM.get(0, eeprom_struct);
+    CalibrationStruct calibration_struct;
+    calibration_store->get(calibration_struct);
 
 #if TEMPERATURE_ANALOG_INPUT
     for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
@@ -241,15 +224,15 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
         for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
             multi_data_points[sensor_idx].mass.data = \
                 (((multi_data_points[sensor_idx].mass.data
-                   * eeprom_struct.mass_coefficient[sensor_idx][0])
-                  + eeprom_struct.mass_coefficient[sensor_idx][1])
-                 - eeprom_struct.tare[sensor_idx][this->tare_idx]);
+                   * calibration_struct.mass_coefficient[sensor_idx][0])
+                  + calibration_struct.mass_coefficient[sensor_idx][1])
+                 - calibration_struct.tare[sensor_idx][this->tare_idx]);
 
         #if TEMPERATURE_ANALOG_INPUT
             multi_data_points[sensor_idx].temperature.data = \
-                ((eeprom_struct.temperature_coefficient[sensor_idx][0]
+                ((calibration_struct.temperature_coefficient[sensor_idx][0]
                   * multi_data_points[sensor_idx].temperature.data)
-                 + eeprom_struct.temperature_coefficient[sensor_idx][1]);
+                 + calibration_struct.temperature_coefficient[sensor_idx][1]);
         #endif
         }
     }
@@ -296,7 +279,7 @@ void Growbies::shift_all_in(DataPoint* data_points, const HX711Gain gain) {
             // time sensitive section when SCK is high.
             for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
                 a_bit = (bool)(gpio_in_reg & get_HX711_dout_port_bit(sensor));
-/                long_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
+                long_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
         }
 
@@ -353,11 +336,11 @@ bool Growbies::wait_all_ready_retry(DataPoint* data_points,
     #if ARDUINO_ARCH_AVR
         gpio_in_reg = PINB;
     #elif ARDUINO_ARCH_ESP32
+        gpio_in_reg = REG_READ(GPIO_IN_REG);
     #endif
         all_ready = true;
 	    for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
-	        // The sensor is ready when the data line is low.
-	        ready = digitalRead(DOUT_0_PIN) == LOW;
+	        ready = (bool)(gpio_in_reg & get_HX711_dout_port_bit(sensor)) == LOW;
 	        data_points[sensor].ready = ready;
 	        all_ready &= ready;
         }
