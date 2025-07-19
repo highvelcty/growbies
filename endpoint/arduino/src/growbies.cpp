@@ -205,7 +205,7 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
     CalibrationStruct calibration_struct;
     calibration_store->get(calibration_struct);
 
-#if TEMPERATURE_ANALOG_INPUT
+#if TEMPERATURE_LOAD_CELL
     for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
         multi_data_points[sensor_idx].temperature.data = analogRead(TEMPERATURE_ANALOG_PIN);
     }
@@ -228,7 +228,7 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
                   + calibration_struct.mass_coefficient[sensor_idx][1])
                  - calibration_struct.tare[sensor_idx][this->tare_idx]);
 
-        #if TEMPERATURE_ANALOG_INPUT
+        #if TEMPERATURE_LOAD_CELL
             multi_data_points[sensor_idx].temperature.data = \
                 ((calibration_struct.temperature_coefficient[sensor_idx][0]
                   * multi_data_points[sensor_idx].temperature.data)

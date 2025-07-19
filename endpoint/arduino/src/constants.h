@@ -14,10 +14,6 @@ const int MASS_SENSOR_COUNT = 1;
 const int TEMPERATURE_SENSOR_COUNT = 1;
 
 
-#if TEMPERATURE_ANALOG_INPUT
-const int TEMPERATURE_ANALOG_PIN = A3;
-#endif
-
 enum Pins : const int {
 #if HX711_PIN_CFG_0
     DOUT_0_PIN = 8,
@@ -26,9 +22,11 @@ enum Pins : const int {
     DOUT_3_PIN = 11,
     HX711_SCK_PIN = 12,
     LED_PIN = 13,
+    TEMPERATURE_ANALOG_PIN = 0xA3,
     HW_I2C_SDA_PIN = 0xA4,
     HW_I2C_SCL_PIN = 0xA5,
 #elif HX711_PIN_CFG_1
+    TEMPERATURE_ANALOG_PIN = A0,
     DOUT_0_PIN = D7,
     HX711_SCK_PIN = D8,
     LED_PIN = D9,

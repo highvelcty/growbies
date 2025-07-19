@@ -11,7 +11,7 @@
     #error "One and only one HX711 pin configuration must be selected."
 #endif
 
-#define TEMPERATURE_ANALOG_INPUT 0
+#define TEMPERATURE_LOAD_CELL 1
 #define POWER_CONTROL 1
 #define LED_INSTALLED 1
 #define FEATURE_LED (1 && LED_INSTALLED)
