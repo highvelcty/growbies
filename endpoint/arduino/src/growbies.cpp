@@ -205,19 +205,21 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
     CalibrationStruct calibration_struct;
     calibration_store->get(calibration_struct);
 
-#if TEMPERATURE_LOAD_CELL
-    for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
-        multi_data_points[sensor_idx].temperature.data = analogRead(TEMPERATURE_ANALOG_PIN);
-    }
-#endif
-
     this->read_dac(this->data_points, times);
     for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
         // meyere: this copy could be eliminated
         multi_data_points[sensor_idx].mass.data = this->data_points[sensor_idx].data;
         multi_data_points[sensor_idx].mass.error_count = this->data_points[sensor_idx].error_count;
         multi_data_points[sensor_idx].mass.ready = this->data_points[sensor_idx].ready;
+        // Initialize to invalid value.
+        multi_data_points[sensor_idx].temperature.data = INVALID_TEMPERATURE;
     }
+
+#if TEMPERATURE_LOAD_CELL
+    for (sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
+        multi_data_points[sensor_idx].temperature.data = analogRead(TEMPERATURE_ANALOG_PIN);
+    }
+#endif
 
     // Units
     if (units & UNIT_GRAMS) {
@@ -227,14 +229,17 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
                    * calibration_struct.mass_coefficient[sensor_idx][0])
                   + calibration_struct.mass_coefficient[sensor_idx][1])
                  - calibration_struct.tare[sensor_idx][this->tare_idx]);
-
-        #if TEMPERATURE_LOAD_CELL
-            multi_data_points[sensor_idx].temperature.data = \
-                ((calibration_struct.temperature_coefficient[sensor_idx][0]
-                  * multi_data_points[sensor_idx].temperature.data)
-                 + calibration_struct.temperature_coefficient[sensor_idx][1]);
-        #endif
         }
+        #if TEMPERATURE_LOAD_CELL
+        for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
+            multi_data_points[sensor_idx].temperature.data = \
+                ((calibration_struct.temperature_coefficient[
+                    get_temperature_sensor_idx(sensor_idx)][0]
+                  * multi_data_points[sensor_idx].temperature.data)
+                 + calibration_struct.temperature_coefficient[
+                    get_temperature_sensor_idx(sensor_idx)][1]);
+         }
+        #endif
     }
 
 //    display->print_mass(total_mass);

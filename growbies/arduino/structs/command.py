@@ -9,9 +9,10 @@ from growbies.utils.report import format_float_table
 logger = logging.getLogger(__name__)
 
 # --- Constants ------------------------------------------------------------------------------------
+# meyere, this needs closed loop and/or variable length returns.
 COEFFICIENT_COUNT = 2
 TARE_COUNT = 1
-MASS_SENSOR_COUNT = 1
+MASS_SENSOR_COUNT = 3
 TEMPERATURE_SENSOR_COUNT = 1
 
 # --- Base Classes ---------------------------------------------------------------------------------
@@ -187,33 +188,18 @@ class Calibration(ctypes.Structure):
         TARE = '_tare'
 
     _pack_ = 1
+    # Note: The rows must be assigned to a variable prior to use. Inlining with parenthesis does
+    # not work.
+    _row = ctypes.c_float * COEFFICIENT_COUNT
+    _tare_row = ctypes.c_float * TARE_COUNT
     _fields_ = [
-        (Field.MASS_COEFFICIENT, ctypes.c_float * MASS_SENSOR_COUNT * COEFFICIENT_COUNT),
-        (Field.TEMPERATURE_COEFFICIENT,
-         ctypes.c_float * TEMPERATURE_SENSOR_COUNT * COEFFICIENT_COUNT),
-        (Field.TARE,
-         ctypes.c_float * MASS_SENSOR_COUNT * TARE_COUNT)
+        (Field.MASS_COEFFICIENT, _row * MASS_SENSOR_COUNT),
+        (Field.TEMPERATURE_COEFFICIENT, _row * TEMPERATURE_SENSOR_COUNT),
+        (Field.TARE, _tare_row * MASS_SENSOR_COUNT)
     ]
 
     def set_sensor_data(self, field, sensor: int, *values):
-        if field == self.Field.MASS_COEFFICIENT:
-            base_values = self.mass_coefficient
-        elif field == self.Field.TEMPERATURE_COEFFICIENT:
-            base_values = self.temperature_coefficient
-        elif field == self.Field.TARE:
-            base_values = self.tare
-        else:
-            raise Exception('Invalid field type.')
-
-        for idx, row in enumerate(base_values):
-            row[sensor] = values[idx]
-
-        if field == self.Field.MASS_COEFFICIENT:
-            self.mass_coefficient = base_values
-        elif field == self.Field.TEMPERATURE_COEFFICIENT:
-            self.temperature_coefficient = base_values
-        elif field == self.Field.TARE:
-            self.tare = base_values
+        getattr(self, field)[sensor] = values
 
     @property
     def mass_coefficient(self) -> list[list[float]]:
@@ -246,21 +232,16 @@ class Calibration(ctypes.Structure):
         _set_ctypes_2d_array(ctypes_2d_array, values)
 
     def __str__(self):
+        coeff_columns = ['Sensor'] + [f'Coefficient {idx}' for idx in range(COEFFICIENT_COUNT)]
+        tare_columns = ['Sensor'] + [f'Tare {idx}' for idx in range(TARE_COUNT)]
+
         str_list = [
-            'Mass Coefficient:',
-            format_float_table(self.mass_coefficient,
-                [f'Sensor %d' % idx for idx in range(len(self.mass_coefficient[0]))]),
-            '',
-            'Temperature Coefficient:',
-            format_float_table(self.temperature_coefficient,
-                [f'Sensor %d' % idx for idx in range(len(self.temperature_coefficient[0]))]),
-            '',
-            'Tare:',
-            format_float_table(self.tare,
-                               [f'Sensor %d' % idx for idx in
-                                range(len(self.tare[0]))])
+            format_float_table('Mass', coeff_columns, self.mass_coefficient),
+            format_float_table('Temperature', coeff_columns, self.temperature_coefficient),
+            format_float_table('Tare', tare_columns, self.tare)
         ]
-        return '\n'.join(str_list)
+
+        return '\n\n'.join(str_list)
 
 
 class DataPoint(ctypes.Structure):

@@ -2,7 +2,6 @@ import logging
 import time
 
 from growbies.arduino.arduino import Arduino
-from growbies.sample.sample import COLUMN_STR
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
@@ -13,6 +12,7 @@ OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5
 CHANNELS = 4
 logger = logging.getLogger(__name__)
+COLUMN_STR = 'timestamp, mass_sensor_0, mass_sensor_1, mass_sensor_2, temperature\n'
 
 def _continue_stream(sess: Session):
     with FileLock(sess.path_to_data, 'a+') as outf:
@@ -57,19 +57,11 @@ def main(sess: Session):
 
                     ts = get_utc_iso_ts_str()
                     data = arduino_serial.read_units()
-
-                    # total = sum(data.sensor[ii].mass for ii in range(4))
-                    # file_str = (f'{ts}, {data.sensor[0].mass}, {data.sensor[1].mass}, '
-                    #            f'{data.sensor[2].mass}, {data.sensor[3].mass}')
-                    # out_str = (f'{ts}, {data.sensor[0].mass:.2f}, {data.sensor[1].mass:.2f}, '
-                    #            f'{data.sensor[2].mass:.2f}, {data.sensor[3].mass:.2f}, {total:.2f}')
-                    # out_str = (f'{ts}, {data.sensor[0].mass.data}, {data.sensor[1].mass.data}, '
-                    #            f'{data.sensor[2].mass.data}, {data.sensor[3].mass.data}, '
-                    #            f'{data.sensor[1].temperature.data}')
-                    # out_str = (f'{ts}, {data.sensor[0].mass.data}, '
-                    #            f'{data.sensor[0].temperature.data}')
-                    out_str = (f'{ts}, {data.sensor[0].mass.data},'
-                               f' {data.sensor[0].temperature.data}')
+                    out_str = (f'{ts}, '
+                               f'{data.sensor[0].mass.data}, '
+                               f'{data.sensor[1].mass.data}, '
+                               f'{data.sensor[2].mass.data}, '
+                               f'{data.sensor[0].temperature.data}')
                     file_str = out_str
 
                     with FileLock(sess.path_to_data, 'a+') as outf:

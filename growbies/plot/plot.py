@@ -6,11 +6,14 @@ from growbies.utils import timestamp
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.ticker as mticker
 from matplotlib.axis import Axis
 import tkinter as tk
 import matplotlib
 
 matplotlib.use('TkAgg')
+
+DATETIME_FMT = timestamp.BASE_FMT + 'Z'
 
 def normalize_list(data):
     min_val = min(data)
@@ -41,7 +44,7 @@ def _extract_x_data_and_y_datas(path: Path) -> \
                 x_data.append(dt)
                 data = data[1:]
                 if len(data) >= (len(labels) - 1):
-                    ref_data = int(data[-1])
+                    ref_data = float(data[-1])
                     data = data[:-1]
 
                 for channel, channel_data in enumerate(data):
@@ -53,6 +56,25 @@ def _extract_x_data_and_y_datas(path: Path) -> \
                     ref_y_data.append(ref_data)
 
     return x_data, y_datas, ref_x_data, ref_y_data
+
+
+def _extract_csv(path: Path) -> tuple[list[str], list[list[float]]]:
+    headers = list()
+    data = list()
+
+    with open(path, 'r') as inf:
+        for row, line in enumerate(inf.readlines()):
+            tokens = [token.strip() for token in line.strip().split(',')]
+            if row == 0:
+                headers = tokens
+                data.extend([[] for _ in tokens])
+            else:
+                for column, token in enumerate(tokens):
+                    if column == 0:
+                        data[column].append(timestamp.get_utc_dt(token))
+                    else:
+                        data[column].append(float(token))
+    return headers, data
 
 
 def time_plot(path: Path, *,
@@ -194,36 +216,77 @@ def _time_plot(title: str,
     # plt.subplots_adjust(bottom=.3)
     plt.show()
 
-def thermal_test(path: Path, normalize=False):
+def thermal_test(path: Path):
 
-    x_data, y_datas, _, __ = _extract_x_data_and_y_datas(path)
+    headers, data = _extract_csv(path)
 
-    ### Time Plot ##################################################################################
-    _time_plot('Thermal Cycle Test', x_data, y_datas, None, None, normalize=normalize,
-               sensor_labels=['Mass', 'Temperature'])
+    fig, ax1 = plt.subplots(figsize=(13,8), constrained_layout=True)
 
-    ### Linearity ##################################################################################
-    fig: plt.Figure = plt.figure()
-    if normalize:
-        lin_x = normalize_list(y_datas[0])
-        lin_y = normalize_list(y_datas[1])
-    else:
-        lin_x = y_datas[0]
-        lin_y = y_datas[1]
+    plt.title('Mass & Temperature over Time')
 
-    plt.plot(lin_x, lin_y, marker='.', linestyle='-')
-    step = 25
-    for i in range(0, len(lin_x) - step, step):
-        dy = lin_y[i+step] - lin_y[i]
-        if dy > 0:
-            dy = 1
-        if dy < 0:
-            dy = -1
-        plt.quiver(lin_x[i], lin_y[i], 0.001, dy,
-                  headwidth=2, headlength=5, color='black')
+    for mass in data[1:-1]:
+        ax1.plot(data[0], mass)
 
-    fig.tight_layout()
+    locator = mticker.MaxNLocator(nbins=15)
+    ax1.xaxis.set_major_locator(locator)
+
+    formatter = mdates.DateFormatter(DATETIME_FMT)
+    ax1.xaxis.set_major_formatter(formatter)
+    plt.xticks(rotation=45)
+
+    elapsed = data[0][-1] - data[0][0]
+    ax1.set_xlabel('Time' + f'\nelapsed: {elapsed}')
+    ax1.set_ylabel('Mass (DAC)')
+
+    # Temperature
+    ax2 = ax1.twinx()
+    ax2.plot(data[0], data[-1], color='purple')
+    ax2.set_ylabel('Temperature (DAC)')
+
+    fig.legend(headers[1:], loc='outside upper right')
+
     plt.show()
+
+    fig, ax = plt.subplots(figsize=(13,8), constrained_layout=True)
+    for mass in data[1:-1]:
+        ax.plot(mass, data[-1])
+    ax.set_title('Mass vs Temperature\n3x electrically averaged thermistors')
+    ax.set_xlabel('Mass (DAC)')
+    ax.set_ylabel('Temperature (DAC)')
+    fig.legend(headers[1:-1], loc='outside upper right')
+
+    plt.show()
+
+
+
+
+    # print(len(y_datas))
+    # ### Time Plot ##################################################################################
+    # _time_plot('Thermal Cycle Test', x_data, y_datas, None, None, normalize=normalize,
+    #            sensor_labels=['Mass 0', 'Mass 1', 'Mass 2', 'Temperature'])
+    #
+    # ### Linearity ##################################################################################
+    # fig: plt.Figure = plt.figure()
+    # if normalize:
+    #     lin_x = normalize_list(y_datas[0])
+    #     lin_y = normalize_list(y_datas[1])
+    # else:
+    #     lin_x = y_datas[0]
+    #     lin_y = y_datas[1]
+    #
+    # plt.plot(lin_x, lin_y, marker='.', linestyle='-')
+    # step = 25
+    # for i in range(0, len(lin_x) - step, step):
+    #     dy = lin_y[i+step] - lin_y[i]
+    #     if dy > 0:
+    #         dy = 1
+    #     if dy < 0:
+    #         dy = -1
+    #     plt.quiver(lin_x[i], lin_y[i], 0.001, dy,
+    #               headwidth=2, headlength=5, color='black')
+    #
+    # fig.tight_layout()
+    # plt.show()
 
 def bucket_test(path: Path, *,
                 invert_sum: bool = False):

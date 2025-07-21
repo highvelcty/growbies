@@ -61,14 +61,16 @@ class Arduino(ArduinoTransport):
 
     def set_mass_coefficients(self, sensor: int, *coefficients):
         calibration = self.get_calibration()
-        calibration.set_sensor_data(command.Calibration.Field.MASS_COEFFICIENT, sensor, *coefficients)
+        calibration.set_sensor_data(command.Calibration.Field.MASS_COEFFICIENT, sensor,
+                                    *coefficients)
         cmd = command.CmdSetCalibration()
         cmd.calibration = calibration
         self.execute(cmd)
 
     def set_temperature_coefficients(self, sensor: int, *coefficients):
         calibration = self.get_calibration()
-        calibration.set_sensor_data(command.Calibration.Field.TEMPERATURE_COEFFICIENT, sensor, *coefficients)
+        calibration.set_sensor_data(command.Calibration.Field.TEMPERATURE_COEFFICIENT, sensor,
+                                     *coefficients)
         cmd = command.CmdSetCalibration()
         cmd.calibration = calibration
         self.execute(cmd)

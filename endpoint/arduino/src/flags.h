@@ -13,7 +13,7 @@
 
 #define TEMPERATURE_LOAD_CELL 1
 #define POWER_CONTROL 1
-#define LED_INSTALLED 1
+#define LED_INSTALLED 0
 #define FEATURE_LED (1 && LED_INSTALLED)
 
 #endif /* flags_h */
