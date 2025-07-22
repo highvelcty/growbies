@@ -7,14 +7,16 @@
 
 #include "constants.h"
 
-typedef float MassCoefficient[MASS_SENSOR_COUNT][COEFFICIENT_COUNT];
-typedef float TemperatureCoefficient[TEMPERATURE_SENSOR_COUNT][COEFFICIENT_COUNT];
+typedef float MassCoeff[MASS_SENSOR_COUNT][COEFF_COUNT];
+typedef float TemperatureCoeff[TEMPERATURE_SENSOR_COUNT][COEFF_COUNT];
+typedef float MassTemperatureCoeff[MASS_SENSOR_COUNT][COEFF_COUNT];
 typedef float Tare[MASS_SENSOR_COUNT][TARE_COUNT];
 
 #pragma pack(1)
 struct CalibrationStruct {
-    MassCoefficient mass_coefficient;
-    TemperatureCoefficient temperature_coefficient;
+    MassTemperatureCoeff mass_temperature_coeff;
+    MassCoeff mass_coeff;
+    TemperatureCoeff temperature_coeff;
     Tare tare;
 };
 
@@ -27,11 +29,6 @@ class PersistentStore {
         Preferences prefs;
         const char* ns = "growbies";
     #endif
-
-    private:
-    #if ARDUINO_ARCH_AVR
-        const unsigned int EEPROM_BYTES = 1024;
-    #endif
 };
 
 class CalibrationStore : public PersistentStore {
@@ -39,6 +36,7 @@ class CalibrationStore : public PersistentStore {
         void begin();
         void get(CalibrationStruct& calibration);
         void put(CalibrationStruct& calibration);
+        int get_temperature_sensor_idx(int mass_sensor_idx);
 
     private:
     #if ARDUINO_ARCH_ESP32

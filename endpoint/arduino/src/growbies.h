@@ -1,6 +1,7 @@
 #ifndef growbies_h
 #define growbies_h
 
+#include "defines.h"
 #include "flags.h"
 #include "protocol/command.h"
 

@@ -5,13 +5,15 @@
 #include <Preferences.h>
 #endif
 
+#include "constants.h"
+#include "defines.h"
 #include "persistent_store.h"
 
 CalibrationStore* calibration_store = new CalibrationStore();
 
 void PersistentStore::begin() {
 #if ARDUINO_ARCH_AVR
-    assert(sizeof(CalibrationStruct) < EEPROM_BYTES);
+    assert(sizeof(CalibrationStruct) < EEPROM.length());
 #elif ARDUINO_ARCH_ESP32
     this->prefs.begin(this->ns, false);
     this->prefs.end();
@@ -49,4 +51,13 @@ void CalibrationStore::put(CalibrationStruct& calibration) {
     this->prefs.putBytes(this->key_cal, &calibration, sizeof(calibration));
     this->prefs.end();
 #endif
+}
+
+int CalibrationStore::get_temperature_sensor_idx(int mass_sensor_idx) {
+    if (TEMPERATURE_SENSOR_COUNT == MASS_SENSOR_COUNT) {
+        return mass_sensor_idx;
+    }
+    else {
+        return 0;
+    }
 }

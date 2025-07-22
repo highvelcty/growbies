@@ -2,6 +2,7 @@
 #include <new> // Required for placement new
 
 #include "constants.h"
+#include "defines.h"
 #include "flags.h"
 #include "growbies.h"
 #include "lib/display.h"
@@ -24,10 +25,10 @@ void Growbies::begin(){
         pinMode(get_HX711_dout_pin(sensor), INPUT_PULLUP);
     #elif ARDUINO_ARCH_ESP32
         gpio_config_t io_conf;
-        io_conf.intr_type = GPIO_INTR_DISABLE; // Disable interrupts
-        io_conf.mode = GPIO_MODE_INPUT; // Set mode to input
-        io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE; // Disable pull-down resistors
-        io_conf.pull_up_en = GPIO_PULLUP_ENABLE; // Enable pull-up resistors (optional, depending on your circuit)
+        io_conf.intr_type = GPIO_INTR_DISABLE;
+        io_conf.mode = GPIO_MODE_INPUT;
+        io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+        io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
         io_conf.pin_bit_mask = (1ULL << DOUT_0_PIN);
         gpio_config(&io_conf);
     #endif
@@ -224,20 +225,30 @@ void Growbies::read_units(MultiDataPoint* multi_data_points, const byte times, c
     // Units
     if (units & UNIT_GRAMS) {
         for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
+            // mass/temperature compensation
+            multi_data_points[sensor_idx].mass.data -= (
+                (calibration_struct.mass_temperature_coeff[sensor_idx][0]
+                * multi_data_points[
+                    calibration_store->get_temperature_sensor_idx(sensor_idx)].temperature.data)
+                + calibration_struct.mass_temperature_coeff[sensor_idx][1]
+            );
+
+            // Mass calibration and tare
             multi_data_points[sensor_idx].mass.data = \
                 (((multi_data_points[sensor_idx].mass.data
-                   * calibration_struct.mass_coefficient[sensor_idx][0])
-                  + calibration_struct.mass_coefficient[sensor_idx][1])
+                   * calibration_struct.mass_coeff[sensor_idx][0])
+                  + calibration_struct.mass_coeff[sensor_idx][1])
                  - calibration_struct.tare[sensor_idx][this->tare_idx]);
         }
         #if TEMPERATURE_LOAD_CELL
         for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
             multi_data_points[sensor_idx].temperature.data = \
-                ((calibration_struct.temperature_coefficient[
-                    get_temperature_sensor_idx(sensor_idx)][0]
-                  * multi_data_points[sensor_idx].temperature.data)
-                 + calibration_struct.temperature_coefficient[
-                    get_temperature_sensor_idx(sensor_idx)][1]);
+                ((calibration_struct.temperature_coeff[
+                    calibration_store->get_temperature_sensor_idx(sensor_idx)][0]
+                  * multi_data_points[
+                    calibration_store->get_temperature_sensor_idx(sensor_idx)].temperature.data)
+                 + calibration_struct.temperature_coeff[
+                    calibration_store->get_temperature_sensor_idx(sensor_idx)][1]);
          }
         #endif
     }

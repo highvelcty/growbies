@@ -249,10 +249,10 @@ def thermal_test(path: Path):
 
     fig, ax = plt.subplots(figsize=(13,8), constrained_layout=True)
     for mass in data[1:-1]:
-        ax.plot(mass, data[-1])
+        ax.plot(data[-1], mass)
     ax.set_title('Mass vs Temperature\n3x electrically averaged thermistors')
-    ax.set_xlabel('Mass (DAC)')
-    ax.set_ylabel('Temperature (DAC)')
+    ax.set_ylabel('Mass (DAC)')
+    ax.set_xlabel('Temperature (DAC)')
     fig.legend(headers[1:-1], loc='outside upper right')
 
     plt.show()

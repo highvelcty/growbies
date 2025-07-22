@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 # --- Constants ------------------------------------------------------------------------------------
 # meyere, this needs closed loop and/or variable length returns.
-COEFFICIENT_COUNT = 2
+COEFF_COUNT = 2
 TARE_COUNT = 1
-MASS_SENSOR_COUNT = 3
+MASS_SENSOR_COUNT = 1
 TEMPERATURE_SENSOR_COUNT = 1
 
 # --- Base Classes ---------------------------------------------------------------------------------
@@ -183,18 +183,20 @@ class BaseCmdWithTimesParam(BaseCommand):
 # --- Misc Structures # ----------------------------------------------------------------------------
 class Calibration(ctypes.Structure):
     class Field:
-        MASS_COEFFICIENT = '_mass_coefficient'
-        TEMPERATURE_COEFFICIENT = '_temperature_coefficient'
+        MASS_TEMPERATURE_COEFF = '_mass_temperature_coeff'
+        MASS_COEFF = '_mass_coeff'
+        TEMPERATURE_COEFF = '_temperature_coeff'
         TARE = '_tare'
 
     _pack_ = 1
     # Note: The rows must be assigned to a variable prior to use. Inlining with parenthesis does
     # not work.
-    _row = ctypes.c_float * COEFFICIENT_COUNT
+    _row = ctypes.c_float * COEFF_COUNT
     _tare_row = ctypes.c_float * TARE_COUNT
     _fields_ = [
-        (Field.MASS_COEFFICIENT, _row * MASS_SENSOR_COUNT),
-        (Field.TEMPERATURE_COEFFICIENT, _row * TEMPERATURE_SENSOR_COUNT),
+        (Field.MASS_TEMPERATURE_COEFF, _row * MASS_SENSOR_COUNT),
+        (Field.MASS_COEFF, _row * MASS_SENSOR_COUNT),
+        (Field.TEMPERATURE_COEFF, _row * TEMPERATURE_SENSOR_COUNT),
         (Field.TARE, _tare_row * MASS_SENSOR_COUNT)
     ]
 
@@ -202,23 +204,33 @@ class Calibration(ctypes.Structure):
         getattr(self, field)[sensor] = values
 
     @property
-    def mass_coefficient(self) -> list[list[float]]:
-        ctypes_2d_array = getattr(self, self.Field.MASS_COEFFICIENT)
+    def mass_temperature_coeff(self) -> list[list[float]]:
+        ctypes_2d_array = getattr(self, self.Field.MASS_TEMPERATURE_COEFF)
         return _get_ctypes_2d_array(ctypes_2d_array)
 
-    @mass_coefficient.setter
-    def mass_coefficient(self, values: list[list[float]]):
-        ctypes_2d_array = getattr(self, self.Field.MASS_COEFFICIENT)
+    @mass_temperature_coeff.setter
+    def mass_temperature_coeff(self, values: list[list[float]]):
+        ctypes_2d_array = getattr(self, self.Field.MASS_TEMPERATURE_COEFF)
         _set_ctypes_2d_array(ctypes_2d_array, values)
 
     @property
-    def temperature_coefficient(self) -> list[list[float]]:
-        ctypes_2d_array = getattr(self, self.Field.TEMPERATURE_COEFFICIENT)
+    def mass_coeff(self) -> list[list[float]]:
+        ctypes_2d_array = getattr(self, self.Field.MASS_COEFF)
         return _get_ctypes_2d_array(ctypes_2d_array)
 
-    @temperature_coefficient.setter
-    def temperature_coefficient(self, values: list[list[float]]):
-        ctypes_2d_array = getattr(self, self.Field.TEMPERATURE_COEFFICIENT)
+    @mass_coeff.setter
+    def mass_coeff(self, values: list[list[float]]):
+        ctypes_2d_array = getattr(self, self.Field.MASS_COEFF)
+        _set_ctypes_2d_array(ctypes_2d_array, values)
+
+    @property
+    def temperature_coeff(self) -> list[list[float]]:
+        ctypes_2d_array = getattr(self, self.Field.TEMPERATURE_COEFF)
+        return _get_ctypes_2d_array(ctypes_2d_array)
+
+    @temperature_coeff.setter
+    def temperature_coeff(self, values: list[list[float]]):
+        ctypes_2d_array = getattr(self, self.Field.TEMPERATURE_COEFF)
         _set_ctypes_2d_array(ctypes_2d_array, values)
 
     @property
@@ -232,12 +244,14 @@ class Calibration(ctypes.Structure):
         _set_ctypes_2d_array(ctypes_2d_array, values)
 
     def __str__(self):
-        coeff_columns = ['Sensor'] + [f'Coefficient {idx}' for idx in range(COEFFICIENT_COUNT)]
+        coeff_columns = ['Sensor'] + [f'Coefficient {idx}' for idx in range(COEFF_COUNT)]
         tare_columns = ['Sensor'] + [f'Tare {idx}' for idx in range(TARE_COUNT)]
 
         str_list = [
-            format_float_table('Mass', coeff_columns, self.mass_coefficient),
-            format_float_table('Temperature', coeff_columns, self.temperature_coefficient),
+            format_float_table('Mass/Temperature',
+                               coeff_columns, self.mass_temperature_coeff),
+            format_float_table('Mass', coeff_columns, self.mass_coeff),
+            format_float_table('Temperature', coeff_columns, self.temperature_coeff),
             format_float_table('Tare', tare_columns, self.tare)
         ]
 

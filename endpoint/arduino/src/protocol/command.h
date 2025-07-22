@@ -114,9 +114,12 @@ struct RespGetCalibration : BaseResp {
     CalibrationStruct calibration;
     RespGetCalibration(): BaseResp(RESP_GET_CALIBRATION) {};
 };
+static_assert(sizeof(RespGetCalibration) < SLIP_BUF_ALLOC_BYTES);
 
 struct RespMultiDataPoint : BaseResp {
     RespMultiDataPoint() : BaseResp(RESP_MULTI_DATA_POINT) {};
 };
+// meyere, update this when the data point structure tree if fixed
+static_assert(sizeof(RespMultiDataPoint) + (sizeof(MultiDataPoint) * MASS_SENSOR_COUNT));
 
 #endif /* command_h */

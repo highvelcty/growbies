@@ -2,8 +2,7 @@
 #define datalink_h
 
 #include <Arduino.h>
-
-#define SLIP_BUF_ALLOC_BYTES 64
+#include "constants.h"
 
 enum Slip {
     SLIP_END = 0xC0,

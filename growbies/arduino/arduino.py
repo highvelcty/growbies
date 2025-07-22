@@ -59,18 +59,26 @@ class Arduino(ArduinoTransport):
     def power_off_hx711(self) -> None:
         self.execute(command.CmdPowerOffHx711())
 
-    def set_mass_coefficients(self, sensor: int, *coefficients):
+    def set_mass_temperature_coeff(self, sensor: int, *coeff):
         calibration = self.get_calibration()
-        calibration.set_sensor_data(command.Calibration.Field.MASS_COEFFICIENT, sensor,
-                                    *coefficients)
+        calibration.set_sensor_data(command.Calibration.Field.MASS_TEMPERATURE_COEFF, sensor,
+                                    *coeff)
         cmd = command.CmdSetCalibration()
         cmd.calibration = calibration
         self.execute(cmd)
 
-    def set_temperature_coefficients(self, sensor: int, *coefficients):
+    def set_mass_coeff(self, sensor: int, *coeff):
         calibration = self.get_calibration()
-        calibration.set_sensor_data(command.Calibration.Field.TEMPERATURE_COEFFICIENT, sensor,
-                                     *coefficients)
+        calibration.set_sensor_data(command.Calibration.Field.MASS_COEFF, sensor,
+                                    *coeff)
+        cmd = command.CmdSetCalibration()
+        cmd.calibration = calibration
+        self.execute(cmd)
+
+    def set_temperature_coeff(self, sensor: int, *coeff):
+        calibration = self.get_calibration()
+        calibration.set_sensor_data(command.Calibration.Field.TEMPERATURE_COEFF, sensor,
+                                     *coeff)
         cmd = command.CmdSetCalibration()
         cmd.calibration = calibration
         self.execute(cmd)
