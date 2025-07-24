@@ -2,6 +2,8 @@ import logging
 import time
 
 from growbies.arduino.arduino import Arduino
+from growbies.arduino.structs.command import MASS_SENSOR_COUNT
+from growbies.arduino.structs.command import TEMPERATURE_SENSOR_COUNT
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
@@ -12,7 +14,12 @@ OSERROR_RETRY_DELAY_SECOND = 1
 SAMPLING_RETRIES = 5
 CHANNELS = 4
 logger = logging.getLogger(__name__)
-COLUMN_STR = 'timestamp, mass_sensor_0, mass_sensor_1, mass_sensor_2, temperature\n'
+COLUMN_STR = ''.join(
+             ['timestamp, '] +
+             [f'mass_sensor_{ii}, ' for ii in range(MASS_SENSOR_COUNT)] +
+             [f'mass, '] +
+             [f'temperature_sensor_{ii}, ' for ii in range(TEMPERATURE_SENSOR_COUNT)] +
+             [f'temperature'])
 
 def _continue_stream(sess: Session):
     with FileLock(sess.path_to_data, 'a+') as outf:
@@ -25,7 +32,7 @@ def _continue_stream(sess: Session):
                 outf.seek(idx + 1)
                 break
             if idx == 0:
-                outf.write(COLUMN_STR)
+                outf.write(COLUMN_STR + '\n')
                 # outf.write('timestamp,load_cell_scale,kitchen_scale\n')
                 break
         outf.truncate()
@@ -56,12 +63,15 @@ def main(sess: Session):
 
 
                     ts = get_utc_iso_ts_str()
-                    data = arduino_serial.read_units()
-                    out_str = (f'{ts}, '
-                               f'{data.sensor[0].mass.data}, '
-                               f'{data.sensor[1].mass.data}, '
-                               f'{data.sensor[2].mass.data}, '
-                               f'{data.sensor[0].temperature.data}')
+                    resp = arduino_serial.read_units()
+                    out_str = ''.join(
+                            [f'{ts}, '] +
+                            [f'{resp.mass_sensor[ii]}, ' for ii in range(MASS_SENSOR_COUNT)] +
+                            [f'{resp.mass}, '] +
+                            [f'{resp.temperature_sensor[ii]}, ' for ii in range(
+                                TEMPERATURE_SENSOR_COUNT)] +
+                            [f'{resp.temperature}']
+                    )
                     file_str = out_str
 
                     with FileLock(sess.path_to_data, 'a+') as outf:

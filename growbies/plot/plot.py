@@ -2,7 +2,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from growbies.utils import timestamp
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -10,6 +9,9 @@ import matplotlib.ticker as mticker
 from matplotlib.axis import Axis
 import tkinter as tk
 import matplotlib
+
+from growbies.utils import timestamp
+from growbies.arduino.structs.command import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
 matplotlib.use('TkAgg')
 
@@ -58,7 +60,7 @@ def _extract_x_data_and_y_datas(path: Path) -> \
     return x_data, y_datas, ref_x_data, ref_y_data
 
 
-def _extract_csv(path: Path) -> tuple[list[str], list[list[float]]]:
+def _extract_csv(path: Path) -> tuple[list[str], list[list[datetime|float]]]:
     headers = list()
     data = list()
 
@@ -216,16 +218,16 @@ def _time_plot(title: str,
     # plt.subplots_adjust(bottom=.3)
     plt.show()
 
-def thermal_test(path: Path):
-
-    headers, data = _extract_csv(path)
+def _over_time(timestamps: list[datetime], y1: list[list[float]], y2: list[list[float]],
+               y1y2labels: tuple[str, str], legend: list[str]):
+    y1_label, y2_label = y1y2labels
 
     fig, ax1 = plt.subplots(figsize=(13,8), constrained_layout=True)
 
     plt.title('Mass & Temperature over Time')
 
-    for mass in data[1:-1]:
-        ax1.plot(data[0], mass)
+    for y in y1:
+        ax1.plot(timestamps, y)
 
     locator = mticker.MaxNLocator(nbins=15)
     ax1.xaxis.set_major_locator(locator)
@@ -234,69 +236,88 @@ def thermal_test(path: Path):
     ax1.xaxis.set_major_formatter(formatter)
     plt.xticks(rotation=45)
 
-    elapsed = data[0][-1] - data[0][0]
+    elapsed = timestamps[-1] - timestamps[0]
     ax1.set_xlabel('Time' + f'\nelapsed: {elapsed}')
-    ax1.set_ylabel('Mass (DAC)')
+    ax1.set_ylabel(y1_label)
 
     # Temperature
     ax2 = ax1.twinx()
-    ax2.plot(data[0], data[-1], color='purple')
-    ax2.set_ylabel('Temperature (DAC)')
+    for y in y2:
+        ax2.plot(timestamps, y, color='purple')
+    ax2.set_ylabel(y2_label)
 
-    fig.legend(headers[1:], loc='outside upper right')
+    fig.legend(legend, loc='outside upper right')
 
     plt.show()
+
+def mass_temperature_cal(path: Path):
+    headers, data = _extract_csv(path)
+    timestamps = data[0]
+    masses = data[1:1+MASS_SENSOR_COUNT+1]
+    temperatures = data[1+MASS_SENSOR_COUNT+1:]
+
+    y1y2labels = ('Mass (grams)', 'Temperature (DAC)')
+    legend = headers[1:]
+    _over_time(timestamps, masses, temperatures, y1y2labels, legend)
 
     fig, ax = plt.subplots(figsize=(13,8), constrained_layout=True)
-    for mass in data[1:-1]:
-        ax.plot(data[-1], mass)
+    for mass in masses:
+        ax.plot(temperatures[-1], mass, linestyle='none', marker='.')
     ax.set_title('Mass vs Temperature\n3x electrically averaged thermistors')
-    ax.set_ylabel('Mass (DAC)')
+    ax.set_ylabel('Mass (grams)')
     ax.set_xlabel('Temperature (DAC)')
-    fig.legend(headers[1:-1], loc='outside upper right')
+    fig.legend(legend[:-1], loc='outside upper right')
 
     plt.show()
 
 
-
-
-    # print(len(y_datas))
-    # ### Time Plot ##################################################################################
-    # _time_plot('Thermal Cycle Test', x_data, y_datas, None, None, normalize=normalize,
-    #            sensor_labels=['Mass 0', 'Mass 1', 'Mass 2', 'Temperature'])
-    #
-    # ### Linearity ##################################################################################
-    # fig: plt.Figure = plt.figure()
-    # if normalize:
-    #     lin_x = normalize_list(y_datas[0])
-    #     lin_y = normalize_list(y_datas[1])
-    # else:
-    #     lin_x = y_datas[0]
-    #     lin_y = y_datas[1]
-    #
-    # plt.plot(lin_x, lin_y, marker='.', linestyle='-')
-    # step = 25
-    # for i in range(0, len(lin_x) - step, step):
-    #     dy = lin_y[i+step] - lin_y[i]
-    #     if dy > 0:
-    #         dy = 1
-    #     if dy < 0:
-    #         dy = -1
-    #     plt.quiver(lin_x[i], lin_y[i], 0.001, dy,
-    #               headwidth=2, headlength=5, color='black')
-    #
-    # fig.tight_layout()
-    # plt.show()
-
-def bucket_test(path: Path, *,
-                invert_sum: bool = False):
-    x_data, y_datas, ref_x_data, ref_y_data = _extract_x_data_and_y_datas(path)
-
+def mass_cal(path: Path, *, invert_sum: bool = False):
     ### Time #######################################################################################
-    title = ('Experiment: Water bowl fill/empty 2 times.\n'
-             'Test scale: 3d print load cell mounts glued to 20"x10" tray.\n'
-             'Context: Concrete floor, reference scale in stack, centered mass.')
-    _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data, invert_sum=invert_sum)
+
+    headers, data = _extract_csv(path)
+    timestamps = data[0]
+
+    mass_sensor_list = data[1:-2]
+    legend = [f'mass_sensor_{idx}' for idx in range(len(mass_sensor_list))]
+    summed_mass = [sum(elements) for elements in zip(*mass_sensor_list)]
+    mass_sensor_list.append(summed_mass)
+    legend.append('summed mass')
+
+    reference_mass = data[-1]
+    mass_sensor_list.append(reference_mass)
+    legend.append('reference mass')
+
+    temperature = data[-2]
+    legend.append('temperature')
+
+    y1y2labels = ('Mass (DAC)', 'Temperature (DAC)')
+
+    _over_time(timestamps, mass_sensor_list, [temperature], y1y2labels, legend)
+
+    fig, ax = plt.subplots(figsize=(13,8), constrained_layout=True)
+
+    mass_sensor_list.pop()
+    legend.pop()
+
+    for mass_sensor in mass_sensor_list:
+        ax.plot(reference_mass, mass_sensor, marker='.')
+    ax.set_title('Test Mass Sensor vs Reference Mass Sesnor')
+    ax.set_ylabel('Test Mass (DAC)')
+    ax.set_xlabel('Reference Mass (grams)')
+    fig.legend(legend, loc='outside upper right')
+    # ax.set_title('Mass vs Temperature\n3x electrically averaged thermistors')
+    # ax.set_ylabel('Mass (DAC)')
+    # ax.set_xlabel('Temperature (DAC)')
+    # fig.legend(legend[:-1], loc='outside upper right')
+    # ax.plot(timestamps, reference_mass)
+
+    plt.show()
+
+
+    # title = ('Experiment: Water bowl fill/empty 2 times.\n'
+    #          'Test scale: 3d print load cell mounts glued to 20"x10" tray.\n'
+    #          'Context: Concrete floor, reference scale in stack, centered mass.')
+    # _time_plot(title, x_data, y_datas, ref_x_data, ref_y_data, invert_sum=invert_sum)
 
     ### Linearity ##################################################################################
     fig: plt.Figure = plt.figure()

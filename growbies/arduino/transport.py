@@ -5,7 +5,7 @@ from .network import ArduinoNetwork
 import ctypes
 import logging
 
-from .structs.command import Packet, Response, TBaseCommand, TBaseResponse
+from .structs.command import Packet, Resp, TBaseCommand, TBaseResponse
 from growbies.utils.bufstr import BufStr
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class ArduinoTransport(ArduinoNetwork, ABC):
 
     @staticmethod
     def _get_resp(packet: Packet) -> Optional[TBaseResponse]:
-        resp_struct = Response.get_struct(packet)
+        resp_struct = Resp.get_struct(packet)
         if resp_struct is None:
             logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
             return None
@@ -41,7 +41,7 @@ class ArduinoTransport(ArduinoNetwork, ABC):
         exp_len = ctypes.sizeof(resp_struct)
         obs_len = ctypes.sizeof(packet)
         if exp_len != obs_len:
-            logger.error(f'Transport layer expected {exp_len} bytes for deserializing to "'
+            logger.error(f'Transport layer deserializing error to "'
                          f'{resp_struct.__qualname__}", '
                          f'expected {ctypes.sizeof(resp_struct)} bytes, observed {obs_len} bytes.')
             return None

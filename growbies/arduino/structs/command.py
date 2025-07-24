@@ -4,7 +4,7 @@ import ctypes
 import logging
 
 from growbies.utils.bufstr import BufStr
-from growbies.utils.report import format_float_table
+from growbies.utils.report import format_float_list, format_float_table
 
 logger = logging.getLogger(__name__)
 
@@ -12,30 +12,26 @@ logger = logging.getLogger(__name__)
 # meyere, this needs closed loop and/or variable length returns.
 COEFF_COUNT = 2
 TARE_COUNT = 1
-MASS_SENSOR_COUNT = 1
+MASS_SENSOR_COUNT = 3
 TEMPERATURE_SENSOR_COUNT = 1
 
 # --- Base Classes ---------------------------------------------------------------------------------
-class Command(IntEnum):
+class Cmd(IntEnum):
     LOOPBACK = 0
     GET_CALIBRATION = 1
     SET_CALIBRATION = 2
-    READ_DAC = 3
-    READ_UNITS = 4
-    SET_PHASE = 5
-    POWER_ON_HX711 = 6
-    POWER_OFF_HX711 = 7
-    TEST = 0xFF
+    READ_UNITS = 3
+    POWER_ON_HX711 = 4
+    POWER_OFF_HX711 = 5
 
-class Response(IntEnum):
+class Resp(IntEnum):
     VOID = 0
     BYTE = 1
     LONG = 2
     FLOAT = 3
     DOUBLE = 4
-    MULTI_DATA_POINT = 5
+    READ_UNITS = 5
     GET_CALIBRATION = 6
-    GET_TARE = 7
     ERROR = 0xFFFF
 
     @classmethod
@@ -52,22 +48,35 @@ class Response(IntEnum):
             return RespDouble
         elif packet.header.type == cls.ERROR:
             return RespError
-        elif packet.header.type == cls.MULTI_DATA_POINT:
-            return RespMultiDataPoint.make_class(packet)
+        elif packet.header.type == cls.READ_UNITS:
+            return RespMultiDataPoint
         elif packet.header.type == cls.GET_CALIBRATION:
             return RespGetCalibration
 
         logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
         return None
 
+
+error_t = ctypes.c_uint32
 class Error(IntEnum):
-    NONE = 0
-    ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW = 1
-    ERROR_UNRECOGNIZED_COMMAND = 2
+    # bitfield
+    NONE                                  = 0x00000000
+    CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 0x00000001
+    UNRECOGNIZED_COMMAND                  = 0x00000002
+    OUT_OF_THRESHOLD_SAMPLE               = 0x00000004
+    HX711_NOT_READY                       = 0x00000008
 
 class Phase(IntEnum):
     A = 0
     B = 1
+
+unit_t = ctypes.c_uint16
+class Unit(IntEnum):
+    # Bitfield
+    UNIT_GRAMS       = 0x0001
+    UNIT_DAC         = 0x0002
+    UNIT_FAHRENHEIT  = 0x0004
+    UNIT_CELSIUS     = 0x0008
 
 # --- Base Classes ---------------------------------------------------------------------------------
 class BaseStructure(ctypes.Structure):
@@ -98,11 +107,11 @@ class PacketHeader(BaseStructure):
     ]
 
     @property
-    def type(self) -> Union[Command, Response]:
+    def type(self) -> Union[Cmd, Resp]:
         return super().type.value
 
     @type.setter
-    def type(self, value: [Command, Response]):
+    def type(self, value: [Cmd, Resp]):
         super().type = value
 
 
@@ -152,7 +161,22 @@ TBaseCommand = TypeVar('TBaseCommand', bound=BaseCommand)
 
 
 class BaseResponse(PacketHeader):
-    pass
+    class Field(PacketHeader.Field):
+        ERROR = '_error'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.ERROR, error_t)
+    ]
+
+    @property
+    def error(self) -> Error:
+        return getattr(self, self.Field.ERROR)
+
+    @error.setter
+    def error(self, error: Error):
+        setattr(self, self.Field.ERROR, error)
+
 TBaseResponse = TypeVar('TBaseResponse', bound=BaseResponse)
 
 
@@ -192,12 +216,11 @@ class Calibration(ctypes.Structure):
     # Note: The rows must be assigned to a variable prior to use. Inlining with parenthesis does
     # not work.
     _row = ctypes.c_float * COEFF_COUNT
-    _tare_row = ctypes.c_float * TARE_COUNT
     _fields_ = [
         (Field.MASS_TEMPERATURE_COEFF, _row * MASS_SENSOR_COUNT),
-        (Field.MASS_COEFF, _row * MASS_SENSOR_COUNT),
+        (Field.MASS_COEFF, ctypes.c_float * COEFF_COUNT),
         (Field.TEMPERATURE_COEFF, _row * TEMPERATURE_SENSOR_COUNT),
-        (Field.TARE, _tare_row * MASS_SENSOR_COUNT)
+        (Field.TARE, ctypes.c_float * TARE_COUNT)
     ]
 
     def set_sensor_data(self, field, sensor: int, *values):
@@ -214,14 +237,13 @@ class Calibration(ctypes.Structure):
         _set_ctypes_2d_array(ctypes_2d_array, values)
 
     @property
-    def mass_coeff(self) -> list[list[float]]:
-        ctypes_2d_array = getattr(self, self.Field.MASS_COEFF)
-        return _get_ctypes_2d_array(ctypes_2d_array)
+    def mass_coeff(self) -> list[float]:
+        return list(getattr(self, self.Field.MASS_COEFF))
 
     @mass_coeff.setter
-    def mass_coeff(self, values: list[list[float]]):
-        ctypes_2d_array = getattr(self, self.Field.MASS_COEFF)
-        _set_ctypes_2d_array(ctypes_2d_array, values)
+    def mass_coeff(self, values: list[float]):
+        for idx in range(len(getattr(self, self.Field.MASS_COEFF))):
+            getattr(self, self.Field.MASS_COEFF)[idx] = values[idx]
 
     @property
     def temperature_coeff(self) -> list[list[float]]:
@@ -234,95 +256,42 @@ class Calibration(ctypes.Structure):
         _set_ctypes_2d_array(ctypes_2d_array, values)
 
     @property
-    def tare(self) -> list[list[float]]:
-        ctypes_2d_array = getattr(self, self.Field.TARE)
-        return _get_ctypes_2d_array(ctypes_2d_array)
+    def tare(self) -> list[float]:
+        return list(getattr(self, self.Field.TARE))
 
     @tare.setter
-    def tare(self, values: list[list[float]]):
-        ctypes_2d_array = getattr(self, self.Field.TARE)
-        _set_ctypes_2d_array(ctypes_2d_array, values)
+    def tare(self, values: list[float]):
+        for idx in range(len(getattr(self, self.Field.TARE))):
+            getattr(self, self.Field.TARE)[idx] = values[idx]
 
     def __str__(self):
-        coeff_columns = ['Sensor'] + [f'Coefficient {idx}' for idx in range(COEFF_COUNT)]
-        tare_columns = ['Sensor'] + [f'Tare {idx}' for idx in range(TARE_COUNT)]
+        coeff_columns = [f'Coeff {idx}' for idx in range(COEFF_COUNT)]
+        sensor_coeff_columns = ['Sensor'] + coeff_columns
+        tare_columns = [f'Slot {idx}' for idx in range(TARE_COUNT)]
 
         str_list = [
-            format_float_table('Mass/Temperature',
-                               coeff_columns, self.mass_temperature_coeff),
-            format_float_table('Mass', coeff_columns, self.mass_coeff),
-            format_float_table('Temperature', coeff_columns, self.temperature_coeff),
-            format_float_table('Tare', tare_columns, self.tare)
+            format_float_table('Mass/Temperature Compensation',
+                               sensor_coeff_columns,
+                               self.mass_temperature_coeff),
+            format_float_list('Mass Calibration Coefficients', coeff_columns, self.mass_coeff),
+            format_float_table('Temperature Calibration Coefficients', sensor_coeff_columns,
+                               self.temperature_coeff),
+            format_float_list('Tare', tare_columns, self.tare)
         ]
 
         return '\n\n'.join(str_list)
-
-
-class DataPoint(ctypes.Structure):
-    class Field(BaseResponse.Field):
-        DATA = '_data'
-        ERROR_COUNT = '_error_count'
-        READY = '_ready'
-        RESERVED1 = 'reserved1'
-        RESERVED2 = 'reserved2'
-
-    _pack_ = 1
-    _fields_ = [
-        (Field.DATA, ctypes.c_float),
-        (Field.ERROR_COUNT, ctypes.c_uint8),
-        (Field.READY, ctypes.c_uint8, 1),
-        (Field.RESERVED1, ctypes.c_uint8, 7),
-        (Field.RESERVED2, ctypes.c_uint16),
-    ]
-
-    @property
-    def data(self) -> float:
-        return getattr(self, self.Field.DATA)
-
-    @property
-    def error_count(self) -> int:
-        return getattr(self, self.Field.ERROR_COUNT)
-
-    @property
-    def ready(self) -> bool:
-        return getattr(self, self.Field.READY)
-
-
-class MultiDataPoint(ctypes.Structure):
-    class Field(BaseResponse.Field):
-        MASS = '_mass'
-        TEMPERATURE = '_temperature'
-
-    _pack_ = 1
-    _fields_ = [
-        (Field.MASS, DataPoint),
-        (Field.TEMPERATURE, DataPoint),
-    ]
-    @property
-    def mass(self) -> DataPoint:
-        return getattr(self, self.Field.MASS)
-
-    @property
-    def temperature(self) -> DataPoint:
-        return getattr(self, self.Field.TEMPERATURE)
-
-    def __str__(self):
-        str_list = list()
-        for key, _ in self._fields_:
-            str_list.append(f'{key}: {getattr(self, key).data}')
-        return '\n'.join(str_list)
 
 
 # --- Commands -------------------------------------------------------------------------------------
 class CmdLoopback(BaseCommand):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        self.type = Command.LOOPBACK
+        self.type = Cmd.LOOPBACK
 
 
 class CmdGetCalibration(BaseCommand):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.GET_CALIBRATION
+        kw[self.Field.TYPE] = Cmd.GET_CALIBRATION
         super().__init__(*args, **kw)
 
 class CmdSetCalibration(BaseCommand):
@@ -343,63 +312,43 @@ class CmdSetCalibration(BaseCommand):
         setattr(self, self.Field.CALIBRATION, calibration)
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.SET_CALIBRATION
+        kw[self.Field.TYPE] = Cmd.SET_CALIBRATION
         super().__init__(*args, **kw)
-
-
 
 class CmdPowerOnHx711(BaseCommand):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.POWER_ON_HX711
+        kw[self.Field.TYPE] = Cmd.POWER_ON_HX711
         super().__init__(*args, **kw)
 
 class CmdPowerOffHx711(BaseCommand):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.POWER_OFF_HX711
+        kw[self.Field.TYPE] = Cmd.POWER_OFF_HX711
         super().__init__(*args, **kw)
-
-class CmdReadDAC(BaseCmdWithTimesParam):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.READ_DAC
-        super().__init__(*args, **kw)
-
 
 class CmdReadUnits(BaseCmdWithTimesParam):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.READ_UNITS
-        super().__init__(*args, **kw)
-
-
-class CmdSetPhase(BaseCommand):
-    class Field(BaseCommand.Field):
-        PHASE = '_phase'
+    class Field(BaseCmdWithTimesParam.Field):
+        UNITS = '_units'
 
     _fields_ = [
-        (Field.PHASE, ctypes.c_uint16),
+        (Field.UNITS, unit_t)
     ]
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Command.SET_PHASE
+        kw[self.Field.TYPE] = Cmd.READ_UNITS
         super().__init__(*args, **kw)
 
     @property
-    def phase(self) -> int:
-        return getattr(self, self.Field.PHASE)
+    def units(self) -> unit_t:
+        return getattr(self, self.Field.UNITS)
 
-    @phase.setter
-    def phase(self, value: int):
-        setattr(self, self.Field.PHASE, value)
-
-class CmdTest(BaseCommand):
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        self.type = Command.TEST
-
+    @units.setter
+    def units(self, val: unit_t):
+        setattr(self, self.Field.UNITS, val)
 
 # --- Responses ------------------------------------------------------------------------------------
 class RespVoid(BaseResponse):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Response.VOID
+        kw[self.Field.TYPE] = Resp.VOID
         super().__init__(*args, **kw)
 
 
@@ -414,7 +363,7 @@ class RespByte(BaseRespWithData):
     ]
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Response.BYTE
+        kw[self.Field.TYPE] = Resp.BYTE
         super().__init__(*args, **kw)
 
 
@@ -424,7 +373,7 @@ class RespLong(BaseRespWithData):
     ]
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Response.LONG
+        kw[self.Field.TYPE] = Resp.LONG
         super().__init__(*args, **kw)
 
 
@@ -434,7 +383,7 @@ class RespFloat(BaseRespWithData):
     ]
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Response.FLOAT
+        kw[self.Field.TYPE] = Resp.FLOAT
         super().__init__(*args, **kw)
 
 
@@ -445,7 +394,7 @@ class RespDouble(BaseRespWithData):
     ]
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Response.DOUBLE
+        kw[self.Field.TYPE] = Resp.DOUBLE
         super().__init__(*args, **kw)
 
 
@@ -458,7 +407,7 @@ class RespError(BaseResponse):
     ]
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Response.ERROR
+        kw[self.Field.TYPE] = Resp.ERROR
         super().__init__(*args, **kw)
 
     @property
@@ -483,33 +432,47 @@ class RespGetCalibration(BaseResponse):
     def calibration(self) -> Calibration:
         return getattr(self, self.Field.CALIBRATION)
 
-
 class RespMultiDataPoint(BaseResponse):
     class Field(BaseResponse.Field):
-        SENSOR = 'sensor'
+        MASS_SENSOR = '_mass_sensor'
+        MASS = '_mass'
+        TEMPERATURE_SENSOR = '_temperature_sensor'
+        TEMPERATURE = '_temperature'
 
-    @classmethod
-    def make_class(cls, packet: 'Packet') -> Type['RespMultiDataPoint']:
-        class _RespMassDataPoint(RespMultiDataPoint):
-            _num_sensors = (len(packet.data) // ctypes.sizeof(MultiDataPoint))
-            _fields_ = [
-                (cls.Field.SENSOR, MultiDataPoint * _num_sensors),
-            ]
-            _pack_ = 1
+    _pack_ = 1
+    _fields_ = [
+        (Field.MASS_SENSOR, ctypes.c_float * MASS_SENSOR_COUNT),
+        (Field.MASS, ctypes.c_float),
+        (Field.TEMPERATURE_SENSOR, ctypes.c_float * TEMPERATURE_SENSOR_COUNT),
+        (Field.TEMPERATURE, ctypes.c_float)
+    ]
 
+    @property
+    def mass_sensor(self) -> list[float]:
+        return list(getattr(self, self.Field.MASS_SENSOR))
 
-            @classmethod
-            def qualname(cls):
-                return f'{RespMultiDataPoint.__qualname__} ({cls._num_sensors}x sensors):'
+    @property
+    def mass(self) -> float:
+        return getattr(self, self.Field.MASS)
 
-            def __str__(self):
-                str_list = []
-                for sensor in range(self._num_sensors):
-                    str_list.append(str(getattr(self, self.Field.SENSOR)[sensor]))
-                return '\n'.join(str_list)
+    @property
+    def temperature_sensor(self) -> list[float]:
+        return list(getattr(self, self.Field.TEMPERATURE_SENSOR))
 
-        return _RespMassDataPoint
+    @property
+    def temperature(self) -> float:
+        return getattr(self, self.Field.TEMPERATURE)
 
+    def __str__(self):
+        str_list = list()
+        for idx, val in enumerate(self.mass_sensor):
+            str_list.append(f'mass_sensor_{idx}: {val}')
+        str_list.append(f'mass: {self.mass}')
+        str_list.append('')
+        for idx, val in enumerate(self.temperature_sensor):
+            str_list.append(f'temperature_sensor_{idx}: {val}')
+        str_list.append(f'temperature: {self.temperature}')
+        return '\n'.join(str_list)
 
     @classmethod
     def from_packet(cls, packet) -> Optional['RespMultiDataPoint']:

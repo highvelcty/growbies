@@ -6,7 +6,7 @@
 #endif
 
 #include "constants.h"
-#include "defines.h"
+#include "flags.h"
 #include "persistent_store.h"
 
 CalibrationStore* calibration_store = new CalibrationStore();
@@ -24,6 +24,14 @@ void CalibrationStore::begin() {
     PersistentStore::begin();
 #if ARDUINO_ARCH_ESP32
     this->prefs.begin(this->ns, false);
+
+    // Clear corrupted or crufty data. This is often due to structure changes in firmware.
+    if (this->prefs.isKey(this->key_cal)) {
+        if (this->prefs.getBytesLength(this->key_cal) != sizeof(CalibrationStruct)){
+            this->prefs.remove(this->key_cal);
+        }
+    }
+
     if (!this->prefs.isKey(this->key_cal)){
         CalibrationStruct calibration;
         memset(&calibration, 0, sizeof(calibration));

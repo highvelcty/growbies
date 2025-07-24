@@ -8,8 +8,12 @@ const int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
 const int WAIT_READY_RETRIES = 100;
 const int WAIT_READY_RETRY_DELAY_MS = 10;
 
-const int SLIP_BUF_ALLOC_BYTES = 128;
+const int SLIP_BUF_ALLOC_BYTES = 256;
+// The worst case slip packet encoding
+const int MAX_SLIP_UNENCODED_PACKET_BYTES = (SLIP_BUF_ALLOC_BYTES / 2) - 2;
 const float INVALID_TEMPERATURE = 1234.5;
+const float INVALID_MASS_SAMPLE_THRESHOLD_DAC = 10000;
+const float INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC = 50;
 
 const uint8_t COEFF_COUNT = 2;
 const uint8_t TARE_COUNT = 1;

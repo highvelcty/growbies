@@ -22,9 +22,9 @@ if path is not None:
 
 _ = Session()
 # plot.velo_vs_scale()
-# plot.bucket_test(path, invert_sum=False)
+# plot.mass_cal(path, invert_sum=False)
 # plot.time_plot(path, normalize=True)
-plot.thermal_test(path)
+plot.mass_temperature_cal(path)
 # plot.csv_difference(path)
 # plot.resister_divider()
 # plot.measure_noise(path)

@@ -39,68 +39,49 @@ class Arduino(ArduinoTransport):
             logger.error(f'Execution layer retries exhausted executing command:\n{cmd}')
             return None
 
-    def set_phase_a(self):
-        cmd = command.CmdSetPhase()
-        cmd.phase = command.Phase.A
-        self.execute(cmd)
-
-    def set_phase_b(self):
-        cmd = command.CmdSetPhase()
-        cmd.phase = command.Phase.B
-        self.execute(cmd)
-
-    def get_calibration(self) -> command.Calibration:
-        resp: command.RespGetCalibration = self.execute(command.CmdGetCalibration())
-        return resp.calibration
-
     def power_on_hx711(self) -> None:
         self.execute(command.CmdPowerOnHx711())
 
     def power_off_hx711(self) -> None:
         self.execute(command.CmdPowerOffHx711())
 
+    def get_calibration(self) -> command.Calibration:
+        resp: command.RespGetCalibration = self.execute(command.CmdGetCalibration())
+        return resp.calibration
+
+
     def set_mass_temperature_coeff(self, sensor: int, *coeff):
-        calibration = self.get_calibration()
-        calibration.set_sensor_data(command.Calibration.Field.MASS_TEMPERATURE_COEFF, sensor,
-                                    *coeff)
         cmd = command.CmdSetCalibration()
-        cmd.calibration = calibration
+        cmd.calibration = self.get_calibration()
+        cmd.calibration.set_sensor_data(command.Calibration.Field.MASS_TEMPERATURE_COEFF, sensor,
+                                    *coeff)
         self.execute(cmd)
 
-    def set_mass_coeff(self, sensor: int, *coeff):
-        calibration = self.get_calibration()
-        calibration.set_sensor_data(command.Calibration.Field.MASS_COEFF, sensor,
-                                    *coeff)
+    def set_mass_coeff(self, *coeff):
         cmd = command.CmdSetCalibration()
-        cmd.calibration = calibration
+        cmd.calibration = self.get_calibration()
+        cmd.calibration.mass_coeff = coeff
         self.execute(cmd)
 
     def set_temperature_coeff(self, sensor: int, *coeff):
-        calibration = self.get_calibration()
-        calibration.set_sensor_data(command.Calibration.Field.TEMPERATURE_COEFF, sensor,
+        cmd = command.CmdSetCalibration()
+        cmd.calibration = self.get_calibration()
+        cmd.calibration.set_sensor_data(command.Calibration.Field.TEMPERATURE_COEFF, sensor,
                                      *coeff)
-        cmd = command.CmdSetCalibration()
-        cmd.calibration = calibration
         self.execute(cmd)
 
-    def set_tare(self, sensor: int, tare_idx: int, value):
-        calibration = self.get_calibration()
-        mod_values = calibration.tare[sensor]
+    def set_tare(self, tare_idx: int, value: float):
+        cmd = command.CmdSetCalibration()
+        cmd.calibration = self.get_calibration()
+        mod_values = cmd.calibration.tare
         mod_values[tare_idx] = value
-        calibration.set_sensor_data(command.Calibration.Field.TARE, sensor, *mod_values)
-        cmd = command.CmdSetCalibration()
-        cmd.calibration = calibration
+        cmd.calibration.tare = mod_values
         self.execute(cmd)
 
-    def read_dac(self, times: int = command.CmdReadDAC.DEFAULT_TIMES) \
+    def read_units(self, times: int = command.CmdReadUnits.DEFAULT_TIMES,
+                   units: command.unit_t = command.Unit.UNIT_GRAMS | command.Unit.UNIT_FAHRENHEIT) \
             -> command.RespMultiDataPoint:
-        cmd = command.CmdReadDAC(times=times)
-        resp: command.RespMultiDataPoint = self.execute(cmd, read_timeout_sec=10)
-        return resp
-
-    def read_units(self, times: int = command.CmdReadUnits.DEFAULT_TIMES) \
-            -> command.RespMultiDataPoint:
-        cmd = command.CmdReadUnits(times=times)
+        cmd = command.CmdReadUnits(times=times, units=units)
         resp: command.RespMultiDataPoint = self.execute(cmd, read_timeout_sec=10)
         return resp
 
@@ -113,10 +94,6 @@ class Arduino(ArduinoTransport):
                 bytes_in_waiting = self.in_waiting
                 if bytes_in_waiting:
                     _ = self.read(bytes_in_waiting)
-
-    def test(self):
-        resp: command.RespLong = self.execute(command.CmdTest())
-        return resp.data
 
     def wait_for_ready(self):
         cmd = command.CmdLoopback()

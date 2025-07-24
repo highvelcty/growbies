@@ -1,9 +1,11 @@
 #ifndef growbies_h
 #define growbies_h
 
-#include "defines.h"
+#include <Arduino.h>
+#include "constants.h"
 #include "flags.h"
 #include "protocol/command.h"
+#include "protocol/network.h"
 
 const int HX711_DAC_BITS = 24;
 
@@ -22,14 +24,6 @@ typedef enum HX711Gain {
     HX711_GAIN_32 = 32
 } HX711Gain;
 
-typedef enum Unit : uint16_t {
-    // Bitfield
-    UNIT_GRAMS       = 0x0001,
-    UNIT_DAC         = 0x0002,
-    UNIT_FAHRENHEIT  = 0x0004,
-    UNIT_CELSIUS     = 0x0008,
-} Units;
-
 
 class Growbies {
     public:
@@ -39,25 +33,20 @@ class Growbies {
         void execute(PacketHdr* packet_hdr);
 
     private:
-        const int static default_threshold = 10000;
-        const byte static default_times = 5;
-        const byte static default_tare_times = 15;
         uint8_t tare_idx = 0;
 
-        byte outbuf[512] = {};
-        DataPoint data_points[MASS_SENSOR_COUNT];
+        byte outbuf[MAX_SLIP_UNENCODED_PACKET_BYTES] = {};
 
         void power_off();
 		void power_on();
-        void sample(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
-		void read_dac(DataPoint* data_points, const byte times = default_times,
-            const HX711Gain gain = HX711_GAIN_128);
-		void read_units(MultiDataPoint* data_points, const byte times = default_times,
-            Unit units = (Unit)(UNIT_GRAMS | UNIT_FAHRENHEIT));
-        void set_gain(HX711Gain gain);
-		void shift_all_in(DataPoint* data_points, const HX711Gain gain = HX711_GAIN_128);
-		bool wait_all_ready_retry(DataPoint* data_points, const int retries,
-            const unsigned long delay_ms);
+		Error median_avg_filter(float **iteration_sensor_sample,
+		                        int rows, int cols, float thresh, float* out);
+        Error sample_mass(float** iteration_mass_samples, int times, HX711Gain gain);
+        Error sample_temperature(float** iteration_temp_samples, int times);
+        void read_units(RespMultiDataPoint* resp, const byte times, const Unit units,
+                        HX711Gain gain = HX711_GAIN_128);
+        void shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], const HX711Gain gain);
+        Error wait_hx711_ready(const int retries, const unsigned long delay_ms);
 };
 
 template <typename PacketType>
@@ -67,7 +56,7 @@ bool check_and_respond_to_deserialization_underflow(const PacketType& packet) {
     }
     else{
         RespError resp;
-        resp.error = ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
+        resp.error = Error::CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
         send_packet(resp);
         return false;
     }

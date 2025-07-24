@@ -7,10 +7,10 @@
 
 #include "constants.h"
 
-typedef float MassCoeff[MASS_SENSOR_COUNT][COEFF_COUNT];
-typedef float TemperatureCoeff[TEMPERATURE_SENSOR_COUNT][COEFF_COUNT];
 typedef float MassTemperatureCoeff[MASS_SENSOR_COUNT][COEFF_COUNT];
-typedef float Tare[MASS_SENSOR_COUNT][TARE_COUNT];
+typedef float MassCoeff[COEFF_COUNT];
+typedef float TemperatureCoeff[TEMPERATURE_SENSOR_COUNT][COEFF_COUNT];
+typedef float Tare[TARE_COUNT];
 
 #pragma pack(1)
 struct CalibrationStruct {
@@ -19,6 +19,7 @@ struct CalibrationStruct {
     TemperatureCoeff temperature_coeff;
     Tare tare;
 };
+
 
 class PersistentStore {
     public:
