@@ -2,7 +2,7 @@
 #define command_h
 
 #include "flags.h"
-#include "lib/persistent_store.h"
+#include "persistent_store.h"
 
 #pragma pack(1)
 
@@ -28,11 +28,11 @@ enum class Resp: uint16_t {
 
 typedef enum Error: uint32_t {
     // bitfield
-    NONE                                  = 0x00000000,
-    CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 0x00000001,
-    UNRECOGNIZED_COMMAND                  = 0x00000002,
-    OUT_OF_THRESHOLD_SAMPLE               = 0x00000004,
-    HX711_NOT_READY                       = 0x00000008,
+    ERROR_NONE                                  = 0x00000000,
+    ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 0x00000001,
+    ERROR_UNRECOGNIZED_COMMAND                  = 0x00000002,
+    ERROR_OUT_OF_THRESHOLD_SAMPLE               = 0x00000004,
+    ERROR_HX711_NOT_READY                       = 0x00000008,
 } Error;
 
 // Bitwise operators for Error
@@ -65,13 +65,13 @@ struct PacketHdr {
     union {
         Resp resp;
         Cmd cmd;
-    } type;
+    } type{};
 
-    PacketHdr(Resp type_) {
+    explicit PacketHdr(const Resp type_) {
         this->type.resp = type_;
     };
 
-    PacketHdr(Cmd type_) {
+    explicit PacketHdr(const Cmd type_) {
         this->type.cmd = type_;
     }
 };
@@ -93,7 +93,7 @@ struct CmdReadUnits : BaseCmdWithTimesParam {
 };
 // --- Base Responses
 struct BaseResp : PacketHdr {
-    Error error = Error::NONE;
+    Error error = ERROR_NONE;
     BaseResp(Resp resp_type) : PacketHdr(resp_type) {};
 };
 

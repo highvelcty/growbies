@@ -2,12 +2,13 @@
 #define growbies_h
 
 #include <Arduino.h>
+
 #include "constants.h"
 #include "flags.h"
-#include "protocol/command.h"
-#include "protocol/network.h"
+#include "command.h"
+#include "network.h"
 
-const int HX711_DAC_BITS = 24;
+constexpr int HX711_DAC_BITS = 24;
 
 enum HX711SerialDelay {
     HX711_BIT_BANG_DELAY = 3,
@@ -28,25 +29,27 @@ typedef enum HX711Gain {
 class Growbies {
     public:
         Growbies();
-        void begin();
+        void begin() const;
 
-        void execute(PacketHdr* packet_hdr);
+        void execute(const PacketHdr* packet_hdr);
 
     private:
         uint8_t tare_idx = 0;
 
         byte outbuf[MAX_SLIP_UNENCODED_PACKET_BYTES] = {};
 
-        void power_off();
-		void power_on();
-		Error median_avg_filter(float **iteration_sensor_sample,
-		                        int rows, int cols, float thresh, float* out);
+        static void power_off();
+
+        static void power_on();
+
+        static Error median_avg_filter(float **iteration_sensor_sample,
+                                       int rows, int cols, float thresh, float* out);
         Error sample_mass(float** iteration_mass_samples, int times, HX711Gain gain);
         Error sample_temperature(float** iteration_temp_samples, int times);
-        void read_units(RespMultiDataPoint* resp, const byte times, const Unit units,
+        void read_units(RespMultiDataPoint* resp, byte times, Unit units,
                         HX711Gain gain = HX711_GAIN_128);
-        void shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], const HX711Gain gain);
-        Error wait_hx711_ready(const int retries, const unsigned long delay_ms);
+        void shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], HX711Gain gain);
+        Error wait_hx711_ready(int retries, unsigned long delay_ms);
 };
 
 template <typename PacketType>
@@ -56,7 +59,7 @@ bool check_and_respond_to_deserialization_underflow(const PacketType& packet) {
     }
     else{
         RespError resp;
-        resp.error = Error::CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
+        resp.error = ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
         send_packet(resp);
         return false;
     }
@@ -64,12 +67,13 @@ bool check_and_respond_to_deserialization_underflow(const PacketType& packet) {
 
 template <typename PacketType>
 bool validate_packet(const PacketType& packet) {
-    bool result;
-    result = check_and_respond_to_deserialization_underflow(packet);
-    return result;
+    return check_and_respond_to_deserialization_underflow(packet);
 }
 
-extern Growbies* growbies;
+/**
+ * Application global
+ */
+extern Growbies growbies;
 
 
 #endif /* growbies_h */

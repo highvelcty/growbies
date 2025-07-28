@@ -1,23 +1,22 @@
-#include <float.h>
 #include <new> // Required for placement new
 
 #include "constants.h"
 #include "flags.h"
-#include "growbies.h"
-#include "lib/display.h"
-#include "lib/persistent_store.h"
-#include "utils/sort.h"
+#include <growbies.h>
+#include <persistent_store.h>
+#include <sort.h>
 
-//#if HAS_ATOMIC_BLOCK
 #if ARDUINO_ARCH_AVR
 #include <util/atomic.h>
 #endif
 
-Growbies* growbies = new Growbies();
+// Growbies* growbies = new Growbies();
 
-Growbies::Growbies() {}
+Growbies growbies;
 
-void Growbies::begin(){
+Growbies::Growbies() = default;
+
+void Growbies::begin() const {
     pinMode(HX711_SCK_PIN, OUTPUT);
     for(int sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
     #if ARDUINO_ARCH_AVR
@@ -40,30 +39,30 @@ void Growbies::begin(){
     calibration_store->begin();
 }
 
-void Growbies::execute(PacketHdr* packet_hdr) {
+void Growbies::execute(const PacketHdr* packet_hdr) {
     if (packet_hdr->type.cmd == Cmd::LOOPBACK) {
-        RespVoid* resp = new (this->outbuf) RespVoid;
-        send_packet(*this->outbuf, sizeof(*resp));
+        new (this->outbuf) RespVoid;
+        send_packet(*this->outbuf, sizeof(RespVoid));
     }
     else if (packet_hdr->type.cmd == Cmd::READ_UNITS) {
-        CmdReadUnits* cmd = (CmdReadUnits*)slip_buf->buf;
+        const auto* cmd = reinterpret_cast<CmdReadUnits *>(slip_buf->buf);
         if (validate_packet(*cmd)) {
             // This constructs at location
-            RespMultiDataPoint* resp = new (this->outbuf) RespMultiDataPoint;
+            auto* resp = new (this->outbuf) RespMultiDataPoint;
             this->read_units(resp, cmd->times, cmd->units);
             send_packet(*this->outbuf, sizeof(*resp));
          }
     }
     else if (packet_hdr->type.cmd == Cmd::GET_CALIBRATION) {
-        CmdGetCalibration* cmd = (CmdGetCalibration*)slip_buf->buf;
+        const auto* cmd = reinterpret_cast<CmdGetCalibration *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
-            RespGetCalibration* resp = new (this->outbuf) RespGetCalibration;
+            auto* resp = new (this->outbuf) RespGetCalibration;
             calibration_store->get(resp->calibration);
-            send_packet(*this->outbuf, sizeof(RespGetCalibration));
+            send_packet(*this->outbuf, sizeof(*resp));
         }
     }
     else if (packet_hdr->type.cmd == Cmd::SET_CALIBRATION) {
-        CmdSetCalibration* cmd = (CmdSetCalibration*)slip_buf->buf;
+        auto* cmd = reinterpret_cast<CmdSetCalibration *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
             new (this->outbuf) RespVoid;
             calibration_store->put(cmd->calibration);
@@ -71,7 +70,7 @@ void Growbies::execute(PacketHdr* packet_hdr) {
         }
     }
     else if (packet_hdr->type.cmd == Cmd::POWER_ON_HX711) {
-        CmdPowerOnHx711* cmd = (CmdPowerOnHx711*)slip_buf->buf;
+        const auto cmd = reinterpret_cast<CmdPowerOnHx711 *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
             this->power_on();
             new (this->outbuf) RespVoid;
@@ -80,7 +79,7 @@ void Growbies::execute(PacketHdr* packet_hdr) {
         }
     }
     else if (packet_hdr->type.cmd == Cmd::POWER_OFF_HX711) {
-        CmdPowerOffHx711* cmd = (CmdPowerOffHx711*)slip_buf->buf;
+        auto cmd = (CmdPowerOffHx711*)slip_buf->buf;
         if(validate_packet(*cmd)) {
             this->power_off();
             new (this->outbuf) RespVoid;
@@ -88,8 +87,8 @@ void Growbies::execute(PacketHdr* packet_hdr) {
         }
     }
     else{
-        RespError* resp = new (this->outbuf) RespError;
-        resp->error = Error::UNRECOGNIZED_COMMAND;
+        auto resp = new (this->outbuf) RespError;
+        resp->error = ERROR_UNRECOGNIZED_COMMAND;
         send_packet(resp, sizeof(RespError));
     }
 }
@@ -113,7 +112,7 @@ Error Growbies::median_avg_filter(float **iteration_sensor_sample,
     float sum;
     int sum_count;
 
-    Error error = Error::NONE;
+    Error error = ERROR_NONE;
 
     float samples[iterations];
 
@@ -148,7 +147,7 @@ Error Growbies::median_avg_filter(float **iteration_sensor_sample,
                 ++sum_count;
             }
             else {
-                error |= Error::OUT_OF_THRESHOLD_SAMPLE;
+                error |= ERROR_OUT_OF_THRESHOLD_SAMPLE;
             }
         }
         out[sensor_idx] = sum / sum_count;
@@ -158,7 +157,7 @@ Error Growbies::median_avg_filter(float **iteration_sensor_sample,
 
 
 Error Growbies::sample_mass(float** iteration_mass_samples, int times, HX711Gain gain) {
-    Error error = Error::NONE;
+    Error error = ERROR_NONE;
 	for (int iteration = 0; iteration < times; ++iteration) {
         error |= this->wait_hx711_ready(WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS);
         this->shift_all_in(iteration_mass_samples[iteration], gain);
@@ -167,7 +166,7 @@ Error Growbies::sample_mass(float** iteration_mass_samples, int times, HX711Gain
 }
 
 Error Growbies::sample_temperature(float** iteration_temp_samples, int times) {
-    Error error = Error::NONE;
+    Error error = ERROR_NONE;
     for (int iteration = 0; iteration < times; ++iteration) {
         for (int sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
             iteration_temp_samples[iteration][sensor_idx] = \
@@ -362,7 +361,7 @@ Error Growbies::wait_hx711_ready(const int retries, const unsigned long delay_ms
 #elif ARDUINO_ARCH_ESP32
     uint32_t gpio_in_reg;
 #endif
-    Error error = Error::NONE;
+    Error error = ERROR_NONE;
 	bool all_ready = true;
 	int retry_count = 0;
 
@@ -388,7 +387,7 @@ Error Growbies::wait_hx711_ready(const int retries, const unsigned long delay_ms
 	} while ((retry_count <= retries) && (!all_ready));
 
 	if (!all_ready){
-	    error |= Error::HX711_NOT_READY;
+	    error |= ERROR_HX711_NOT_READY;
 	}
 
 	return error;
