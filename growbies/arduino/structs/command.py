@@ -210,7 +210,6 @@ class Calibration(ctypes.Structure):
     class Field:
         MASS_TEMPERATURE_COEFF = '_mass_temperature_coeff'
         MASS_COEFF = '_mass_coeff'
-        TEMPERATURE_COEFF = '_temperature_coeff'
         TARE = '_tare'
 
     _pack_ = 1
@@ -220,7 +219,6 @@ class Calibration(ctypes.Structure):
     _fields_ = [
         (Field.MASS_TEMPERATURE_COEFF, _row * MASS_SENSOR_COUNT),
         (Field.MASS_COEFF, ctypes.c_float * COEFF_COUNT),
-        (Field.TEMPERATURE_COEFF, _row * TEMPERATURE_SENSOR_COUNT),
         (Field.TARE, ctypes.c_float * TARE_COUNT)
     ]
 
@@ -247,16 +245,6 @@ class Calibration(ctypes.Structure):
             getattr(self, self.Field.MASS_COEFF)[idx] = values[idx]
 
     @property
-    def temperature_coeff(self) -> list[list[float]]:
-        ctypes_2d_array = getattr(self, self.Field.TEMPERATURE_COEFF)
-        return _get_ctypes_2d_array(ctypes_2d_array)
-
-    @temperature_coeff.setter
-    def temperature_coeff(self, values: list[list[float]]):
-        ctypes_2d_array = getattr(self, self.Field.TEMPERATURE_COEFF)
-        _set_ctypes_2d_array(ctypes_2d_array, values)
-
-    @property
     def tare(self) -> list[float]:
         return list(getattr(self, self.Field.TARE))
 
@@ -275,8 +263,6 @@ class Calibration(ctypes.Structure):
                                sensor_coeff_columns,
                                self.mass_temperature_coeff),
             format_float_list('Mass Calibration Coefficients', coeff_columns, self.mass_coeff),
-            format_float_table('Temperature Calibration Coefficients', sensor_coeff_columns,
-                               self.temperature_coeff),
             format_float_list('Tare', tare_columns, self.tare)
         ]
 

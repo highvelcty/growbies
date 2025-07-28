@@ -1,7 +1,7 @@
 #ifndef constants_h
 #define constants_h
 
-#include <assert.h>
+#include <cassert>
 #include <pins_arduino.h>
 #include "flags.h"
 
@@ -18,6 +18,27 @@ constexpr float INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC = 50;
 
 constexpr uint8_t COEFF_COUNT = 2;
 constexpr uint8_t TARE_COUNT = 1;
+
+// Thermistor
+constexpr float THERMISTOR_V_REF = 2.7; // Measured ADC reference voltage
+#if ARDUINO_ARCH_AVR
+constexpr int ADC_RESOLUTION = 1024;
+#elif ARDUINO_ARCH_ESP32
+constexpr int THERMISTOR_ADC_RESOLUTION = 4096;
+#endif
+
+#if THERMISTOR_HW_0
+// Steinhart-hart coeffs calculated at 0*C, 25*C & 50*C
+constexpr float STEINHART_HART_A = 1.003702421E-3;
+constexpr float STEINHART_HART_B = 1.811901925E-4;
+constexpr float STEINHART_HART_C = 1.731869483E-7;
+
+constexpr float THERMISTOR_SERIES_RESISTOR = 100000.0;
+constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0;
+constexpr float THERMISTOR_NOMINAL_TEMPERATURE = 25.0;          // 25°C
+constexpr float THERMISTOR_B_COEFFICIENT = 4100.0;              // Beta coefficient for thermistor
+#endif
+
 
 enum Pins : int {
 #if HX711_PIN_CFG_0

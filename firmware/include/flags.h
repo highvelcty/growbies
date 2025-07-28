@@ -18,4 +18,12 @@
 #define MASS_SENSOR_COUNT 3
 #define TEMPERATURE_SENSOR_COUNT 3
 
+// Maps to Eaton NRNE105H4100B1H
+#if TEMPERATURE_SENSOR_COUNT > 0
+#define THERMISTOR_HW_0 true
+#define THERMISTOR_HW_1 false
+static_assert(!THERMISTOR_HW_0 != !THERMISTOR_HW_1);
+#endif
+
+
 #endif /* flags_h */

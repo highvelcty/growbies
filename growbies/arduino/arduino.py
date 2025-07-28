@@ -63,13 +63,6 @@ class Arduino(ArduinoTransport):
         cmd.calibration.mass_coeff = coeff
         self.execute(cmd)
 
-    def set_temperature_coeff(self, sensor: int, *coeff):
-        cmd = command.CmdSetCalibration()
-        cmd.calibration = self.get_calibration()
-        cmd.calibration.set_sensor_data(command.Calibration.Field.TEMPERATURE_COEFF, sensor,
-                                     *coeff)
-        self.execute(cmd)
-
     def set_tare(self, tare_idx: int, value: float):
         cmd = command.CmdSetCalibration()
         cmd.calibration = self.get_calibration()

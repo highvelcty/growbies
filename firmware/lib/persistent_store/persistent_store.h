@@ -9,14 +9,12 @@
 
 typedef float MassTemperatureCoeff[MASS_SENSOR_COUNT][COEFF_COUNT];
 typedef float MassCoeff[COEFF_COUNT];
-typedef float TemperatureCoeff[TEMPERATURE_SENSOR_COUNT][COEFF_COUNT];
 typedef float Tare[TARE_COUNT];
 
 #pragma pack(1)
 struct CalibrationStruct {
     MassTemperatureCoeff mass_temperature_coeff;
     MassCoeff mass_coeff;
-    TemperatureCoeff temperature_coeff;
     Tare tare;
 };
 

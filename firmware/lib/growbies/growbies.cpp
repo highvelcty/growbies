@@ -5,6 +5,7 @@
 #include <growbies.h>
 #include <persistent_store.h>
 #include <sort.h>
+#include <thermistor.h>
 
 #if ARDUINO_ARCH_AVR
 #include <util/atomic.h>
@@ -224,49 +225,36 @@ void Growbies::read_units(RespMultiDataPoint* resp, const byte times, const Unit
     resp->mass = 0;
     resp->temperature = 0;
 
-    if (units & UNIT_MASS_DAC) {
-        for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
-            // Sum
-            resp->mass += resp->mass_sensor[sensor_idx];
-        }
-    }
-    if (units & UNIT_TEMP_DAC) {
-        // Average
-        for (sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
-            resp->temperature += resp->temperature_sensor[sensor_idx];
-        }
-        resp->temperature /= TEMPERATURE_SENSOR_COUNT;
-    }
-    if (units & UNIT_GRAMS) {
-        for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
+    for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
+        if (units & UNIT_GRAMS) {
             // mass/temperature compensation per sensor
             resp->mass_sensor[sensor_idx] -= (
                 (calibration_struct.mass_temperature_coeff[sensor_idx][0]
                 * resp->temperature_sensor[
                     calibration_store->get_temperature_sensor_idx(sensor_idx)])
                 + calibration_struct.mass_temperature_coeff[sensor_idx][1]);
-
-            // Sum corrected mass
-            resp->mass += resp->mass_sensor[sensor_idx];
         }
 
+        // Sum  mass
+        resp->mass += resp->mass_sensor[sensor_idx];
+    }
+    if (units & UNIT_GRAMS) {
         // Mass calibration and tare
         resp->mass = ((resp->mass * calibration_struct.mass_coeff[0])
                       + calibration_struct.mass_coeff[1])
                      - calibration_struct.tare[this->tare_idx];
     }
 
-    #if TEMPERATURE_SENSOR_COUNT
-    if ((units & UNIT_FAHRENHEIT) || (units & UNIT_CELSIUS)) {
-        for (sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
+#if TEMPERATURE_SENSOR_COUNT
+    for (sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
+        if ((units & UNIT_CELSIUS)) {
             resp->temperature_sensor[sensor_idx] = \
-                ((calibration_struct.temperature_coeff[sensor_idx][0]
-                  * resp->temperature_sensor[sensor_idx])
-                 + calibration_struct.temperature_coeff[sensor_idx][1]);
-            resp->temperature += resp->temperature_sensor[sensor_idx];
-         }
-    }
-    #endif
+                dac_to_celsius(resp->temperature_sensor[sensor_idx]);
+        }
+        resp->temperature += resp->temperature_sensor[sensor_idx];
+     }
+    resp->temperature /= TEMPERATURE_SENSOR_COUNT;
+#endif
 
     // Free 2D arrays
     for(iteration = 0; iteration < times; ++iteration) {
