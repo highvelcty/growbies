@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 COEFF_COUNT = 2
 TARE_COUNT = 1
 MASS_SENSOR_COUNT = 3
-TEMPERATURE_SENSOR_COUNT = 1
+TEMPERATURE_SENSOR_COUNT = 3
 
 # --- Base Classes ---------------------------------------------------------------------------------
 class Cmd(IntEnum):
@@ -73,10 +73,11 @@ class Phase(IntEnum):
 unit_t = ctypes.c_uint16
 class Unit(IntEnum):
     # Bitfield
-    UNIT_GRAMS       = 0x0001
-    UNIT_DAC         = 0x0002
-    UNIT_FAHRENHEIT  = 0x0004
-    UNIT_CELSIUS     = 0x0008
+    UNIT_GRAMS          = 0x0001
+    UNIT_MASS_DAC       = 0x0002
+    UNIT_TEMP_DAC       = 0x0004
+    UNIT_FAHRENHEIT     = 0x0004
+    UNIT_CELSIUS        = 0x0008
 
 # --- Base Classes ---------------------------------------------------------------------------------
 class BaseStructure(ctypes.Structure):

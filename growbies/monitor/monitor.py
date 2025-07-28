@@ -4,6 +4,7 @@ import time
 from growbies.arduino.arduino import Arduino
 from growbies.arduino.structs.command import MASS_SENSOR_COUNT
 from growbies.arduino.structs.command import TEMPERATURE_SENSOR_COUNT
+from growbies.arduino.structs.command import CmdReadUnits
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
@@ -63,7 +64,7 @@ def main(sess: Session):
 
 
                     ts = get_utc_iso_ts_str()
-                    resp = arduino_serial.read_units()
+                    resp = arduino_serial.read_dac(CmdReadUnits.DEFAULT_TIMES)
                     out_str = ''.join(
                             [f'{ts}, '] +
                             [f'{resp.mass_sensor[ii]}, ' for ii in range(MASS_SENSOR_COUNT)] +

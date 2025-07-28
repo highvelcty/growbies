@@ -16,6 +16,6 @@
 #define FEATURE_LED (1 && LED_INSTALLED)
 
 #define MASS_SENSOR_COUNT 3
-#define TEMPERATURE_SENSOR_COUNT 1
+#define TEMPERATURE_SENSOR_COUNT 3
 
 #endif /* flags_h */

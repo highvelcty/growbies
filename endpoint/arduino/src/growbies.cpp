@@ -170,7 +170,8 @@ Error Growbies::sample_temperature(float** iteration_temp_samples, int times) {
     Error error = Error::NONE;
     for (int iteration = 0; iteration < times; ++iteration) {
         for (int sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
-            iteration_temp_samples[iteration][sensor_idx] = analogRead(TEMPERATURE_ANALOG_PIN);
+            iteration_temp_samples[iteration][sensor_idx] = \
+                analogRead(get_temperature_pin(sensor_idx));
         }
     }
     return error;
@@ -191,7 +192,7 @@ void Growbies::read_units(RespMultiDataPoint* resp, const byte times, const Unit
     float** iteration_temp_samples = (float**)malloc(times * sizeof(float*));
     for (iteration = 0; iteration < times; ++iteration) {
         iteration_temp_samples[iteration] = \
-            (float*)malloc(TEMPERATURE_SENSOR_COUNT + sizeof(float));
+            (float*)malloc(TEMPERATURE_SENSOR_COUNT * sizeof(float));
     }
 
 #if POWER_CONTROL
@@ -224,15 +225,20 @@ void Growbies::read_units(RespMultiDataPoint* resp, const byte times, const Unit
     resp->mass = 0;
     resp->temperature = 0;
 
-    if (units & UNIT_DAC) {
+    if (units & UNIT_MASS_DAC) {
         for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
+            // Sum
             resp->mass += resp->mass_sensor[sensor_idx];
         }
-        for (sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
-            resp->temperature = resp->temperature_sensor[sensor_idx];
-        }
     }
-    else if (units & UNIT_GRAMS) {
+    if (units & UNIT_TEMP_DAC) {
+        // Average
+        for (sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
+            resp->temperature += resp->temperature_sensor[sensor_idx];
+        }
+        resp->temperature /= TEMPERATURE_SENSOR_COUNT;
+    }
+    if (units & UNIT_GRAMS) {
         for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
             // mass/temperature compensation per sensor
             resp->mass_sensor[sensor_idx] -= (
@@ -249,8 +255,10 @@ void Growbies::read_units(RespMultiDataPoint* resp, const byte times, const Unit
         resp->mass = ((resp->mass * calibration_struct.mass_coeff[0])
                       + calibration_struct.mass_coeff[1])
                      - calibration_struct.tare[this->tare_idx];
+    }
 
-        #if TEMPERATURE_SENSOR_COUNT
+    #if TEMPERATURE_SENSOR_COUNT
+    if ((units & UNIT_FAHRENHEIT) || (units & UNIT_CELSIUS)) {
         for (sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
             resp->temperature_sensor[sensor_idx] = \
                 ((calibration_struct.temperature_coeff[sensor_idx][0]
@@ -258,8 +266,8 @@ void Growbies::read_units(RespMultiDataPoint* resp, const byte times, const Unit
                  + calibration_struct.temperature_coeff[sensor_idx][1]);
             resp->temperature += resp->temperature_sensor[sensor_idx];
          }
-        #endif
     }
+    #endif
 
     // Free 2D arrays
     for(iteration = 0; iteration < times; ++iteration) {

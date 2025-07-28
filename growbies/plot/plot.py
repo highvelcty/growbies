@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from cycler import cycler
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
@@ -226,8 +227,11 @@ def _over_time(timestamps: list[datetime], y1: list[list[float]], y2: list[list[
 
     plt.title('Mass & Temperature over Time')
 
-    for y in y1:
-        ax1.plot(timestamps, y)
+    shared_cycler = iter(cycler(color=plt.rcParams['axes.prop_cycle'].by_key()['color']))
+
+    for idx, y in enumerate(y1):
+        ax1.plot(timestamps, y, color=next(shared_cycler)['color'],
+                 marker='.' if idx == len(y1) - 1 else None)
 
     locator = mticker.MaxNLocator(nbins=15)
     ax1.xaxis.set_major_locator(locator)
@@ -242,8 +246,10 @@ def _over_time(timestamps: list[datetime], y1: list[list[float]], y2: list[list[
 
     # Temperature
     ax2 = ax1.twinx()
-    for y in y2:
-        ax2.plot(timestamps, y, color='purple')
+    for idx, y in enumerate(y2):
+        ax2.plot(timestamps, y, color=next(shared_cycler)['color'],
+                 marker = '.' if idx == len(y2) - 1 else None)
+
     ax2.set_ylabel(y2_label)
 
     fig.legend(legend, loc='outside upper right')

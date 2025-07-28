@@ -54,9 +54,10 @@ enum Phase: uint8_t {
 typedef enum Unit : uint16_t {
     // Bitfield
     UNIT_GRAMS       = 0x0001,
-    UNIT_DAC         = 0x0002,
-    UNIT_FAHRENHEIT  = 0x0004,
-    UNIT_CELSIUS     = 0x0008,
+    UNIT_MASS_DAC    = 0x0002,
+    UNIT_TEMP_DAC    = 0x0004,
+    UNIT_FAHRENHEIT  = 0x0008,
+    UNIT_CELSIUS     = 0x0010,
 } Units;
 
 // --- Base Commands
