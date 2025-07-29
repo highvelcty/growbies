@@ -1,7 +1,7 @@
 #ifndef constants_h
 #define constants_h
 
-#include <cassert>
+#include "assert.h"
 #include <pins_arduino.h>
 #include "flags.h"
 
@@ -20,23 +20,24 @@ constexpr uint8_t COEFF_COUNT = 2;
 constexpr uint8_t TARE_COUNT = 1;
 
 // Thermistor
-constexpr float THERMISTOR_V_REF = 2.7; // Measured ADC reference voltage
 #if ARDUINO_ARCH_AVR
+constexpr float ADC_V_REF = 3.3; // Measured ADC reference voltage
 constexpr int ADC_RESOLUTION = 1024;
 #elif ARDUINO_ARCH_ESP32
-constexpr int THERMISTOR_ADC_RESOLUTION = 4096;
+constexpr int ADC_RESOLUTION = 4096;
 #endif
 
 #if THERMISTOR_HW_0
 // Steinhart-hart coeffs calculated at 0*C, 25*C & 50*C
-constexpr float STEINHART_HART_A = 1.003702421E-3;
-constexpr float STEINHART_HART_B = 1.811901925E-4;
-constexpr float STEINHART_HART_C = 1.731869483E-7;
 
 constexpr float THERMISTOR_SERIES_RESISTOR = 100000.0;
 constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0;
-constexpr float THERMISTOR_NOMINAL_TEMPERATURE = 25.0;          // 25°C
-constexpr float THERMISTOR_B_COEFFICIENT = 4100.0;              // Beta coefficient for thermistor
+constexpr float THERMISTOR_NOMINAL_TEMPERATURE = 298.15;        // kelvin
+constexpr float THERMISTOR_SUPPLY_VOLTAGE = 2.7;
+constexpr float THERMISTOR_BETA_COEFF = 4100.0;              // Beta coefficient for thermistor
+constexpr float STEINHART_HART_A = 1.003702421E-3;
+constexpr float STEINHART_HART_B = 1.811901925E-4;
+constexpr float STEINHART_HART_C = 1.731869483E-7;
 #endif
 
 
@@ -99,7 +100,7 @@ inline int get_temperature_pin(int mass_sensor_idx) {
 #endif
 #elif HX711_PIN_CFG_1
 #if TEMPERATURE_SENSOR_COUNT == 1
-    return TEMPERATURE_PIN_0
+    return TEMPERATURE_PIN_0;
 #elif TEMPERATURE_SENSOR_COUNT == 3
     switch (mass_sensor_idx) {
         case 0:
@@ -110,12 +111,10 @@ inline int get_temperature_pin(int mass_sensor_idx) {
             return TEMPERATURE_PIN_2;
         default:
             assert(false && "Temperature pin out of range.");
+    }
 #else
     assert(false && "More than three temperature sensors has not been implemented.");
 #endif
-    }
 #endif
-
 }
-
 #endif /* constants_h */

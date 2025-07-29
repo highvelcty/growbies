@@ -1,5 +1,7 @@
 #include <new> // Required for placement new
 
+// #include "esp_adc_cal.h"
+
 #include "constants.h"
 #include "flags.h"
 #include <growbies.h>
@@ -170,8 +172,16 @@ Error Growbies::sample_temperature(float** iteration_temp_samples, int times) {
     Error error = ERROR_NONE;
     for (int iteration = 0; iteration < times; ++iteration) {
         for (int sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
+        #if ARDUINO_ARCH_AVR
             iteration_temp_samples[iteration][sensor_idx] = \
-                analogRead(get_temperature_pin(sensor_idx));
+                (static_cast<float>(analogRead(get_temperature_pin(sensor_idx))) / ADC_RESOLUTION)
+                * THERMISTOR_SUPPLY_VOLTAGE;
+
+        #elif ARDUINO_ARCH_ESP32
+            iteration_temp_samples[iteration][sensor_idx] = \
+                static_cast<float>(analogReadMilliVolts(get_temperature_pin(sensor_idx))) / 1000.0;
+        #endif
+
         }
     }
     return error;
@@ -249,7 +259,7 @@ void Growbies::read_units(RespMultiDataPoint* resp, const byte times, const Unit
     for (sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
         if ((units & UNIT_CELSIUS)) {
             resp->temperature_sensor[sensor_idx] = \
-                dac_to_celsius(resp->temperature_sensor[sensor_idx]);
+                steinhart_hart(resp->temperature_sensor[sensor_idx]);
         }
         resp->temperature += resp->temperature_sensor[sensor_idx];
      }

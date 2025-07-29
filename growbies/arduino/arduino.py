@@ -75,7 +75,7 @@ class Arduino(ArduinoTransport):
         return self.read_units(times, command.Unit.UNIT_MASS_DAC | command.Unit.UNIT_TEMP_DAC)
 
     def read_units(self, times: int = command.CmdReadUnits.DEFAULT_TIMES,
-                   units: command.Unit = command.Unit.UNIT_GRAMS | command.Unit.UNIT_FAHRENHEIT) \
+                   units: command.Unit = command.Unit.UNIT_GRAMS | command.Unit.UNIT_CELSIUS) \
             -> command.RespMultiDataPoint:
         cmd = command.CmdReadUnits(times=times, units=units)
         resp: command.RespMultiDataPoint = self.execute(cmd, read_timeout_sec=10)
