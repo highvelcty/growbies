@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from enum import StrEnum
 from pathlib import Path
 import sys
@@ -9,26 +9,14 @@ from . import __doc__ as pkg_doc
 from .monitor import main
 
 class Param(StrEnum):
-    PATH = 'path'
+    OUTPUT = 'output'
     TAG = 'tag'
 
-parser = ArgumentParser(description=pkg_doc)
-parser.add_argument(f'--{Param.TAG}', action='append', help='Session tags')
+parser = ArgumentParser(description=pkg_doc, formatter_class=ArgumentDefaultsHelpFormatter)
+parser.add_argument('-o', f'--{Param.OUTPUT}', help=f'Output directory path.',
+                    default=Session.DEFAULT_OUTPUT)
+parser.add_argument('-t', f'--{Param.TAG}', action='append', help='Session tags')
 
 ns_args = parser.parse_args(sys.argv[1:])
-tags = getattr(ns_args, Param.TAG)
-
-if tags is None:
-    sess = Session()
-else:
-    for path in RepoPaths.OUTPUT.value.iterdir():
-        for tag in tags:
-            if tag not in path.name:
-                break
-        else:
-            sess = Session(path)
-            break
-    else:
-        sess = Session(tags)
-
+sess = Session(getattr(ns_args, Param.OUTPUT), getattr(ns_args, Param.TAG))
 main(sess)

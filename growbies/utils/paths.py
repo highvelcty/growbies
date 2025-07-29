@@ -1,9 +1,11 @@
+import os
 from enum import Enum
 from pathlib import Path
 
 from growbies import constants
 
 _REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
+os.chdir(_REPO_ROOT)
 
 class RepoPaths(Enum):
     # .
