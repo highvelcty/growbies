@@ -22,6 +22,8 @@ class Session(object):
     def __init__(self, output: Optional[Path|str] = DEFAULT_OUTPUT,
                  tags: Optional[Iterable[str]] = None):
 
+        session_type_str = 'New'
+
         if output is None:
             self._output_dir = RepoPaths.OUTPUT.value
         else:
@@ -40,6 +42,7 @@ class Session(object):
                 else:
                     # All tags were found in the path. Set the output directory to the discovered
                     # path and quit searching.
+                    session_type_str = 'Existing'
                     self._session_dir = discovered_path
                     break
 
@@ -56,7 +59,7 @@ class Session(object):
 
         self._session_dir.mkdir(parents=True, exist_ok=True)
         log.start(RepoPaths.DEFAULT_LOG.value, file_level=logging.DEBUG, stdout_level=logging.INFO)
-        logger.info(f'New session\n'
+        logger.info(f'{session_type_str} session\n'
                     f'  path_to_data: {self.path_to_data}')
 
     @property
