@@ -29,7 +29,6 @@ constexpr int ADC_RESOLUTION = 4096;
 
 #if THERMISTOR_HW_0
 // Steinhart-hart coeffs calculated at 0*C, 25*C & 50*C
-
 constexpr float THERMISTOR_SERIES_RESISTOR = 100000.0;
 constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0;
 constexpr float THERMISTOR_NOMINAL_TEMPERATURE = 298.15;        // kelvin

@@ -4,7 +4,6 @@ import time
 from growbies.arduino.arduino import Arduino
 from growbies.arduino.structs.command import MASS_SENSOR_COUNT
 from growbies.arduino.structs.command import TEMPERATURE_SENSOR_COUNT
-from growbies.arduino.structs.command import CmdReadUnits
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
