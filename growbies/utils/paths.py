@@ -2,7 +2,7 @@ import os
 from enum import Enum
 from pathlib import Path
 
-from growbies import constants
+from growbies import constants, env
 
 _REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
 os.chdir(_REPO_ROOT)
@@ -30,10 +30,6 @@ class RepoPaths(Enum):
 
     # ./docs
     DOCS = REPO_ROOT / 'docs'
-
-    # ./endpoint
-    ENDPOINT = REPO_ROOT / 'endpoint'
-    ENDPOINT_ARDUINO = ENDPOINT / 'arduino'
 
     # ./growbies
     GROWBIES = REPO_ROOT / 'growbies'
@@ -73,7 +69,7 @@ class RepoPaths(Enum):
 
 class InstallPaths(Enum):
     # /usr/lib
-    USR_LIB = Path('/usr/lib')
+    USR_LIB =  Path(f'/usr/lib')
     USR_LIB_GROWBIES = USR_LIB / constants.APPNAME.lower()
     # /var/opt/db
     USR_LIB_GROWBIES_DB = USR_LIB_GROWBIES / 'db'

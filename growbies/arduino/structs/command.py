@@ -12,8 +12,8 @@ logger = logging.getLogger(__name__)
 # meyere, this needs closed loop and/or variable length returns.
 COEFF_COUNT = 2
 TARE_COUNT = 1
-MASS_SENSOR_COUNT = 3
-TEMPERATURE_SENSOR_COUNT = 3
+MASS_SENSOR_COUNT = 1
+TEMPERATURE_SENSOR_COUNT = 1
 
 # --- Base Classes ---------------------------------------------------------------------------------
 class Cmd(IntEnum):

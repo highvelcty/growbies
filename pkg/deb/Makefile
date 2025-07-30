@@ -1,4 +1,4 @@
-default: package
+default: build
 
 # ?= means to assign only if undefined
 CONTAINER ?= growbies_build
@@ -17,9 +17,11 @@ INTERNAL_WORKDIR = /code
 PATH_DIST = $(shell basename ${PATH_PKG_DEB_DIST})
 
 run_cmd = podman run --tty --interactive --rm \
+	$(shell ls /dev/ttyACM* /dev/ttyUSB* 2>/dev/null | sed 's|^|--device=|') \
+	--group-add keep-groups \
 	--volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR}
 
-external_build: start $(PATH_DIST)
+build: container start $(PATH_DIST)
 	make deb_src_copy -C "${REPO_ROOT}"
 	$(MAKE) ${PATH_DIST}
 
@@ -34,8 +36,7 @@ internal_build:
 		apt reinstall -y ./growbies*.deb; \
 	)
 
-package:
-	make deb_src_copy -C "${REPO_ROOT}"
+container:
 	podman build \
 		--volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR} \
 		--tag ${CONTAINER} \
