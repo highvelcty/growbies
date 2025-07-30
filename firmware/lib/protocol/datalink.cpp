@@ -1,6 +1,6 @@
 #include "datalink.h"
 
-uint16_t SlipBuf::buf_len() {
+uint16_t SlipBuf::buf_len() const {
     return this->buf_ptr - this->buf;
 }
 
@@ -10,7 +10,7 @@ void SlipBuf::reset() {
 }
 
 
-bool recv_slip(byte a_byte) {
+bool recv_slip(const byte a_byte) {
     if (a_byte == SLIP_END){
         return true;
     }
@@ -35,7 +35,7 @@ bool recv_slip(byte a_byte) {
 }
 
 
-void send_slip(byte* buf, unsigned int buf_len) {
+void send_slip(const byte* buf, unsigned int buf_len) {
     for (unsigned int idx = 0; idx < buf_len; ++idx){
         if (buf[idx] == SLIP_END){
             Serial.write(SLIP_ESC);

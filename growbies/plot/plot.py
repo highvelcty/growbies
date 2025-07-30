@@ -262,7 +262,7 @@ def mass_temperature_cal(path: Path):
     masses = data[1:1+MASS_SENSOR_COUNT+1]
     temperatures = data[1+MASS_SENSOR_COUNT+1:]
 
-    y1y2labels = ('Mass (grams)', 'Temperature (DAC)')
+    y1y2labels = ('Mass (grams)', 'Temperature (*C)')
     legend = headers[1:]
     _over_time(timestamps, masses, temperatures, y1y2labels, legend)
 

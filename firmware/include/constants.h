@@ -73,6 +73,7 @@ typedef enum Unit : uint16_t {
 
 #if BUTTERFLY
 constexpr auto BUTTERFLY_SAMPLES_PER_DATAPOINT = 7;
+constexpr auto WAIT_FOR_CMD_USECS = 100000;
 #endif
 
 inline int get_HX711_dout_pin(int sensor){

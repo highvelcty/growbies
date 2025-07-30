@@ -17,12 +17,12 @@ class SlipBuf {
         uint8_t* buf_ptr = buf;
         bool within_escape = false;
 
-        uint16_t buf_len();
+        uint16_t buf_len() const;
         void reset();
 };
 
 bool recv_slip(byte a_byte);
-void send_slip(byte* buf, unsigned int buf_len);
+void send_slip(const byte* buf, unsigned int buf_len);
 void send_slip_end();
 
 extern SlipBuf* slip_buf;

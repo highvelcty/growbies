@@ -293,7 +293,7 @@ class CmdGetDatapoint(BaseCmdWithTimesParam):
         RAW = '_raw'
 
     _fields_ = [
-        (Field.RAW, bool)
+        (Field.RAW, ctypes.c_bool)
     ]
 
     def __init__(self, *args, **kw):
