@@ -63,7 +63,7 @@ def main(sess: Session):
 
 
                     ts = get_utc_iso_ts_str()
-                    resp = arduino_serial.read_units()
+                    resp = arduino_serial.get_datapoint()
                     out_str = ''.join(
                             [f'{ts}, '] +
                             [f'{resp.mass_sensor[ii]}, ' for ii in range(MASS_SENSOR_COUNT)] +

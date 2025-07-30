@@ -39,7 +39,6 @@ constexpr float STEINHART_HART_B = 1.811901925E-4;
 constexpr float STEINHART_HART_C = 1.731869483E-7;
 #endif
 
-
 enum Pins : int {
 #if HX711_PIN_CFG_0
     DOUT_0_PIN = 8,
@@ -64,6 +63,17 @@ enum Pins : int {
     HW_I2C_SCL_PIN = D5,
 #endif
 };
+
+typedef enum Unit : uint16_t {
+    // Bitfield
+    UNIT_GRAMS          = 0x0001,
+    UNIT_MASS_DAC       = 0x0002,
+    UNIT_CELSIUS        = 0x0008,
+} Units;
+
+#if BUTTERFLY
+constexpr auto BUTTERFLY_SAMPLES_PER_DATAPOINT = 7;
+#endif
 
 inline int get_HX711_dout_pin(int sensor){
 #if HX711_PIN_CFG_0

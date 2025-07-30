@@ -71,14 +71,15 @@ class Arduino(ArduinoTransport):
         cmd.calibration.tare = mod_values
         self.execute(cmd)
 
-    def read_dac(self, times: int = 1):
-        return self.read_units(times, command.Unit.UNIT_MASS_DAC | command.Unit.UNIT_TEMP_DAC)
+    def get_raw_datapoint(self, times: int = 1) -> command.RespDataPoint:
+        cmd = command.CmdGetDatapoint(times=times, raw=True)
+        resp: command.RespDataPoint = self.execute(cmd, read_timeout_sec=10)
+        return resp
 
-    def read_units(self, times: int = command.CmdReadUnits.DEFAULT_TIMES,
-                   units: command.Unit = command.Unit.UNIT_GRAMS | command.Unit.UNIT_CELSIUS) \
-            -> command.RespMultiDataPoint:
-        cmd = command.CmdReadUnits(times=times, units=units)
-        resp: command.RespMultiDataPoint = self.execute(cmd, read_timeout_sec=10)
+    def get_datapoint(self, times: int = command.CmdGetDatapoint.DEFAULT_TIMES) \
+            -> command.RespDataPoint:
+        cmd = command.CmdGetDatapoint(times=times)
+        resp: command.RespDataPoint = self.execute(cmd, read_timeout_sec=10)
         return resp
 
     def reset_communication(self):

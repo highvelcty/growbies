@@ -1,6 +1,17 @@
 #include "constants.h"
+#include "flags.h"
 #include <growbies.h>
+
+#if FEATURE_DISPLAY
 #include <display.h>
+#endif
+
+#if BUTTERFLY
+#include "esp_sleep.h"
+#include <command.h>
+#endif
+
+
 
 #if FEATURE_LED
 #include "lib/led.h"
@@ -14,10 +25,8 @@ void setup() {
     //     //   baudrates for 8MHz for 57600 baud is 57554 or 57971.
     Serial.begin(57600);
     growbies.begin();
-#if ARDUINO_ARCH_AVR
+#if FEATURE_DISPLAY
     display->begin();
-#elif ARDUINO_ARCH_ESP32
-    // not implemented
 #endif
 
 #if LED_INSTALLED
@@ -31,6 +40,14 @@ void setup() {
 
 }
 
+#if BUTTERFLY
+void loop() {
+    // Read data
+    // Send data
+    // Wait for response
+    // Sleep
+}
+#else
 void loop() {
     while (!Serial.available()){
         delay(MAIN_POLLING_LOOP_INTERVAL_MS);
@@ -44,3 +61,4 @@ void loop() {
         slip_buf->reset();
     }
 }
+#endif

@@ -21,7 +21,7 @@ def main(sess: Session):
         # Sample scale under test
         samples = list()
         ts = get_utc_iso_ts_str()
-        data = arduino.read_units(7)
+        data = arduino.get_datapoint(7)
 
         # Initialize output file if necessary
         if not sess.path_to_data.exists():

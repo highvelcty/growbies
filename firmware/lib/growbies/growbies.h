@@ -25,17 +25,18 @@ typedef enum HX711Gain {
     HX711_GAIN_32 = 32
 } HX711Gain;
 
-
 class Growbies {
     public:
         Growbies();
         void begin() const;
 
         void execute(const PacketHdr* packet_hdr);
+#if BUTTERFLY
+        void exec_read();
+#endif
 
     private:
         uint8_t tare_idx = 0;
-
         byte outbuf[MAX_SLIP_UNENCODED_PACKET_BYTES] = {};
 
         static void power_off();
@@ -46,9 +47,10 @@ class Growbies {
                                        int rows, int cols, float thresh, float* out);
         Error sample_mass(float** iteration_mass_samples, int times, HX711Gain gain);
         Error sample_temperature(float** iteration_temp_samples, int times);
-        void read_units(RespMultiDataPoint* resp, byte times, Unit units,
+        void get_datapoint(RespDataPoint* resp, byte times, bool raw = false,
                         HX711Gain gain = HX711_GAIN_128);
-        void shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], HX711Gain gain);
+
+        static void shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], HX711Gain gain);
         Error wait_hx711_ready(int retries, unsigned long delay_ms);
 };
 

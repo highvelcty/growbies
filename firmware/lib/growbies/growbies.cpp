@@ -47,12 +47,12 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
         new (this->outbuf) RespVoid;
         send_packet(*this->outbuf, sizeof(RespVoid));
     }
-    else if (packet_hdr->type.cmd == Cmd::READ_UNITS) {
-        const auto* cmd = reinterpret_cast<CmdReadUnits *>(slip_buf->buf);
+    else if (packet_hdr->type.cmd == Cmd::GET_DATAPOINT) {
+        const auto* cmd = reinterpret_cast<CmdGetDatapoint *>(slip_buf->buf);
         if (validate_packet(*cmd)) {
             // This constructs at location
-            auto* resp = new (this->outbuf) RespMultiDataPoint;
-            this->read_units(resp, cmd->times, cmd->units);
+            auto* resp = new (this->outbuf) RespDataPoint;
+            this->get_datapoint(resp, cmd->times, cmd->raw);
             send_packet(*this->outbuf, sizeof(*resp));
          }
     }
@@ -95,6 +95,14 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
         send_packet(resp, sizeof(RespError));
     }
 }
+
+#if BUTTERFLY
+void Growbies::exec_read() {
+    auto* resp = new (this->outbuf) RespDataPoint;
+    this->get_datapoint(resp, BUTTERFLY_SAMPLES_PER_DATAPOINT);
+    send_packet(*this->outbuf, sizeof(*resp));
+}
+#endif
 
 void Growbies::power_off() {
     digitalWrite(HX711_SCK_PIN, HIGH);
@@ -187,22 +195,23 @@ Error Growbies::sample_temperature(float** iteration_temp_samples, int times) {
     return error;
 }
 
-void Growbies::read_units(RespMultiDataPoint* resp, const byte times, const Unit units,
-                          HX711Gain gain) {
+void Growbies::get_datapoint(RespDataPoint *resp, const byte times,
+                             const bool raw, const HX711Gain gain) {
     int iteration;
     int sensor_idx;
-    CalibrationStruct calibration_struct;
+    CalibrationStruct calibration_struct{};
     calibration_store->get(calibration_struct);
 
     // Allocate 2D arrays
-    float** iteration_mass_samples = (float**)malloc(times * sizeof(float*));
+    auto iteration_mass_samples = static_cast<float **>(malloc(times * sizeof(float *)));
     for (iteration = 0; iteration < times; ++iteration) {
-        iteration_mass_samples[iteration] = (float*)malloc(MASS_SENSOR_COUNT * sizeof(float));
+        iteration_mass_samples[iteration] = \
+            static_cast<float *>(malloc(MASS_SENSOR_COUNT * sizeof(float)));
     }
-    float** iteration_temp_samples = (float**)malloc(times * sizeof(float*));
+    auto iteration_temp_samples = static_cast<float **>(malloc(times * sizeof(float *)));
     for (iteration = 0; iteration < times; ++iteration) {
         iteration_temp_samples[iteration] = \
-            (float*)malloc(TEMPERATURE_SENSOR_COUNT * sizeof(float));
+            static_cast<float *>(malloc(TEMPERATURE_SENSOR_COUNT * sizeof(float)));
     }
 
 #if POWER_CONTROL
@@ -220,23 +229,21 @@ void Growbies::read_units(RespMultiDataPoint* resp, const byte times, const Unit
                                      times,
                                      MASS_SENSOR_COUNT,
                                      INVALID_MASS_SAMPLE_THRESHOLD_DAC,
-                                     (float*)&resp->mass_sensor);
+                                     reinterpret_cast<float *>(&resp->mass_sensor));
 
 #if TEMPERATURE_SENSOR_COUNT
     resp->error |= median_avg_filter(iteration_temp_samples,
                                      times,
                                      TEMPERATURE_SENSOR_COUNT,
                                      INVALID_MASS_SAMPLE_THRESHOLD_DAC,
-                                     (float*)&resp->temperature_sensor);
+                                     reinterpret_cast<float *>(&resp->temperature_sensor));
 #endif
 
-
-    // Units
     resp->mass = 0;
     resp->temperature = 0;
 
     for (sensor_idx = 0; sensor_idx < MASS_SENSOR_COUNT; ++sensor_idx) {
-        if (units & UNIT_GRAMS) {
+        if (!raw) {
             // mass/temperature compensation per sensor
             resp->mass_sensor[sensor_idx] -= (
                 (calibration_struct.mass_temperature_coeff[sensor_idx][0]
@@ -248,23 +255,21 @@ void Growbies::read_units(RespMultiDataPoint* resp, const byte times, const Unit
         // Sum  mass
         resp->mass += resp->mass_sensor[sensor_idx];
     }
-    if (units & UNIT_GRAMS) {
+    if (!raw) {
         // Mass calibration and tare
         resp->mass = ((resp->mass * calibration_struct.mass_coeff[0])
                       + calibration_struct.mass_coeff[1])
                      - calibration_struct.tare[this->tare_idx];
     }
 
-#if TEMPERATURE_SENSOR_COUNT
     for (sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
-        if ((units & UNIT_CELSIUS)) {
+        if (!raw) {
             resp->temperature_sensor[sensor_idx] = \
                 steinhart_hart(resp->temperature_sensor[sensor_idx]);
         }
         resp->temperature += resp->temperature_sensor[sensor_idx];
      }
     resp->temperature /= TEMPERATURE_SENSOR_COUNT;
-#endif
 
     // Free 2D arrays
     for(iteration = 0; iteration < times; ++iteration) {
@@ -309,10 +314,10 @@ void Growbies::shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], const HX711G
         #endif
             digitalWrite(HX711_SCK_PIN, LOW);
 
-            // This time intensive task needs to happen after pulling SCK low so as to not perturb
-            // time sensitive section when SCK is high.
+            // This time intensive task needs to happen after pulling SCK low to not perturb time
+            // sensitive section when SCK is high.
             for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
-                a_bit = (bool)(gpio_in_reg & get_HX711_dout_port_bit(sensor));
+                a_bit = static_cast<bool>(gpio_in_reg & get_HX711_dout_port_bit(sensor));
                 long_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
         }

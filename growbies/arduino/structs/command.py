@@ -20,37 +20,25 @@ class Cmd(IntEnum):
     LOOPBACK = 0
     GET_CALIBRATION = 1
     SET_CALIBRATION = 2
-    READ_UNITS = 3
+    GET_DATAPOINT = 3
     POWER_ON_HX711 = 4
     POWER_OFF_HX711 = 5
 
 class Resp(IntEnum):
     VOID = 0
-    BYTE = 1
-    LONG = 2
-    FLOAT = 3
-    DOUBLE = 4
-    READ_UNITS = 5
-    GET_CALIBRATION = 6
+    DATAPOINT = 1
+    CALIBRATION = 2
     ERROR = 0xFFFF
 
     @classmethod
     def get_struct(cls, packet: 'Packet') -> Optional[Type['TBaseResponse']]:
         if packet.header.type == cls.VOID:
             return RespVoid
-        elif packet.header.type == cls.BYTE:
-            return RespByte
-        elif packet.header.type == cls.LONG:
-            return RespLong
-        elif packet.header.type == cls.FLOAT:
-            return RespFloat
-        elif packet.header.type == cls.DOUBLE:
-            return RespDouble
         elif packet.header.type == cls.ERROR:
             return RespError
-        elif packet.header.type == cls.READ_UNITS:
-            return RespMultiDataPoint
-        elif packet.header.type == cls.GET_CALIBRATION:
+        elif packet.header.type == cls.DATAPOINT:
+            return RespDataPoint
+        elif packet.header.type == cls.CALIBRATION:
             return RespGetCalibration
 
         logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
@@ -66,17 +54,6 @@ class Error(IntEnum):
     OUT_OF_THRESHOLD_SAMPLE               = 0x00000004
     HX711_NOT_READY                       = 0x00000008
 
-class Phase(IntEnum):
-    A = 0
-    B = 1
-
-unit_t = ctypes.c_uint16
-class Unit(IntEnum):
-    # Bitfield
-    UNIT_GRAMS          = 0x0001
-    UNIT_MASS_DAC       = 0x0002
-    UNIT_TEMP_DAC       = 0x0004
-    UNIT_CELSIUS        = 0x0008
 
 # --- Base Classes ---------------------------------------------------------------------------------
 class BaseStructure(ctypes.Structure):
@@ -311,78 +288,31 @@ class CmdPowerOffHx711(BaseCommand):
         kw[self.Field.TYPE] = Cmd.POWER_OFF_HX711
         super().__init__(*args, **kw)
 
-class CmdReadUnits(BaseCmdWithTimesParam):
+class CmdGetDatapoint(BaseCmdWithTimesParam):
     class Field(BaseCmdWithTimesParam.Field):
-        UNITS = '_units'
+        RAW = '_raw'
 
     _fields_ = [
-        (Field.UNITS, unit_t)
+        (Field.RAW, bool)
     ]
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Cmd.READ_UNITS
+        kw[self.Field.TYPE] = Cmd.GET_DATAPOINT
         super().__init__(*args, **kw)
 
     @property
-    def units(self) -> unit_t:
-        return getattr(self, self.Field.UNITS)
+    def raw(self) -> bool:
+        return getattr(self, self.Field.RAW)
 
-    @units.setter
-    def units(self, val: unit_t):
-        setattr(self, self.Field.UNITS, val)
+    @raw.setter
+    def raw(self, val: bool):
+        setattr(self, self.Field.RAW, val)
 
 # --- Responses ------------------------------------------------------------------------------------
 class RespVoid(BaseResponse):
     def __init__(self, *args, **kw):
         kw[self.Field.TYPE] = Resp.VOID
         super().__init__(*args, **kw)
-
-
-class BaseRespWithData(BaseResponse):
-    class Field(BaseResponse.Field):
-        DATA = 'data'
-
-
-class RespByte(BaseRespWithData):
-    _fields_ = [
-        (BaseRespWithData.Field.DATA, ctypes.c_uint8)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Resp.BYTE
-        super().__init__(*args, **kw)
-
-
-class RespLong(BaseRespWithData):
-    _fields_ = [
-        (BaseRespWithData.Field.DATA, ctypes.c_int32)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Resp.LONG
-        super().__init__(*args, **kw)
-
-
-class RespFloat(BaseRespWithData):
-    _fields_ = [
-        (BaseRespWithData.Field.DATA, ctypes.c_float)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Resp.FLOAT
-        super().__init__(*args, **kw)
-
-
-class RespDouble(BaseRespWithData):
-    """Arduino uno has 4 byte double, the same as a float."""
-    _fields_ = [
-        (BaseRespWithData.Field.DATA, ctypes.c_float)
-    ]
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Resp.DOUBLE
-        super().__init__(*args, **kw)
-
 
 class RespError(BaseResponse):
     class Field(BaseResponse.Field):
@@ -418,7 +348,7 @@ class RespGetCalibration(BaseResponse):
     def calibration(self) -> Calibration:
         return getattr(self, self.Field.CALIBRATION)
 
-class RespMultiDataPoint(BaseResponse):
+class RespDataPoint(BaseResponse):
     class Field(BaseResponse.Field):
         MASS_SENSOR = '_mass_sensor'
         MASS = '_mass'
@@ -461,7 +391,7 @@ class RespMultiDataPoint(BaseResponse):
         return '\n'.join(str_list)
 
     @classmethod
-    def from_packet(cls, packet) -> Optional['RespMultiDataPoint']:
+    def from_packet(cls, packet) -> Optional['RespDataPoint']:
         return cls.make_class(packet).from_buffer(packet)
 
 # --- Protected functions --------------------------------------------------------------------------
