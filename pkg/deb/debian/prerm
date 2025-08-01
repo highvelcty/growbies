@@ -4,6 +4,6 @@ set -e
 
 source /usr/lib/growbies/paths.env
 
-systemctl stop growbies
+systemctl stop "${PATH_APPNAME}"
 rm -rf "${PATH_USR_LIB_GROWBIES_VENV}"
 
