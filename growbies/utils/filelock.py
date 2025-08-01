@@ -19,24 +19,19 @@ class FileLock(object):
         fcntl.lockf(self._fd.fileno(), fcntl.LOCK_UN)
         self._fd.close()
 
+    def __getattr__(self, name):
+        """
+        Delegate attribute access to the wrapped object.
+        """
+        return getattr(self._fd, name)
+
+
     def clear(self):
         """
         Clear contents of file and reset index to zero.
         """
         self._fd.seek(0)
         self._fd.truncate()
-
-    def flush(self):
-        self._fd.flush()
-
-    def read(self, n: int = -1) -> AnyStr:
-        return self._fd.read(n)
-
-    def write(self, s: AnyStr) -> int:
-        return self._fd.write(s)
-
-    def seek(self, offset: int, whence: int = 0) -> int:
-        return self._fd.seek(offset, whence)
 
 class PidFileLock(FileLock):
     def __enter__(self):

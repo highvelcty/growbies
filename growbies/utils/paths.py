@@ -5,7 +5,6 @@ from pathlib import Path
 from growbies import constants, env
 
 _REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
-os.chdir(_REPO_ROOT)
 
 class RepoPaths(Enum):
     # .
@@ -69,6 +68,7 @@ class RepoPaths(Enum):
 
 class InstallPaths(Enum):
     # /usr/lib
+    APPNAME = constants.APPNAME.lower()
     USR_LIB =  Path(f'/usr/lib')
     USR_LIB_GROWBIES = USR_LIB / constants.APPNAME.lower()
     # /var/opt/db

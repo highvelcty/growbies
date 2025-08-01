@@ -1,7 +1,7 @@
 [Unit]
 Description=Growbies Service
-Requires=growbies-config.service
-After=network.target growbies-config.service
+Requires=growbies-init-tables.service
+After=network.target growbies-init-tables.service
 
 [Service]
 User=growbies

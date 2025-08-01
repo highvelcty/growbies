@@ -3,18 +3,22 @@ from enum import StrEnum
 import sys
 
 from . import __doc__ as pkg_doc
-from . import init
+from .init_db_and_user import init_db_and_user
+from .init_tables import init_tables
 from growbies.constants import APPNAME
 
 SUBCMD = 'subcmd'
 
 class SubCmd(StrEnum):
-    INIT = 'init'
+    INIT_DB_AND_USER = 'init_db_and_user'
+    INIT_TABLES = 'init_tables'
 
     @classmethod
     def get_help_str(cls, sub_cmd_: 'SubCmd') -> str:
-        if sub_cmd_ == cls.INIT:
-            return f'Initialize the {APPNAME} local database.'
+        if sub_cmd_ == cls.INIT_DB_AND_USER:
+            return f'Initialize the {APPNAME} database.'
+        elif sub_cmd_ == cls.INIT_TABLES:
+            return f'Initialize tables for {APPNAME} database.'
         else:
             raise ValueError(f'Database sub-command "{sub_cmd_}" does not exist')
 
@@ -26,5 +30,8 @@ for sub_cmd in SubCmd:
 ns_args = parser.parse_args(sys.argv[1:])
 sub_cmd = getattr(ns_args, SUBCMD)
 
-if SubCmd.INIT == sub_cmd:
-    init.main()
+if SubCmd.INIT_DB_AND_USER == sub_cmd:
+    init_db_and_user()
+elif SubCmd.INIT_TABLES == sub_cmd:
+    init_tables()
+

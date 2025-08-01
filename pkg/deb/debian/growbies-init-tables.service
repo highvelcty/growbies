@@ -1,0 +1,13 @@
+[Unit]
+Description=Create and initialize Growbies database tables.
+Requires=growbies-init-db-and-user.service
+After=postgresql.service growbies-init-db-and-user.service
+
+[Service]
+User=growbies
+Group=growbies
+Type=oneshot
+ExecStart=/usr/bin/growbies db init_tables
+
+[Install]
+WantedBy=multi-user.target

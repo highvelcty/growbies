@@ -21,7 +21,7 @@ run_cmd = podman run --tty --interactive --rm \
 	--group-add keep-groups \
 	--volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR}
 
-build: container start $(PATH_DIST)
+build: image start $(PATH_DIST)
 	make deb_src_copy -C "${REPO_ROOT}"
 	$(MAKE) ${PATH_DIST}
 
@@ -36,7 +36,7 @@ internal_build:
 		apt install --reinstall -y ./growbies*.deb; \
 	)
 
-container:
+image:
 	podman build \
 		--volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR} \
 		--tag ${CONTAINER} \

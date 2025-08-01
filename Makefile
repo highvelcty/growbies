@@ -54,4 +54,3 @@ ${PATH_PKG_DEB_DEBIAN_SRC}: $(src_watch)
 		-cf - . | tar xf - -C ${PATH_PKG_DEB_DEBIAN_SRC}; \
 		touch ${PATH_PKG_DEB_DEBIAN_SRC}; \
 	)
-

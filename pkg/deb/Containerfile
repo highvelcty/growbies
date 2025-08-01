@@ -8,13 +8,16 @@ ENV PATHS_ENV=${PATH_SRC}/build/paths.env
 # Install  build dependencies
 RUN \
     apt update -y && \
+    apt install systemd -y && \
     apt install dh-make -y && \
     apt install debmake -y && \
     apt install build-essential -y && \
     # Install package specific build dependencies
     apt-get build-dep -y .
 
-# Build and install
+ \
+    # Build and install
+    # Build and install
 RUN \
     REPO_ROOT=${PATH_SRC} make internal_build
 

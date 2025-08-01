@@ -10,9 +10,12 @@ source "${PATH_USR_LIB_GROWBIES_VENV_ACTIVATE}"
 pip install "${PATH_USR_LIB_GROWBIES}"/*.whl --force-reinstall
 rm "${PATH_USR_LIB_GROWBIES}"/*.whl
 
-# Create a system user 'growbies' if it doesn't exist
+## Create a system user 'growbies' if it doesn't exist
 if ! id -u growbies >/dev/null 2>&1; then
-    adduser --system --group --no-create-home --quiet growbies
+#  useradd growbies --system --no-create-home --shell /sbin/nologin  // meyere, this in the end
+  useradd growbies --system --no-create-home --shell /bin/bash
+  usermod -aG dialout growbies
+  chown -R growbies:growbies "${PATH_USR_LIB_GROWBIES}" "${PATH_VAR_LIB_GROWBIES}"
 fi
 
 systemctl enable growbies

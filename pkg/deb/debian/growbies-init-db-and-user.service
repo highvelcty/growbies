@@ -1,13 +1,13 @@
 [Unit]
-Description=Configure Growbies
+Description=Configure Growbies database and account.;
 Requires=postgresql.service
 After=postgresql.service
 
 [Service]
 # This must be done as a service because root is required to perform the database administrative
-# tasks
+# tasks.
 Type=oneshot
-ExecStart=/usr/bin/growbies db init
+ExecStart=/usr/bin/growbies db init_db_and_user
 
 [Install]
 WantedBy=multi-user.target

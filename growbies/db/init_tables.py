@@ -16,8 +16,7 @@ def init_tables():
     # from growbies.db import models
     # engine = create_engine(constants.SQLMODEL_LOCAL_ADDRESS, echo_pool=True)
     # SQLModel.metadata.create_all(engine)
-
-    conn = psycopg2.connect(f'dbname={constants.DB_NAME} user={constants.DB_USER}')
+    conn = psycopg2.connect(f'dbname={constants.DB_NAME}')
 
     _create_tables(conn)
 
