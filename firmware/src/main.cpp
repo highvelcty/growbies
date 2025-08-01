@@ -68,8 +68,8 @@ void loop() {
     } while (current_time.tv_usec - start_time.tv_usec < WAIT_FOR_CMD_USECS);
 
 
-    // Wait for response
-    // Sleep
+    esp_sleep_enable_timer_wakeup(DEEP_SLEEP_USECS);
+    esp_deep_sleep_start();
 }
 #else
 void loop() {

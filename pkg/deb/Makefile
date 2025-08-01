@@ -27,13 +27,13 @@ build: container start $(PATH_DIST)
 
 internal_build:
 	( \
-		set -e; \
+		set -ex; \
 		PATHS_ENV=${PATHS_ENV} debuild --preserve-env -b --no-sign --lintian-opts --allow-root; \
 		mkdir -p ${PATH_DIST}; \
 		mv /growbies*.deb ${PATH_DIST}/; \
 		cd ${PATH_DIST}; \
 		dpkg-scanpackages --multiversion . | xz > Packages.xz; \
-		apt reinstall -y ./growbies*.deb; \
+		apt install --reinstall -y ./growbies*.deb; \
 	)
 
 container:

@@ -4,6 +4,8 @@ Requires=growbies-config.service
 After=network.target growbies-config.service
 
 [Service]
+User=growbies
+Group=growbies
 ExecStart=/usr/bin/growbies service start
 ExecStop=/usr/bin/growbies service stop
 SuccessExitStatus=0

@@ -10,6 +10,11 @@ source "${PATH_USR_LIB_GROWBIES_VENV_ACTIVATE}"
 pip install "${PATH_USR_LIB_GROWBIES}"/*.whl --force-reinstall
 rm "${PATH_USR_LIB_GROWBIES}"/*.whl
 
+# Create a system user 'growbies' if it doesn't exist
+if ! id -u growbies >/dev/null 2>&1; then
+    adduser --system --group --no-create-home --quiet growbies
+fi
+
 systemctl enable growbies
 if systemd-notify --booted; then
   systemctl restart growbies

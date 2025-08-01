@@ -5,7 +5,6 @@ import pickle
 import time
 
 from . import Op
-from growbies.db.init_tables import init_tables
 from growbies.utils.filelock import FileLock
 from growbies.utils.paths import InstallPaths
 
@@ -54,8 +53,7 @@ class Queue(object):
                         contents: list[TBaseCmd] = pickle.load(file)
                     except EOFError:
                         pass
-                    file.seek(0)
-                    file.truncate()
+                    file.clear()
 
                 self._cached_mtime = os.stat(self.PATH).st_mtime
                 break
@@ -71,23 +69,23 @@ class Queue(object):
             except EOFError:
                 pass
             contents.append(item)
-            file.seek(0)
-            file.truncate()
+            file.clear()
             pickle.dump(contents, file)
 
-def main():
-    init_tables()
-    queue = Queue()
-    queue.flush()
-    done = False
-    try:
-        while not done:
-            for cmd in queue.get():
-                if cmd.op == Op.STOP:
-                    done = True
-                    break
-                else:
-                    logger.error(f'Unknown command {cmd} received.')
-    except KeyboardInterrupt:
-        queue.put(StopCmd())
-        main()
+class Service:
+    def __init__(self):
+        self._queue = Queue()
+
+    def run(self):
+        done = False
+        try:
+            while not done:
+                for cmd in self._queue.get():
+                    if cmd.op == Op.STOP:
+                        done = True
+                        break
+                    else:
+                        logger.error(f'Unknown command {cmd} received.')
+        except KeyboardInterrupt:
+            self._queue.put(StopCmd())
+            return self.run()

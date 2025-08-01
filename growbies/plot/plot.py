@@ -259,8 +259,13 @@ def _over_time(timestamps: list[datetime], y1: list[list[float]], y2: list[list[
 def mass_temperature_cal(path: Path):
     headers, data = _extract_csv(path)
     timestamps = data[0]
-    masses = data[1:1+MASS_SENSOR_COUNT+1]
-    temperatures = data[1+MASS_SENSOR_COUNT+1:]
+    masses = list()
+    temperatures = list()
+    for idx, ydata in enumerate(data):
+        if 'mass' in headers[idx].lower():
+            masses.append(ydata)
+        elif 'temp' in headers[idx].lower():
+            temperatures.append(ydata)
 
     y1y2labels = ('Mass (grams)', 'Temperature (*C)')
     legend = headers[1:]
