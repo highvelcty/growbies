@@ -12,8 +12,7 @@ rm "${PATH_USR_LIB_GROWBIES}"/*.whl
 
 ## Create a system user 'growbies' if it doesn't exist
 if ! id -u growbies >/dev/null 2>&1; then
-#  useradd growbies --system --no-create-home --shell /sbin/nologin  // meyere, this in the end
-  useradd growbies --system --no-create-home --shell /bin/bash
+  useradd growbies --system --no-create-home --shell /sbin/nologin
   usermod -aG dialout growbies
   chown -R growbies:growbies "${PATH_USR_LIB_GROWBIES}" "${PATH_VAR_LIB_GROWBIES}"
 fi
