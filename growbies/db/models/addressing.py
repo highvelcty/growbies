@@ -40,5 +40,5 @@ class Endpoint(Base, table=True):
     device: Device = Relationship(back_populates=Device.__tablename__)
 
 assert (Gateway.__tablename__ == Account.gateways.prop.back_populates)
-assert (Device.__tablename__ == Gateway.gateways.prop.back_populates)
-assert (Endpoint.__tablename__ == Device.gateways.prop.back_populates)
+assert (Device.__tablename__ == Gateway.devices.prop.back_populates)
+assert (Endpoint.__tablename__ == Device.endpoints.prop.back_populates)
