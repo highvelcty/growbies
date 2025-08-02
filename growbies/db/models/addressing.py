@@ -5,7 +5,7 @@ class Base(SQLModel, table=False):
     def get_field_name(cls, ref) -> str:
 
         # noinspection PyTypeChecker
-        # Eric Meyer: false positive
+        # false positive?
         #   pycharm 2025.1.3.1 and sqlmodel 0.0.24
         for field_name in cls.model_fields:
             if getattr(cls, field_name) == ref:

@@ -34,4 +34,3 @@ if SubCmd.INIT_DB_AND_USER == sub_cmd:
     init_db_and_user()
 elif SubCmd.INIT_TABLES == sub_cmd:
     init_tables()
-
