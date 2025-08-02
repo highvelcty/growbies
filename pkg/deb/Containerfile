@@ -15,10 +15,7 @@ RUN \
     # Install package specific build dependencies
     apt-get build-dep -y .
 
- \
     # Build and install
-    # Build and install
-RUN \
-    REPO_ROOT=${PATH_SRC} make internal_build
+RUN REPO_ROOT=${PATH_SRC} make internal_build
 
 CMD [ "/usr/lib/systemd/systemd" ]

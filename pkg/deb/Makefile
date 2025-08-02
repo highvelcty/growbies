@@ -18,8 +18,7 @@ INTERNAL_WORKDIR = /code
 PATH_DIST = $(shell basename ${PATH_PKG_DEB_DIST})
 
 run_cmd = podman run --tty --interactive --rm \
-	$(shell ls /dev/ttyACM* /dev/ttyUSB* 2>/dev/null | sed 's|^|--device=|') \
-	--group-add keep-groups \
+ 	$(shell ls /dev/ttyACM* /dev/ttyUSB* 2>/dev/null | sed 's|^|--device=|') \
 	--volume ${REPO_ROOT}/${PATH_PKG_DEB}:${INTERNAL_WORKDIR}
 
 build: image start $(PATH_DIST)
