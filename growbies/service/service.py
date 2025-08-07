@@ -6,6 +6,7 @@ import time
 
 from . import Op
 from growbies.utils.filelock import FileLock
+from growbies.session import Session2
 from growbies.utils.paths import InstallPaths
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,7 @@ class Queue(object):
 class Service:
     def __init__(self):
         self._queue = Queue()
+        self._session = Session2()
 
     def run(self):
         done = False

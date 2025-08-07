@@ -1,1 +1,1 @@
-from .addressing import Account, Device, Gateway, Endpoint
+from .addressing import Account, Base, Device, Gateway, Endpoint

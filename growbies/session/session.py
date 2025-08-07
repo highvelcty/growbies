@@ -3,10 +3,10 @@ from pathlib import Path
 from typing import Iterable, Optional
 import logging
 
-from sqlmodel import create_engine
-
 from . import log
 from growbies.cfg import Cfg
+from growbies.db.engine import db_engine
+from growbies.db.models import Account, Gateway
 from growbies.utils.paths import RepoPaths
 from growbies.utils import timestamp
 
@@ -71,7 +71,11 @@ class Session(object):
 
 class Session2(object):
     def __init__(self):
-
+        # Load configuration from file.
         self._cfg = Cfg()
         self._cfg.load()
 
+        # Update the DB with account and gateway information input via configuration.
+        self._account = db_engine.merge_account(Account(**self._cfg.account.model_dump()))
+        self._gateway = db_engine.merge_gateway(Gateway(name=self._cfg.gateway.name,
+                                                        account=self._account.id))

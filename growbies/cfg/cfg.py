@@ -1,13 +1,12 @@
 from pydantic import BaseModel, Field
 from typing import ClassVar
-from yaml import safe_load_all
+from yaml import safe_load
 
 from growbies.constants import APPNAME, YAML_INDENT
 from growbies.utils.paths import InstallPaths
 
-
-class BaseCfg(BaseModel):
-    def _format_doc_str(self, _ret_str: list[str], indent: str, strip: bool = False):
+class Base(BaseModel):
+    def _doc_str_to_yaml(self, _ret_str: list[str], indent: str, strip: bool = False):
         if strip:
             lines = self.__doc__.strip().splitlines()
         else:
@@ -15,28 +14,35 @@ class BaseCfg(BaseModel):
         for line in lines:
             _ret_str.append(f'{indent}# {line}')
 
-    def _recursive_str(self, _ret_str: list[str], _level: int = 0):
+    def _make_yaml(self, _ret_str: list[str], _level: int = 0):
         indent = ' ' * YAML_INDENT * _level
         # noinspection PyTypeChecker
         for key in self.model_fields:
             value = getattr(self, key)
-            if isinstance(value, BaseCfg):
+            if isinstance(value, Base):
                 _ret_str.append('')
-                value._format_doc_str(_ret_str, indent, strip=True)
+                value._doc_str_to_yaml(_ret_str, indent, strip=True)
                 _ret_str.append(f'{indent}{key}:')
-                value._recursive_str(_ret_str, _level + 1)
+                value._make_yaml(_ret_str, _level + 1)
             else:
                 _ret_str.append(f'{indent}{key}: {value}')
 
-class Account(BaseCfg):
+    def __str__(self):
+        ret_str = list()
+        self._doc_str_to_yaml(ret_str, '')
+        self._make_yaml(ret_str)
+        return '\n'.join(ret_str)
+
+
+class Account(Base):
     """Account configuration."""
     name: str = 'Default'
 
-class Gateway(BaseCfg):
+class Gateway(Base):
     """Gateway configuration."""
     name: str = 'Default'
 
-class Cfg(BaseCfg):
+class Cfg(Base):
     account: Account = Field(default_factory=Account)
     gateway: Gateway = Field(default_factory=Gateway)
 
@@ -44,17 +50,12 @@ class Cfg(BaseCfg):
 
     @classmethod
     def load(cls):
-        return cls(**next(safe_load_all(cls.PATH)))
+        with open(cls.PATH, 'r') as inf:
+            return cls(**safe_load(inf))
 
     def save(self):
         self.PATH.parent.mkdir(parents=True, exist_ok=True)
         with open(self.PATH, 'w') as outf:
             outf.write(str(self))
-
-    def __str__(self):
-        ret_str = list()
-        self._format_doc_str(ret_str, '')
-        self._recursive_str(ret_str)
-        return '\n'.join(ret_str)
 
 Cfg.__doc__ = f'\n{APPNAME.capitalize()} configuration.\n\n'
