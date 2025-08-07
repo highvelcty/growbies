@@ -20,6 +20,9 @@ usermod -aG dialout "${PATH_APPNAME}"
 # Make application user the owner of the pertinent application paths
 chown -R "${PATH_APPNAME}":"${PATH_APPNAME}" "${PATH_USR_LIB_GROWBIES}" "${PATH_VAR_LIB_GROWBIES}"
 
+# Create a default configuration file if necessary.
+growbies cfg init --yes
+
 # Enable the service so that it will start with system boot.
 systemctl enable "${PATH_APPNAME}"
 # If the system has been booted

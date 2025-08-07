@@ -3,7 +3,10 @@ from pathlib import Path
 from typing import Iterable, Optional
 import logging
 
+from sqlmodel import create_engine
+
 from . import log
+from growbies.cfg import Cfg
 from growbies.utils.paths import RepoPaths
 from growbies.utils import timestamp
 
@@ -65,3 +68,10 @@ class Session(object):
     @property
     def path_to_data(self) -> Path:
         return self._session_dir / self.OutputFiles.DATA.value
+
+class Session2(object):
+    def __init__(self):
+
+        self._cfg = Cfg()
+        self._cfg.load()
+

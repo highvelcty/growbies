@@ -77,7 +77,7 @@ void loop() {
         delay(MAIN_POLLING_LOOP_INTERVAL_MS);
     }
 
-    if (recv_slip(Serial.read())){
+    if (recv_slip(Serial.read())) {
         const PacketHdr *packet_hdr = recv_packet();
         if (packet_hdr != nullptr) {
             growbies.execute(packet_hdr);

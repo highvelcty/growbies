@@ -32,15 +32,6 @@ class RepoPaths(Enum):
 
     # ./growbies
     GROWBIES = REPO_ROOT / 'growbies'
-    GROWBIES_DB = GROWBIES / 'db'
-    GROWBIES_DB_SQL = GROWBIES_DB / 'sql'
-    GROWBIES_DB_SQL_INIT_TABLES = GROWBIES_DB_SQL / 'init_tables.sql'
-    GROWBIES_EXEC = GROWBIES / 'exec'
-    GROWBIES_HUMAN_INPUT = GROWBIES / 'human_input'
-    GROWBIES_MONITOR = GROWBIES / 'monitor'
-    GROWBIES_PLOT = GROWBIES / 'plot'
-    GROWBIES_SAMPLE = GROWBIES / 'sample'
-    GROWBIES_SERVICE = GROWBIES / 'service'
 
     # ./output
     OUTPUT = REPO_ROOT / 'output'
@@ -67,26 +58,33 @@ class RepoPaths(Enum):
         return _REPO_ROOT / path.value
 
 class InstallPaths(Enum):
-    # /usr/lib
     APPNAME = constants.APPNAME.lower()
+
+    # /usr/bin
+    USR_BIN = Path(f'/usr/bin')
+
+    # /usr/lib
     USR_LIB =  Path(f'/usr/lib')
-    USR_LIB_GROWBIES = USR_LIB / constants.APPNAME.lower()
+    USR_LIB_GROWBIES = USR_LIB / APPNAME
+
+    # /var/lib
+    VAR_LIB = Path('/var/lib')
+    VAR_LIB_GROWBIES = VAR_LIB / APPNAME
+
     # /var/opt/db
     USR_LIB_GROWBIES_DB = USR_LIB_GROWBIES / 'db'
     USR_LIB_GROWBIES_VENV = USR_LIB_GROWBIES / 'venv'
     USR_LIB_GROWBIES_VENV_ACTIVATE = USR_LIB_GROWBIES_VENV / 'bin/activate'
 
-    # /usr/bin
-    USR_BIN = Path(f'/usr/bin')
-
-    # /var/lib
-    VAR_LIB = Path('/var/lib')
-    VAR_LIB_GROWBIES = VAR_LIB / constants.APPNAME.lower()
-
     # /var/opt/lock
     VAR_LIB_GROWBIES_LOCK = VAR_LIB_GROWBIES / 'lock'
     VAR_LIB_GROWBIES_LOCK_Q = VAR_LIB_GROWBIES_LOCK / 'cmd_queue.pkl'
     VAR_LIB_GROWBIES_LOCK_SERVICE = VAR_LIB_GROWBIES_LOCK / 'service.lock'
+
+    # /etc
+    ETC = Path(f'/etc')
+    ETC_GROWBIES = ETC / APPNAME
+    ETC_GROWBIES_YAML = ETC_GROWBIES / 'growbies.yaml'
 
 
 class DebianPaths(Enum):
