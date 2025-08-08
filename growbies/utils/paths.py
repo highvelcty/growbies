@@ -86,6 +86,9 @@ class InstallPaths(Enum):
     ETC_GROWBIES = ETC / APPNAME
     ETC_GROWBIES_YAML = ETC_GROWBIES / 'growbies.yaml'
 
+    SYS_BUS_USB_DEVICES = Path('/sys/bus/usb/devices')
+    DEV = Path('/dev')
+
 
 class DebianPaths(Enum):
     # .

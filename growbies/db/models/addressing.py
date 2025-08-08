@@ -12,14 +12,14 @@ class Base(SQLModel, table=False):
 
 class Account(Base, table=True):
     id: int = Field(default=None, primary_key=True)
-    name: str
+    name: str = Field(sa_column=Column(String, unique=True, index=True))
 
     gateways: list['Gateway'] = Relationship(back_populates='account_relation', cascade_delete=True)
 
 class Gateway(Base, table=True):
     """Gateway configuration."""
     id: int = Field(default=None, primary_key=True)
-    name: str
+    name: str = Field(sa_column=Column(String, unique=True, index=True))
     account: int = Field(
         sa_column=Column(
             Integer,
@@ -36,7 +36,7 @@ class Gateway(Base, table=True):
 
 class Device(Base, table=True):
     id: int = Field(default=None, primary_key=True)
-    name: str
+    name: str = Field(sa_column=Column(String, unique=True, index=True))
     gateway: int = Field(
         sa_column=Column(
             Integer,
@@ -54,7 +54,7 @@ class Device(Base, table=True):
 
 class Endpoint(Base, table=True):
     id: int = Field(default=None, primary_key=True)
-    name: str
+    name: str = Field(sa_column=Column(String, unique=True, index=True))
     device: int = Field(
         sa_column=Column(
             Integer,

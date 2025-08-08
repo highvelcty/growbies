@@ -33,6 +33,9 @@ class Engine:
             session.refresh(merged)
             return merged
 
+    def merge_account(self, account: Account) -> Account:
+        return self._merge(account)
+
     def merge_gateway(self, gateway: Gateway) -> Gateway:
         return self._merge(gateway)
 
