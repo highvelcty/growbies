@@ -1,11 +1,11 @@
-from typing import Optional, Iterator
+import logging
 import shlex
 import subprocess
 
-from prettytable import PrettyTable
-from pydantic import BaseModel
-
+from growbies.models.device import Device, Devices
 from growbies.utils.paths import InstallPaths
+
+logger = logging.getLogger(__name__)
 
 class SupportedVidPid:
     ESPRESSIF_DEBUG = (0x303a, 0x1001)
@@ -13,38 +13,7 @@ class SupportedVidPid:
 
     all_ = (ESPRESSIF_DEBUG, FTDI_FT232)
 
-class UsbDevice(BaseModel):
-    vid: int
-    pid: int
-    serial: str
-    path: Optional[str] = None
-
-    def __str__(self):
-        return f'{self.path} {self.serial} {hex(self.vid)}:{hex(self.pid)}'
-
-class UsbDevices(BaseModel):
-    devices: list[UsbDevice] = list()
-
-    def append(self, device: UsbDevice):
-        self.devices.append(device)
-
-    def __getitem__(self, index):
-        return self.devices[index]
-
-    def __len__(self):
-        return len(self.devices)
-
-    def __iter__(self) -> Iterator[UsbDevice]:
-        return iter(self.devices)
-
-    def __str__(self):
-        table = PrettyTable(('Path', 'Serial', 'VID:PID'))
-        for device in self.devices:
-            table.add_row([device.path, device.serial,
-                           f'{device.vid:04x}:{device.pid:04x}'])
-        return str(table)
-
-def _get_udevadm_info(devices: UsbDevices):
+def _get_udevadm_info(devices: Devices):
     paths = InstallPaths.DEV.value.glob('tty*')
     cmd = 'udevadm info --no-pager'
     split_cmd = shlex.split(cmd) + [str(path) for path in paths]
@@ -61,7 +30,7 @@ def _get_udevadm_info(devices: UsbDevices):
                 if serial == device.serial:
                     device.path = devname
 
-def _get_vid_pid_serial(devices: UsbDevices):
+def _get_vid_pid_serial(devices: Devices):
     for path in InstallPaths.SYS_BUS_USB_DEVICES.value.iterdir():
         path_to_vid = path / 'idVendor'
         path_to_pid = path / 'idProduct'
@@ -71,10 +40,10 @@ def _get_vid_pid_serial(devices: UsbDevices):
             pid = int(path_to_pid.read_text(), 16)
             serial = path_to_serial.read_text().strip()
             if (vid, pid) in SupportedVidPid.all_:
-                devices.append(UsbDevice(vid=vid, pid=pid, serial=serial))
+                devices.append(Device(vid=vid, pid=pid, serial=serial))
 
-def discover_usb() -> UsbDevices:
-    devices = UsbDevices()
+def ls() -> Devices:
+    devices = Devices()
     _get_vid_pid_serial(devices)
     _get_udevadm_info(devices)
     return devices

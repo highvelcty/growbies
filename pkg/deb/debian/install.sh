@@ -16,6 +16,7 @@ dh_installdocs
 dh_installdirs "${PATH_USR_LIB_GROWBIES}"
 dh_installdirs "${PATH_VAR_LIB_GROWBIES}"
 dh_installdirs "${PATH_VAR_LIB_GROWBIES_LOCK}"
+dh_installdirs "${PATH_VAR_LOG_GROWBIES}"
 
 # Install files
 dh_install "${PATH_DEBIAN_SRC}/${PATH_DIST}"/*.whl "${PATH_USR_LIB_GROWBIES}"

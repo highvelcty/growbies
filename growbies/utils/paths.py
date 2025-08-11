@@ -66,20 +66,22 @@ class InstallPaths(Enum):
     # /usr/lib
     USR_LIB =  Path(f'/usr/lib')
     USR_LIB_GROWBIES = USR_LIB / APPNAME
+    USR_LIB_GROWBIES_VENV = USR_LIB_GROWBIES / 'venv'
+    USR_LIB_GROWBIES_VENV_ACTIVATE = USR_LIB_GROWBIES_VENV / 'bin/activate'
 
     # /var/lib
     VAR_LIB = Path('/var/lib')
     VAR_LIB_GROWBIES = VAR_LIB / APPNAME
 
-    # /var/opt/db
-    USR_LIB_GROWBIES_DB = USR_LIB_GROWBIES / 'db'
-    USR_LIB_GROWBIES_VENV = USR_LIB_GROWBIES / 'venv'
-    USR_LIB_GROWBIES_VENV_ACTIVATE = USR_LIB_GROWBIES_VENV / 'bin/activate'
-
-    # /var/opt/lock
+    # /var/lib/lock
     VAR_LIB_GROWBIES_LOCK = VAR_LIB_GROWBIES / 'lock'
     VAR_LIB_GROWBIES_LOCK_Q = VAR_LIB_GROWBIES_LOCK / 'cmd_queue.pkl'
     VAR_LIB_GROWBIES_LOCK_SERVICE = VAR_LIB_GROWBIES_LOCK / 'service.lock'
+
+    # /var/log
+    VAR_LOG = Path('/var/log')
+    VAR_LOG_GROWBIES = VAR_LOG / APPNAME
+    VAR_LOG_GROWBIES_LOG = VAR_LOG_GROWBIES / 'growbies.log'
 
     # /etc
     ETC = Path(f'/etc')
@@ -88,6 +90,7 @@ class InstallPaths(Enum):
 
     SYS_BUS_USB_DEVICES = Path('/sys/bus/usb/devices')
     DEV = Path('/dev')
+    DEV_TTY_STR = DEV / 'tty*'
 
 
 class DebianPaths(Enum):

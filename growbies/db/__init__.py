@@ -1,1 +1,1 @@
-"""Interface to the database."""
+"""Database interface."""

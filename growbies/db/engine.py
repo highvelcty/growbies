@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from sqlmodel import create_engine, Session, SQLModel
 
 from .constants import SQLMODEL_LOCAL_ADDRESS
-from .models.addressing import Account, Gateway
+from growbies.models.db import Account, Gateway
 
 class Engine:
     def __init__(self):
@@ -18,7 +18,7 @@ class Engine:
 
     def init_tables(self):
         # All models representing tables found in the import space will be created.
-        from . import models
+        from growbies.models.db import addressing
         with Session(self._engine) as session:
             SQLModel.metadata.create_all(self._engine)
             session.commit()
