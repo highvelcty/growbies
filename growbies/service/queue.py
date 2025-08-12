@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 import atexit
 import os
 import pickle
@@ -35,7 +35,7 @@ class Queue:
         contents = list()
         while True:
             current_mtime = os.stat(self._path).st_mtime
-            if self._cached_mtime == current_mtime:
+            if block and (self._cached_mtime == current_mtime):
                 time.sleep(self._polling_interval_sec)
             else:
                 with FileLock(self._path, 'ab+') as file:
@@ -47,7 +47,8 @@ class Queue:
                     file.clear()
 
                 self._cached_mtime = os.stat(self._path).st_mtime
-                break
+                if contents:
+                    break
             if not block:
                 break
 
@@ -66,8 +67,10 @@ class Queue:
             pickle.dump(contents, file)
 
 class PidQueue(Queue):
-    def __init__(self, pid: int):
-        self._path = InstallPaths.VAR_LIB_GROWBIES_LOCK.value / f'{pid}_resp_queue.pkl'
+    def __init__(self, pid: Optional[int] = None):
+        if pid is None:
+            pid = os.getpid()
+        self._path = InstallPaths.RUN_GROWBIES.value / f'{pid}_resp_queue.pkl'
         super().__init__(self._path)
         atexit.register(self._cleanup)
 
@@ -84,13 +87,15 @@ class PidQueue(Queue):
 
 
 class ServiceQueue(Queue):
-    PATH = InstallPaths.VAR_LIB_GROWBIES_LOCK_Q.value
+    PATH = InstallPaths.RUN_GROWBIES.value
 
     def __init__(self):
         super().__init__(self.PATH)
+        self._pid = os.getpid()
 
     def get(self, *args) -> list[TBaseCmd]:
         return super().get()
 
-    def put(self, item: TBaseCmd):
-        return super().put(item)
+    def put(self, cmd: TBaseCmd):
+        cmd.qid = self._pid
+        return super().put(cmd)

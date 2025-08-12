@@ -32,7 +32,6 @@ sub_cmd = getattr(ns_args, SUBCMD)
 
 if SubCmd.LS == sub_cmd:
     pid = os.getpid()
-    with ServiceQueue() as cmd_q, \
-        PidQueue(pid) as resp_q:
-        cmd_q.put(DeviceLsCmd(qid=pid))
-        resp_q.get()
+    with ServiceQueue() as cmd_q, PidQueue() as resp_q:
+        cmd_q.put(DeviceLsCmd())
+        print(resp_q.get())

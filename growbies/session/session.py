@@ -4,7 +4,7 @@ from typing import Iterable, Optional
 import logging
 
 from . import log
-from growbies.cfg import Cfg
+from growbies.models.cfg import Cfg
 from growbies.db.engine import db_engine
 from growbies.models.db import Account, Gateway
 from growbies.utils.paths import InstallPaths, RepoPaths
@@ -81,6 +81,7 @@ class Session2(object):
         self._cfg.load()
 
         # Update the DB with account and gateway information input via configuration.
-        self._account = db_engine.merge_account(Account(**self._cfg.account.model_dump()))
-        self._gateway = db_engine.merge_gateway(Gateway(name=self._cfg.gateway.name,
-                                                        account=self._account.id))
+        self._account = db_engine.upsert_account(Account(**self._cfg.account.model_dump()))
+        print(f'emey account id: {self._account.id}')
+        self._gateway = db_engine.upsert_gateway(Gateway(name=self._cfg.gateway.name,
+                                                         account=self._account.id))

@@ -83,6 +83,11 @@ class InstallPaths(Enum):
     VAR_LOG_GROWBIES = VAR_LOG / APPNAME
     VAR_LOG_GROWBIES_LOG = VAR_LOG_GROWBIES / 'growbies.log'
 
+    # /run/growbies
+    # Note: created and available when "RuntimeDirectory=" is used in systemd service files
+    RUN = Path('/run')
+    RUN_GROWBIES = RUN / 'growbies'
+
     # /etc
     ETC = Path(f'/etc')
     ETC_GROWBIES = ETC / APPNAME

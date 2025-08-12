@@ -23,7 +23,9 @@ class Service:
                     elif cmd.cmd == Cmd.DEVICE_LS:
                         from growbies.device import ls
                         with PidQueue(cmd.qid) as resp_q:
-                            resp_q.put(ls())
+                            data = ls()
+                            logger.info(f'emey ls data:\n{data}')
+                            resp_q.put({'emey':'yo'})
                     else:
                         logger.error(f'Unknown command {cmd} received.')
         except KeyboardInterrupt:

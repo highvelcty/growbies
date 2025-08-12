@@ -15,10 +15,18 @@ if ! id -u "${PATH_APPNAME}" >/dev/null 2>&1; then
   # Add a system user/group that the application will be ran as
   useradd "${PATH_APPNAME}" --system --no-create-home --shell /bin/bash
 fi
-# Add the newly created group to the dialout group for serial port access
+# Add the newly created user to the dialout group for serial port access
 usermod -aG dialout "${PATH_APPNAME}"
 # Make application user the owner of the pertinent application paths
-chown -R "${PATH_APPNAME}":"${PATH_APPNAME}" "${PATH_USR_LIB_GROWBIES}" "${PATH_VAR_LIB_GROWBIES}"
+chown -R "${PATH_APPNAME}":"${PATH_APPNAME}" \
+  "${PATH_USR_LIB_GROWBIES}" "${PATH_VAR_LIB_GROWBIES}" "${PATH_VAR_LOG_GROWBIES}"
+
+# Create a group for sharing queue data between growbies and the installing user
+if ! getent group growbies-queue >/dev/null; then
+    groupadd --system growbies-queue
+fi
+usermod -aG growbies-queue growbies
+usermod -a -G growbies-queue "$SUDO_USER"
 
 # Create a default configuration file if necessary.
 growbies cfg init --yes
