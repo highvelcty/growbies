@@ -28,3 +28,7 @@ def format_float_list(title, headers: list[str], data: list[float]):
     table.add_row(data)
 
     return str(table)
+
+def format_8bit_binary(num: int) -> str:
+    bin_str = f'{num:08b}'
+    return ' '.join(bin_str[i:i+4] for i in range(0, 8, 4))

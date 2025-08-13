@@ -75,7 +75,6 @@ class InstallPaths(Enum):
 
     # /var/lib/lock
     VAR_LIB_GROWBIES_LOCK = VAR_LIB_GROWBIES / 'lock'
-    VAR_LIB_GROWBIES_LOCK_Q = VAR_LIB_GROWBIES_LOCK / 'cmd_queue.pkl'
     VAR_LIB_GROWBIES_LOCK_SERVICE = VAR_LIB_GROWBIES_LOCK / 'service.lock'
 
     # /var/log
@@ -87,6 +86,7 @@ class InstallPaths(Enum):
     # Note: created and available when "RuntimeDirectory=" is used in systemd service files
     RUN = Path('/run')
     RUN_GROWBIES = RUN / 'growbies'
+    RUN_GROWBIES_CMD_Q = RUN_GROWBIES / 'cmd_queue.pkl'
 
     # /etc
     ETC = Path(f'/etc')

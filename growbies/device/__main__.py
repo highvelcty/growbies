@@ -34,4 +34,4 @@ if SubCmd.LS == sub_cmd:
     pid = os.getpid()
     with ServiceQueue() as cmd_q, PidQueue() as resp_q:
         cmd_q.put(DeviceLsCmd())
-        print(resp_q.get())
+        print(next(resp_q.get()))

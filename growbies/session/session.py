@@ -81,7 +81,14 @@ class Session2(object):
         self._cfg.load()
 
         # Update the DB with account and gateway information input via configuration.
-        self._account = db_engine.upsert_account(Account(**self._cfg.account.model_dump()))
-        print(f'emey account id: {self._account.id}')
-        self._gateway = db_engine.upsert_gateway(Gateway(name=self._cfg.gateway.name,
+        self._account = db_engine.account.upsert(Account(**self._cfg.account.model_dump()))
+        self._gateway = db_engine.gateway.upsert(Gateway(name=self._cfg.gateway.name,
                                                          account=self._account.id))
+
+    @property
+    def account(self) -> Account:
+        return self._account
+
+    @property
+    def gateway(self) -> Gateway:
+        return self._gateway

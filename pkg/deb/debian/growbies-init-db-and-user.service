@@ -7,7 +7,7 @@ After=postgresql.service
 # This must be done as a service because root is required to perform the database administrative
 # tasks.
 Type=oneshot
-ExecStart=/usr/bin/growbies db init_db_and_user
+ExecStart=/usr/bin/growbies --keep_privileges db init_db_and_user
 
 [Install]
 WantedBy=multi-user.target

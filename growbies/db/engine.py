@@ -1,14 +1,20 @@
 from contextlib import contextmanager
+import logging
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import create_engine, select, Session, SQLModel
 
 from .constants import SQLMODEL_LOCAL_ADDRESS
-from growbies.models.db import Account, Gateway, TSQLModel
+from growbies.models.db import Account, Device, Devices, Gateway
 
-class Engine:
+logger = logging.getLogger(__name__)
+
+class DBEngine:
     def __init__(self):
         self._lazy_init_engine = None
+        self.account = AccountEngine(self)
+        self.gateway = GatewayEngine(self)
+        self.devices = DevicesEngine(self)
 
     @property
     def _engine(self):
@@ -27,7 +33,7 @@ class Engine:
             session.close()
 
     def _merge(self, thing):
-        with self._new_session() as session:
+        with self.new_session() as session:
             merged = session.merge(thing)
             session.commit()
             # To make dynamically created (such as id fields) accessible after session close
@@ -35,45 +41,27 @@ class Engine:
             session.refresh(merged)
             return merged
 
-    def _upsert(self, instance: TSQLModel) -> TSQLModel:
-        table = instance.__table__
-        # Get the single primary key column name
-        primary_keys = [col.name for col in table.primary_key.columns]
-        if len(primary_keys) != 1:
-            raise Exception("Composite primary keys not supported")
-        pk_name = primary_keys[0]
+    @contextmanager
+    def new_session(self):
+        session = Session(self._engine)
+        try:
+            yield session
+        finally:
+            session.close()
 
-        unique_key = "name"  # adjust if needed
+class AccountEngine:
+    def __init__(self, engine: DBEngine):
+        self._engine = engine
 
-        values = instance.model_dump(exclude_unset=True)
-
-        insert_stmt = pg_insert(table).values(values)
-        to_be_updated = {k: insert_stmt.excluded[k] for k in values if k != unique_key}
-        if not to_be_updated:
-            to_be_updated = values
-        update_stmt = insert_stmt.on_conflict_do_update(
-            index_elements=[unique_key],
-            set_={k: insert_stmt.excluded[k] for k in values if k != unique_key}
-        )
-
-        with self._new_session() as session:
+    def upsert(self, account: Account):
+        with self._engine.new_session() as session:
+            stmt = (
+                select(Account)
+                .where(Account.name == account.name)
+                .with_for_update()
+            )
             # noinspection PyTypeChecker
-            session.exec(update_stmt)
-            session.commit()
-
-            refreshed = session.get(type(instance), values.get(pk_name))
-            return refreshed
-
-    def upsert_account(self, account: Account) -> Account:
-        """
-        The implementation of account upsert varies from gateway upsert because, at the time of
-        this writing, there is only one column in the account table. If/when that changes,
-        the same path for upserting the gateway table can be reused.
-        """
-        with self._new_session() as session:
-            statement = select(Account).where(Account.name == account.name)
-            # noinspection PyTypeChecker
-            existing_account = session.exec(statement).first()
+            existing_account = session.exec(stmt).first()
 
             if existing_account:
                 return existing_account
@@ -83,16 +71,99 @@ class Engine:
                 session.refresh(account)
             return account
 
-    def upsert_gateway(self, gateway: Gateway) -> Gateway:
-        return self._upsert(gateway)
+class GatewayEngine:
+    def __init__(self, engine: DBEngine):
+        self._engine = engine
 
-    @contextmanager
-    def _new_session(self):
-        session = Session(self._engine)
-        try:
-            yield session
-        finally:
-            session.close()
+    def upsert(self, gateway: Gateway):
+        table = gateway.__table__
+        # Get the single primary key column name
+        unique_key = Gateway.Key.NAME
+
+        new_values = gateway.model_dump(exclude_unset=True)
+
+        insert_stmt = pg_insert(table).values(new_values)
+
+        # Always exclude the unique key on upsert
+        keys_to_exclude = [unique_key]
+
+        # Overwrite everything except the keys to be excluded. The insert_stmt.excluded is not
+        # data from the DB, but a special SQL expression construct representing the `EXCLUDED`
+        # table alias use in PostgresSQL `ON CONFLICT` clause.
+        key_to_update = {k: insert_stmt.excluded[k] for k in new_values if k not in keys_to_exclude}
+
+        # Filter based on
+        update_stmt = insert_stmt.on_conflict_do_update(
+            index_elements=[unique_key],
+            set_=key_to_update
+        )
+
+        with self._engine.new_session() as session:
+            # noinspection PyTypeChecker
+            session.exec(update_stmt)
+            session.commit()
+
+            stmt = (
+                select(Gateway)
+                .where(getattr(Gateway, unique_key) == gateway.name)
+            )
+            return session.exec(stmt).first()
+
+
+class DevicesEngine:
+    def __init__(self, engine: DBEngine):
+        self._engine = engine
+
+    def get_all(self) -> Devices:
+        with self._engine.new_session() as session:
+            stmt = select(Device)
+            results = session.exec(stmt).all()
+        return Devices(devices=list(results))
+
+    def _overwrite(self, device: Device) -> Device:
+        with self._engine.new_session() as session:
+            session.begin()  # explicitly start a transaction
+
+            # Lock the row by unique key
+            stmt = (
+                select(type(device))
+                .where(getattr(type(device), Device.Key.NAME) == device.name)
+                .with_for_update()
+            )
+            session.exec(stmt)
+
+            session.add(device)
+            session.commit()
+            session.refresh(device)
+            return device
+
+    def _merge_with_new(self, new_devices: Devices) -> Devices:
+        merged_devices = self.get_all()
+
+        # Update existing
+        for existing_device in merged_devices:
+            new_device = new_devices.get(existing_device.serial)
+            if new_device is not None:
+                existing_device.gateway = new_device.gateway
+                existing_device.serial = new_device.serial
+                existing_device.vid = new_device.vid
+                existing_device.pid = new_device.pid
+                existing_device.path = new_device.path
+                existing_device.state |= new_device.state
+
+        # Add new
+        new_serials = set((dev.serial for dev in new_devices))
+        existing_serials = set((dev.serial for dev in merged_devices))
+        for serial in (new_serials - existing_serials):
+            merged_devices.append(new_devices.get(serial))
+
+        return merged_devices
+
+    def merge_with_new(self, new_devices: Devices):
+        merged_devices = self._merge_with_new(new_devices)
+        for device in merged_devices:
+            self._overwrite(device)
+        return merged_devices
 
 # Application global singleton
-db_engine = Engine()
+db_engine = DBEngine()

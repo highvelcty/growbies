@@ -1,8 +1,11 @@
+import re
 import logging
 import shlex
 import subprocess
 
-from growbies.models.device import Device, Devices
+from growbies.models.db import Device, Devices, DeviceState
+from growbies.db.engine import db_engine
+from growbies.session import Session2
 from growbies.utils.paths import InstallPaths
 
 logger = logging.getLogger(__name__)
@@ -13,37 +16,45 @@ class SupportedVidPid:
 
     all_ = (ESPRESSIF_DEBUG, FTDI_FT232)
 
-def _get_udevadm_info(devices: Devices):
-    paths = InstallPaths.DEV.value.glob('tty*')
-    cmd = 'udevadm info --no-pager'
-    split_cmd = shlex.split(cmd) + [str(path) for path in paths]
-    proc = subprocess.run(split_cmd, stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE, check=True, encoding='utf-8')
 
-    devname = None
-    for line in proc.stdout.splitlines():
-        if 'DEVNAME=' in line:
-            devname = line.split('=')[-1]
-        if 'ID_USB_SERIAL_SHORT=' in line:
-            serial = line.split('=')[-1]
-            for device in devices:
-                if serial == device.serial:
-                    device.path = devname
+def ls(session: Session2) -> Devices:
+    new_devices = Devices()
+    _get_info(new_devices, session)
+    return db_engine.devices.merge_with_new(new_devices)
 
-def _get_vid_pid_serial(devices: Devices):
-    for path in InstallPaths.SYS_BUS_USB_DEVICES.value.iterdir():
-        path_to_vid = path / 'idVendor'
-        path_to_pid = path / 'idProduct'
-        path_to_serial = path / 'serial'
-        if path_to_vid.exists() and path_to_pid.exists() and path_to_serial.exists():
-            vid = int(path_to_vid.read_text(), 16)
-            pid = int(path_to_pid.read_text(), 16)
-            serial = path_to_serial.read_text().strip()
+def _get_info(devices: Devices, session: Session2):
+    vid_re = re.compile(r'.*idVendor.*==\"([0-9a-fA-F]+)\"')
+    pid_re = re.compile(r'.*idProduct.*==\"([0-9a-fA-F]+)\"')
+    serial_re = re.compile(r'.*serial.*==\"([^\"]+)\"')
+
+    paths = list(InstallPaths.DEV.value.glob('ttyUSB*'))
+    paths.extend(InstallPaths.DEV.value.glob('ttyACM*'))
+
+    for path in paths:
+        cmd = f'udevadm info --attribute-walk --no-pager {path}'
+        proc = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, check=True, encoding='utf-8')
+
+        vid = None
+        pid = None
+        serial = None
+
+        for line in proc.stdout.splitlines():
+            vid_search = vid_re.search(line)
+            if vid_search:
+                vid = int(vid_search.group(1), 16)
+            pid_search = pid_re.search(line)
+
+            if pid_search:
+                pid = int(pid_search.group(1), 16)
+
             if (vid, pid) in SupportedVidPid.all_:
-                devices.append(Device(vid=vid, pid=pid, serial=serial))
+                serial_search = serial_re.search(line)
+                if serial_search:
+                    serial = serial_search.group(1)
+                    break
 
-def ls() -> Devices:
-    devices = Devices()
-    _get_vid_pid_serial(devices)
-    _get_udevadm_info(devices)
-    return devices
+        if serial:
+            devices.append(Device(
+                gateway=session.gateway.id,
+                vid=vid, pid=pid, serial=serial, path=str(path), state=DeviceState.DISCOVERED))

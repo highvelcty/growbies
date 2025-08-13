@@ -10,7 +10,6 @@ ExecStart=/usr/bin/growbies service start
 ExecStop=/usr/bin/growbies service stop
 RuntimeDirectory=growbies
 RuntimeDirectoryMode=2770
-SupplementaryGroups=growbies-queue
 SuccessExitStatus=0
 
 [Install]

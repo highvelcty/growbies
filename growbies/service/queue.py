@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Iterator, Optional
 import atexit
 import os
 import pickle
@@ -31,7 +31,7 @@ class Queue:
         with FileLock(self._path, 'w'):
             pass
 
-    def get(self, block: bool = True) -> list[PickleableType]:
+    def get(self, block: bool = True) -> Iterator[PickleableType]:
         contents = list()
         while True:
             current_mtime = os.stat(self._path).st_mtime
@@ -52,7 +52,7 @@ class Queue:
             if not block:
                 break
 
-        return contents
+        yield from contents
 
     def put(self, item: PickleableType):
         contents = list()
@@ -68,14 +68,25 @@ class Queue:
 
 class PidQueue(Queue):
     def __init__(self, pid: Optional[int] = None):
+        # If pid is None, the file is being created from new. Cleanup with be automated. Else,
+        # if pid is not None, cleanup will not be automated as the object will be attaching to an
+        # existing file instead of creating from new. It is the responsibility of the creator to
+        # clean up.
         if pid is None:
             pid = os.getpid()
+            self._auto_cleanup = True
+        else:
+            self._auto_cleanup = False
+
         self._path = InstallPaths.RUN_GROWBIES.value / f'{pid}_resp_queue.pkl'
         super().__init__(self._path)
-        atexit.register(self._cleanup)
+
+        if self._auto_cleanup:
+            atexit.register(self._cleanup)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._cleanup()
+        if self._auto_cleanup:
+            self._cleanup()
 
     def _cleanup(self):
         try:
@@ -87,14 +98,14 @@ class PidQueue(Queue):
 
 
 class ServiceQueue(Queue):
-    PATH = InstallPaths.RUN_GROWBIES.value
+    PATH = InstallPaths.RUN_GROWBIES_CMD_Q.value
 
     def __init__(self):
         super().__init__(self.PATH)
         self._pid = os.getpid()
 
-    def get(self, *args) -> list[TBaseCmd]:
-        return super().get()
+    def get(self, *args) -> Iterator[TBaseCmd]:
+        yield from super().get()
 
     def put(self, cmd: TBaseCmd):
         cmd.qid = self._pid
