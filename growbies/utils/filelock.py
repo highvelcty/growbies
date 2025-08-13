@@ -1,10 +1,9 @@
 from pathlib import Path
-from typing import AnyStr
 import fcntl
 import os
 
 
-class FileLock(object):
+class FileLock:
     def __init__(self, path: Path, mode: str):
         self._path = path
         self._mode = mode

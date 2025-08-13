@@ -21,7 +21,7 @@ class SubCmd(StrEnum):
     STOP = 'stop'
 
     @classmethod
-    def get_help_str(cls, op: 'Op') -> str:
+    def get_help_str(cls, op: 'SubCmd') -> str:
         if op == cls.START:
             return f'Start the {APPNAME} service.'
         elif op == cls.STOP:

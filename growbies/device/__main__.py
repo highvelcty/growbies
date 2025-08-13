@@ -1,11 +1,9 @@
 from argparse import ArgumentParser, RawTextHelpFormatter
 from enum import StrEnum
 import logging
-import os
 import sys
-
 from . import __doc__ as pkg_doc
-from growbies.service import PidQueue, ServiceQueue
+from growbies.service.queue import PidQueue, ServiceQueue
 from growbies.models.service import DeviceLsCmd
 
 logger = logging.getLogger(__name__)
@@ -31,7 +29,6 @@ ns_args = parser.parse_args(sys.argv[1:])
 sub_cmd = getattr(ns_args, SUBCMD)
 
 if SubCmd.LS == sub_cmd:
-    pid = os.getpid()
     with ServiceQueue() as cmd_q, PidQueue() as resp_q:
         cmd_q.put(DeviceLsCmd())
         print(next(resp_q.get()))

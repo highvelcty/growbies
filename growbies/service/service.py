@@ -1,6 +1,7 @@
 import logging
 
 from .queue import ServiceQueue, PidQueue
+from growbies.device import discovery
 from growbies.models.service import ServiceStopCmd, Cmd
 from growbies.session import Session2
 
@@ -21,9 +22,8 @@ class Service:
                         done = True
                         break
                     elif cmd.cmd == Cmd.DEVICE_LS:
-                        from growbies.device import ls
                         with PidQueue(cmd.qid) as resp_q:
-                            data = ls(self._session)
+                            data = discovery.ls(self._session)
                             resp_q.put(data)
                     else:
                         logger.error(f'Unknown command {cmd} received.')

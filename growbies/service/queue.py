@@ -1,5 +1,6 @@
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Iterator, Optional
+from typing import Any, BinaryIO, cast, Generator, Iterator, Optional
 import atexit
 import os
 import pickle
@@ -12,7 +13,9 @@ from growbies.utils.paths import InstallPaths
 PickleableType = Any
 
 class Queue:
-    DEFAULT_POLLING_INTERVAL_SEC = 0.25
+    BLOCKING_IO_ERROR_RETRIES = 5
+    BLOCKING_IO_ERROR_DELAY_SEC = 0.01
+    DEFAULT_POLLING_INTERVAL_SEC = 0.01
     def __init__(self,
                  path: Path,
                  polling_interval_sec: float = DEFAULT_POLLING_INTERVAL_SEC):
@@ -28,8 +31,8 @@ class Queue:
         pass
 
     def flush(self):
-        with FileLock(self._path, 'w'):
-            pass
+        with self._file_lock as file:
+            file.flush()
 
     def get(self, block: bool = True) -> Iterator[PickleableType]:
         contents = list()
@@ -38,15 +41,14 @@ class Queue:
             if block and (self._cached_mtime == current_mtime):
                 time.sleep(self._polling_interval_sec)
             else:
-                with FileLock(self._path, 'ab+') as file:
+                self._cached_mtime = current_mtime
+                with self._file_lock() as file:
                     file.seek(0)
                     try:
-                        contents = pickle.load(file)
+                        contents = pickle.load(cast(BinaryIO, file))
                     except EOFError:
                         pass
                     file.clear()
-
-                self._cached_mtime = os.stat(self._path).st_mtime
                 if contents:
                     break
             if not block:
@@ -56,15 +58,35 @@ class Queue:
 
     def put(self, item: PickleableType):
         contents = list()
-        with FileLock(self._path, 'ab+') as file:
+        with self._file_lock() as file:
             file.seek(0)
             try:
-                contents: pickle.load(file)
+                contents = pickle.load(cast(BinaryIO, file))
             except EOFError:
                 pass
             contents.append(item)
             file.clear()
+            # noinspection PyTypeChecker
             pickle.dump(contents, file)
+
+    @contextmanager
+    def _file_lock(self) -> Generator[FileLock, None, None]:
+        """Context manager for safely opening a file with retries on BlockingIOError."""
+        last_exc: Exception | None = None
+
+        for _ in range(self.BLOCKING_IO_ERROR_RETRIES):
+            try:
+                with FileLock(self._path, 'ab+') as file:
+                    yield file
+                return
+            except BlockingIOError as e:
+                last_exc = e
+                time.sleep(self.BLOCKING_IO_ERROR_DELAY_SEC)
+
+        # if we exhausted all retries, propagate the last exception
+        if last_exc is not None:
+            raise last_exc
+
 
 class PidQueue(Queue):
     def __init__(self, pid: Optional[int] = None):
@@ -95,7 +117,6 @@ class PidQueue(Queue):
             pass
         except Exception as e:
             print(f"Warning: failed to remove {self._path} at exit: {e}")
-
 
 class ServiceQueue(Queue):
     PATH = InstallPaths.RUN_GROWBIES_CMD_Q.value

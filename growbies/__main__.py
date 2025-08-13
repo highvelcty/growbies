@@ -1,8 +1,7 @@
-from argparse import ArgumentParser, RawTextHelpFormatter, RawDescriptionHelpFormatter
+from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import os
 import shlex
 import sys
-
 from . import __doc__ as pkg_doc
 from . import cfg, db, device, exec, human_input, monitor, plot, sample, service
 from .constants import USERNAME
@@ -34,3 +33,4 @@ delattr(ns, Param.KEEP_PRIVILEGES)
 sub_cmd = shlex.split(f'{sys.executable} -m {__package__}.{getattr(ns, CMD)} ') + args
 
 os.execvp(sys.executable, sub_cmd)
+
