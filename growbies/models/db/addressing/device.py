@@ -10,7 +10,9 @@ from .base import KeyStr
 from .gateway import Gateway
 if TYPE_CHECKING:
     from .endpoint import Endpoint
+from growbies.utils.types import Serial_t
 from growbies.utils.report import format_8bit_binary
+
 
 class ConnectionState(IntEnum):
     INITIAL     = 0x00
@@ -42,7 +44,7 @@ class Device(SQLModel, table=True):
             nullable =False
         )
     )
-    serial: str = Field(sa_column=Column(String, unique=True, index=True))
+    serial: Serial_t = Field(sa_column=Column(String, unique=True, index=True))
     vid: int
     pid: int
     path: str

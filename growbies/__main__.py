@@ -16,7 +16,7 @@ parser = ArgumentParser(description=pkg_doc,
                         formatter_class=RawDescriptionHelpFormatter)
 sub = parser.add_subparsers(dest=CMD, required=True)
 
-for pkg in (cfg, db, device,  exec, human_input, monitor, plot, sample, service):
+for pkg in (cfg, db, device, exec, human_input, monitor, plot, sample, service):
     sub.add_parser(pkg.__name__.split('.')[-1], help=pkg.__doc__, add_help=False)
 
 parser.add_argument(f'--{Param.KEEP_PRIVILEGES}', default=False, action='store_true',

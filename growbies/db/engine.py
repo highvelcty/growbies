@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from typing import Iterator
 import logging
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -6,6 +7,7 @@ from sqlmodel import create_engine, select, Session, SQLModel
 
 from .constants import SQLMODEL_LOCAL_ADDRESS
 from growbies.models.db import Account, Device, Devices, Gateway
+from growbies.utils.types import Serial_t
 
 logger = logging.getLogger(__name__)
 
@@ -120,6 +122,10 @@ class DevicesEngine:
             results = session.exec(stmt).all()
         return Devices(devices=list(results))
 
+    def get_all_serials(self) -> Iterator[Serial_t]:
+        for device in self.get_all():
+            yield device.serial
+
     def _overwrite(self, device: Device) -> Device:
         with self._engine.new_session() as session:
             session.begin()  # explicitly start a transaction
@@ -164,6 +170,12 @@ class DevicesEngine:
         for device in merged_devices:
             self._overwrite(device)
         return merged_devices
+
+    def activate(self, *serials: Serial_t):
+        pass
+
+    def deactivate(self, *serials: Serial_t):
+        pass
 
 # Application global singleton
 db_engine = DBEngine()

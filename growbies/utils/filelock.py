@@ -30,7 +30,7 @@ class FileLock:
         Clear contents of file and reset index to zero.
         """
         self._fd.seek(0)
-        self._fd.truncate()
+        self._fd.truncate(0)
 
 class PidFileLock(FileLock):
     def __enter__(self):
@@ -43,8 +43,7 @@ class PidFileLock(FileLock):
         return fd
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._fd.seek(0)
-        self._fd.truncate()
+        self.clear()
         super().__exit__(exc_type, exc_val, exc_tb)
 
     def get_pid(self) -> int:

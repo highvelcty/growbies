@@ -1,28 +1,40 @@
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, BinaryIO, cast, Generator, Iterator, Optional
+from typing import BinaryIO, cast, Generator, Iterator, Optional
 import atexit
+import logging
 import os
 import pickle
 import time
 
+from inotify_simple import INotify, flags
+
 from growbies.models.service import TBaseCmd
 from growbies.utils.filelock import FileLock
 from growbies.utils.paths import InstallPaths
+from growbies.utils.types import Pickleable_t
 
-PickleableType = Any
+logger = logging.getLogger(__name__)
+
 
 class Queue:
     BLOCKING_IO_ERROR_RETRIES = 5
     BLOCKING_IO_ERROR_DELAY_SEC = 0.01
+    DEFAULT_GET_TIMEOUT_SEC = 10
     DEFAULT_POLLING_INTERVAL_SEC = 0.01
     def __init__(self,
                  path: Path,
                  polling_interval_sec: float = DEFAULT_POLLING_INTERVAL_SEC):
+
         self._path = Path(path)
         self._polling_interval_sec = polling_interval_sec
-        self._cached_mtime = 0
+
+        # Initialize path
         self._path.touch(exist_ok=True)
+        self._inotify = INotify()
+        self._inotify_watch = None
+
+        self._cached_mtime = 0
 
     def __enter__(self):
         return self
@@ -30,33 +42,43 @@ class Queue:
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-    def flush(self):
-        with self._file_lock as file:
-            file.flush()
-
-    def get(self, block: bool = True) -> Iterator[PickleableType]:
+    def _read_contents(self) -> list[Pickleable_t]:
         contents = list()
-        while True:
-            current_mtime = os.stat(self._path).st_mtime
-            if block and (self._cached_mtime == current_mtime):
-                time.sleep(self._polling_interval_sec)
+
+        with self._file_lock() as file:
+            file.seek(0)
+            try:
+                contents = pickle.load(cast(BinaryIO, file))
+            except EOFError:
+                pass
+
+            if contents:
+                file.clear()
             else:
-                self._cached_mtime = current_mtime
-                with self._file_lock() as file:
-                    file.seek(0)
-                    try:
-                        contents = pickle.load(cast(BinaryIO, file))
-                    except EOFError:
-                        pass
-                    file.clear()
-                if contents:
+                if not self._inotify_watch:
+                    self._inotify_watch = self._inotify.add_watch(self._path, flags.CLOSE_WRITE)
+
+        return contents
+
+    def get(self, timeout: int = DEFAULT_GET_TIMEOUT_SEC) -> Iterator[Pickleable_t]:
+        contents = self._read_contents()
+        if not contents:
+            events = list()
+            startt = time.time()
+            # Comparing to length 2 because the first event will be from closing the file handle
+            # from the read. The read has to have write permissions to obtain the file lock.
+            while len(events) < 2:
+                timeout_remaining = timeout - (time.time() - startt)
+                if timeout_remaining < 0:
                     break
-            if not block:
-                break
+                events.extend(self._inotify.read(timeout=int(timeout_remaining) * 1000))
+
+            if events:
+                contents = self._read_contents()
 
         yield from contents
 
-    def put(self, item: PickleableType):
+    def put(self, item: Pickleable_t):
         contents = list()
         with self._file_lock() as file:
             file.seek(0)
