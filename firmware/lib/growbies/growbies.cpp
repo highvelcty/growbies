@@ -203,12 +203,12 @@ void Growbies::get_datapoint(RespDataPoint *resp, const byte times,
     calibration_store->get(calibration_struct);
 
     // Allocate 2D arrays
-    auto iteration_mass_samples = static_cast<float **>(malloc(times * sizeof(float *)));
+    const auto iteration_mass_samples = static_cast<float **>(malloc(times * sizeof(float *)));
     for (iteration = 0; iteration < times; ++iteration) {
         iteration_mass_samples[iteration] = \
             static_cast<float *>(malloc(MASS_SENSOR_COUNT * sizeof(float)));
     }
-    auto iteration_temp_samples = static_cast<float **>(malloc(times * sizeof(float *)));
+    const auto iteration_temp_samples = static_cast<float **>(malloc(times * sizeof(float *)));
     for (iteration = 0; iteration < times; ++iteration) {
         iteration_temp_samples[iteration] = \
             static_cast<float *>(malloc(TEMPERATURE_SENSOR_COUNT * sizeof(float)));

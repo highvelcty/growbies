@@ -1,5 +1,5 @@
-from .account import Account
-from .gateway import Gateway
-from .device import Device, Devices, DeviceState
-from .endpoint import Endpoint
-from .base import TSQLModel, KeyStr
+from .addressing.account import Account
+from .addressing.gateway import Gateway
+from .addressing.device import Device, Devices, ConnectionState
+from .addressing.endpoint import Endpoint
+from .addressing.base import TSQLModel, KeyStr

@@ -3,7 +3,7 @@ import logging
 import shlex
 import subprocess
 
-from growbies.models.db import Device, Devices, DeviceState
+from growbies.models.db import Device, Devices, ConnectionState
 from growbies.db.engine import db_engine
 from growbies.session import Session2
 from growbies.utils.paths import InstallPaths
@@ -57,4 +57,4 @@ def _get_info(devices: Devices, session: Session2):
         if serial:
             devices.append(Device(
                 gateway=session.gateway.id,
-                vid=vid, pid=pid, serial=serial, path=str(path), state=DeviceState.DISCOVERED))
+                vid=vid, pid=pid, serial=serial, path=str(path), state=ConnectionState.DISCOVERED))

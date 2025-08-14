@@ -71,7 +71,7 @@ class Queue:
 
     @contextmanager
     def _file_lock(self) -> Generator[FileLock, None, None]:
-        """Context manager for safely opening a file with retries on BlockingIOError."""
+        """Context manager for opening a file with retries on BlockingIOError."""
         last_exc: Exception | None = None
 
         for _ in range(self.BLOCKING_IO_ERROR_RETRIES):

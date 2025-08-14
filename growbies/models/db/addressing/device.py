@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from .endpoint import Endpoint
 from growbies.utils.report import format_8bit_binary
 
-class DeviceState(IntEnum):
+class ConnectionState(IntEnum):
     INITIAL     = 0x00
     DISCOVERED  = 0x01
     ACTIVE      = 0x02
@@ -46,7 +46,7 @@ class Device(SQLModel, table=True):
     vid: int
     pid: int
     path: str
-    state: DeviceState
+    state: ConnectionState
 
     gateway_relation: Gateway = Relationship(back_populates='devices')
     endpoints: list['Endpoint'] = Relationship(back_populates='device_relation',
@@ -57,38 +57,38 @@ class Device(SQLModel, table=True):
             self._device = device
 
         # Helper methods to set and clear bits
-        def _set_flag(self, flag: DeviceState, value: bool):
+        def _set_flag(self, flag: ConnectionState, value: bool):
             if value:
                 self._device.state |= flag
             else:
                 self._device.state &= ~flag
 
-        def _get_flag(self, flag: DeviceState) -> bool:
+        def _get_flag(self, flag: ConnectionState) -> bool:
             return bool(self._device.state & flag)
 
         @property
         def discovered(self) -> bool:
-            return self._get_flag(DeviceState.DISCOVERED)
+            return self._get_flag(ConnectionState.DISCOVERED)
 
         @discovered.setter
         def discovered(self, value: bool):
-            self._set_flag(DeviceState.DISCOVERED, value)
+            self._set_flag(ConnectionState.DISCOVERED, value)
 
         @property
         def active(self) -> bool:
-            return self._get_flag(DeviceState.ACTIVE)
+            return self._get_flag(ConnectionState.ACTIVE)
 
         @active.setter
         def active(self, value: bool):
-            self._set_flag(DeviceState.ACTIVE, value)
+            self._set_flag(ConnectionState.ACTIVE, value)
 
         @property
         def connected(self) -> bool:
-            return self._get_flag(DeviceState.CONNECTED)
+            return self._get_flag(ConnectionState.CONNECTED)
 
         @connected.setter
         def connected(self, value: bool):
-            self._set_flag(DeviceState.CONNECTED, value)
+            self._set_flag(ConnectionState.CONNECTED, value)
 
     def __str__(self):
         return (f'{self.name} {self.serial} '
