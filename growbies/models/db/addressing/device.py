@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import IntFlag
 from typing import Iterator, Optional, TYPE_CHECKING
 
 from prettytable import PrettyTable
@@ -14,7 +14,7 @@ from growbies.utils.types import Serial_t
 from growbies.utils.report import format_8bit_binary
 
 
-class ConnectionState(IntEnum):
+class ConnectionState(IntFlag):
     INITIAL     = 0x00
     DISCOVERED  = 0x01
     ACTIVE      = 0x02
@@ -47,12 +47,18 @@ class Device(SQLModel, table=True):
     serial: Serial_t = Field(sa_column=Column(String, unique=True, index=True))
     vid: int
     pid: int
-    path: str
-    state: ConnectionState
+    path: Optional[str]
+    state: ConnectionState = \
+        Field(sa_column=Column(Integer, nullable=False, default=ConnectionState.INITIAL))
 
     gateway_relation: Gateway = Relationship(back_populates='devices')
     endpoints: list['Endpoint'] = Relationship(back_populates='device_relation',
                                                cascade_delete=True)
+
+    def initialize_discovered_info(self):
+        # Clear bit.
+        self.state &= ~ConnectionState.DISCOVERED
+        self.path = None
 
     class State:
         def __init__(self, device: 'Device'):
@@ -97,7 +103,7 @@ class Device(SQLModel, table=True):
                 f'{hex(self.vid)}:{hex(self.pid)} {hex(self.state)} {self.path}')
 
 class Devices(BaseModel):
-    devices: list[Device] = list()
+    devices: list[Device] = Field(default_factory=list)
 
     def get(self, serial) -> Optional[Device]:
         for dev in self.devices:
@@ -117,9 +123,12 @@ class Devices(BaseModel):
     def __iter__(self) -> Iterator[Device]:
         return iter(self.devices)
 
+    def sort(self) -> 'Devices':
+        return Devices(devices=sorted(self.devices, key=lambda d: d.serial))
+
     def __str__(self):
         table = PrettyTable(('Name', 'Serial', 'VID:PID', 'State', 'Path'))
-        for device in self.devices:
+        for device in self.sort():
             table.add_row([device.name, device.serial,
                            f'{device.vid:04x}:{device.pid:04x}',
                            f'{format_8bit_binary(device.state)}', device.path])

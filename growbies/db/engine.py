@@ -1,12 +1,12 @@
 from contextlib import contextmanager
-from typing import Iterator
 import logging
 
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import create_engine, select, Session, SQLModel
 
 from .constants import SQLMODEL_LOCAL_ADDRESS
-from growbies.models.db import Account, Device, Devices, Gateway
+from growbies.models.db import Account, ConnectionState, Device, Devices, Gateway
+
 from growbies.utils.types import Serial_t
 
 logger = logging.getLogger(__name__)
@@ -122,9 +122,8 @@ class DevicesEngine:
             results = session.exec(stmt).all()
         return Devices(devices=list(results))
 
-    def get_all_serials(self) -> Iterator[Serial_t]:
-        for device in self.get_all():
-            yield device.serial
+    def get_all_serials(self) -> list[Serial_t]:
+        return [dev.serial for dev in self.get_all()]
 
     def _overwrite(self, device: Device) -> Device:
         with self._engine.new_session() as session:
@@ -143,39 +142,53 @@ class DevicesEngine:
             session.refresh(device)
             return device
 
-    def _merge_with_new(self, new_devices: Devices) -> Devices:
+    def _merge_with_discovered(self, discovered_devices: Devices) -> Devices:
         merged_devices = self.get_all()
 
-        # Update existing
+        # Update existing in DB.
         for existing_device in merged_devices:
-            new_device = new_devices.get(existing_device.serial)
-            if new_device is not None:
-                existing_device.gateway = new_device.gateway
-                existing_device.serial = new_device.serial
-                existing_device.vid = new_device.vid
-                existing_device.pid = new_device.pid
-                existing_device.path = new_device.path
-                existing_device.state |= new_device.state
+            existing_device.initialize_discovered_info()
+            discovered_device = discovered_devices.get(existing_device.serial)
+            if discovered_device is not None:
+                existing_device.gateway = discovered_device.gateway
+                existing_device.serial = discovered_device.serial
+                existing_device.vid = discovered_device.vid
+                existing_device.pid = discovered_device.pid
+                existing_device.path = discovered_device.path
+                # Set the bit.
+                existing_device.state |= ConnectionState.DISCOVERED
 
         # Add new
-        new_serials = set((dev.serial for dev in new_devices))
+        new_serials = set((dev.serial for dev in discovered_devices))
         existing_serials = set((dev.serial for dev in merged_devices))
         for serial in (new_serials - existing_serials):
-            merged_devices.append(new_devices.get(serial))
+            merged_devices.append(discovered_devices.get(serial))
 
         return merged_devices
 
-    def merge_with_new(self, new_devices: Devices):
-        merged_devices = self._merge_with_new(new_devices)
+    def merge_with_discovered(self, discovered_devices: Devices):
+        merged_devices = self._merge_with_discovered(discovered_devices)
         for device in merged_devices:
             self._overwrite(device)
         return merged_devices
 
+    def _de_activate(self, *serials: Serial_t, activate: bool = True):
+        with self._engine.new_session() as session:
+            for serial in serials:
+                device = session.exec(select(Device).where(Device.serial == serial)).one()
+                if activate:
+                    # set the bit
+                    device.state |= ConnectionState.ACTIVE
+                else:
+                    # clear the bit
+                    device.state &= ~ConnectionState.ACTIVE
+
+            session.commit()
     def activate(self, *serials: Serial_t):
-        pass
+        self._de_activate(*serials, activate=True)
 
     def deactivate(self, *serials: Serial_t):
-        pass
+        self._de_activate(*serials, activate=False)
 
 # Application global singleton
 db_engine = DBEngine()

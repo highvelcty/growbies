@@ -18,11 +18,11 @@ class SupportedVidPid:
 
 
 def ls(session: Session2) -> Devices:
-    new_devices = Devices()
-    _get_info(new_devices, session)
-    return db_engine.devices.merge_with_new(new_devices)
+    discovered_devices = Devices()
+    _discover_info(discovered_devices, session)
+    return db_engine.devices.merge_with_discovered(discovered_devices)
 
-def _get_info(devices: Devices, session: Session2):
+def _discover_info(devices: Devices, session: Session2):
     vid_re = re.compile(r'.*idVendor.*==\"([0-9a-fA-F]+)\"')
     pid_re = re.compile(r'.*idProduct.*==\"([0-9a-fA-F]+)\"')
     serial_re = re.compile(r'.*serial.*==\"([^\"]+)\"')
@@ -32,8 +32,13 @@ def _get_info(devices: Devices, session: Session2):
 
     for path in paths:
         cmd = f'udevadm info --attribute-walk --no-pager {path}'
-        proc = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE, check=True, encoding='utf-8')
+        try:
+            proc = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE,
+                                  stderr=subprocess.PIPE, check=True, encoding='utf-8')
+        except subprocess.CalledProcessError as err:
+            logger.error(err.stderr)
+            logger.exception(err)
+            continue
 
         vid = None
         pid = None
@@ -55,6 +60,5 @@ def _get_info(devices: Devices, session: Session2):
                     break
 
         if serial:
-            devices.append(Device(
-                gateway=session.gateway.id,
-                vid=vid, pid=pid, serial=serial, path=str(path), state=ConnectionState.DISCOVERED))
+            devices.append(Device(gateway=session.gateway.id, vid=vid, pid=pid, serial=serial,
+                                  path=str(path), state=ConnectionState.DISCOVERED))

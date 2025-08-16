@@ -4,7 +4,7 @@ import sys
 
 from . import __doc__ as pkg_doc
 from .init_db_and_user import init_db_and_user
-from .engine import db_engine
+from growbies.db.engine import db_engine
 from growbies.constants import APPNAME
 
 SUBCMD = 'subcmd'

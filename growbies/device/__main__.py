@@ -56,11 +56,17 @@ sub_cmd = getattr(ns_args, SUBCMD)
 def _run_cmd(cmd: TBaseCmd):
     with ServiceQueue() as cmd_q, PidQueue() as resp_q:
         cmd_q.put(cmd)
-        print(next(resp_q.get()))
+        return next(resp_q.get())
 
 if SubCmd.LS == sub_cmd:
-    _run_cmd(DeviceLsCmd())
+    print(_run_cmd(DeviceLsCmd()))
 elif SubCmd.ACTIVATE == sub_cmd:
-    _run_cmd(DeviceActivateCmd())
+    ret = _run_cmd(DeviceActivateCmd(serials=getattr(ns_args, ActivateSubCmd.SERIALS)))
+    if ret is not None:
+        print(ret)
+        sys.exit(1)
 elif SubCmd.DEACTIVATE == sub_cmd:
-    _run_cmd(DeviceDeactivateCmd())
+    ret = _run_cmd(DeviceDeactivateCmd(serials=getattr(ns_args, ActivateSubCmd.SERIALS)))
+    if ret is not None:
+        print(ret)
+        sys.exit(1)
