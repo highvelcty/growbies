@@ -1,4 +1,6 @@
-from typing import Any, NewType
+from typing import Any, Annotated
 
 Pickleable_t = Any
-Serial_t = NewType('Serial_t', str)
+DeviceID_t = Annotated[int, 'DeviceID_t']
+Serial_t = Annotated[str, 'Serial_t']
+WorkerID_t = Annotated[int, 'WorkerID_t']

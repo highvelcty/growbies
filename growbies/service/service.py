@@ -1,8 +1,8 @@
 import logging
 
 from .queue import ServiceQueue, PidQueue
-from growbies.device import activate, discovery
-from growbies.models.service.cmd import *
+from.cmd.structs import *
+from growbies.service.cmd import activate, discovery
 from growbies.session import Session2
 
 logger = logging.getLogger(__name__)

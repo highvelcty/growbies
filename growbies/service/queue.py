@@ -9,7 +9,7 @@ import time
 
 from inotify_simple import INotify, flags
 
-from growbies.models.service import TBaseCmd
+from growbies.service.cmd.structs import TBaseCmd
 from growbies.utils.filelock import FileLock
 from growbies.utils.paths import InstallPaths
 from growbies.utils.types import Pickleable_t

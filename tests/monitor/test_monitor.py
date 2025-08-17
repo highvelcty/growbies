@@ -2,7 +2,6 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import Mock
 from tempfile import NamedTemporaryFile
-from io import StringIO
 
 from growbies.monitor import monitor
 from growbies.session import Session

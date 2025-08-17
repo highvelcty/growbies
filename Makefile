@@ -8,8 +8,8 @@ build/paths.env: build_lib/export_paths.py
 
 include build/paths.env
 
-src_watch = $(shell find ${PATH_GROWBIES} -name '*' ! -path '*__pycache__*')
-src_watch += $(shell find ${PATH_PKG_BASH_SRC} -type f -name '*')
+#src_watch = ${PATH_APPNAME}
+src_watch := $(shell find ${PATH_APPNAME} -type f)
 
 ### Interface ######################################################################################
 clean:

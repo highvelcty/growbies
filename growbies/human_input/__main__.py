@@ -3,7 +3,7 @@ from enum import StrEnum
 
 from . import __doc__ as pkg_doc
 from .human_input import main
-from growbies import Session
+from growbies.session import Session
 
 class Param(StrEnum):
     PATH = 'path'

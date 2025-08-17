@@ -5,7 +5,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlmodel import create_engine, select, Session, SQLModel
 
 from .constants import SQLMODEL_LOCAL_ADDRESS
-from growbies.models.db import Account, ConnectionState, Device, Devices, Gateway
+from growbies.db.models import Account, ConnectionState, Device, Devices, Gateway
 
 from growbies.utils.types import Serial_t
 
@@ -28,7 +28,7 @@ class DBEngine:
     def init_tables(self):
         # All models representing tables found in the import space will be created.
         # noinspection PyUnresolvedReferences
-        from growbies.models.db import addressing
+        from growbies.db.models import addressing
         with Session(self._engine) as session:
             SQLModel.metadata.create_all(self._engine)
             session.commit()

@@ -4,7 +4,7 @@ import sys
 
 from . import __doc__ as pkg_doc
 from growbies.constants import APPNAME
-from growbies.models.cfg import Cfg
+from growbies.cfg import Cfg
 
 SUBCMD = 'subcmd'
 

@@ -10,7 +10,7 @@ from .base import KeyStr
 from .gateway import Gateway
 if TYPE_CHECKING:
     from .endpoint import Endpoint
-from growbies.utils.types import Serial_t
+from growbies.utils.types import Serial_t, DeviceID_t
 from growbies.utils.report import format_8bit_binary
 
 
@@ -32,7 +32,7 @@ class Device(SQLModel, table=True):
         PATH: KeyStr = 'path'
         STATE: KeyStr = 'state'
 
-    id: int = Field(default=None, primary_key=True)
+    id: DeviceID_t = Field(default=None, primary_key=True)
     name: str = 'Default'
     gateway: int = Field(
         sa_column=Column(

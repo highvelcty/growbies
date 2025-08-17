@@ -1,17 +1,17 @@
 from typing import Optional
 import logging
 
-from .discovery import ls
+from growbies.service.cmd import discovery
 from growbies.db.engine import db_engine
-from growbies.models.service.cmd import DeviceActivateCmd, DeviceDeactivateCmd
-from growbies.models.service.resp import ErrorResp
+from growbies.service.cmd.structs import DeviceActivateCmd, DeviceDeactivateCmd
+from growbies.service.resp.structs import ErrorResp
 from growbies.session import Session2
 from growbies.utils.types import Serial_t
 
 logger = logging.getLogger(__name__)
 
 def _match_serials(*tgt_serials: Serial_t, sess: Session2) -> ErrorResp | tuple[Serial_t, ...]:
-    devices = ls(sess)
+    devices = discovery.ls(sess)
     existing_serials = [dev.serial for dev in devices]
     match_serials = {tgt: '' for tgt in tgt_serials}
 
