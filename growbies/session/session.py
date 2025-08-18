@@ -5,7 +5,7 @@ import logging
 
 from . import log
 from growbies.cfg import Cfg
-from growbies.db.engine import db_engine
+from growbies.db.engine import get_db_engine
 from growbies.db.models import Account, Gateway
 from growbies.utils.paths import InstallPaths, RepoPaths
 from growbies.utils import timestamp
@@ -81,6 +81,7 @@ class Session2(object):
         self._cfg.load()
 
         # Update the DB with account and gateway information input via configuration.
+        db_engine = get_db_engine()
         self._account = db_engine.account.upsert(Account(**self._cfg.account.model_dump()))
         self._gateway = db_engine.gateway.upsert(Gateway(name=self._cfg.gateway.name,
                                                          account=self._account.id))
@@ -92,3 +93,11 @@ class Session2(object):
     @property
     def gateway(self) -> Gateway:
         return self._gateway
+
+
+session = None
+def get_session() -> Session2:
+    global session
+    if session is None:
+        session = Session2()
+    return session

@@ -1,5 +1,4 @@
 import logging
-import time
 from queue import Queue
 from threading import Thread
 from typing import cast, Optional
@@ -14,7 +13,6 @@ class Worker(Thread):
     def __init__(self, device_id: DeviceID_t):
         super().__init__()
         self._id: WorkerID_t = cast(WorkerID_t, device_id)
-        self._stop = False
         self._cmd_queue = Queue()
         self._resp_queue = Queue()
 
@@ -30,10 +28,10 @@ class Worker(Thread):
         self._cmd_queue.put(None)
 
     def run(self):
+        logger.info(f'Worker ID {self._id} starting.')
         while True:
             cmd: Optional[BaseCmd] = self._cmd_queue.get()
             if cmd is None:
                 break
-            time.sleep(.25)
 
         logger.info(f'Worker ID {self.id} exiting.')

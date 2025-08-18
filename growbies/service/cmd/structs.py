@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from growbies.utils.types import Serial_t
 
-__all__ = ['Cmd', 'BaseCmd', 'DeviceLsCmd', 'DeviceActivateCmd', 'DeviceDeactivateCmd',
+__all__ = ['Cmd', 'BaseCmd', 'DeviceLsCmd', 'ActivateCmd', 'DeactivateCmd',
            'ServiceStopCmd', 'TBaseCmd']
 
 class Cmd(StrEnum):
@@ -25,12 +25,12 @@ class DeviceLsCmd(BaseCmd):
     def __init__(self, **kw):
         super().__init__(cmd=Cmd.DEVICE_LS, **kw)
 
-class DeviceActivateCmd(BaseCmd):
+class ActivateCmd(BaseCmd):
     serials: list[Serial_t] = Field(default_factory=list, min_length=1)
     def __init__(self, **kw):
         super().__init__(cmd=Cmd.DEVICE_ACTIVATE, **kw)
 
-class DeviceDeactivateCmd(BaseCmd):
+class DeactivateCmd(BaseCmd):
     serials: list[Serial_t] = Field(default_factory=list, min_length=1)
     def __init__(self, **kw):
         super().__init__(cmd=Cmd.DEVICE_DEACTIVATE, **kw)

@@ -4,9 +4,9 @@ import shlex
 import subprocess
 
 from growbies.db.models import Device, Devices, ConnectionState
-from growbies.db.engine import db_engine
-from growbies.session import Session2
+from growbies.db.engine import get_db_engine
 from growbies.utils.paths import InstallPaths
+from growbies.session import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -17,18 +17,20 @@ class SupportedVidPid:
     all_ = (ESPRESSIF_DEBUG, FTDI_FT232)
 
 
-def ls(session: Session2) -> Devices:
+def ls() -> Devices:
     discovered_devices = Devices()
-    _discover_info(discovered_devices, session)
-    return db_engine.devices.merge_with_discovered(discovered_devices)
+    _discover_info(discovered_devices)
+    return get_db_engine().devices.merge_with_discovered(discovered_devices)
 
-def _discover_info(devices: Devices, session: Session2):
+def _discover_info(devices: Devices):
     vid_re = re.compile(r'.*idVendor.*==\"([0-9a-fA-F]+)\"')
     pid_re = re.compile(r'.*idProduct.*==\"([0-9a-fA-F]+)\"')
     serial_re = re.compile(r'.*serial.*==\"([^\"]+)\"')
 
     paths = list(InstallPaths.DEV.value.glob('ttyUSB*'))
     paths.extend(InstallPaths.DEV.value.glob('ttyACM*'))
+
+    session = get_session()
 
     for path in paths:
         cmd = f'udevadm info --attribute-walk --no-pager {path}'

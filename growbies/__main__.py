@@ -84,14 +84,14 @@ try:
     if SubCmd.LS == cmd:
         print(_run_cmd(DeviceLsCmd()))
     elif SubCmd.ACTIVATE == cmd:
-        ret = _run_cmd(DeviceActivateCmd(serials=getattr(ns, ActivateSubCmd.SERIALS)))
+        ret = _run_cmd(ActivateCmd(serials=getattr(ns, ActivateSubCmd.SERIALS)))
         if ret is not None:
-            sys.stderr.write(ret)
+            sys.stderr.write(f'{ret}\n')
             sys.exit(1)
     elif SubCmd.DEACTIVATE == cmd:
-        ret = _run_cmd(DeviceDeactivateCmd(serials=getattr(ns, ActivateSubCmd.SERIALS)))
+        ret = _run_cmd(DeactivateCmd(serials=getattr(ns, ActivateSubCmd.SERIALS)))
         if ret is not None:
-            sys.stderr.write(ret)
+            sys.stderr.write(f'{ret}\n')
             sys.exit(1)
     sys.exit(0)
 except ValueError:

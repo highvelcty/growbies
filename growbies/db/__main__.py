@@ -4,7 +4,7 @@ import sys
 
 from . import __doc__ as pkg_doc
 from .init_db_and_user import init_db_and_user
-from growbies.db.engine import db_engine
+from growbies.db.engine import get_db_engine
 from growbies.constants import APPNAME
 
 SUBCMD = 'subcmd'
@@ -33,4 +33,4 @@ sub_cmd = getattr(ns_args, SUBCMD)
 if SubCmd.INIT_DB_AND_USER == sub_cmd:
     init_db_and_user()
 elif SubCmd.INIT_TABLES == sub_cmd:
-    db_engine.init_tables()
+    get_db_engine().init_tables()

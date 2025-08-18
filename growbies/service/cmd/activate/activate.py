@@ -2,47 +2,55 @@ from typing import Optional
 import logging
 
 from growbies.service.cmd import discovery
-from growbies.db.engine import db_engine
-from growbies.service.cmd.structs import DeviceActivateCmd, DeviceDeactivateCmd
+from growbies.db.engine import get_db_engine
+from growbies.service.cmd.structs import ActivateCmd, DeactivateCmd
 from growbies.service.resp.structs import ErrorResp
-from growbies.session import Session2
-from growbies.utils.types import Serial_t
+from growbies.utils.types import DeviceID_t, Serial_t
+from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
 
-def _match_serials(*tgt_serials: Serial_t, sess: Session2) -> ErrorResp | tuple[Serial_t, ...]:
-    devices = discovery.ls(sess)
-    existing_serials = [dev.serial for dev in devices]
-    match_serials = {tgt: '' for tgt in tgt_serials}
+def _match_serials_to_device_ids(*tgt_serials: Serial_t) -> ErrorResp | tuple[DeviceID_t, ...]:
+    devices = discovery.ls()
+    serials_ids = {dev.serial: dev.id for dev in devices}
+    matches = dict()
 
-    for tgt in match_serials:
-        for existing_serial in existing_serials:
-            if tgt.lower() in existing_serial.lower():
-                if match_serials[tgt]:
+    for tgt in tgt_serials:
+        for serial, device_id in serials_ids.items():
+            if tgt.lower() in serial.lower():
+                if matches.get(tgt):
                     return ErrorResp(msg=f'Multiple hits for "{tgt}".')
-                match_serials[tgt] = existing_serial
+                matches[tgt] = device_id
 
-    for tgt, found in match_serials.items():
-        if not found:
+    for tgt in tgt_serials:
+        if tgt not in matches:
             return ErrorResp(msg=f'"{tgt}" not found.')
 
-    return tuple(match_serials.values())
+    return tuple(matches.values())
 
-def _de_activate(cmd: DeviceActivateCmd | DeviceDeactivateCmd, sess: Session2):
-    serials_or_resp = _match_serials(*cmd.serials, sess=sess)
-    if isinstance(serials_or_resp, ErrorResp):
-        return serials_or_resp
+def activate(cmd: ActivateCmd) -> Optional[ErrorResp]:
+    resp = _match_serials_to_device_ids(*cmd.serials)
+    if isinstance(resp, ErrorResp):
+        return resp
 
-    serials = serials_or_resp
-    if isinstance(cmd, DeviceActivateCmd):
-        db_engine.devices.activate(*serials)
-    else:
-        db_engine.devices.deactivate(*serials)
+    device_ids = resp
+    engine = get_db_engine().devices
+    worker_pool = get_pool()
+
+    engine.set_active(*device_ids)
+    worker_pool.start(*device_ids)
     return None
 
-def activate(cmd: DeviceActivateCmd, sess: Session2) -> Optional[ErrorResp]:
-    return _de_activate(cmd, sess)
+def deactivate(cmd: DeactivateCmd) -> Optional[ErrorResp]:
+    resp = _match_serials_to_device_ids(*cmd.serials)
+    if isinstance(resp, ErrorResp):
+        return resp
 
+    device_ids = resp
+    engine = get_db_engine().devices
+    worker_pool = get_pool()
 
-def deactivate(cmd: DeviceDeactivateCmd, sess: Session2):
-    return _de_activate(cmd, sess)
+    engine.clear_active(*device_ids)
+    worker_pool.stop(*device_ids)
+    worker_pool.wait(*device_ids)
+    return None
