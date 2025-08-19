@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import logging
+from typing import Any, Generator
 
 from sqlmodel import create_engine, Session, SQLModel
 
@@ -22,8 +23,10 @@ class DBEngine:
     @property
     def _engine(self):
         if self._lazy_init_engine is None:
-            self._lazy_init_engine = create_engine(SQLMODEL_LOCAL_ADDRESS, echo_pool=True,
-                                                   echo=True)
+            # echo_pool and echo can be set to "debug" for more details.
+            self._lazy_init_engine = create_engine(SQLMODEL_LOCAL_ADDRESS, echo_pool=False,
+                                                   echo=False)
+
         return self._lazy_init_engine
 
     def init_tables(self):
@@ -45,7 +48,7 @@ class DBEngine:
             return merged
 
     @contextmanager
-    def new_session(self) -> Session:
+    def new_session(self) -> Generator[Session, Any, None]:
         session = Session(self._engine)
         try:
             yield session
@@ -53,11 +56,11 @@ class DBEngine:
             session.close()
 
 
-
-# Application global singleton
-db_engine = None
+# Application global singleton.
+_db_engine = None
 def get_db_engine():
-    global db_engine
-    if db_engine is None:
-        db_engine = DBEngine()
-    return db_engine
+    """Return the application global singleton, initializing it if it has not yet been."""
+    global _db_engine
+    if _db_engine is None:
+        _db_engine = DBEngine()
+    return _db_engine

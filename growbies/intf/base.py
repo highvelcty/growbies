@@ -6,7 +6,7 @@ import serial
 from growbies.utils.bufstr import BufStr
 
 
-class BaseArduinoSerial(object):
+class BaseSerial(object):
     DEBUG_DATALINK_READ = False
     DEBUG_DATALINK_WRITE = False
 

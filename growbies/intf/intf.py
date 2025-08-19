@@ -2,13 +2,13 @@ from typing import Optional
 import logging
 import time
 
-from .transport import ArduinoTransport
+from .transport import Transport
 from .structs import command
 
 logger = logging.getLogger(__name__)
 
 
-class Arduino(ArduinoTransport):
+class Intf(Transport):
     EXEC_RETRIES = 3
 
     RESET_COMMUNICATION_LOOPS = 3
@@ -17,7 +17,7 @@ class Arduino(ArduinoTransport):
 
     def execute(self, cmd: command.TBaseCommand, *,
                 retries: int = EXEC_RETRIES,
-                read_timeout_sec: int = ArduinoTransport.DEFAULT_READ_TIMEOUT_SEC) \
+                read_timeout_sec: int = Transport.DEFAULT_READ_TIMEOUT_SEC) \
             -> Optional[command.TBaseResponse]:
         for retry in range(retries):
             if retry:

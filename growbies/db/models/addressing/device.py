@@ -3,6 +3,7 @@ from typing import Iterator, Optional, TYPE_CHECKING
 
 from prettytable import PrettyTable
 from pydantic import BaseModel
+from pydantic.fields import ComputedFieldInfo
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, Integer, ForeignKey, String
 
@@ -55,52 +56,18 @@ class Device(SQLModel, table=True):
     endpoints: list['Endpoint'] = Relationship(back_populates='device_relation',
                                                cascade_delete=True)
 
-    def initialize_discovered_info(self):
-        # Clear bit.
+    def init_discovery_info(self):
         self.state &= ~ConnectionState.DISCOVERED
         self.path = None
 
-    class State:
-        def __init__(self, device: 'Device'):
-            self._device = device
-
-        # Helper methods to set and clear bits
-        def _set_flag(self, flag: ConnectionState, value: bool):
-            if value:
-                self._device.state |= flag
-            else:
-                self._device.state &= ~flag
-
-        def _get_flag(self, flag: ConnectionState) -> bool:
-            return bool(self._device.state & flag)
-
-        @property
-        def discovered(self) -> bool:
-            return self._get_flag(ConnectionState.DISCOVERED)
-
-        @discovered.setter
-        def discovered(self, value: bool):
-            self._set_flag(ConnectionState.DISCOVERED, value)
-
-        @property
-        def active(self) -> bool:
-            return self._get_flag(ConnectionState.ACTIVE)
-
-        @active.setter
-        def active(self, value: bool):
-            self._set_flag(ConnectionState.ACTIVE, value)
-
-        @property
-        def connected(self) -> bool:
-            return self._get_flag(ConnectionState.CONNECTED)
-
-        @connected.setter
-        def connected(self, value: bool):
-            self._set_flag(ConnectionState.CONNECTED, value)
+    def init_start_connection(self):
+        self.state &= ~ConnectionState.ERROR
+        self.state &= ~ConnectionState.CONNECTED
 
     def __str__(self):
         return (f'{self.name} {self.serial} '
                 f'{hex(self.vid)}:{hex(self.pid)} {hex(self.state)} {self.path}')
+
 
 class Devices(BaseModel):
     devices: list[Device] = Field(default_factory=list)

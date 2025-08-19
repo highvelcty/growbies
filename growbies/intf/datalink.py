@@ -2,7 +2,7 @@ from abc import ABC
 from enum import IntEnum
 import logging
 
-from .base import BaseArduinoSerial
+from .base import BaseSerial
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ class Slip(IntEnum):
     ESC_ESC = 0xDD
 
 
-class ArduinoDatalink(ABC, BaseArduinoSerial):
+class Datalink(ABC, BaseSerial):
     READY_RETRIES = 5
     READY_RETRY_DELAY_SEC = 1
 

@@ -1,7 +1,7 @@
 from abc import ABC
 from typing import cast, Optional
 
-from .network import ArduinoNetwork
+from .network import Network
 import ctypes
 import logging
 
@@ -11,7 +11,7 @@ from growbies.utils.bufstr import BufStr
 logger = logging.getLogger(__name__)
 
 
-class ArduinoTransport(ArduinoNetwork, ABC):
+class Transport(Network, ABC):
     DEBUG_TRANSPORT_READ = False
     DEBUG_TRANSPORT_WRITE = False
 
@@ -22,7 +22,7 @@ class ArduinoTransport(ArduinoNetwork, ABC):
         self._send_packet(memoryview(cmd).cast('B'))
 
     def _recv_resp(self, *,
-                   read_timeout_sec = ArduinoNetwork.DEFAULT_READ_TIMEOUT_SEC) \
+                   read_timeout_sec = Network.DEFAULT_READ_TIMEOUT_SEC) \
             -> Optional[TBaseResponse]:
         packet = self._recv_packet(read_timeout_sec=read_timeout_sec)
         if self.DEBUG_TRANSPORT_READ and packet is not None:

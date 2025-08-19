@@ -1,13 +1,13 @@
 from typing import cast
 import ctypes
 
-from growbies.arduino.structs.command import Packet
-from growbies.arduino import datalink, network
+from growbies.intf.structs.command import Packet
+from growbies.intf import datalink, network
 
 from .base import BaseTest, BaseMockArduino
 
 
-class MockArduino(BaseMockArduino, network.ArduinoNetwork):
+class MockArduino(BaseMockArduino, network.Network):
     pass
 
 
@@ -68,7 +68,7 @@ class TestArduinoNetwork(BaseTest):
             self.assertTrue(decode_passed)
             decoded_buf = memoryview(self._arduino_serial._recv_buf).cast('B')[
                           :self._arduino_serial._recv_buf_idx -
-                           network.ArduinoNetwork.CHECKSUM_BYTES]
+                           network.Network.CHECKSUM_BYTES]
             packet = Packet.make(decoded_buf)
             payload_offset = ctypes.sizeof(packet.header)
             payload = memoryview(cast(bytes, packet)).cast('B')[payload_offset:payload_offset +

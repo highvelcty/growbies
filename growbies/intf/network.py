@@ -6,12 +6,12 @@ import time
 
 logger = logging.getLogger(__name__)
 
-from .datalink import ArduinoDatalink
+from .datalink import Datalink
 from .structs.command import Packet
 from growbies.utils.bufstr import BufStr
 
 
-class ArduinoNetwork(ArduinoDatalink, ABC):
+class Network(Datalink, ABC):
     CHECKSUM_BYTES = 2
     POLLING_SEC = 0.01
     DEBUG_NETWORK_READ = False
@@ -32,7 +32,7 @@ class ArduinoNetwork(ArduinoDatalink, ABC):
 
 
     def _recv_packet(self, *,
-                     read_timeout_sec:int = ArduinoDatalink.DEFAULT_READ_TIMEOUT_SEC) \
+                     read_timeout_sec:int = Datalink.DEFAULT_READ_TIMEOUT_SEC) \
                      -> Optional[Packet]:
         self._slip_reset_recv_state()
         startt = time.time()

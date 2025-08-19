@@ -2,7 +2,7 @@ from growbies.arduino import datalink
 
 from .base import BaseMockArduino as BaseMockArduino, BaseTest
 
-class MockArduino(BaseMockArduino, datalink.ArduinoDatalink):
+class MockArduino(BaseMockArduino, datalink.Datalink):
     pass
 
 

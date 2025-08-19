@@ -58,9 +58,8 @@ parser.add_argument(f'--{Param.KEEP_PRIVILEGES}', default=False, action='store_t
 
 # Activate and Deactivate
 for sub_parser in (parsers[SubCmd.ACTIVATE], parsers[SubCmd.DEACTIVATE]):
-    sub_parser.add_argument(
-        ActivateSubCmd.SERIALS, nargs='+', type=str,
-        help=ActivateSubCmd.get_help_str(ActivateSubCmd.SERIALS))
+    sub_parser.add_argument(ActivateSubCmd.SERIALS, nargs='+', type=str,
+                            help=ActivateSubCmd.get_help_str(ActivateSubCmd.SERIALS))
 
 ns, args = parser.parse_known_args(sys.argv[1:])
 
