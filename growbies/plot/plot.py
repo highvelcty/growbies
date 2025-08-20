@@ -12,7 +12,7 @@ import tkinter as tk
 import matplotlib
 
 from growbies.utils import timestamp
-from growbies.arduino.structs.command import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
+from growbies.intf.structs.command import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
 matplotlib.use('TkAgg')
 
@@ -305,6 +305,7 @@ def mass_cal(path: Path, *, invert_sum: bool = False):
 
     _over_time(timestamps, mass_sensor_list, [temperature], y1y2labels, legend)
 
+
     fig, ax = plt.subplots(figsize=(13,8), constrained_layout=True)
 
     mass_sensor_list.pop()
@@ -323,6 +324,7 @@ def mass_cal(path: Path, *, invert_sum: bool = False):
     # ax.plot(timestamps, reference_mass)
 
     plt.show()
+
 
 
     # title = ('Experiment: Water bowl fill/empty 2 times.\n'
@@ -368,7 +370,7 @@ def mass_cal(path: Path, *, invert_sum: bool = False):
     plt.show()
 
     ### Error ######################################################################################
-    error_x_data = ref_y_data
+    error_x_data = 33ref_y_data
     difference_y_data = list()
     for ref_data, load_cell_data in (zip(lin_x, lin_y)):
         difference_y_data.append((load_cell_data-ref_data)*100)

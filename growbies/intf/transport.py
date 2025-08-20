@@ -22,7 +22,7 @@ class Transport(Network, ABC):
         self._send_packet(memoryview(cmd).cast('B'))
 
     def _recv_resp(self, *,
-                   read_timeout_sec = Network.DEFAULT_READ_TIMEOUT_SEC) \
+                   read_timeout_sec: float = Network.DEFAULT_READ_TIMEOUT_SEC) \
             -> Optional[TBaseResponse]:
         packet = self._recv_packet(read_timeout_sec=read_timeout_sec)
         if self.DEBUG_TRANSPORT_READ and packet is not None:

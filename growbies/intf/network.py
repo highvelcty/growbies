@@ -32,7 +32,7 @@ class Network(Datalink, ABC):
 
 
     def _recv_packet(self, *,
-                     read_timeout_sec:int = Datalink.DEFAULT_READ_TIMEOUT_SEC) \
+                     read_timeout_sec: float = Datalink.DEFAULT_READ_TIMEOUT_SEC) \
                      -> Optional[Packet]:
         self._slip_reset_recv_state()
         startt = time.time()

@@ -1,5 +1,4 @@
 import logging
-import os
 import time
 from queue import Queue
 from threading import Thread
@@ -11,17 +10,11 @@ from growbies.db.engine import get_db_engine
 from growbies.intf import Intf
 from growbies.service.cmd.structs import BaseCmd, TBaseCmd, ReconnectCmd
 from growbies.service.resp.structs import TBaseResp
-from growbies.service.queue import IDQueue, ServiceQueue
+from growbies.service.queue import ServiceQueue
+from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
 
 logger = logging.getLogger(__name__)
-
-class ContextAdapter(logging.LoggerAdapter):
-    class ExtraKey:
-        WORKER_NAME = 'worker_name'
-
-    def process(self, msg, kwargs):
-        return f"{self.extra[ContextAdapter.ExtraKey.WORKER_NAME]}: {msg}", kwargs
 
 class Worker(Thread):
     _RECONNECT_RETRY_DELAY_SECONDS = 3
@@ -33,9 +26,6 @@ class Worker(Thread):
         self._device = self._engine.get(device_id)
         self._retry_connection = True
 
-        self.logger = ContextAdapter(logger,
-                                     {ContextAdapter.ExtraKey.WORKER_NAME: f'{self.name}'})
-
     @property
     def id(self) -> WorkerID_t:
         return self._device.id
@@ -46,13 +36,13 @@ class Worker(Thread):
 
     @property
     def name(self):
-        return f'worker {self.id}'
+        return f'{self._device.serial}'
 
     def stop(self):
         self._cmd_queue.put(None)
 
     def _do_retry_connection(self):
-        self.logger.info(f'Connection retry.')
+        logger.info(f'Connection retry.')
         time.sleep(self._RECONNECT_RETRY_DELAY_SECONDS)
         cmd = ReconnectCmd(serials=(self._device.serial,))
         with ServiceQueue() as cmd_q:
@@ -63,10 +53,10 @@ class Worker(Thread):
             intf = Intf(port=self._device.path)
         except SerialException as err:
             if err.errno == 2:
-                self.logger.error(f'Could not open serial port {self._device.path}.')
+                logger.error(f'Could not open serial port {self._device.path}.')
                 return False
             else:
-                self.logger.exception(err)
+                logger.exception(err)
                 raise err
         return True
 
@@ -78,17 +68,20 @@ class Worker(Thread):
                 break
 
     def run(self):
+        log.thread_local.name = self.name
         try:
-            self.logger.info(f'Starting.')
+            logger.info(f'Thread start.')
             self._engine.init_start_connection()
             if self._connect():
+                logger.info('Device connecting.')
                 self._engine.set_connected()
+                logger.info('Device connected.')
                 self._service_cmds()
         except Exception as err:
-            self.logger.error(f'Exception.')
-            self.logger.exception(err)
+            logger.exception(err)
             self._engine.set_error()
         finally:
+            self._engine.clear_connected()
             if self._retry_connection:
                 self._do_retry_connection()
-            self.logger.info(f'Exiting.')
+            logger.info(f'Thread exit.')

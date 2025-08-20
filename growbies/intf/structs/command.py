@@ -24,11 +24,17 @@ class Cmd(IntEnum):
     POWER_ON_HX711 = 4
     POWER_OFF_HX711 = 5
 
+    def __str__(self):
+        return self.name
+
 class Resp(IntEnum):
     VOID = 0
     DATAPOINT = 1
     CALIBRATION = 2
     ERROR = 0xFFFF
+
+    def __str__(self):
+        return self.name
 
     @classmethod
     def get_struct(cls, packet: 'Packet') -> Optional[Type['TBaseResponse']]:
@@ -133,7 +139,14 @@ class Packet(BasePacket):
 
 
 class BaseCommand(PacketHeader):
-    pass
+    @property
+    def type(self) -> Cmd:
+        return Cmd(super().type.value)
+
+    @type.setter
+    def type(self, value: Cmd):
+        super().type = value
+
 TBaseCommand = TypeVar('TBaseCommand', bound=BaseCommand)
 
 
@@ -153,6 +166,14 @@ class BaseResponse(PacketHeader):
     @error.setter
     def error(self, error: Error):
         setattr(self, self.Field.ERROR, error)
+
+    @property
+    def type(self) -> Resp:
+        return Resp(super().type.value)
+
+    @type.setter
+    def type(self, value: Resp):
+        super().type = value
 
 TBaseResponse = TypeVar('TBaseResponse', bound=BaseResponse)
 

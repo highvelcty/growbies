@@ -17,11 +17,11 @@ class Intf(Transport):
 
     def execute(self, cmd: command.TBaseCommand, *,
                 retries: int = EXEC_RETRIES,
-                read_timeout_sec: int = Transport.DEFAULT_READ_TIMEOUT_SEC) \
+                read_timeout_sec: float = Transport.DEFAULT_READ_TIMEOUT_SEC) \
             -> Optional[command.TBaseResponse]:
         for retry in range(retries):
             if retry:
-                logger.error(f'Execution layer attempt {retry+1}/{self.EXEC_RETRIES}')
+                logger.debug(f'Execution layer attempt {retry+1}/{retries}')
                 self.reset_communication()
 
             # Send
@@ -30,13 +30,14 @@ class Intf(Transport):
             # Receive
             resp = self._recv_resp(read_timeout_sec=read_timeout_sec)
             if resp is None:
-                logger.error(f'Execution layer no response.')
+                logger.debug(f'Execution layer no response.')
             elif isinstance(resp, command.RespError):
-                logger.error(f'Execution layer error response 0x{resp.error:04X} received.')
+                logger.debug(f'Execution layer error response 0x{resp.error:04X} received.')
             else:
                 return resp
         else:
-            logger.error(f'Execution layer retries exhausted executing command:\n{cmd}')
+            logger.error(f'Execution layer retries {retries} exhausted executing command:\
+            n{cmd}')
             return None
 
     def power_on_hx711(self) -> None:
@@ -94,7 +95,8 @@ class Intf(Transport):
 
     def wait_for_ready(self):
         cmd = command.CmdLoopback()
-        resp: Optional[command.RespVoid] = self.execute(cmd, retries=self.READY_RETRIES)
+        resp: Optional[command.RespVoid] = self.execute(cmd, retries=self.READY_RETRIES,
+                                                        read_timeout_sec=0.01)
         if resp is None:
-            raise ConnectionError(f'Arduino serial port was not ready with {self.READY_RETRIES} '
+            raise ConnectionError(f'Device was not ready with {self.READY_RETRIES} '
                                   f'retries, {self.READY_RETRY_DELAY_SEC} second delay per retry.')

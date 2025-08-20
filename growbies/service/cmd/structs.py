@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from growbies.utils.types import Serial_t
 
 __all__ = ['Cmd', 'BaseCmd', 'DeviceLsCmd', 'ActivateCmd', 'DeactivateCmd',
-           'ServiceStopCmd', 'TBaseCmd']
+           'ServiceStopCmd', 'ReconnectCmd', 'TBaseCmd']
 
 class Cmd(StrEnum):
     LS = 'ls'
