@@ -110,46 +110,51 @@ class Queue:
             raise last_exc
 
 
-class PidQueue(Queue):
-    def __init__(self, pid: Optional[int] = None):
+class IDQueue(Queue):
+    def __init__(self, qid: Optional[int | str] = None):
         # If pid is None, the file is being created from new. Cleanup with be automated. Else,
         # if pid is not None, cleanup will not be automated as the object will be attaching to an
         # existing file instead of creating from new. It is the responsibility of the creator to
         # clean up.
-        if pid is None:
-            pid = os.getpid()
+        if qid is None:
+            qid = os.getpid()
             self._auto_cleanup = True
         else:
             self._auto_cleanup = False
 
-        self._path = InstallPaths.RUN_GROWBIES.value / f'{pid}_resp_queue.pkl'
+        self._qid = str(qid)
+
+        self._path = InstallPaths.RUN_GROWBIES.value / f'{qid}_resp_queue.pkl'
         super().__init__(self._path)
 
         if self._auto_cleanup:
-            atexit.register(self._cleanup)
+            atexit.register(self.cleanup)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._auto_cleanup:
-            self._cleanup()
+            self.cleanup()
 
-    def _cleanup(self):
+    def cleanup(self):
         try:
             os.remove(self._path)
         except FileNotFoundError:
             pass
         except Exception as e:
-            print(f"Warning: failed to remove {self._path} at exit: {e}")
+            logger.warning(f"Warning: failed to remove {self._path} at exit: {e}")
+
+    @property
+    def qid(self) -> str:
+        return self._qid
+
 
 class ServiceQueue(Queue):
     PATH = InstallPaths.RUN_GROWBIES_CMD_Q.value
 
     def __init__(self):
         super().__init__(self.PATH)
-        self._pid = os.getpid()
 
     def get(self, *args) -> Iterator[TBaseCmd]:
         yield from super().get()
 
     def put(self, cmd: TBaseCmd):
-        cmd.qid = self._pid
         return super().put(cmd)

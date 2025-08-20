@@ -73,17 +73,19 @@ cmd = getattr(ns, CMD)
 try:
     cmd = SubCmd(cmd)
     from growbies.service.cmd.structs import *
-    from growbies.service.queue import PidQueue, ServiceQueue
+    from growbies.service.queue import IDQueue, ServiceQueue
 
     def _run_cmd(cmd_: TBaseCmd):
-        with ServiceQueue() as cmd_q, PidQueue() as resp_q:
+        with ServiceQueue() as cmd_q, IDQueue() as resp_q:
+            cmd_.qid = resp_q.qid
             cmd_q.put(cmd_)
             return next(resp_q.get())
 
     if SubCmd.LS == cmd:
         print(_run_cmd(DeviceLsCmd()))
     elif SubCmd.ACTIVATE == cmd:
-        ret = _run_cmd(ActivateCmd(serials=getattr(ns, ActivateSubCmd.SERIALS)))
+        cmd = ActivateCmd(serials=getattr(ns, ActivateSubCmd.SERIALS))
+        ret = _run_cmd(cmd)
         if ret is not None:
             sys.stderr.write(f'{ret}\n')
             sys.exit(1)

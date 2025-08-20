@@ -59,7 +59,6 @@ class DevicesEngine:
         # Update existing in DB.
         for existing_device in merged_devices:
             existing_device.init_discovery_info()
-            existing_device.initialize_discovered_info()
             discovered_device = discovered_devices.get(existing_device.serial)
             if discovered_device is not None:
                 existing_device.gateway = discovered_device.gateway
@@ -131,6 +130,14 @@ class DeviceEngine:
         with self._engine.new_session() as db_session, db_session.begin():
             self._set_flag(flag=ConnectionState.CONNECTED, value=False, db_session=db_session)
 
+    def set_error(self):
+        with self._engine.new_session() as db_session, db_session.begin():
+            self._set_flag(flag=ConnectionState.ERROR, value=True, db_session=db_session)
+
+    def clear_error(self):
+        with self._engine.new_session() as db_session, db_session.begin():
+            self._set_flag(flag=ConnectionState.ERROR, value=False, db_session=db_session)
+
     def init_start_connection(self):
         with self._engine.new_session() as db_session, db_session.begin():
             device = self._get(self._device_id, db_session)
@@ -146,7 +153,7 @@ class DeviceEngine:
 
     def _set_flag(self, flag: ConnectionState, value: bool, db_session: DBSession):
         # Attached model
-        device = db_session.get(self._device_id, db_session)
+        device = self._get(self._device_id, db_session)
         if value:
             # set the bit
             device.state |= flag

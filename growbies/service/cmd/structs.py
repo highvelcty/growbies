@@ -9,31 +9,37 @@ __all__ = ['Cmd', 'BaseCmd', 'DeviceLsCmd', 'ActivateCmd', 'DeactivateCmd',
            'ServiceStopCmd', 'TBaseCmd']
 
 class Cmd(StrEnum):
-    DEVICE_LS = 'device_ls'
-    DEVICE_ACTIVATE = 'device_activate'
-    DEVICE_DEACTIVATE = 'device_deactivate'
+    LS = 'ls'
+    ACTIVATE = 'activate'
+    DEACTIVATE = 'deactivate'
+    RECONNECT = 'reconnect'
     SERVICE_STOP = 'service_stop'
 
 
 class BaseCmd(BaseModel):
     cmd: Cmd
-    qid: Optional[int] = None
+    qid: Optional[int|str] = None
 TBaseCmd = TypeVar('TBaseCmd', bound=BaseCmd)
 
 
 class DeviceLsCmd(BaseCmd):
     def __init__(self, **kw):
-        super().__init__(cmd=Cmd.DEVICE_LS, **kw)
+        super().__init__(cmd=Cmd.LS, **kw)
 
 class ActivateCmd(BaseCmd):
     serials: list[Serial_t] = Field(default_factory=list, min_length=1)
     def __init__(self, **kw):
-        super().__init__(cmd=Cmd.DEVICE_ACTIVATE, **kw)
+        super().__init__(cmd=Cmd.ACTIVATE, **kw)
 
 class DeactivateCmd(BaseCmd):
     serials: list[Serial_t] = Field(default_factory=list, min_length=1)
     def __init__(self, **kw):
-        super().__init__(cmd=Cmd.DEVICE_DEACTIVATE, **kw)
+        super().__init__(cmd=Cmd.DEACTIVATE, **kw)
+
+class ReconnectCmd(BaseCmd):
+    serials: list[Serial_t] = Field(default_factory=list, min_length=1)
+    def __init__(self, **kw):
+        super().__init__(cmd=Cmd.RECONNECT, **kw)
 
 class ServiceStopCmd(BaseCmd):
     def __init__(self):

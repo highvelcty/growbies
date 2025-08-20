@@ -38,7 +38,7 @@ def activate(cmd: ActivateCmd) -> Optional[ErrorResp]:
     worker_pool = get_pool()
 
     engine.set_active(*device_ids)
-    worker_pool.start(*device_ids)
+    worker_pool.connect(*device_ids)
     return None
 
 def deactivate(cmd: DeactivateCmd) -> Optional[ErrorResp]:
@@ -51,6 +51,6 @@ def deactivate(cmd: DeactivateCmd) -> Optional[ErrorResp]:
     worker_pool = get_pool()
 
     engine.clear_active(*device_ids)
-    worker_pool.stop(*device_ids)
-    worker_pool.wait(*device_ids)
+    worker_pool.disconnect(*device_ids)
+    worker_pool.join_all(*device_ids)
     return None

@@ -35,7 +35,7 @@ def start(path: Path, file_level: int = logging.DEBUG, stdout_level: int = loggi
 
     fmt = logging.Formatter(f'|%(asctime)s{timestamp.UTC_Z} '
                             f'%(name)s '
-                            f'%(levelname)s|\n'
+                            f'%(levelname)s| '
                             f'%(message)s',
                             timestamp.BASE_FMT)
     fmt.converter = time.gmtime

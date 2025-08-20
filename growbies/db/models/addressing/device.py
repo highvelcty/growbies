@@ -64,6 +64,21 @@ class Device(SQLModel, table=True):
         self.state &= ~ConnectionState.ERROR
         self.state &= ~ConnectionState.CONNECTED
 
+    def is_initial(self) -> bool:
+        return bool(not self.state)
+
+    def is_discovered(self) -> bool:
+        return bool(self.state & ConnectionState.DISCOVERED)
+
+    def is_active(self) -> bool:
+        return bool(self.state & ConnectionState.ACTIVE)
+
+    def is_connected(self) -> bool:
+        return bool(self.state & ConnectionState.CONNECTED)
+
+    def is_error(self) -> bool:
+        return bool(self.state & ConnectionState.ERROR)
+
     def __str__(self):
         return (f'{self.name} {self.serial} '
                 f'{hex(self.vid)}:{hex(self.pid)} {hex(self.state)} {self.path}')
