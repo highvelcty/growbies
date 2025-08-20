@@ -49,17 +49,17 @@ class Network(Datalink, ABC):
                         checksum = ctypes.c_uint16.from_buffer(buf[-self.CHECKSUM_BYTES:]).value
                         calc_checksum = sum(buf[:-self.CHECKSUM_BYTES])
                         if checksum != calc_checksum:
-                            logger.error(f'Network layer checksum mismatch.\n'
+                            logger.debug(f'Network layer checksum mismatch.\n'
                                          f'calc: {calc_checksum}, given: {checksum}')
                             return None
                         else:
                             return Packet.make(buf[:-self.CHECKSUM_BYTES])
                     else:
-                        logger.error('Network layer packet checksum underflow.')
+                        logger.debug('Network layer packet checksum underflow.')
                         return None
             else:
                 time.sleep(self.POLLING_SEC)
         else:
-            logger.error(f'Network layer timeout of {read_timeout_sec} seconds waiting for a '
+            logger.debug(f'Network layer timeout of {read_timeout_sec} seconds waiting for a '
                          f'valid packet.')
             return None

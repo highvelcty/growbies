@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import ByteString
 
 import serial
@@ -6,7 +6,7 @@ import serial
 from growbies.utils.bufstr import BufStr
 
 
-class BaseSerial(object):
+class BaseSerial(ABC):
     DEBUG_DATALINK_READ = False
     DEBUG_DATALINK_WRITE = False
 
@@ -20,6 +20,9 @@ class BaseSerial(object):
         """
         self._serial = serial.Serial(*args, port=port, baudrate=baudrate, timeout=timeout, **kw)
         self.wait_for_ready()
+
+    def close(self):
+        self._serial.close()
 
     @property
     def in_waiting(self) -> int:

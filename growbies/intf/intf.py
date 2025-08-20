@@ -32,12 +32,13 @@ class Intf(Transport):
             if resp is None:
                 logger.debug(f'Execution layer no response.')
             elif isinstance(resp, command.RespError):
-                logger.debug(f'Execution layer error response 0x{resp.error:04X} received.')
+                logger.debug(f'Execution layer error response resp.error 0x{resp.error:04X} '
+                             f'received.')
             else:
                 return resp
         else:
-            logger.error(f'Execution layer retries {retries} exhausted executing command:\
-            n{cmd}')
+            logger.error(f'Execution layer retries {retries} exhausted executing {cmd.type} '
+                         f'command.')
             return None
 
     def power_on_hx711(self) -> None:
@@ -96,7 +97,7 @@ class Intf(Transport):
     def wait_for_ready(self):
         cmd = command.CmdLoopback()
         resp: Optional[command.RespVoid] = self.execute(cmd, retries=self.READY_RETRIES,
-                                                        read_timeout_sec=0.01)
+                                                        read_timeout_sec=0.5)
         if resp is None:
             raise ConnectionError(f'Device was not ready with {self.READY_RETRIES} '
                                   f'retries, {self.READY_RETRY_DELAY_SEC} second delay per retry.')

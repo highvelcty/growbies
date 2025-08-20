@@ -60,6 +60,9 @@ class Error(IntEnum):
     OUT_OF_THRESHOLD_SAMPLE               = 0x00000004
     HX711_NOT_READY                       = 0x00000008
 
+    def __str__(self):
+        return self.name
+
 
 # --- Base Classes ---------------------------------------------------------------------------------
 class BaseStructure(ctypes.Structure):
@@ -82,7 +85,7 @@ TBasePacket = TypeVar('TBasePacket', bound=BasePacket)
 
 class PacketHeader(BaseStructure):
     class Field:
-        TYPE = 'type'
+        TYPE = '_type'
 
     _pack_ = 1
     _fields_ = [
@@ -91,11 +94,11 @@ class PacketHeader(BaseStructure):
 
     @property
     def type(self) -> Union[Cmd, Resp]:
-        return super().type.value
+        return getattr(self, self.Field.TYPE)
 
     @type.setter
     def type(self, value: [Cmd, Resp]):
-        super().type = value
+        setattr(self, self.Field.TYPE, value)
 
 
 class Packet(BasePacket):
@@ -141,12 +144,11 @@ class Packet(BasePacket):
 class BaseCommand(PacketHeader):
     @property
     def type(self) -> Cmd:
-        return Cmd(super().type.value)
+        return Cmd(getattr(self, self.Field.TYPE))
 
     @type.setter
     def type(self, value: Cmd):
-        super().type = value
-
+        setattr(self, self.Field.TYPE, value)
 TBaseCommand = TypeVar('TBaseCommand', bound=BaseCommand)
 
 
@@ -169,12 +171,11 @@ class BaseResponse(PacketHeader):
 
     @property
     def type(self) -> Resp:
-        return Resp(super().type.value)
+        return Resp(super().type)
 
     @type.setter
     def type(self, value: Resp):
-        super().type = value
-
+        setattr(self, self.Field.TYPE, value)
 TBaseResponse = TypeVar('TBaseResponse', bound=BaseResponse)
 
 
@@ -182,7 +183,7 @@ class BaseCmdWithTimesParam(BaseCommand):
     DEFAULT_TIMES = 7
 
     class Field(BaseCommand.Field):
-        TIMES = 'times'
+        TIMES = '_times'
 
     _fields_ = [
         # How many samples to read from the HX711 per data point.

@@ -13,7 +13,7 @@ class Slip(IntEnum):
     ESC_ESC = 0xDD
 
 
-class Datalink(ABC, BaseSerial):
+class Datalink(BaseSerial, ABC):
     READY_RETRIES = 5
     READY_RETRY_DELAY_SEC = 1
 

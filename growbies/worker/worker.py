@@ -24,6 +24,7 @@ class Worker(Thread):
         self._resp_queue = Queue()
         self._engine = get_db_engine().devices.get_engine(device_id)
         self._device = self._engine.get(device_id)
+        self._intf = None
         self._retry_connection = True
 
     @property
@@ -50,7 +51,7 @@ class Worker(Thread):
 
     def _connect(self) -> bool:
         try:
-            intf = Intf(port=self._device.path)
+            self._intf = Intf(port=self._device.path)
         except SerialException as err:
             if err.errno == 2:
                 logger.error(f'Could not open serial port {self._device.path}.')
@@ -59,6 +60,10 @@ class Worker(Thread):
                 logger.exception(err)
                 raise err
         return True
+
+    def _disconnect(self):
+        if self._intf:
+            self._intf.close()
 
     def _service_cmds(self):
         while True:
@@ -72,8 +77,8 @@ class Worker(Thread):
         try:
             logger.info(f'Thread start.')
             self._engine.init_start_connection()
+            logger.info('Device connecting.')
             if self._connect():
-                logger.info('Device connecting.')
                 self._engine.set_connected()
                 logger.info('Device connected.')
                 self._service_cmds()
@@ -81,6 +86,8 @@ class Worker(Thread):
             logger.exception(err)
             self._engine.set_error()
         finally:
+            self._disconnect()
+            logger.info('Device disconnected.')
             self._engine.clear_connected()
             if self._retry_connection:
                 self._do_retry_connection()
