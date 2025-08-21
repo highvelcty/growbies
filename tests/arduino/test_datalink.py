@@ -1,4 +1,4 @@
-from growbies.arduino import datalink
+from growbies.intf import datalink
 
 from .base import BaseMockArduino as BaseMockArduino, BaseTest
 

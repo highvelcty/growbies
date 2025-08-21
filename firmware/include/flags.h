@@ -26,6 +26,6 @@
 static_assert(!THERMISTOR_HW_0 != !THERMISTOR_HW_1);
 #endif
 
-#define BUTTERFLY false && (ARDUINO_ARCH_ESP32)
+#define BUTTERFLY true && (ARDUINO_ARCH_ESP32 || ARDUINO_ARCH_AVR)
 
 #endif /* flags_h */

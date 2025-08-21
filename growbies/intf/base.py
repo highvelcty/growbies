@@ -19,14 +19,22 @@ class BaseSerial(ABC):
            bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE
         """
         self._serial = serial.Serial(*args, port=port, baudrate=baudrate, timeout=timeout, **kw)
-        self.wait_for_ready()
 
     def close(self):
         self._serial.close()
 
+    def reset_input_buffer(self):
+        self._serial.reset_input_buffer()
+
+    def reset_output_buffer(self):
+        self._serial.reset_output_buffer()
+
     @property
     def in_waiting(self) -> int:
         return self._serial.in_waiting
+
+    def fileno(self) -> int:
+        return self._serial.fileno()
 
     def read(self, size=1) -> bytes:
         buf = self._serial.read(size)
@@ -36,7 +44,3 @@ class BaseSerial(ABC):
     def write(self, buf: ByteString):
         if self.DEBUG_DATALINK_WRITE: print(f'python datalink send:\n{BufStr(buf)}')
         self._serial.write(buf)
-
-    @abstractmethod
-    def wait_for_ready(self):
-        ...

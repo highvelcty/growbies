@@ -7,7 +7,8 @@ import time
 logger = logging.getLogger(__name__)
 
 from .datalink import Datalink
-from .structs.command import Packet
+from .common import Packet
+from .resp import BaseResp
 from growbies.utils.bufstr import BufStr
 
 
@@ -34,6 +35,7 @@ class Network(Datalink, ABC):
     def _recv_packet(self, *,
                      read_timeout_sec: float = Datalink.DEFAULT_READ_TIMEOUT_SEC) \
                      -> Optional[Packet]:
+        packet = None
         self._slip_reset_recv_state()
         startt = time.time()
         while time.time() - startt < read_timeout_sec:
@@ -44,22 +46,29 @@ class Network(Datalink, ABC):
                         print(f'Network layer recv:\n'
                               f'{BufStr(self._recv_buf[:self.recv_buf_len()])}')
 
-                    if self.recv_buf_len() > self.CHECKSUM_BYTES:
+                    if self.recv_buf_len() > ctypes.sizeof(BaseResp):
                         buf = memoryview(self._recv_buf)[:self.recv_buf_len()].cast('B')
                         checksum = ctypes.c_uint16.from_buffer(buf[-self.CHECKSUM_BYTES:]).value
                         calc_checksum = sum(buf[:-self.CHECKSUM_BYTES])
                         if checksum != calc_checksum:
-                            logger.debug(f'Network layer checksum mismatch.\n'
+                            logger.debug(f'Network layer checksum mismatch. '
                                          f'calc: {calc_checksum}, given: {checksum}')
-                            return None
+                            break
                         else:
-                            return Packet.make(buf[:-self.CHECKSUM_BYTES])
+                            packet = Packet.make(buf[:-self.CHECKSUM_BYTES])
+                            break
                     else:
-                        logger.debug('Network layer packet checksum underflow.')
-                        return None
+                        logger.debug('Network layer response packet underflow.')
+                        break
             else:
                 time.sleep(self.POLLING_SEC)
         else:
             logger.debug(f'Network layer timeout of {read_timeout_sec} seconds waiting for a '
                          f'valid packet.')
-            return None
+
+        if not packet:
+            buf_str = BufStr(self._recv_buf[:self.recv_buf_len()],
+                                     title='Network layer spurious data.')
+            logger.debug(f'\n{buf_str}')
+
+        return packet

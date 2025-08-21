@@ -1,7 +1,7 @@
 from typing import cast
 import ctypes
 
-from growbies.intf.structs.command import Packet
+from growbies.intf.common import Packet
 from growbies.intf import datalink, network
 
 from .base import BaseTest, BaseMockArduino
@@ -21,25 +21,25 @@ class TestArduinoNetwork(BaseTest):
         buf = bytearray(Packet.MIN_SIZE_IN_BYTES + 4)
         packet = Packet.make(buf)
         self._arduino_serial._send_packet(buf)
-        self.assertEqual(b'\x00\x00\x00\x00\x00\x00\x00\x00\xc0',
-                         self._arduino_serial.written)
+
+        self.assertEqual(b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xc0', self._arduino_serial.written)
 
         packet.data[0] = datalink.Slip.END
         self._arduino_serial.reset()
         self._arduino_serial._send_packet(buf)
-        self.assertEqual(b'\x00\x00\xdb\xdc\x00\x00\x00\xdb\xdc\x00\xc0',
+        self.assertEqual(b'\x00\x00\x00\x00\xdb\xdc\x00\x00\x00\xdb\xdc\x00\xc0',
                          self._arduino_serial.written)
 
         packet.data[0] = datalink.Slip.ESC
         self._arduino_serial.reset()
         self._arduino_serial._send_packet(buf)
-        self.assertEqual(b'\x00\x00\xdb\xdd\x00\x00\x00\xdb\xdd\x00\xc0',
+        self.assertEqual(b'\x00\x00\x00\x00\xdb\xdd\x00\x00\x00\xdb\xdd\x00\xc0',
                          self._arduino_serial.written)
 
         packet.data[0] = 0xFF
         self._arduino_serial.reset()
         self._arduino_serial._send_packet(buf)
-        self.assertEqual(b'\x00\x00\xff\x00\x00\x00\xff\x00\xc0',
+        self.assertEqual(b'\x00\x00\x00\x00\xff\x00\x00\x00\xff\x00\xc0',
                          self._arduino_serial.written)
 
         packet.data[0] = 0x01
@@ -48,7 +48,7 @@ class TestArduinoNetwork(BaseTest):
         packet.data[3] = 0x04
         self._arduino_serial.reset()
         self._arduino_serial._send_packet(buf)
-        self.assertEqual(b'\x00\x00\x01\x02\x03\x04\n\x00\xc0',
+        self.assertEqual(b'\x00\x00\x00\x00\x01\x02\x03\x04\n\x00\xc0',
                          self._arduino_serial.written)
 
         for payload_bytes in (b'\x00', b'\x01', b'\xff', b'\x02\x03',

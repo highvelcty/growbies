@@ -43,11 +43,11 @@ void Growbies::begin() const {
 }
 
 void Growbies::execute(const PacketHdr* packet_hdr) {
-    if (packet_hdr->type.cmd == Cmd::LOOPBACK) {
+    if (packet_hdr->cmd == Cmd::LOOPBACK) {
         new (this->outbuf) RespVoid;
         send_packet(*this->outbuf, sizeof(RespVoid));
     }
-    else if (packet_hdr->type.cmd == Cmd::GET_DATAPOINT) {
+    else if (packet_hdr->cmd == Cmd::GET_DATAPOINT) {
         const auto* cmd = reinterpret_cast<CmdGetDatapoint *>(slip_buf->buf);
         if (validate_packet(*cmd)) {
             // This constructs at location
@@ -56,7 +56,7 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
             send_packet(*this->outbuf, sizeof(*resp));
          }
     }
-    else if (packet_hdr->type.cmd == Cmd::GET_CALIBRATION) {
+    else if (packet_hdr->cmd == Cmd::GET_CALIBRATION) {
         const auto* cmd = reinterpret_cast<CmdGetCalibration *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
             auto* resp = new (this->outbuf) RespGetCalibration;
@@ -64,7 +64,7 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
             send_packet(*this->outbuf, sizeof(*resp));
         }
     }
-    else if (packet_hdr->type.cmd == Cmd::SET_CALIBRATION) {
+    else if (packet_hdr->cmd == Cmd::SET_CALIBRATION) {
         auto* cmd = reinterpret_cast<CmdSetCalibration *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
             new (this->outbuf) RespVoid;
@@ -72,7 +72,7 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
             send_packet(*this->outbuf, sizeof(RespVoid));
         }
     }
-    else if (packet_hdr->type.cmd == Cmd::POWER_ON_HX711) {
+    else if (packet_hdr->cmd == Cmd::POWER_ON_HX711) {
         const auto cmd = reinterpret_cast<CmdPowerOnHx711 *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
             this->power_on();
@@ -81,8 +81,8 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
             send_packet(*this->outbuf, sizeof(RespVoid));
         }
     }
-    else if (packet_hdr->type.cmd == Cmd::POWER_OFF_HX711) {
-        auto cmd = (CmdPowerOffHx711*)slip_buf->buf;
+    else if (packet_hdr->cmd == Cmd::POWER_OFF_HX711) {
+        const auto cmd = reinterpret_cast<CmdPowerOffHx711 *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
             this->power_off();
             new (this->outbuf) RespVoid;
@@ -115,7 +115,8 @@ void Growbies::power_on() {
 }
 
 Error Growbies::median_avg_filter(float **iteration_sensor_sample,
-                                  int iterations, int sensors, float thresh, float* out) {
+                                  int iterations, const int sensors,
+                                  const float thresh, float *out) {
     int iteration;
     int middle;
     float median;
@@ -167,7 +168,7 @@ Error Growbies::median_avg_filter(float **iteration_sensor_sample,
 }
 
 
-Error Growbies::sample_mass(float** iteration_mass_samples, int times, HX711Gain gain) {
+Error Growbies::sample_mass(float** iteration_mass_samples, int times, const HX711Gain gain) {
     Error error = ERROR_NONE;
 	for (int iteration = 0; iteration < times; ++iteration) {
         error |= this->wait_hx711_ready(WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS);
@@ -176,7 +177,7 @@ Error Growbies::sample_mass(float** iteration_mass_samples, int times, HX711Gain
     return error;
 }
 
-Error Growbies::sample_temperature(float** iteration_temp_samples, int times) {
+Error Growbies::sample_temperature(float **iteration_temp_samples, const int times) {
     Error error = ERROR_NONE;
     for (int iteration = 0; iteration < times; ++iteration) {
         for (int sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
@@ -364,8 +365,8 @@ Error Growbies::wait_hx711_ready(const int retries, const unsigned long delay_ms
 #elif ARDUINO_ARCH_ESP32
     uint32_t gpio_in_reg;
 #endif
+    bool all_ready;
     Error error = ERROR_NONE;
-	bool all_ready = true;
 	int retry_count = 0;
 
 	do {
@@ -378,7 +379,7 @@ Error Growbies::wait_hx711_ready(const int retries, const unsigned long delay_ms
     #endif
         all_ready = true;
 	    for (sensor = 0; sensor < MASS_SENSOR_COUNT; ++sensor) {
-	        ready = (bool)(gpio_in_reg & get_HX711_dout_port_bit(sensor)) == LOW;
+	        ready = static_cast<bool>(gpio_in_reg & get_HX711_dout_port_bit(sensor)) == LOW;
 	        all_ready &= ready;
         }
 

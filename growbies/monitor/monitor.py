@@ -1,9 +1,8 @@
 import logging
 import time
 
-from growbies.arduino.arduino import Arduino
-from growbies.arduino.structs.command import MASS_SENSOR_COUNT
-from growbies.arduino.structs.command import TEMPERATURE_SENSOR_COUNT
+from growbies.intf import Intf
+from growbies.intf.common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 from growbies.session import Session
 from growbies.utils.timestamp import get_utc_iso_ts_str, ContextElapsedTime
 from growbies.utils.filelock import FileLock
@@ -38,7 +37,7 @@ def _continue_stream(sess: Session):
         outf.truncate()
 
 def main(sess: Session):
-    arduino_serial = Arduino()
+    arduino_serial = Intf()
     iteration = 0
     # Note: logging is intentionally avoided this retry loop. This is because the errors being
     # handled are likely due to temporary unavailability of the host file system. Logging also

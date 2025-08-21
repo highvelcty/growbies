@@ -1,9 +1,8 @@
-from typing import Optional
-import logging
 import time
 
+from .cmd import *
+from .resp import *
 from .transport import Transport
-from .structs import command
 
 logger = logging.getLogger(__name__)
 
@@ -15,74 +14,69 @@ class Intf(Transport):
     RESET_COMMUNICATION_LOOP_DELAY = 0.33
     MANUAL_CALIBRATION_SAMPLES = 25
 
-    def execute(self, cmd: command.TBaseCommand, *,
+    def execute(self, cmd_: TBaseCmd, *,
                 retries: int = EXEC_RETRIES,
                 read_timeout_sec: float = Transport.DEFAULT_READ_TIMEOUT_SEC) \
-            -> Optional[command.TBaseResponse]:
+            -> Optional[TBaseResp]:
+        resp_ = None
         for retry in range(retries):
             if retry:
                 logger.debug(f'Execution layer attempt {retry+1}/{retries}')
                 self.reset_communication()
 
             # Send
-            self._send_cmd(cmd)
+            self.send_cmd(cmd_)
 
             # Receive
-            resp = self._recv_resp(read_timeout_sec=read_timeout_sec)
-            if resp is None:
-                logger.debug(f'Execution layer no response.')
-            elif isinstance(resp, command.RespError):
-                logger.debug(f'Execution layer error response resp.error 0x{resp.error:04X} '
-                             f'received.')
-            else:
-                return resp
+            resp_ = self.recv_resp(read_timeout_sec=read_timeout_sec)
+            if resp_:
+                break
         else:
-            logger.error(f'Execution layer retries {retries} exhausted executing {cmd.type} '
+            logger.error(f'Execution layer retries {retries} exhausted executing {cmd_.type} '
                          f'command.')
-            return None
+        return resp_
 
     def power_on_hx711(self) -> None:
-        self.execute(command.CmdPowerOnHx711())
+        self.execute(CmdPowerOnHx711())
 
     def power_off_hx711(self) -> None:
-        self.execute(command.CmdPowerOffHx711())
+        self.execute(CmdPowerOffHx711())
 
-    def get_calibration(self) -> command.Calibration:
-        resp: command.RespGetCalibration = self.execute(command.CmdGetCalibration())
-        return resp.calibration
-
+    def get_calibration(self) -> Calibration:
+        resp_: RespGetCalibration = self.execute(CmdGetCalibration())
+        return resp_.calibration
 
     def set_mass_temperature_coeff(self, sensor: int, *coeff):
-        cmd = command.CmdSetCalibration()
-        cmd.calibration = self.get_calibration()
-        cmd.calibration.set_sensor_data(command.Calibration.Field.MASS_TEMPERATURE_COEFF, sensor,
+        cmd_ = CmdSetCalibration()
+        cmd_.calibration = self.get_calibration()
+        cmd_.calibration.set_sensor_data(Calibration.Field.MASS_TEMPERATURE_COEFF, sensor,
                                     *coeff)
-        self.execute(cmd)
+        self.execute(cmd_)
 
     def set_mass_coeff(self, *coeff):
-        cmd = command.CmdSetCalibration()
-        cmd.calibration = self.get_calibration()
-        cmd.calibration.mass_coeff = coeff
-        self.execute(cmd)
+        cmd_ = CmdSetCalibration()
+        cmd_.calibration = self.get_calibration()
+        cmd_.calibration.mass_coeff = coeff
+        self.execute(cmd_)
 
     def set_tare(self, tare_idx: int, value: float):
-        cmd = command.CmdSetCalibration()
-        cmd.calibration = self.get_calibration()
-        mod_values = cmd.calibration.tare
+        cmd_ = CmdSetCalibration()
+        cmd_.calibration = self.get_calibration()
+        mod_values = cmd_.calibration.tare
         mod_values[tare_idx] = value
-        cmd.calibration.tare = mod_values
-        self.execute(cmd)
+        cmd_.calibration.tare = mod_values
+        self.execute(cmd_)
 
-    def get_raw_datapoint(self, times: int = 1) -> command.RespDataPoint:
-        cmd = command.CmdGetDatapoint(times=times, raw=True)
-        resp: command.RespDataPoint = self.execute(cmd, read_timeout_sec=10)
-        return resp
+    def get_raw_datapoint(self, times: int = 1) -> RespDataPoint:
+        cmd_ = CmdGetDatapoint(times=times, raw=True)
+        resp_: RespDataPoint = self.execute(cmd_, read_timeout_sec=10)
+        return resp_
 
-    def get_datapoint(self, times: int = command.CmdGetDatapoint.DEFAULT_TIMES) \
-            -> command.RespDataPoint:
-        cmd = command.CmdGetDatapoint(times=times)
-        resp: command.RespDataPoint = self.execute(cmd, read_timeout_sec=10)
-        return resp
+    def get_datapoint(self, times: int = CmdGetDatapoint.DEFAULT_TIMES) \
+            -> RespDataPoint:
+        cmd_ = CmdGetDatapoint(times=times)
+        resp_: RespDataPoint = self.execute(cmd_, read_timeout_sec=10)
+        return resp_
 
     def reset_communication(self):
         for _ in range(self.RESET_COMMUNICATION_LOOPS):
@@ -93,11 +87,3 @@ class Intf(Transport):
                 bytes_in_waiting = self.in_waiting
                 if bytes_in_waiting:
                     _ = self.read(bytes_in_waiting)
-
-    def wait_for_ready(self):
-        cmd = command.CmdLoopback()
-        resp: Optional[command.RespVoid] = self.execute(cmd, retries=self.READY_RETRIES,
-                                                        read_timeout_sec=0.5)
-        if resp is None:
-            raise ConnectionError(f'Device was not ready with {self.READY_RETRIES} '
-                                  f'retries, {self.READY_RETRY_DELAY_SEC} second delay per retry.')

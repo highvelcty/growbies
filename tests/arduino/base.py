@@ -9,9 +9,6 @@ class BaseMockArduino(object):
     def reset(self):
         self.written = b''
 
-    def wait_for_ready(self):
-        pass
-
     def write(self, data):
         self.written += data
 
