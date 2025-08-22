@@ -66,6 +66,7 @@ void loop() {
 
 
 // #if ARDUINO_ARCH_ESP32
+// meyere, this causes ruckus on the usb bus
 //     esp_sleep_enable_timer_wakeup(DEEP_SLEEP_USECS);
 //     esp_deep_sleep_start();
 // #elif ARDUINO_ARCH_AVR

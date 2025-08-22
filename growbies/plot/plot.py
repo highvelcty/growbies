@@ -12,7 +12,6 @@ import tkinter as tk
 import matplotlib
 
 from growbies.utils import timestamp
-from growbies.intf.structs.command import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
 matplotlib.use('TkAgg')
 
@@ -370,7 +369,7 @@ def mass_cal(path: Path, *, invert_sum: bool = False):
     plt.show()
 
     ### Error ######################################################################################
-    error_x_data = 33ref_y_data
+    error_x_data = ref_y_data
     difference_y_data = list()
     for ref_data, load_cell_data in (zip(lin_x, lin_y)):
         difference_y_data.append((load_cell_data-ref_data)*100)
