@@ -84,9 +84,9 @@ class Worker(Thread):
     def _process_async(resp: RespDataPoint | RespError):
         logger.info(f'Process {resp.type}')
         if resp.type == Resp.ERROR:
-            pass
+            logger.error(resp)
         elif resp.type == Resp.DATAPOINT:
-            pass
+            logger.info(resp)
         else:
             logger.error(f'Invalid response type received: {resp.type}.')
 

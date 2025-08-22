@@ -73,8 +73,6 @@ void loop() {
 //     delay(DEEP_SLEEP_MILLIS);
 // #endif
 
-    delay(DEEP_SLEEP_MILLIS);
-
 }
 #else
 void loop() {

@@ -73,7 +73,7 @@ typedef enum Unit : uint16_t {
 
 #if BUTTERFLY
 constexpr auto BUTTERFLY_SAMPLES_PER_DATAPOINT = 7;
-constexpr auto WAIT_FOR_CMD_MILLIS = 100;
+constexpr auto WAIT_FOR_CMD_MILLIS = 1000;
 constexpr uint32_t DEEP_SLEEP_MILLIS = 1000; // 1 second
 constexpr auto DEEP_SLEEP_USECS = DEEP_SLEEP_MILLIS * 1000;
 #endif
