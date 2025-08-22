@@ -1,8 +1,7 @@
-import os
 from enum import Enum
 from pathlib import Path
 
-from growbies import constants, env
+from growbies import constants
 
 _REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
 
@@ -105,7 +104,10 @@ class DebianPaths(Enum):
     DEBIAN_INSTALL_SH = DEBIAN_ROOT / 'install.sh'
     DEBIAN_SRC = DEBIAN_ROOT / 'src'
     DEBIAN_SRC_GROWBIES = DEBIAN_SRC / RepoPaths.GROWBIES.value
+    DEBIAN_SRC_GROWBIES_INIT = DEBIAN_SRC_GROWBIES / '__init__.py'
     DEBIAN_SRC_PKG_BASH_SRC = DEBIAN_SRC / RepoPaths.PKG_BASH_SRC.value
+    DEBIAN_SRC_BUILD_LIB = DEBIAN_SRC / 'build_lib'
+    DEBIAN_SRC_BUILD_LIB_SET_VERSION_PY = DEBIAN_SRC_BUILD_LIB / 'set_version.py'
 
     # command
     DEBIAN_BASE_PYTHON = 'python3.11'

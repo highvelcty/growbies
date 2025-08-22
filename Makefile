@@ -29,7 +29,7 @@ tests:
 
 ### Utilities ######################################################################################
 $(PATH_DIST): $(src_watch)
-	python -m build
+	GIT_HASH=$(git rev-parse --short HEAD) python -m build
 
 $(PATH_DOT_COVERAGE):
 	( \
