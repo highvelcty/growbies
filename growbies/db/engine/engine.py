@@ -2,6 +2,7 @@ from contextlib import contextmanager
 import logging
 from typing import Any, Generator
 
+from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import create_engine, Session, SQLModel
 
 
@@ -9,6 +10,12 @@ from .account import AccountEngine
 from .device import DevicesEngine
 from .gateway import GatewayEngine
 from growbies.db.constants import SQLMODEL_LOCAL_ADDRESS
+
+# All models representing tables found in the import space will be created, but the static
+# checker doesn't know this.
+# noinspection PyUnresolvedReferences
+from growbies.db.models import addressing
+from growbies.db.models.endpoint_types import EndpointTypes
 
 logger = logging.getLogger(__name__)
 
@@ -30,13 +37,28 @@ class DBEngine:
         return self._lazy_init_engine
 
     def init_tables(self):
-        # All models representing tables found in the import space will be created.
-        # noinspection PyUnresolvedReferences
-        from growbies.db.models import addressing
         with Session(self._engine) as session:
             SQLModel.metadata.create_all(self._engine)
             session.commit()
             session.close()
+
+    def _init_endpoint_type_table(self):
+        default_endpoint_types = [
+            {EndpointTypes.Key.NAME: 'mass',
+             EndpointTypes.Key.DESCRIPTION: 'Weight measured in DAC.'},
+            {EndpointTypes.Key.NAME: 'temperature',
+             EndpointTypes.Key.DESCRIPTION: 'Temperature measured in DAC.'}
+        ]
+
+        with Session(self._engine) as session:
+            for row in default_endpoint_types:
+                # The postgres sqlalchemy insert is used here because it supports on conflict do
+                # nothing. Whereas, the native sqlmodel `add` statement does not.
+                stmt = insert(EndpointTypes).values(**row).on_conflict_do_nothing(
+                    index_elements=["name"]  # ensures unique name prevents duplicates
+                )
+                session.exec(stmt)
+            session.commit()
 
     def _merge(self, thing):
         with self.new_session() as session:

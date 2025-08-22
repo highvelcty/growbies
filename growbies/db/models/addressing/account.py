@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, String
@@ -12,7 +12,7 @@ class Account(SQLModel, table=True):
         ID: KeyStr = 'id'
         NAME: KeyStr = 'name'
 
-    id: int = Field(default=None, primary_key=True)
+    id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(sa_column=Column(String, unique=True, index=True))
 
     gateways: list['Gateway'] = Relationship(back_populates='account_relation', cascade_delete=True)

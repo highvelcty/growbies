@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, Integer, ForeignKey, String
@@ -15,7 +15,7 @@ class Gateway(SQLModel, table=True):
         NAME: KeyStr = 'name'
         ACCOUNT: KeyStr = 'account'
 
-    id: int = Field(default=None, primary_key=True)
+    id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(sa_column=Column(String, unique=True, index=True))
     account: int = Field(
         sa_column=Column(

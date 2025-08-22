@@ -1,7 +1,8 @@
 from enum import IntEnum
+from typing import Optional
 
 from sqlmodel import Field, Relationship, SQLModel
-from sqlalchemy import Column, Integer, ForeignKey, String
+from sqlalchemy import Column, Integer, ForeignKey
 
 from .base import KeyStr
 from .device import Device
@@ -17,7 +18,7 @@ class Endpoint(SQLModel, table=True):
         NAME: KeyStr = 'name'
         DEVICE: KeyStr = 'device'
 
-    id: int = Field(default=None, primary_key=True)
+    id: Optional[int] = Field(default=None, primary_key=True)
     device: int = Field(
         sa_column=Column(
             Integer,
@@ -28,6 +29,8 @@ class Endpoint(SQLModel, table=True):
             nullable=False
         )
     )
+    # This is the index that is used for accessing coefficient/calibration data by end point
+    # within the firmware.
     index: int
     type: EndpointType
 
