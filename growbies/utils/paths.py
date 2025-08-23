@@ -111,3 +111,8 @@ class DebianPaths(Enum):
 
     # command
     DEBIAN_BASE_PYTHON = 'python3.11'
+
+class FirmwarePaths(Enum):
+    FIRMWARE = Path(RepoPaths.REPO_ROOT.value) / 'firmware'
+    FIRMWARE_PIO = FIRMWARE / '.pio'
+    FIRMWARE_PIO_BUILD = FIRMWARE_PIO / 'build'

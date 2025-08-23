@@ -42,9 +42,6 @@ internal_build:
 		apt install --reinstall -y ./growbies*.deb; \
 	)
 
-emey:
-	./${PATH_DEBIAN_SRC_BUILD_LIB_SET_VERSION_PY};
-
 image:
 	( \
 		make deb_src_copy -C "${REPO_ROOT}"; \
