@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 from .datalink import Datalink
 from .common import Packet
-from .resp import BaseResp
+from .resp import BaseDeviceResp
 from growbies.utils.bufstr import BufStr
 
 
@@ -46,7 +46,7 @@ class Network(Datalink, ABC):
                         print(f'Network layer recv:\n'
                               f'{BufStr(self._recv_buf[:self.recv_buf_len()])}')
 
-                    if self.recv_buf_len() > ctypes.sizeof(BaseResp):
+                    if self.recv_buf_len() > ctypes.sizeof(BaseDeviceResp):
                         buf = memoryview(self._recv_buf)[:self.recv_buf_len()].cast('B')
                         checksum = ctypes.c_uint16.from_buffer(buf[-self.CHECKSUM_BYTES:]).value
                         calc_checksum = sum(buf[:-self.CHECKSUM_BYTES])

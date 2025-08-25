@@ -1,19 +1,21 @@
 from .worker import Worker
-from growbies.service.cmd.structs import TBaseCmd
-from growbies.service.resp.structs import TBaseResp
+from growbies.intf.cmd import TBaseDeviceCmd
+from growbies.service.resp.structs import ServiceCmdError
+from growbies.intf.resp import TBaseDeviceResp
 from growbies.utils.types import DeviceID_t, WorkerID_t
 
 
 class Pool:
     def __init__(self):
-        self._workers: dict[WorkerID_t: Worker] = dict()
+        self._workers: dict[WorkerID_t, Worker] = dict()
 
-    def cmd(self, worker_id: WorkerID_t, cmd: TBaseCmd) -> TBaseResp:
-        return self._workers[worker_id].cmd(cmd)
+    @property
+    def workers(self) -> dict[DeviceID_t | WorkerID_t, Worker]:
+        return self._workers
 
     def connect(self, *device_ids: DeviceID_t):
         for device_id in device_ids:
-            worker: Worker = self._workers.get(device_id)
+            worker = self._workers.get(device_id)
             if worker is None:
                 worker = Worker(device_id)
                 worker.start()
@@ -23,7 +25,7 @@ class Pool:
                 worker.start()
                 self._workers[device_id] = worker
 
-    def disconnect(self, *worker_ids: WorkerID_t):
+    def disconnect(self, *worker_ids:  WorkerID_t):
         for worker_id in worker_ids:
             self._workers[worker_id].stop()
 
@@ -37,9 +39,9 @@ class Pool:
             del self._workers[worker_id]
 
 
-pool = None
+_pool = None
 def get_pool() -> Pool:
-    global pool
-    if pool is None:
-        pool = Pool()
-    return pool
+    global _pool
+    if _pool is None:
+        _pool = Pool()
+    return _pool

@@ -1,7 +1,7 @@
 import os
 from typing import Any
 
-from .common import Base, BASE_FILENAME
+from .common import Base, BASE_FILENAME, get_git_hash
 
 from growbies.utils.paths import FirmwarePaths
 
@@ -15,16 +15,16 @@ class BaseFw(Base):
 
         all = Base.Key.all + (MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT)
 
-    _path = FirmwarePaths.FIRMWARE_PIO_BUILD.value / os.environ[PIOENV] / FILENAME
-
     def _constants(self) -> dict[Base.Key.type_, Any]:
         ret_dict = super()._constants()
+        ret_dict[self.Key.VERSION] = f'0.0.1-dev0+{get_git_hash()}'
         ret_dict[self.Key.MASS_SENSOR_COUNT] = 1
         ret_dict[self.Key.TEMPERATURE_SENSOR_COUNT] = 1
         return ret_dict
 
     def save(self):
-        with open(self._path, 'w') as outf:
+        path = FirmwarePaths.FIRMWARE_PIO_BUILD.value / os.environ[PIOENV] / FILENAME
+        with open(path, 'w') as outf:
             outf.write(str(self))
 
     def __str__(self):
@@ -34,7 +34,10 @@ class BaseFw(Base):
         ]
 
         for key, value in self._constants().items():
-            str_list.append(f'#define {key} {value}')
+            if isinstance(value, str):
+                str_list.append(f'#define {key} "{value}"')
+            else:
+                str_list.append(f'#define {key} {value}')
 
         str_list.append('')
         str_list.append('')

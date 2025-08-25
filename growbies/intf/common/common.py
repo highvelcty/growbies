@@ -3,8 +3,8 @@ import ctypes
 import logging
 
 if TYPE_CHECKING:
-    from ..cmd import Cmd
-    from ..resp import Resp
+    from ..cmd import DeviceCmd
+    from ..resp import DeviceResp
 from growbies.utils.bufstr import BufStr
 from growbies.utils.report import format_float_list, format_float_table
 
@@ -58,11 +58,11 @@ class PacketHeader(BaseStructure):
         setattr(self, self.Field.ID, value)
 
     @property
-    def type(self) -> Union['Cmd', 'Resp']:
+    def type(self) -> Union['DeviceCmd', 'DeviceResp']:
         return getattr(self, self.Field.TYPE)
 
     @type.setter
-    def type(self, value: ['Cmd', 'Resp']):
+    def type(self, value: ['DeviceCmd', 'DeviceResp']):
         setattr(self, self.Field.TYPE, value)
 
 

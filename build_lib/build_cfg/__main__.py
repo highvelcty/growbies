@@ -16,11 +16,13 @@ for cmd in Cmd:
 
 cmd_parsers[Cmd.FIRMWARE].add_argument(f'{Param.MODEL_NUMBER}',
                                        default=firmware.Default.MODEL_NUMBER,
-                                      help=Param.get_help_str(Param.MODEL_NUMBER))
+                                       help=Param.get_help_str(Param.MODEL_NUMBER),
+                                       nargs='?')
 
 cmd_parsers[Cmd.GATEWAY].add_argument(f'{Param.MODEL_NUMBER}',
                                       default=gateway.Default.MODEL_NUMBER,
-                                      help=Param.get_help_str(Param.MODEL_NUMBER))
+                                      help=Param.get_help_str(Param.MODEL_NUMBER),
+                                      nargs='?')
 
 ns, args = parser.parse_known_args(sys.argv[1:])
 

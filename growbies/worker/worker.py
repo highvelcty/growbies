@@ -10,9 +10,9 @@ from serial.serialutil import SerialException
 
 from growbies.db.engine import get_db_engine
 from growbies.intf import Intf
-from growbies.intf.cmd import BaseCmd, TBaseCmd
-from growbies.intf.resp import Resp, RespError, RespDataPoint, TBaseResp
-from growbies.service.cmd.structs import ReconnectCmd
+from growbies.intf.cmd import BaseDeviceCmd, TBaseDeviceCmd
+from growbies.intf.resp import DeviceResp, ErrorDeviceResp, DataPointDeviceResp, TBaseDeviceResp
+from growbies.service.cmd.structs import ReconnectServiceCmd
 from growbies.service.queue import ServiceQueue
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
@@ -25,7 +25,7 @@ class PipeCmd:
 
 class Worker(Thread):
     _RECONNECT_RETRY_DELAY_SECONDS = 3
-    _ASYNC_RESPONSES = (RespDataPoint, RespError)
+    _ASYNC_RESPONSES = (DataPointDeviceResp, ErrorDeviceResp)
     _PIPE_READ_BYTES = 1024
     def __init__(self, device_id: DeviceID_t):
         super().__init__()
@@ -42,7 +42,7 @@ class Worker(Thread):
     def id(self) -> WorkerID_t:
         return self._device.id
 
-    def cmd(self, cmd: TBaseCmd) -> TBaseResp:
+    def cmd(self, cmd: TBaseDeviceCmd):
         self._in_queue.put(cmd)
         os.write(self._wpipe, PipeCmd.WAKE)
         return self._out_queue.get()
@@ -57,7 +57,7 @@ class Worker(Thread):
     def _retry_connection(self):
         logger.info(f'Connection retry.')
         time.sleep(self._RECONNECT_RETRY_DELAY_SECONDS)
-        cmd = ReconnectCmd(serials=(self._device.serial,))
+        cmd = ReconnectServiceCmd(serials=(self._device.serial,))
         with ServiceQueue() as cmd_q:
             cmd_q.put(cmd)
 
@@ -81,12 +81,13 @@ class Worker(Thread):
             self._intf.close()
 
     @staticmethod
-    def _process_async(resp: RespDataPoint | RespError):
+    def _process_async(resp: DataPointDeviceResp | ErrorDeviceResp):
         logger.info(f'Process {resp.type}')
-        if resp.type == Resp.ERROR:
+        if resp.type == DeviceResp.ERROR:
             logger.error(resp)
-        elif resp.type == Resp.DATAPOINT:
-            logger.info(resp)
+        elif resp.type == DeviceResp.DATAPOINT:
+            pass
+            # logger.info(resp)
         else:
             logger.error(f'Invalid response type received: {resp.type}.')
 
@@ -101,7 +102,7 @@ class Worker(Thread):
                     self._retry_connection_flag = False
                     break
                 elif pipe_cmd == PipeCmd.WAKE:
-                    cmd: BaseCmd = self._in_queue.get()
+                    cmd: BaseDeviceCmd = self._in_queue.get()
                     logger.info(f'Sending {cmd.type} command to device.')
                     self._transaction_id += 1
                     cmd.id = self._transaction_id

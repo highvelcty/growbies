@@ -2,7 +2,7 @@ import logging
 
 from .queue import ServiceQueue, IDQueue
 from.cmd.structs import *
-from growbies.service.cmd import activate, discovery
+from growbies.service.cmd import activate, discovery, loopback
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
 
@@ -29,19 +29,22 @@ class Service:
             while not done:
                 for cmd in self._queue.get():
                     logger.info(f'Service cmd "{cmd.cmd}".')
-                    if cmd.cmd == Cmd.SERVICE_STOP:
-                        done = True
-                        break
-                    elif cmd.cmd == Cmd.LS:
-                        with IDQueue(cmd.qid) as resp_q:
-                            resp_q.put(discovery.ls())
-                    elif cmd.cmd == Cmd.ACTIVATE:
+                    if cmd.cmd == ServiceCmd.ACTIVATE:
                         with IDQueue(cmd.qid) as resp_q:
                             resp_q.put(activate.activate(cmd))
-                    elif cmd.cmd == Cmd.DEACTIVATE:
+                    elif cmd.cmd == ServiceCmd.DEACTIVATE:
                         with IDQueue(cmd.qid) as resp_q:
                             resp_q.put(activate.deactivate(cmd))
-                    elif cmd.cmd == Cmd.RECONNECT:
+                    elif cmd.cmd == ServiceCmd.LOOPBACK:
+                        with IDQueue(cmd.qid) as resp_q:
+                            resp_q.put(loopback.loopback(cmd))
+                    elif cmd.cmd == ServiceCmd.LS:
+                        with IDQueue(cmd.qid) as resp_q:
+                            resp_q.put(discovery.ls())
+                    elif cmd.cmd == ServiceCmd.SERVICE_STOP:
+                        done = True
+                        break
+                    elif cmd.cmd == ServiceCmd.RECONNECT:
                         resp = activate.deactivate(cmd)
                         if resp:
                             logger.error(resp)
@@ -51,7 +54,7 @@ class Service:
                     else:
                         logger.error(f'Unknown command {cmd} received.')
         except KeyboardInterrupt:
-            self._queue.put(ServiceStopCmd())
+            self._queue.put(ServiceStopServiceCmd())
             return self.run()
 
         get_pool().disconnect_all()

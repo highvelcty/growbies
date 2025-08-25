@@ -5,13 +5,14 @@ import logging
 
 from ..common import Calibration, PacketHeader
 
-__all__ = ['Cmd', 'BaseCmd', 'TBaseCmd',
-           'CmdLoopback', 'CmdGetCalibration', 'CmdSetCalibration', 'CmdPowerOnHx711',
-           'CmdPowerOffHx711', 'CmdGetDatapoint']
+__all__ = ['DeviceCmd', 'BaseDeviceCmd', 'TBaseDeviceCmd',
+           'LoopbackDeviceCmd', 'GetCalibrationDeviceCmd', 'SetCalibrationDeviceCmd',
+           'PowerOnHx711DeviceCmd',
+           'PowerOffHx711DeviceCmd', 'GetDatapointDeviceCmd']
 
 logger = logging.getLogger(__name__)
 
-class Cmd(IntEnum):
+class DeviceCmd(IntEnum):
     LOOPBACK = 0
     GET_CALIBRATION = 1
     SET_CALIBRATION = 2
@@ -22,20 +23,20 @@ class Cmd(IntEnum):
     def __str__(self):
         return self.name
 
-class BaseCmd(PacketHeader):
+class BaseDeviceCmd(PacketHeader):
     @property
-    def type(self) -> Cmd:
-        return Cmd(getattr(self, self.Field.TYPE))
+    def type(self) -> DeviceCmd:
+        return DeviceCmd(getattr(self, self.Field.TYPE))
 
     @type.setter
-    def type(self, value: Cmd):
+    def type(self, value: DeviceCmd):
         setattr(self, self.Field.TYPE, value)
-TBaseCmd = TypeVar('TBaseCmd', bound=BaseCmd)
+TBaseDeviceCmd = TypeVar('TBaseDeviceCmd', bound=BaseDeviceCmd)
 
-class BaseCmdWithTimesParam(BaseCmd):
+class BaseDeviceCmdWithTimesParam(BaseDeviceCmd):
     DEFAULT_TIMES = 7
 
-    class Field(BaseCmd.Field):
+    class Field(BaseDeviceCmd.Field):
         TIMES = '_times'
 
     _fields_ = [
@@ -55,19 +56,13 @@ class BaseCmdWithTimesParam(BaseCmd):
     def times(self, value: int):
         super().times = value
 
-class CmdLoopback(BaseCmd):
+class GetCalibrationDeviceCmd(BaseDeviceCmd):
     def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        self.type = Cmd.LOOPBACK
-
-
-class CmdGetCalibration(BaseCmd):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Cmd.GET_CALIBRATION
+        kw[self.Field.TYPE] = DeviceCmd.GET_CALIBRATION
         super().__init__(*args, **kw)
 
-class CmdSetCalibration(BaseCmd):
-    class Field(BaseCmd.Field):
+class SetCalibrationDeviceCmd(BaseDeviceCmd):
+    class Field(BaseDeviceCmd.Field):
         CALIBRATION = '_calibration'
 
     _fields_ = [
@@ -84,21 +79,11 @@ class CmdSetCalibration(BaseCmd):
         setattr(self, self.Field.CALIBRATION, calibration)
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Cmd.SET_CALIBRATION
+        kw[self.Field.TYPE] = DeviceCmd.SET_CALIBRATION
         super().__init__(*args, **kw)
 
-class CmdPowerOnHx711(BaseCmd):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Cmd.POWER_ON_HX711
-        super().__init__(*args, **kw)
-
-class CmdPowerOffHx711(BaseCmd):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Cmd.POWER_OFF_HX711
-        super().__init__(*args, **kw)
-
-class CmdGetDatapoint(BaseCmdWithTimesParam):
-    class Field(BaseCmdWithTimesParam.Field):
+class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
+    class Field(BaseDeviceCmdWithTimesParam.Field):
         RAW = '_raw'
 
     _fields_ = [
@@ -106,7 +91,7 @@ class CmdGetDatapoint(BaseCmdWithTimesParam):
     ]
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Cmd.GET_DATAPOINT
+        kw[self.Field.TYPE] = DeviceCmd.GET_DATAPOINT
         super().__init__(*args, **kw)
 
     @property
@@ -116,3 +101,18 @@ class CmdGetDatapoint(BaseCmdWithTimesParam):
     @raw.setter
     def raw(self, val: bool):
         setattr(self, self.Field.RAW, val)
+
+class LoopbackDeviceCmd(BaseDeviceCmd):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self.type = DeviceCmd.LOOPBACK
+
+class PowerOffHx711DeviceCmd(BaseDeviceCmd):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = DeviceCmd.POWER_OFF_HX711
+        super().__init__(*args, **kw)
+
+class PowerOnHx711DeviceCmd(BaseDeviceCmd):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = DeviceCmd.POWER_ON_HX711
+        super().__init__(*args, **kw)

@@ -9,7 +9,7 @@ import time
 
 from inotify_simple import INotify, flags
 
-from growbies.service.cmd.structs import TBaseCmd
+from growbies.service.cmd.structs import TBaseServiceCmd
 from growbies.utils.filelock import FileLock
 from growbies.utils.paths import InstallPaths
 from growbies.utils.types import Pickleable_t
@@ -153,8 +153,8 @@ class ServiceQueue(Queue):
     def __init__(self):
         super().__init__(self.PATH)
 
-    def get(self, *args) -> Iterator[TBaseCmd]:
+    def get(self, *args) -> Iterator[TBaseServiceCmd]:
         yield from super().get()
 
-    def put(self, cmd: TBaseCmd):
+    def put(self, cmd: TBaseServiceCmd):
         return super().put(cmd)

@@ -14,10 +14,10 @@ class Intf(Transport):
     RESET_COMMUNICATION_LOOP_DELAY = 0.33
     MANUAL_CALIBRATION_SAMPLES = 25
 
-    def execute(self, cmd_: TBaseCmd, *,
+    def execute(self, cmd_: TBaseDeviceCmd, *,
                 retries: int = EXEC_RETRIES,
                 read_timeout_sec: float = Transport.DEFAULT_READ_TIMEOUT_SEC) \
-            -> Optional[TBaseResp]:
+            -> Optional[TBaseDeviceResp]:
         resp_ = None
         for retry in range(retries):
             if retry:
@@ -37,45 +37,45 @@ class Intf(Transport):
         return resp_
 
     def power_on_hx711(self) -> None:
-        self.execute(CmdPowerOnHx711())
+        self.execute(PowerOnHx711DeviceCmd())
 
     def power_off_hx711(self) -> None:
-        self.execute(CmdPowerOffHx711())
+        self.execute(PowerOffHx711DeviceCmd())
 
     def get_calibration(self) -> Calibration:
-        resp_: RespGetCalibration = self.execute(CmdGetCalibration())
+        resp_: GetCalibrationDeviceRespGetCalibration = self.execute(GetCalibrationDeviceCmd())
         return resp_.calibration
 
     def set_mass_temperature_coeff(self, sensor: int, *coeff):
-        cmd_ = CmdSetCalibration()
+        cmd_ = SetCalibrationDeviceCmd()
         cmd_.calibration = self.get_calibration()
         cmd_.calibration.set_sensor_data(Calibration.Field.MASS_TEMPERATURE_COEFF, sensor,
                                     *coeff)
         self.execute(cmd_)
 
     def set_mass_coeff(self, *coeff):
-        cmd_ = CmdSetCalibration()
+        cmd_ = SetCalibrationDeviceCmd()
         cmd_.calibration = self.get_calibration()
         cmd_.calibration.mass_coeff = coeff
         self.execute(cmd_)
 
     def set_tare(self, tare_idx: int, value: float):
-        cmd_ = CmdSetCalibration()
+        cmd_ = SetCalibrationDeviceCmd()
         cmd_.calibration = self.get_calibration()
         mod_values = cmd_.calibration.tare
         mod_values[tare_idx] = value
         cmd_.calibration.tare = mod_values
         self.execute(cmd_)
 
-    def get_raw_datapoint(self, times: int = 1) -> RespDataPoint:
-        cmd_ = CmdGetDatapoint(times=times, raw=True)
-        resp_: RespDataPoint = self.execute(cmd_, read_timeout_sec=10)
+    def get_raw_datapoint(self, times: int = 1) -> DataPointDeviceResp:
+        cmd_ = GetDatapointDeviceCmd(times=times, raw=True)
+        resp_: DataPointDeviceResp = self.execute(cmd_, read_timeout_sec=10)
         return resp_
 
-    def get_datapoint(self, times: int = CmdGetDatapoint.DEFAULT_TIMES) \
-            -> RespDataPoint:
-        cmd_ = CmdGetDatapoint(times=times)
-        resp_: RespDataPoint = self.execute(cmd_, read_timeout_sec=10)
+    def get_datapoint(self, times: int = GetDatapointDeviceCmd.DEFAULT_TIMES) \
+            -> DataPointDeviceResp:
+        cmd_ = GetDatapointDeviceCmd(times=times)
+        resp_: DataPointDeviceResp = self.execute(cmd_, read_timeout_sec=10)
         return resp_
 
     def reset_communication(self):

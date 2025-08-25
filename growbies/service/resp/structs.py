@@ -2,14 +2,11 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-__all__ = ['ErrorResp', 'TBaseResp']
+__all__ = ['ServiceCmdError', 'TBaseServiceResp']
 
-class BaseResp(BaseModel):
+class BaseServiceResp(BaseModel):
     pass
-TBaseResp = TypeVar('TBaseResp', bound=BaseResp)
+TBaseServiceResp = TypeVar('TBaseServiceResp', bound=BaseServiceResp)
 
-class ErrorResp(BaseModel):
-    msg: str
-
-    def __str__(self):
-        return f'Error: {self.msg}'
+class ServiceCmdError(Exception):
+    pass

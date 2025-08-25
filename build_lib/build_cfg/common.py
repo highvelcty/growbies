@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import StrEnum
 from typing import Any, TypeVar, NewType
+import shlex
+import subprocess
 
 from growbies.utils.types import ModelNumber_t
 
@@ -21,7 +23,7 @@ class Cmd(StrEnum):
             raise ValueError(f'Sub-command "{sub_cmd_}" does not exist')
 
 class Param(StrEnum):
-    MODEL_NUMBER = 'model_number`'
+    MODEL_NUMBER = 'model_number'
 
     @classmethod
     def get_help_str(cls, param_: 'Param'):
@@ -61,7 +63,10 @@ TBase = TypeVar('TBase', bound=Base)
 def dispatch(cmd: Cmd, model_number: ModelNumber_t):
     if cmd == Cmd.GATEWAY:
         from . import gateway
-        gateway.Default().save()
+        if model_number == gateway.Default.MODEL_NUMBER:
+            gateway.Default().save()
+        else:
+            raise ValueError(f'Invalid gateway model number: {model_number}.')
     elif cmd == Cmd.FIRMWARE:
         from . import firmware
         if model_number == firmware.Default.MODEL_NUMBER:
@@ -71,3 +76,9 @@ def dispatch(cmd: Cmd, model_number: ModelNumber_t):
     else:
         raise ValueError(f'Invalid sub-cmd: {cmd}.')
 
+def get_git_hash() -> str:
+    cmd = 'git rev-parse --short HEAD'
+    res = subprocess.run(shlex.split(cmd),
+                         stdout=subprocess.PIPE,
+                         text=True, check=True)
+    return res.stdout.strip()

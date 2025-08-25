@@ -8,7 +8,7 @@ from ..common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
 logger = logging.getLogger(__name__)
 
-class Resp(IntEnum):
+class DeviceResp(IntEnum):
     VOID = 0
     DATAPOINT = 1
     CALIBRATION = 2
@@ -18,22 +18,22 @@ class Resp(IntEnum):
         return self.name
 
     @classmethod
-    def get_struct(cls, packet: 'Packet') -> Optional[Type['TBaseResp']]:
+    def get_struct(cls, packet: 'Packet') -> Optional[Type['TBaseDeviceResp']]:
         if packet.header.type == cls.VOID:
-            return RespVoid
+            return VoidDeviceResp
         elif packet.header.type == cls.ERROR:
-            return RespError
+            return ErrorDeviceResp
         elif packet.header.type == cls.DATAPOINT:
-            return RespDataPoint
+            return DataPointDeviceResp
         elif packet.header.type == cls.CALIBRATION:
-            return RespGetCalibration
+            return GetCalibrationDeviceRespGetCalibration
 
         logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
         return None
 
 
 error_t = ctypes.c_uint32
-class Error(IntEnum):
+class DeviceError(IntEnum):
     # bitfield
     NONE                                  = 0x00000000
     CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 0x00000001
@@ -44,7 +44,7 @@ class Error(IntEnum):
     def __str__(self):
         return self.name
 
-class BaseResp(PacketHeader):
+class BaseDeviceResp(PacketHeader):
     class Field(PacketHeader.Field):
         ERROR = '_error'
 
@@ -54,29 +54,24 @@ class BaseResp(PacketHeader):
     ]
 
     @property
-    def error(self) -> Error:
+    def error(self) -> DeviceError:
         return getattr(self, self.Field.ERROR)
 
     @error.setter
-    def error(self, error: Error):
+    def error(self, error: DeviceError):
         setattr(self, self.Field.ERROR, error)
 
     @property
-    def type(self) -> Resp:
-        return Resp(super().type)
+    def type(self) -> DeviceResp:
+        return DeviceResp(super().type)
 
     @type.setter
-    def type(self, value: Resp):
+    def type(self, value: DeviceResp):
         setattr(self, self.Field.TYPE, value)
-TBaseResp = TypeVar('TBaseResp', bound=BaseResp)
+TBaseDeviceResp = TypeVar('TBaseDeviceResp', bound=BaseDeviceResp)
 
-class RespVoid(BaseResp):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Resp.VOID
-        super().__init__(*args, **kw)
-
-class RespError(BaseResp):
-    class Field(BaseResp.Field):
+class ErrorDeviceResp(BaseDeviceResp):
+    class Field(BaseDeviceResp.Field):
         ERROR = 'error'
 
     _fields_ = [
@@ -84,33 +79,20 @@ class RespError(BaseResp):
     ]
 
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = Resp.ERROR
+        kw[self.Field.TYPE] = DeviceResp.ERROR
         super().__init__(*args, **kw)
 
     @property
-    def error(self) -> Error:
+    def error(self) -> DeviceError:
         return super().error
 
     @error.setter
-    def error(self, value: Error):
+    def error(self, value: DeviceError):
         super().error = value
 
 
-class RespGetCalibration(BaseResp):
-    class Field(BaseResp.Field):
-        CALIBRATION = '_calibration'
-
-    _pack_ = 1
-    _fields_ = [
-        (Field.CALIBRATION, Calibration)
-    ]
-
-    @property
-    def calibration(self) -> Calibration:
-        return getattr(self, self.Field.CALIBRATION)
-
-class RespDataPoint(BaseResp):
-    class Field(BaseResp.Field):
+class DataPointDeviceResp(BaseDeviceResp):
+    class Field(BaseDeviceResp.Field):
         MASS_SENSOR = '_mass_sensor'
         MASS = '_mass'
         TEMPERATURE_SENSOR = '_temperature_sensor'
@@ -152,5 +134,23 @@ class RespDataPoint(BaseResp):
         return '\n'.join(str_list)
 
     @classmethod
-    def from_packet(cls, packet) -> Optional['RespDataPoint']:
+    def from_packet(cls, packet) -> Optional['DataPointDeviceResp']:
         return cls.make_class(packet).from_buffer(packet)
+
+class GetCalibrationDeviceRespGetCalibration(BaseDeviceResp):
+    class Field(BaseDeviceResp.Field):
+        CALIBRATION = '_calibration'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.CALIBRATION, Calibration)
+    ]
+
+    @property
+    def calibration(self) -> Calibration:
+        return getattr(self, self.Field.CALIBRATION)
+
+class VoidDeviceResp(BaseDeviceResp):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = DeviceResp.VOID
+        super().__init__(*args, **kw)
