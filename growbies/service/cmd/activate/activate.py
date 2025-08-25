@@ -2,7 +2,7 @@ from typing import Optional
 import logging
 
 from growbies.db.engine import get_db_engine
-from growbies.service.cmd.serials_to_devices import serials_to_device_ids
+from growbies.service.cmd.serials_to_device_ids import serials_to_device_ids
 from growbies.service.cmd.structs import ActivateServiceCmd, DeactivateServiceCmd
 from growbies.service.resp.structs import ServiceCmdError
 from growbies.worker.pool import get_pool
