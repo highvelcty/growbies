@@ -11,7 +11,9 @@ $(REPO_ROOT)/build/paths.env:
 PATHS_ENV=$(REPO_ROOT)/build/paths.env
 include ${PATHS_ENV}
 
-src_watch = $(shell find ${PATH_DEBIAN_SRC_GROWBIES} -type f -name '*' 2>/dev/null || true)
+src_watch := $(shell find ${PATH_DEBIAN_SRC_GROWBIES} -type f \
+    			-not -path "*/__pycache__/*" \
+    			-not -name "*.pyc")
 src_watch += $(shell find ${PATH_DEBIAN_SRC_PKG_BASH_SRC} -type f -name '*' 2>/dev/null || true)
 
 INTERNAL_WORKDIR = /code

@@ -28,7 +28,7 @@ class Network(Datalink, ABC):
         self._slip_send_end()
 
         if self.DEBUG_NETWORK_WRITE:
-            print(f'Network layer send:\n'
+            logger.debug(f'Network layer send:\n'
                   f'{BufStr(bytes(buf) + bytes(checksum))}')
 
 
@@ -43,7 +43,7 @@ class Network(Datalink, ABC):
             if bytes_in_waiting:
                 if self._slip_decode_frame(self.read(bytes_in_waiting)):
                     if self.DEBUG_NETWORK_READ:
-                        print(f'Network layer recv:\n'
+                        logger.debug(f'Network layer recv:\n'
                               f'{BufStr(self._recv_buf[:self.recv_buf_len()])}')
 
                     if self.recv_buf_len() > ctypes.sizeof(BaseDeviceResp):

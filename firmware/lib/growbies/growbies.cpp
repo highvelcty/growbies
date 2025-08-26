@@ -44,8 +44,9 @@ void Growbies::begin() const {
 
 void Growbies::execute(const PacketHdr* packet_hdr) {
     if (packet_hdr->cmd == Cmd::LOOPBACK) {
-        new (this->outbuf) RespVoid;
-        send_packet(*this->outbuf, sizeof(RespVoid));
+        const auto resp = new (this->outbuf) RespVoid;
+        resp->id = 1;
+        send_packet(this->outbuf, sizeof(RespVoid));
     }
     else if (packet_hdr->cmd == Cmd::GET_DATAPOINT) {
         const auto* cmd = reinterpret_cast<CmdGetDatapoint *>(slip_buf->buf);

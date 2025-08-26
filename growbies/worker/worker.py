@@ -27,6 +27,7 @@ class Worker(Thread):
     _RECONNECT_RETRY_DELAY_SECONDS = 3
     _ASYNC_RESPONSES = (DataPointDeviceResp, ErrorDeviceResp)
     _PIPE_READ_BYTES = 1024
+    _DEFAULT_CMD_TIMEOUT_SECONDS = 3
     def __init__(self, device_id: DeviceID_t):
         super().__init__()
         self._in_queue = Queue()
@@ -36,7 +37,6 @@ class Worker(Thread):
         self._intf: Optional[Intf] = None
         self._retry_connection_flag = True
         self._rpipe, self._wpipe = os.pipe()
-        self._transaction_id = 1
 
     @property
     def id(self) -> WorkerID_t:
@@ -45,7 +45,7 @@ class Worker(Thread):
     def cmd(self, cmd: TBaseDeviceCmd):
         self._in_queue.put(cmd)
         os.write(self._wpipe, PipeCmd.WAKE)
-        return self._out_queue.get()
+        return self._out_queue.get(block=True, timeout=Worker._DEFAULT_CMD_TIMEOUT_SECONDS)
 
     @property
     def name(self):
@@ -82,7 +82,6 @@ class Worker(Thread):
 
     @staticmethod
     def _process_async(resp: DataPointDeviceResp | ErrorDeviceResp):
-        logger.info(f'Process {resp.type}')
         if resp.type == DeviceResp.ERROR:
             logger.error(resp)
         elif resp.type == DeviceResp.DATAPOINT:
@@ -103,19 +102,18 @@ class Worker(Thread):
                     break
                 elif pipe_cmd == PipeCmd.WAKE:
                     cmd: BaseDeviceCmd = self._in_queue.get()
+                    cmd.id = 1
                     logger.info(f'Sending {cmd.type} command to device.')
-                    self._transaction_id += 1
-                    cmd.id = self._transaction_id
                     self._intf.send_cmd(cmd)
                     continue
 
             resp = self._intf.recv_resp()
             if resp is not None:
-                if resp.id == self._transaction_id:
-                    self._transaction_id -= 1
-                    logger.info(f'Received {resp.type} response from device, sending to client.')
+                if resp.id:
+                    logger.info(f'Received synchronous {resp.type} response.')
                     self._out_queue.put(resp)
                 else:
+                    logger.info(f'Received asynchronous {resp.type} response.')
                     self._process_async(resp)
 
     def run(self):

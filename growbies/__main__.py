@@ -3,12 +3,15 @@ from enum import StrEnum
 import os
 import shlex
 import sys
+
 from . import __doc__ as pkg_doc
 from . import cfg, db, human_input, monitor, plot, sample, service
 from .constants import USERNAME
 from .utils.privileges import drop_privileges
 
+from growbies.intf.resp import VoidDeviceResp
 from growbies.service.cmd.structs import *
+from growbies.service.resp.structs import ServiceCmdError
 from growbies.service.queue import IDQueue, ServiceQueue
 
 CMD = 'cmd'
@@ -81,7 +84,13 @@ elif ServiceCmd.DEACTIVATE == cmd:
     sys.exit(0)
 elif ServiceCmd.LOOPBACK == cmd:
     ret = _run_cmd(LoopbackServiceCmd(serial=getattr(ns, PositionalParam.SERIAL)))
-    print(ret)
+    if isinstance(ret, ServiceCmdError):
+        raise ret
+    else:
+        ret: VoidDeviceResp
+        print(ret)
+
 else:
     fwd_cmd = shlex.split(f'{sys.executable} -m {__package__}.{getattr(ns, CMD)} ') + args
     os.execvp(sys.executable, fwd_cmd)
+

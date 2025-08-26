@@ -52,5 +52,6 @@ ${PATH_PKG_DEB_DEBIAN_SRC}: $(src_watch)
 			--exclude='.[^/]*' \
 			--exclude='*__pycache__' \
 		-cf - . | tar xf - -C ${PATH_PKG_DEB_DEBIAN_SRC}; \
+		python -m build_lib.build_cfg gateway; \
 		touch ${PATH_PKG_DEB_DEBIAN_SRC}; \
 	)
