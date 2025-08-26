@@ -1,12 +1,9 @@
 from enum import IntEnum
 from typing import Optional, Type, TypeVar
 import ctypes
-import logging
 
 from ..common import Calibration, Packet, PacketHeader
 from ..common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
-
-logger = logging.getLogger(__name__)
 
 class DeviceResp(IntEnum):
     VOID = 0
@@ -18,7 +15,7 @@ class DeviceResp(IntEnum):
         return self.name
 
     @classmethod
-    def get_struct(cls, packet: 'Packet') -> Optional[Type['TBaseDeviceResp']]:
+    def get_class(cls, packet: 'Packet') -> Optional[Type['TDeviceResp']]:
         if packet.header.type == cls.VOID:
             return VoidDeviceResp
         elif packet.header.type == cls.ERROR:
@@ -27,9 +24,8 @@ class DeviceResp(IntEnum):
             return DataPointDeviceResp
         elif packet.header.type == cls.CALIBRATION:
             return GetCalibrationDeviceRespGetCalibration
-
-        logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
-        return None
+        else:
+            return None
 
 
 error_t = ctypes.c_uint32
@@ -68,7 +64,7 @@ class BaseDeviceResp(PacketHeader):
     @type.setter
     def type(self, value: DeviceResp):
         setattr(self, self.Field.TYPE, value)
-TBaseDeviceResp = TypeVar('TBaseDeviceResp', bound=BaseDeviceResp)
+TDeviceResp = TypeVar('TDeviceResp', bound=BaseDeviceResp)
 
 class ErrorDeviceResp(BaseDeviceResp):
     class Field(BaseDeviceResp.Field):

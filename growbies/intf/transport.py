@@ -6,8 +6,8 @@ import ctypes
 import logging
 
 from .common import Packet
-from .cmd import TBaseDeviceCmd
-from .resp import DeviceResp, TBaseDeviceResp
+from .cmd import TDeviceCmd
+from .resp import DeviceResp, TDeviceResp
 from growbies.utils.bufstr import BufStr
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class Transport(Network, ABC):
     DEBUG_TRANSPORT_READ = False
     DEBUG_TRANSPORT_WRITE = False
 
-    def send_cmd(self, cmd: TBaseDeviceCmd):
+    def send_cmd(self, cmd: TDeviceCmd):
         if self.DEBUG_TRANSPORT_WRITE:
             print(BufStr(memoryview(cmd).cast('B'), title='Transport Write:'))
 
@@ -25,7 +25,7 @@ class Transport(Network, ABC):
 
     def recv_resp(self, *,
                   read_timeout_sec: float = Network.DEFAULT_READ_TIMEOUT_SEC) \
-            -> Optional[TBaseDeviceResp]:
+            -> Optional[TDeviceResp]:
         packet = self._recv_packet(read_timeout_sec=read_timeout_sec)
         if self.DEBUG_TRANSPORT_READ and packet is not None:
             print(BufStr(memoryview(packet).cast('B'), title='Transport Read:'))
@@ -34,9 +34,9 @@ class Transport(Network, ABC):
         return self._get_resp(packet)
 
     @staticmethod
-    def _get_resp(packet: Packet) -> Optional[TBaseDeviceResp]:
+    def _get_resp(packet: Packet) -> Optional[TDeviceResp]:
         resp = None
-        resp_struct = DeviceResp.get_struct(packet)
+        resp_struct = DeviceResp.get_class(packet)
         if resp_struct is None:
             logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
         else:

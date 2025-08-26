@@ -1,8 +1,6 @@
 import logging
-import os
 import time
-from queue import Queue
-from select import select
+from queue import Queue, Empty
 from threading import Thread
 from typing import Optional
 
@@ -10,8 +8,8 @@ from serial.serialutil import SerialException
 
 from growbies.db.engine import get_db_engine
 from growbies.intf import Intf
-from growbies.intf.cmd import BaseDeviceCmd, TBaseDeviceCmd
-from growbies.intf.resp import DeviceResp, ErrorDeviceResp, DataPointDeviceResp, TBaseDeviceResp
+from growbies.intf.cmd import TDeviceCmd
+from growbies.intf.resp import DeviceResp, ErrorDeviceResp, DataPointDeviceResp, PacketHeader
 from growbies.service.cmd.structs import ReconnectServiceCmd
 from growbies.service.queue import ServiceQueue
 from growbies.session import log
@@ -28,31 +26,31 @@ class Worker(Thread):
     _ASYNC_RESPONSES = (DataPointDeviceResp, ErrorDeviceResp)
     _PIPE_READ_BYTES = 1024
     _DEFAULT_CMD_TIMEOUT_SECONDS = 3
+    _RESP_Q_TIMEOUT_SECONDS = 0.1
     def __init__(self, device_id: DeviceID_t):
         super().__init__()
-        self._in_queue = Queue()
         self._out_queue = Queue()
         self._engine = get_db_engine().devices.get_engine(device_id)
         self._device = self._engine.get(device_id)
         self._intf: Optional[Intf] = None
         self._retry_connection_flag = True
-        self._rpipe, self._wpipe = os.pipe()
+        self._do_continue = True
 
     @property
     def id(self) -> WorkerID_t:
         return self._device.id
 
-    def cmd(self, cmd: TBaseDeviceCmd):
-        self._in_queue.put(cmd)
-        os.write(self._wpipe, PipeCmd.WAKE)
-        return self._out_queue.get(block=True, timeout=Worker._DEFAULT_CMD_TIMEOUT_SECONDS)
+    def cmd(self, cmd: TDeviceCmd, timeout: Optional[float] = _DEFAULT_CMD_TIMEOUT_SECONDS):
+        self._intf.send_cmd(cmd)
+        return self._out_queue.get(block=True, timeout=timeout)
 
     @property
     def name(self):
         return f'{self._device.serial}'
 
     def stop(self):
-        os.write(self._wpipe, PipeCmd.STOP)
+        self._do_continue = False
+        self.join()
 
     def _retry_connection(self):
         logger.info(f'Connection retry.')
@@ -72,49 +70,35 @@ class Worker(Thread):
                 logger.exception(err)
                 raise err
 
-        self._intf.reset_output_buffer()
-        self._intf.reset_input_buffer()
+        self._intf.start()
+        
         return True
 
     def _disconnect(self):
         if self._intf:
-            self._intf.close()
+            self._intf.stop()
 
     @staticmethod
-    def _process_async(resp: DataPointDeviceResp | ErrorDeviceResp):
+    def _process_async(header: PacketHeader, resp: DataPointDeviceResp | ErrorDeviceResp):
         if resp.type == DeviceResp.ERROR:
-            logger.error(resp)
+            resp: ErrorDeviceResp
+            logger.error(f'Received asynchronous error response with error code 0x{resp.error:X}')
         elif resp.type == DeviceResp.DATAPOINT:
-            pass
-            # logger.info(resp)
+            logger.info(f'Received asynchronous {header.type} response.')
         else:
-            logger.error(f'Invalid response type received: {resp.type}.')
+            logger.error(f'Invalid response type received: {header.type}.')
 
     def _service_cmds(self):
-        while True:
-            # Wait for either serial or rpipe to be readable
-            rlist, _, _ = select([self._intf.fileno(), self._rpipe], [], [])
-            if self._rpipe in rlist:
-                # Pipe wake and drain
-                pipe_cmd = os.read(self._rpipe, self._PIPE_READ_BYTES)
-                if pipe_cmd == PipeCmd.STOP:
-                    self._retry_connection_flag = False
-                    break
-                elif pipe_cmd == PipeCmd.WAKE:
-                    cmd: BaseDeviceCmd = self._in_queue.get()
-                    cmd.id = 1
-                    logger.info(f'Sending {cmd.type} command to device.')
-                    self._intf.send_cmd(cmd)
-                    continue
-
-            resp = self._intf.recv_resp()
-            if resp is not None:
-                if resp.id:
-                    logger.info(f'Received synchronous {resp.type} response.')
-                    self._out_queue.put(resp)
-                else:
-                    logger.info(f'Received asynchronous {resp.type} response.')
-                    self._process_async(resp)
+        while self._do_continue:
+            try:
+                header, resp = self._intf.recv_resp(timeout=self._RESP_Q_TIMEOUT_SECONDS)
+            except Empty:
+                continue
+            if header.id:
+                logger.info(f'Received synchronous {header.type} response.')
+                self._out_queue.put(resp)
+            else:
+                self._process_async(header, resp)
 
     def run(self):
         log.thread_local.name = self.name

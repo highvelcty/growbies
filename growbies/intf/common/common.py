@@ -40,13 +40,13 @@ TBasePacket = TypeVar('TBasePacket', bound=BasePacket)
 
 class PacketHeader(BaseStructure):
     class Field:
-        ID = '_id'
         TYPE = '_type'
+        ID = '_id'
 
     _pack_ = 1
     _fields_ = [
-        (Field.ID, ctypes.c_uint16),
         (Field.TYPE, ctypes.c_uint16),
+        (Field.ID, ctypes.c_uint16),
     ]
 
     @property

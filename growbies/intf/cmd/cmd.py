@@ -1,11 +1,11 @@
 from enum import IntEnum
-from typing import TypeVar
+from typing import Optional, TypeVar
 import ctypes
 import logging
 
 from ..common import Calibration, PacketHeader
 
-__all__ = ['DeviceCmd', 'BaseDeviceCmd', 'TBaseDeviceCmd',
+__all__ = ['DeviceCmd', 'BaseDeviceCmd', 'TDeviceCmd',
            'LoopbackDeviceCmd', 'GetCalibrationDeviceCmd', 'SetCalibrationDeviceCmd',
            'PowerOnHx711DeviceCmd',
            'PowerOffHx711DeviceCmd', 'GetDatapointDeviceCmd']
@@ -23,6 +23,23 @@ class DeviceCmd(IntEnum):
     def __str__(self):
         return self.name
 
+    @classmethod
+    def get_type(cls, cmd: 'TDeviceCmd') -> Optional['DeviceCmd']:
+        if isinstance(cmd, LoopbackDeviceCmd):
+            return DeviceCmd.LOOPBACK
+        elif isinstance(cmd, GetDatapointDeviceCmd):
+            return DeviceCmd.GET_CALIBRATION
+        elif isinstance(cmd, SetCalibrationDeviceCmd):
+            return DeviceCmd.SET_CALIBRATION
+        elif isinstance(cmd, GetDatapointDeviceCmd):
+            return DeviceCmd.GET_DATAPOINT
+        elif isinstance(cmd, PowerOnHx711DeviceCmd):
+            return DeviceCmd.POWER_ON_HX711
+        elif isinstance(cmd, PowerOffHx711DeviceCmd):
+            return DeviceCmd.POWER_OFF_HX711
+        else:
+            return None
+
 class BaseDeviceCmd(PacketHeader):
     @property
     def type(self) -> DeviceCmd:
@@ -31,7 +48,7 @@ class BaseDeviceCmd(PacketHeader):
     @type.setter
     def type(self, value: DeviceCmd):
         setattr(self, self.Field.TYPE, value)
-TBaseDeviceCmd = TypeVar('TBaseDeviceCmd', bound=BaseDeviceCmd)
+TDeviceCmd = TypeVar('TDeviceCmd', bound=BaseDeviceCmd)
 
 class BaseDeviceCmdWithTimesParam(BaseDeviceCmd):
     DEFAULT_TIMES = 7

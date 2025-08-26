@@ -1,7 +1,7 @@
 from .worker import Worker
-from growbies.intf.cmd import TBaseDeviceCmd
+from growbies.intf.cmd import TDeviceCmd
 from growbies.service.resp.structs import ServiceCmdError
-from growbies.intf.resp import TBaseDeviceResp
+from growbies.intf.resp import TDeviceResp
 from growbies.utils.types import DeviceID_t, WorkerID_t
 
 

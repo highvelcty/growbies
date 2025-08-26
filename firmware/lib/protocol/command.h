@@ -44,19 +44,22 @@ inline Error& operator|=(Error& lhs, const Error rhs) {
 
 // --- Base Commands
 struct PacketHdr {
-    uint16_t id = 0;  // Default is zero
     union {
         uint16_t type;
         Resp resp;
         Cmd cmd;
     };
+    uint16_t id = 0;  // Default is zero
 
     // Constructors
-    explicit PacketHdr(const uint16_t id_, const Resp r) : id(id_), resp(r) {}
-    explicit PacketHdr(const uint16_t id_, const Cmd c) : id(id_), cmd(c) {}
+    explicit PacketHdr(const uint16_t id_, const Resp r) : resp(r), id(id_) {}
+    explicit PacketHdr(const uint16_t id_, const Cmd c)  : cmd(c), id(id_) {}
     explicit PacketHdr(const Cmd c) : PacketHdr(0, c) {}
     explicit PacketHdr(const Resp r) : PacketHdr(0, r) {}
 };
+
+// Verify size at compile time
+static_assert(sizeof(PacketHdr) == 4, "PacketHdr must be exactly 4 bytes");
 
 
 struct BaseCmd : PacketHdr {

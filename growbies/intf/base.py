@@ -1,14 +1,16 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import ByteString
+import logging
 
 import serial
 
 from growbies.utils.bufstr import BufStr
 
+logger = logging.getLogger(__name__)
 
 class BaseSerial(ABC):
-    DEBUG_DATALINK_READ = False
-    DEBUG_DATALINK_WRITE = False
+    DEBUG_DATALINK_READ = True
+    DEBUG_DATALINK_WRITE = True
 
     def __init__(self, *args, port='/dev/ttyACM0', baudrate=57600, timeout=0.5, **kw):
         """
@@ -38,9 +40,9 @@ class BaseSerial(ABC):
 
     def read(self, size=1) -> bytes:
         buf = self._serial.read(size)
-        if self.DEBUG_DATALINK_READ: print(f'python datalink recv:\n{BufStr(buf)}')
+        if self.DEBUG_DATALINK_READ: logger.debug(f'python datalink recv:\n{BufStr(buf)}')
         return buf
 
     def write(self, buf: ByteString):
-        if self.DEBUG_DATALINK_WRITE: print(f'python datalink send:\n{BufStr(buf)}')
+        if self.DEBUG_DATALINK_WRITE: logger.debug(f'python datalink send:\n{BufStr(buf)}')
         self._serial.write(buf)

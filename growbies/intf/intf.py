@@ -1,23 +1,23 @@
-import time
+import logging
 
 from .cmd import *
 from .resp import *
-from .transport import Transport
+from .slip import Transport, SerialDatalink
 
 logger = logging.getLogger(__name__)
 
 
-class Intf(Transport):
+class Intf(Transport, SerialDatalink):
     EXEC_RETRIES = 3
 
     RESET_COMMUNICATION_LOOPS = 3
     RESET_COMMUNICATION_LOOP_DELAY = 0.33
-    MANUAL_CALIBRATION_SAMPLES = 25
+    DEFAULT_READ_TIMEOUT_SEC = 5
 
-    def execute(self, cmd_: TBaseDeviceCmd, *,
+    def execute(self, cmd_: TDeviceCmd, *,
                 retries: int = EXEC_RETRIES,
-                read_timeout_sec: float = Transport.DEFAULT_READ_TIMEOUT_SEC) \
-            -> Optional[TBaseDeviceResp]:
+                timeout: float = DEFAULT_READ_TIMEOUT_SEC) \
+            -> Optional[TDeviceResp]:
         resp_ = None
         for retry in range(retries):
             if retry:
@@ -28,7 +28,7 @@ class Intf(Transport):
             self.send_cmd(cmd_)
 
             # Receive
-            resp_ = self.recv_resp(read_timeout_sec=read_timeout_sec)
+            resp_ = self.recv_resp(timeout=timeout)
             if resp_:
                 break
         else:
@@ -69,21 +69,11 @@ class Intf(Transport):
 
     def get_raw_datapoint(self, times: int = 1) -> DataPointDeviceResp:
         cmd_ = GetDatapointDeviceCmd(times=times, raw=True)
-        resp_: DataPointDeviceResp = self.execute(cmd_, read_timeout_sec=10)
+        resp_: DataPointDeviceResp = self.execute(cmd_, timeout=10)
         return resp_
 
     def get_datapoint(self, times: int = GetDatapointDeviceCmd.DEFAULT_TIMES) \
             -> DataPointDeviceResp:
         cmd_ = GetDatapointDeviceCmd(times=times)
-        resp_: DataPointDeviceResp = self.execute(cmd_, read_timeout_sec=10)
+        resp_: DataPointDeviceResp = self.execute(cmd_, timeout=10)
         return resp_
-
-    def reset_communication(self):
-        for _ in range(self.RESET_COMMUNICATION_LOOPS):
-            self._slip_send_end()
-
-            startt = time.time()
-            while time.time() - startt < self.RESET_COMMUNICATION_LOOP_DELAY:
-                bytes_in_waiting = self.in_waiting
-                if bytes_in_waiting:
-                    _ = self.read(bytes_in_waiting)
