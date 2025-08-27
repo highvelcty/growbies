@@ -9,7 +9,7 @@ from serial.serialutil import SerialException
 from growbies.db.engine import get_db_engine
 from growbies.intf import Intf
 from growbies.intf.cmd import TDeviceCmd
-from growbies.intf.resp import DeviceResp, ErrorDeviceResp, DataPointDeviceResp, PacketHeader
+from growbies.intf.resp import DeviceResp, ErrorDeviceResp, DataPointDeviceResp
 from growbies.service.cmd.structs import ReconnectServiceCmd
 from growbies.service.queue import ServiceQueue
 from growbies.session import log
@@ -70,7 +70,6 @@ class Worker(Thread):
                 raise err
 
         self._intf.start()
-
         return True
 
     def _disconnect(self):

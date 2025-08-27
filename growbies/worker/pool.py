@@ -27,7 +27,9 @@ class Pool:
 
     def disconnect(self, *worker_ids:  WorkerID_t):
         for worker_id in worker_ids:
-            self._workers[worker_id].stop()
+            worker = self._workers.get(worker_id)
+            if worker:
+                worker.stop()
 
     def disconnect_all(self):
         for worker in self._workers.values():
@@ -35,9 +37,10 @@ class Pool:
 
     def join_all(self, *worker_ids: WorkerID_t, timeout=None):
         for worker_id in worker_ids:
-            self._workers[worker_id].join(timeout=timeout)
-            del self._workers[worker_id]
-
+            worker = self._workers.get(worker_id)
+            if worker:
+                worker.join(timeout=timeout)
+                del self._workers[worker_id]
 
 _pool = None
 def get_pool() -> Pool:

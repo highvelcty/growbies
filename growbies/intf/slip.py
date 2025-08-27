@@ -1,18 +1,24 @@
+"""
+An LSB-first implementation of SLIP with a two byte crc
+
+ (https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol)
+"""
 from abc import ABC, abstractmethod
-from typing import cast, Optional
+from typing import Optional
 import ctypes
 import logging
-import serial
 import threading
 import time
 import queue
 
+import serial
+
 from .cmd import DeviceCmd, TDeviceCmd
 from .common import Packet, PacketHeader
 from .resp import TDeviceResp, DeviceResp
-from growbies.constants import UINT16_MAX
-from growbies.utils.report import format_dropped_bytes
 from growbies.utils.bufstr import BufStr
+from growbies.utils.crc import crc_ccitt16
+from growbies.utils.report import format_dropped_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +86,8 @@ class BaseDataLink(threading.Thread, ABC):
         buf = bytearray()
         escaping = False
 
+        logger.info(f'SLIP thread start.')
+
         while self._do_continue:
             try:
                 if self.in_waiting:
@@ -119,6 +127,7 @@ class BaseDataLink(threading.Thread, ABC):
             except serial.SerialException as err:
                 logger.exception(err)
                 break
+        logger.info('SLIP thread exit.')
 
     def _enqueue(self, frame: bytes):
         try:
@@ -130,7 +139,7 @@ class BaseDataLink(threading.Thread, ABC):
 
 class SerialDatalink(BaseDataLink):
     _RESET_COMMUNICATION_LOOPS = 3
-    _RESET_COMMUNICATION_LOOP_DELAY = 0.33
+    _RESET_COMMUNICATION_LOOP_DELAY = 3
 
     def __init__(self, *args, port='/dev/ttyACM0', baudrate=57600, timeout=0.5, **kw):
         """
@@ -141,7 +150,9 @@ class SerialDatalink(BaseDataLink):
            bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE
         """
         super().__init__()
-        self._serial = serial.Serial(*args, port=port, baudrate=baudrate, timeout=timeout, **kw)
+        self._serial = serial.Serial(*args, port=port, baudrate=baudrate, timeout=timeout,
+                                     # dsrdtr=False, # Do not reset arduino on connect
+                                     **kw)
 
     def close(self):
         self._serial.close()
@@ -156,42 +167,29 @@ class SerialDatalink(BaseDataLink):
     def write(self, data: bytes) -> int:
         return self._serial.write(data)
 
-    def reset_communication(self):
-        for ii in range(self._RESET_COMMUNICATION_LOOPS):
-            self.write(SLIP_ESC.to_bytes() * 3)
-
-        startt = time.time()
-        while time.time() - startt < self._RESET_COMMUNICATION_LOOP_DELAY:
-            bytes_in_waiting = self.in_waiting
-            if bytes_in_waiting:
-                _ = self.read(bytes_in_waiting)
-
 
 class Network(BaseDataLink, ABC):
-    _CHECKSUM_BYTES = 2
+    _CRC_BYTES = 2
     def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[Packet]:
         frame = super().recv_frame(block=block, timeout=timeout)
 
-        if self._valid_checksum(frame):
-            return Packet.make(frame[:-self._CHECKSUM_BYTES])
-        else:
-            logger.warning(f'Invalid checksum. Dropping frame: '
-                           f'{format_dropped_bytes(frame)}')
+        if self._valid_crc(frame):
+            return Packet.make(frame[:-self._CRC_BYTES])
         return None
 
     def send_packet(self, buf: bytes):
-        # 16-bit additive checksum
-        checksum = (sum(buf) & UINT16_MAX).to_bytes(self._CHECKSUM_BYTES, "little")
-        super().send_frame(buf + checksum)
+        crc = crc_ccitt16(buf).to_bytes(self._CRC_BYTES, 'little')
+        super().send_frame(buf + crc)
 
-    def _valid_checksum(self, frame: bytes) -> bool:
-        if len(frame) < self._CHECKSUM_BYTES:
+    def _valid_crc(self, frame: bytes) -> bool:
+        if len(frame) < self._CRC_BYTES:
             return False
-        mv = memoryview(frame)
-        data, chk = mv[:-self._CHECKSUM_BYTES], mv[-self._CHECKSUM_BYTES:]
-        # Todo: The byte order needs to be documented.
-        calc = (sum(data) & UINT16_MAX).to_bytes(self._CHECKSUM_BYTES, "little")
-        return chk == calc
+
+        data, chk = frame[:-self._CRC_BYTES], frame[-self._CRC_BYTES:]
+        calc_bytes = crc_ccitt16(data).to_bytes(self._CRC_BYTES, byteorder='little')
+        if chk != calc_bytes:
+            logger.warning(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
+        return chk == calc_bytes
 
 class Transport(Network, ABC):
     def recv_resp(self, block=True, timeout: Optional[float] = None) -> Optional[TDeviceResp]:
