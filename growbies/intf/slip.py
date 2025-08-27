@@ -122,8 +122,9 @@ class BaseDataLink(threading.Thread, ABC):
 
     def _enqueue(self, frame: bytes):
         try:
-            self._frames.put_nowait(frame)
+            self._frames.put_nowait(bytes(frame))
         except queue.Full:
+            logger.error('SLIP queue is full.')
             # drop the newest frame if queue is full
             pass
 
@@ -193,12 +194,11 @@ class Network(BaseDataLink, ABC):
         return chk == calc
 
 class Transport(Network, ABC):
-    def recv_resp(self, block=True, timeout: Optional[float] = None) \
-            -> tuple[Optional[PacketHeader], Optional[TDeviceResp]]:
+    def recv_resp(self, block=True, timeout: Optional[float] = None) -> Optional[TDeviceResp]:
         resp = None
         packet = super().recv_packet(block=block, timeout=timeout)
         if packet is None:
-            return None, None
+            return None
 
         resp_class = DeviceResp.get_class(packet)
         if resp_class is None:
@@ -212,13 +212,13 @@ class Transport(Network, ABC):
                              f'expected {ctypes.sizeof(resp_class)} bytes, observed {obs_len} '
                              f'bytes.')
             else:
-                resp = resp_class.from_buffer(cast(bytes, packet))
+                resp = resp_class.from_buffer(packet)
 
         if not resp:
             buf_str = BufStr(bytes(packet), title='Transport layer received invalid packet.')
             logger.debug(f'\n{buf_str}')
 
-        return packet.header, resp
+        return resp
 
     def send_cmd(self, cmd: TDeviceCmd):
         packet_header = PacketHeader()

@@ -63,6 +63,8 @@ void loop() {
         }
     } while (millis() - startt < WAIT_FOR_CMD_MILLIS);
 
+    delay(DEEP_SLEEP_MILLIS);
+
 
 
 // #if ARDUINO_ARCH_ESP32

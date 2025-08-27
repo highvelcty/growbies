@@ -33,7 +33,6 @@ class Worker(Thread):
         self._engine = get_db_engine().devices.get_engine(device_id)
         self._device = self._engine.get(device_id)
         self._intf: Optional[Intf] = None
-        self._retry_connection_flag = True
         self._do_continue = True
 
     @property
@@ -71,7 +70,7 @@ class Worker(Thread):
                 raise err
 
         self._intf.start()
-        
+
         return True
 
     def _disconnect(self):
@@ -79,26 +78,28 @@ class Worker(Thread):
             self._intf.stop()
 
     @staticmethod
-    def _process_async(header: PacketHeader, resp: DataPointDeviceResp | ErrorDeviceResp):
+    def _process_async(resp: DataPointDeviceResp | ErrorDeviceResp):
         if resp.type == DeviceResp.ERROR:
             resp: ErrorDeviceResp
             logger.error(f'Received asynchronous error response with error code 0x{resp.error:X}')
         elif resp.type == DeviceResp.DATAPOINT:
-            logger.info(f'Received asynchronous {header.type} response.')
+            logger.info(f'Received asynchronous {resp.type} response.')
         else:
-            logger.error(f'Invalid response type received: {header.type}.')
+            logger.error(f'Invalid response type received: {resp.type}.')
 
     def _service_cmds(self):
         while self._do_continue:
             try:
-                header, resp = self._intf.recv_resp(timeout=self._RESP_Q_TIMEOUT_SECONDS)
+                resp = self._intf.recv_resp(timeout=self._RESP_Q_TIMEOUT_SECONDS)
             except Empty:
                 continue
-            if header.id:
-                logger.info(f'Received synchronous {header.type} response.')
+            if resp is None:
+                continue
+            if resp.id:
+                logger.info(f'Received synchronous {resp.type} response.')
                 self._out_queue.put(resp)
             else:
-                self._process_async(header, resp)
+                self._process_async(resp)
 
     def run(self):
         log.thread_local.name = self.name
@@ -117,6 +118,6 @@ class Worker(Thread):
             self._disconnect()
             logger.info('Device disconnected.')
             self._engine.clear_connected()
-            if self._retry_connection_flag:
+            if self._do_continue:
                 self._retry_connection()
             logger.info(f'Thread exit.')

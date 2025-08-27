@@ -19,5 +19,4 @@ def loopback(cmd: LoopbackServiceCmd) -> ServiceCmdError | VoidDeviceResp:
     except KeyError:
         return ServiceCmdError(f'Serial number "{cmd.serial}" is inactive.')
 
-
     return worker.cmd(LoopbackDeviceCmd())

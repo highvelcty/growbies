@@ -11,7 +11,7 @@ from growbies.utils.report import format_float_list, format_float_table
 logger = logging.getLogger(__name__)
 
 __all__ = ['COEFF_COUNT', 'TARE_COUNT', 'MASS_SENSOR_COUNT', 'TEMPERATURE_SENSOR_COUNT',
-           'Packet', 'PacketHeader', 'Calibration']
+           'BaseStructure', 'Packet', 'PacketHeader', 'Calibration']
 
 # --- Constants ------------------------------------------------------------------------------------
 # meyere, this needs closed loop and/or variable length returns.
@@ -93,7 +93,7 @@ class Packet(BasePacket):
                          f'observed {buf_len} bytes.')
             return None
 
-        packet = _Packet.from_buffer(cast(bytes, source))
+        packet = _Packet.from_buffer_copy(cast(bytes, source))
 
         return packet
 
