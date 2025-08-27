@@ -1,7 +1,7 @@
 """
-An LSB-first implementation of SLIP with a two byte crc
+An LSB-first implementation of SLIP with a two byte CRC.
 
- (https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol)
+See: https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol
 """
 from abc import ABC, abstractmethod
 from typing import Optional
@@ -16,6 +16,7 @@ import serial
 from .cmd import DeviceCmd, TDeviceCmd
 from .common import Packet, PacketHeader
 from .resp import TDeviceResp, DeviceResp
+from growbies.session import log
 from growbies.utils.bufstr import BufStr
 from growbies.utils.crc import crc_ccitt16
 from growbies.utils.report import format_dropped_bytes
@@ -36,8 +37,9 @@ class BaseDataLink(threading.Thread, ABC):
     _SERIAL_POLLING_INTERVAL_SECONDS = 0.1
 
     @abstractmethod
-    def __init__(self):
+    def __init__(self, thread_name: Optional[str] = None):
         super().__init__()
+        self._thread_name = thread_name
         self._frames: queue.Queue[bytes] = queue.Queue(maxsize=self._Q_SIZE)
         self._do_continue = True
 
@@ -83,10 +85,13 @@ class BaseDataLink(threading.Thread, ABC):
         self.close()
 
     def run(self):
+        if self._thread_name:
+            log.thread_local.name = self._thread_name
+
         buf = bytearray()
         escaping = False
 
-        logger.info(f'SLIP thread start.')
+        logger.info(f'Thread start.')
 
         while self._do_continue:
             try:
@@ -127,7 +132,7 @@ class BaseDataLink(threading.Thread, ABC):
             except serial.SerialException as err:
                 logger.exception(err)
                 break
-        logger.info('SLIP thread exit.')
+        logger.info('Thread exit.')
 
     def _enqueue(self, frame: bytes):
         try:
@@ -149,7 +154,7 @@ class SerialDatalink(BaseDataLink):
            dsrdtr=False, rtscts=False, xonxoff=False, parity=serial.PARITY_NONE
            bytesize=serial.EIGHTBITS, stopbits=serial.STOPBITS_ONE
         """
-        super().__init__()
+        super().__init__(thread_name=kw.pop('thread_name', None))
         self._serial = serial.Serial(*args, port=port, baudrate=baudrate, timeout=timeout,
                                      # dsrdtr=False, # Do not reset arduino on connect
                                      **kw)
@@ -166,7 +171,6 @@ class SerialDatalink(BaseDataLink):
 
     def write(self, data: bytes) -> int:
         return self._serial.write(data)
-
 
 class Network(BaseDataLink, ABC):
     _CRC_BYTES = 2

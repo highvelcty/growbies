@@ -60,7 +60,7 @@ class Worker(Thread):
 
     def _connect(self) -> bool:
         try:
-            self._intf = Intf(port=self._device.path)
+            self._intf = Intf(port=self._device.path, thread_name=f'{self.name}_SLIP')
         except SerialException as err:
             if err.errno == 2:
                 logger.error(f'Could not open serial port {self._device.path}.')
