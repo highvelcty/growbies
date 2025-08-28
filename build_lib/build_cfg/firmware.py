@@ -29,6 +29,8 @@ class BaseFw(Base):
 
     def __str__(self):
         str_list = [
+            '// This file is updated by the build system at build time.',
+            '',
             '#pragma once',
             ''
         ]
