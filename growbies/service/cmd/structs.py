@@ -6,7 +6,6 @@ from growbies.utils.types import Serial_t
 
 __all__ = ['BaseServiceCmd', 'ServiceCmd', 'TBaseServiceCmd',
            'ActivateServiceCmd', 'DeactivateServiceCmd', 'LsServiceCmd', 'LoopbackServiceCmd',
-           'ReconnectServiceCmd',
            'ServiceStopServiceCmd']
 
 class ServiceCmd:
@@ -16,7 +15,6 @@ class ServiceCmd:
     DEACTIVATE = type_("deactivate")
     LOOPBACK = type_("loopback")
     LS = type_("ls")
-    RECONNECT = type_("reconnect")
     SERVICE_STOP = type_("service_stop")
 
     external_cmds = (ACTIVATE, DEACTIVATE, LOOPBACK, LS)
@@ -32,8 +30,6 @@ class ServiceCmd:
             return 'The loopback command will test round trip command/response functionality.'
         elif cmd_ == cls.LS:
             return f'List discovered devices merged with known devices in the DB.'
-        elif cmd_ == cls.RECONNECT:
-            return 'Disconnect and then connect to a device.'
         elif cmd_ == cls.SERVICE_STOP:
             return 'Stop the service.'
         else:
@@ -64,11 +60,6 @@ class LoopbackServiceCmd(BaseServiceCmd):
     serial: Serial_t
     def __init__(self, **kw):
         super().__init__(cmd=ServiceCmd.LOOPBACK, **kw)
-
-class ReconnectServiceCmd(BaseServiceCmd):
-    serials: list[Serial_t] = Field(default_factory=list, min_length=1)
-    def __init__(self, **kw):
-        super().__init__(cmd=ServiceCmd.RECONNECT, **kw)
 
 class ServiceStopServiceCmd(BaseServiceCmd):
     def __init__(self):

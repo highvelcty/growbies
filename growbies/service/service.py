@@ -44,13 +44,6 @@ class Service:
                     elif cmd.cmd == ServiceCmd.SERVICE_STOP:
                         done = True
                         break
-                    elif cmd.cmd == ServiceCmd.RECONNECT:
-                        resp = activate.deactivate(cmd)
-                        if resp:
-                            logger.error(resp)
-                        resp = activate.activate(cmd)
-                        if resp:
-                            logger.error(resp)
                     else:
                         logger.error(f'Unknown command {cmd} received.')
         except KeyboardInterrupt:

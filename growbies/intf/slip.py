@@ -35,6 +35,7 @@ class BaseDataLink(threading.Thread, ABC):
     _Q_SIZE = 64
     _MAX_FRAME_BYTES = 4096
     _SERIAL_POLLING_INTERVAL_SECONDS = 0.1
+    _JOIN_TIMEOUT_SECONDS = 3
 
     @abstractmethod
     def __init__(self, thread_name: Optional[str] = None):
@@ -81,7 +82,9 @@ class BaseDataLink(threading.Thread, ABC):
 
     def stop(self):
         self._do_continue = False
-        self.join()
+        self.join(self._JOIN_TIMEOUT_SECONDS)
+        if self.is_alive():
+            logger.error(f'Thread did not die after {self._JOIN_TIMEOUT_SECONDS} seconds.')
         self.close()
 
     def run(self):
