@@ -90,6 +90,23 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
             send_packet(*this->outbuf, sizeof(RespVoid));
         }
     }
+    else if (packet_hdr->cmd == Cmd::GET_IDENTIFY) {
+        const auto* cmd = reinterpret_cast<CmdGetIdentify *>(slip_buf->buf);
+        if(validate_packet(*cmd)) {
+            auto* resp = new (this->outbuf) RespGetIdentify;
+            identify_store->get(resp->identify);
+            send_packet(*this->outbuf, sizeof(*resp));
+        }
+    }
+    else if (packet_hdr->cmd == Cmd::SET_IDENTIFY) {
+        auto* cmd = reinterpret_cast<CmdSetIdentify *>(slip_buf->buf);
+        if(validate_packet(*cmd)) {
+            new (this->outbuf) RespVoid;
+            identify_store->put(cmd->identify);
+            send_packet(*this->outbuf, sizeof(RespVoid));
+        }
+    }
+
     else{
         auto resp = new (this->outbuf) RespError;
         resp->error = ERROR_UNRECOGNIZED_COMMAND;
@@ -201,7 +218,7 @@ void Growbies::get_datapoint(RespDataPoint *resp, const byte times,
                              const bool raw, const HX711Gain gain) {
     int iteration;
     int sensor_idx;
-    CalibrationStruct calibration_struct{};
+    Calibration calibration_struct{};
     calibration_store->get(calibration_struct);
 
     // Allocate 2D arrays
@@ -249,8 +266,7 @@ void Growbies::get_datapoint(RespDataPoint *resp, const byte times,
             // mass/temperature compensation per sensor
             resp->mass_sensor[sensor_idx] -= (
                 (calibration_struct.mass_temperature_coeff[sensor_idx][0]
-                * resp->temperature_sensor[
-                    calibration_store->get_temperature_sensor_idx(sensor_idx)])
+                * resp->temperature_sensor[get_temperature_sensor_idx(sensor_idx)])
                 + calibration_struct.mass_temperature_coeff[sensor_idx][1]);
         }
 

@@ -5,16 +5,17 @@ from pydantic import BaseModel, Field
 from growbies.utils.types import Serial_t
 
 __all__ = ['BaseServiceCmd', 'ServiceCmd', 'TBaseServiceCmd',
-           'ActivateServiceCmd', 'DeactivateServiceCmd', 'LsServiceCmd', 'LoopbackServiceCmd',
-           'ServiceStopServiceCmd']
+           'ActivateServiceCmd', 'DeactivateServiceCmd', 'GetIdServiceCmd', 'LsServiceCmd',
+           'LoopbackServiceCmd', 'ServiceStopServiceCmd']
 
 class ServiceCmd:
     # noinspection PyNewType
     type_ = NewType('ServiceCmd', str)
-    ACTIVATE = type_("activate")
-    DEACTIVATE = type_("deactivate")
-    LOOPBACK = type_("loopback")
-    LS = type_("ls")
+    ACTIVATE = type_('activate')
+    DEACTIVATE = type_('deactivate')
+    LOOPBACK = type_('loopback')
+    LS = type_('ls')
+    ID = type_('id')
     SERVICE_STOP = type_("service_stop")
 
     external_cmds = (ACTIVATE, DEACTIVATE, LOOPBACK, LS)
@@ -30,6 +31,8 @@ class ServiceCmd:
             return 'The loopback command will test round trip command/response functionality.'
         elif cmd_ == cls.LS:
             return f'List discovered devices merged with known devices in the DB.'
+        elif cmd_ == cls.ID:
+            return f'Identify device.'
         elif cmd_ == cls.SERVICE_STOP:
             return 'Stop the service.'
         else:
@@ -41,6 +44,10 @@ class BaseServiceCmd(BaseModel):
     qid: Optional[int|str] = None
 TBaseServiceCmd = TypeVar('TBaseServiceCmd', bound=BaseServiceCmd)
 
+class GetIdServiceCmd(BaseServiceCmd):
+    serial: Serial_t
+    def __init__(self, **kw):
+        super().__init__(cmd=ServiceCmd.ID, **kw)
 
 class LsServiceCmd(BaseServiceCmd):
     def __init__(self, **kw):

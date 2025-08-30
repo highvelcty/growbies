@@ -3,12 +3,13 @@ from typing import Optional, TypeVar
 import ctypes
 import logging
 
-from ..common import Calibration, PacketHeader
+from ..common import Calibration, PacketHeader, Identify
 
 __all__ = ['DeviceCmd', 'BaseDeviceCmd', 'TDeviceCmd',
-           'LoopbackDeviceCmd', 'GetCalibrationDeviceCmd', 'SetCalibrationDeviceCmd',
-           'PowerOnHx711DeviceCmd',
-           'PowerOffHx711DeviceCmd', 'GetDatapointDeviceCmd']
+           'LoopbackDeviceCmd',
+           'GetCalibrationDeviceCmd', 'SetCalibrationDeviceCmd',
+           'GetIdentifyDeviceCmd', 'SetIdentifyDeviceCmd',
+           'PowerOnHx711DeviceCmd', 'PowerOffHx711DeviceCmd', 'GetDatapointDeviceCmd']
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,8 @@ class DeviceCmd(IntEnum):
     GET_DATAPOINT = 3
     POWER_ON_HX711 = 4
     POWER_OFF_HX711 = 5
+    GET_IDENTIFY = 6
+    SET_IDENTIFY = 7
 
     def __str__(self):
         return self.name
@@ -98,6 +101,33 @@ class SetCalibrationDeviceCmd(BaseDeviceCmd):
     def __init__(self, *args, **kw):
         kw[self.Field.TYPE] = DeviceCmd.SET_CALIBRATION
         super().__init__(*args, **kw)
+
+class GetIdentifyDeviceCmd(BaseDeviceCmd):
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = DeviceCmd.GET_IDENTIFY
+        super().__init__(*args, **kw)
+
+class SetIdentifyDeviceCmd(BaseDeviceCmd):
+    class Field(BaseDeviceCmd.Field):
+        IDENTIFY = '_identify'
+
+    _fields_ = [
+        (Field.IDENTIFY, Identify)
+
+    ]
+
+    @property
+    def identify(self) -> Identify:
+        return getattr(self, self.Field.IDENTIFY)
+
+    @identify.setter
+    def identify(self, identify: Identify):
+        setattr(self, self.Field.IDENTIFY, identify)
+
+    def __init__(self, *args, **kw):
+        kw[self.Field.TYPE] = DeviceCmd.SET_CALIBRATION
+        super().__init__(*args, **kw)
+
 
 class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
     class Field(BaseDeviceCmdWithTimesParam.Field):

@@ -37,7 +37,7 @@ class Growbies {
 
     private:
         uint8_t tare_idx = 0;
-        byte outbuf[MAX_SLIP_UNENCODED_PACKET_BYTES] = {};
+        byte outbuf[SLIP_BUF_ALLOC_BYTES] = {};
 
         static void power_off();
 

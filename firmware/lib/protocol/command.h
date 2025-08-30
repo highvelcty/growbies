@@ -13,12 +13,15 @@ enum class Cmd: uint16_t {
     GET_DATAPOINT = 3,
     POWER_ON_HX711 = 4,
     POWER_OFF_HX711 = 5,
+    GET_IDENTIFY = 6,
+    SET_IDENTIFY = 7,
 };
 
 enum class Resp: uint16_t {
     VOID = 0,
     DATAPOINT = 1,
     CALIBRATION = 2,
+    IDENTIFY = 3,
     ERROR = 0xFFFF,
 };
 
@@ -78,8 +81,13 @@ struct BaseCmdWithTimesParam : BaseCmd {
 // --- Commands
 struct CmdGetCalibration : BaseCmd {};
 struct CmdSetCalibration : BaseCmd {
-    CalibrationStruct calibration{};
+    Calibration calibration{};
 };
+struct CmdGetIdentify: BaseCmd {};
+struct CmdSetIdentify : BaseCmd {
+    Identify1 identify{};
+};
+
 struct CmdPowerOnHx711 : BaseCmd {};
 struct CmdPowerOffHx711 : BaseCmd {};
 struct CmdGetDatapoint : BaseCmdWithTimesParam {
@@ -107,11 +115,18 @@ struct RespLoopback : BaseResp {
 };
 
 struct RespGetCalibration : BaseResp {
-    CalibrationStruct calibration;
+    Calibration calibration;
     RespGetCalibration(): BaseResp(Resp::CALIBRATION), calibration() {
     };
 };
 static_assert(sizeof(RespGetCalibration) < MAX_SLIP_UNENCODED_PACKET_BYTES);
+
+struct RespGetIdentify : BaseResp {
+    Identify1 identify;
+    RespGetIdentify(): BaseResp(Resp::IDENTIFY), identify() {
+    };
+};
+static_assert(sizeof(RespGetIdentify) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 typedef float MassSensor[MASS_SENSOR_COUNT];
 typedef float TemperatureSensor[TEMPERATURE_SENSOR_COUNT];

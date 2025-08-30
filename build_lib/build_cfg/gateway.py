@@ -11,11 +11,6 @@ class BaseGateway(Base):
         with open(path, 'w') as outf:
             outf.write(str(self))
 
-    def _constants(self) -> dict[Base.Key.type_, Any]:
-        ret_dict = super()._constants()
-        ret_dict[self.Key.VERSION] = f'0.0.1-dev0+{get_git_hash()}'
-        return ret_dict
-
     def __str__(self):
         str_list = [
             '"""This file is updated by the build system at build time."""',
@@ -30,6 +25,11 @@ class BaseGateway(Base):
         str_list.append('')
 
         return '\n'.join(str_list)
+
+    def _constants(self) -> dict[Base.Key.type_, Any]:
+        ret_dict = super()._constants()
+        ret_dict[self.Key.VERSION] = f'0.0.1-dev0+{get_git_hash()}'
+        return ret_dict
 
 class Default(BaseGateway):
     MODEL_NUMBER = 'default'

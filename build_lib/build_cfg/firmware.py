@@ -9,19 +9,6 @@ PIOENV = 'PIOENV'
 FILENAME = BASE_FILENAME + '.h'
 
 class BaseFw(Base):
-    class Key(Base.Key):
-        MASS_SENSOR_COUNT: Base.Key.type_ = 'MASS_SENSOR_COUNT'
-        TEMPERATURE_SENSOR_COUNT: Base.Key.type_ = 'TEMPERATURE_SENSOR_COUNT'
-
-        all = Base.Key.all + (MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT)
-
-    def _constants(self) -> dict[Base.Key.type_, Any]:
-        ret_dict = super()._constants()
-        ret_dict[self.Key.VERSION] = f'0.0.1-dev0+{get_git_hash()}'
-        ret_dict[self.Key.MASS_SENSOR_COUNT] = 1
-        ret_dict[self.Key.TEMPERATURE_SENSOR_COUNT] = 1
-        return ret_dict
-
     def save(self):
         path = FirmwarePaths.FIRMWARE_PIO_BUILD.value / os.environ[PIOENV] / FILENAME
         with open(path, 'w') as outf:
@@ -29,7 +16,7 @@ class BaseFw(Base):
 
     def __str__(self):
         str_list = [
-            '// This file is updated by the build system at build time.',
+            '// This file created by the build system at build time.',
             '',
             '#pragma once',
             ''
@@ -45,6 +32,11 @@ class BaseFw(Base):
         str_list.append('')
 
         return '\n'.join(str_list)
+
+    def _constants(self) -> dict[Base.Key.type_, Any]:
+        ret_dict = super()._constants()
+        ret_dict[self.Key.VERSION] = f'0.0.1-dev0+{get_git_hash()}'
+        return ret_dict
 
 class Default(BaseFw):
     MODEL_NUMBER = 'MICRO_ESP32C3-MASS_1-TEMP_1-COMM_USB-0'

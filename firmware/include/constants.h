@@ -9,7 +9,7 @@ constexpr int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
 constexpr int WAIT_READY_RETRIES = 100;
 constexpr int WAIT_READY_RETRY_DELAY_MS = 10;
 
-constexpr int SLIP_BUF_ALLOC_BYTES = 256;
+constexpr int SLIP_BUF_ALLOC_BYTES = 512;
 // The worst case slip packet encoding
 constexpr int MAX_SLIP_UNENCODED_PACKET_BYTES = (SLIP_BUF_ALLOC_BYTES / 2) - 2;
 constexpr float INVALID_TEMPERATURE = 1234.5;
@@ -128,5 +128,14 @@ inline int get_temperature_pin(int mass_sensor_idx) {
     assert(false && "More than three temperature sensors has not been implemented.");
 #endif
 #endif
+}
+
+inline int get_temperature_sensor_idx(const int mass_sensor_idx) {
+    if (TEMPERATURE_SENSOR_COUNT == MASS_SENSOR_COUNT) {
+        return mass_sensor_idx;
+    }
+    else {
+        return 0;
+    }
 }
 #endif /* constants_h */

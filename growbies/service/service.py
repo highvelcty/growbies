@@ -1,8 +1,8 @@
 import logging
 
 from .queue import ServiceQueue, IDQueue
-from.cmd.structs import *
-from growbies.service.cmd import activate, discovery, loopback
+from.cmd.structs import ServiceCmd, ServiceStopServiceCmd
+from growbies.service.cmd import activate, discovery, loopback, identify
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
 
@@ -35,6 +35,9 @@ class Service:
                     elif cmd.cmd == ServiceCmd.DEACTIVATE:
                         with IDQueue(cmd.qid) as resp_q:
                             resp_q.put(activate.deactivate(cmd))
+                    elif cmd.cmd == ServiceCmd.ID:
+                        with IDQueue(cmd.qid) as resp_q:
+                            resp_q.put(identify.identify(cmd))
                     elif cmd.cmd == ServiceCmd.LOOPBACK:
                         with IDQueue(cmd.qid) as resp_q:
                             resp_q.put(loopback.loopback(cmd))
