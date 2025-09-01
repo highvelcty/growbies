@@ -18,7 +18,6 @@ typedef float Tare[TARE_COUNT];
 #pragma pack(1)
 
 constexpr uint16_t MAGIC = 0x7A3F;
-
 struct NvmHeader {
     uint16_t magic = MAGIC;
     uint16_t version = 0;
@@ -90,7 +89,7 @@ class PersistentStore {
     protected:
     #if ARDUINO_ARCH_ESP32
         Preferences prefs;
-        const char* ns = "growbies";
+        const char* ns = APPNAME;
     #endif
 };
 
@@ -111,9 +110,13 @@ public:
         EEPROM.get(this->partition_offset, id_struct);
 
         if (!id_struct.header.is_initialized()) {
-            id_struct = Identify0{}; // reinitialize using default constructor
+            // Zero the entire Identify1 memory in EEPROM in 32-byte chunks
+            for (size_t offset = 0; offset < sizeof(Identify1); ++offset) {
+                EEPROM.update(partition_offset + offset, 0);
+            }
 
-            // Write back to EEPROM
+            // Initialize Identify0 portion with header + firmware_version
+            id_struct = Identify0{}; // default constructor sets header and firmware_version
             EEPROM.put(this->partition_offset, id_struct);
         }
 
@@ -122,7 +125,7 @@ public:
 
         // Initialize if the key does not exist
         if (!this->prefs.isKey(this->ns_key)) {
-            Identify0 id_struct;
+            Identify1 id_struct;
             this->prefs.putBytes(this->ns_key, &id_struct, sizeof(id_struct));
         }
         this->prefs.end();

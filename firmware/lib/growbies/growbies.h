@@ -43,17 +43,19 @@ class Growbies {
 
         static void power_on();
 
-        static Error median_avg_filter(float **iteration_sensor_sample,
-                                       int rows, int cols, float thresh, float* out);
-        Error sample_mass(float** iteration_mass_samples, int times, HX711Gain gain);
-
-        static Error sample_temperature(float** iteration_temp_samples, int times);
-        void get_datapoint(RespDataPoint* resp, byte times, bool raw = false,
-                        HX711Gain gain = HX711_GAIN_128);
+        static void median_avg_filter(float **iteration_sensor_sample,
+                                       int rows, int cols, float thresh, float* out,
+                                       RespError& resp_error);
+        static void sample_mass(float** iteration_mass_samples, int times, HX711Gain gain,
+                                RespError& resp_error);
+        static void sample_temperature(float** iteration_temp_samples, int times);
+        void get_datapoint(RespDataPoint* resp, RespError& resp_error,
+                           byte times, bool raw = false,
+                           HX711Gain gain = HX711_GAIN_128) const;
 
         static void shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], HX711Gain gain);
 
-        static Error wait_hx711_ready(int retries, unsigned long delay_ms);
+        static ErrorCode wait_hx711_ready(int retries, unsigned long delay_ms);
 };
 
 template <typename PacketType>

@@ -5,6 +5,8 @@
 #include <pins_arduino.h>
 #include "flags.h"
 
+constexpr const char* APPNAME = "growbies";
+
 constexpr int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
 constexpr int WAIT_READY_RETRIES = 100;
 constexpr int WAIT_READY_RETRY_DELAY_MS = 10;

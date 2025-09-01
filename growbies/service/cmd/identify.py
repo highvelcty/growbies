@@ -1,20 +1,19 @@
 from growbies.service.cmd.structs import GetIdServiceCmd
-from growbies.service.cmd.serials_to_device_ids import serials_to_device_ids
 from growbies.service.resp.structs import ServiceCmdError
+from growbies.service.cmd.serials_to_device_ids import serials_to_device_ids
 from growbies.intf.cmd import GetIdentifyDeviceCmd
+from growbies.intf.resp import GetIdentifyDeviceResp
 from growbies.worker.pool import get_pool
 
-def get(cmd: GetIdServiceCmd):
-    try:
-        device_id = serials_to_device_ids(cmd.serial)[0]
-    except ServiceCmdError as err:
-        return err
-
+def get(cmd: GetIdServiceCmd) -> GetIdentifyDeviceResp:
+    """
+    raises:
+        :class:`ServiceCmdError`
+        :class:`DeviceError`
+    """
     pool = get_pool()
-
     try:
-        worker = pool.workers[device_id]
+        worker = pool.workers[serials_to_device_ids(cmd.serial)[0]]
     except KeyError:
-        return ServiceCmdError(f'Serial number "{cmd.serial}" is inactive.')
-
+        raise ServiceCmdError(f'Serial number "{cmd.serial}" is inactive.')
     return worker.cmd(GetIdentifyDeviceCmd())

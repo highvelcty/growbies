@@ -13,12 +13,12 @@ class ServiceCmd:
     type_ = NewType('ServiceCmd', str)
     ACTIVATE = type_('activate')
     DEACTIVATE = type_('deactivate')
+    ID = type_('id')
     LOOPBACK = type_('loopback')
     LS = type_('ls')
-    ID = type_('id')
     SERVICE_STOP = type_("service_stop")
 
-    external_cmds = (ACTIVATE, DEACTIVATE, LOOPBACK, LS)
+    external_cmds = (ACTIVATE, DEACTIVATE, ID, LOOPBACK, LS)
 
     @classmethod
     def get_help_str(cls, cmd_: 'ServiceCmd.type_') -> str:

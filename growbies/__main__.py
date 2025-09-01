@@ -9,9 +9,7 @@ from . import cfg, db, human_input, monitor, plot, sample, service
 from .constants import USERNAME
 from .utils.privileges import drop_privileges
 
-from growbies.intf.resp import VoidDeviceResp
 from growbies.service.cmd.structs import *
-from growbies.service.resp.structs import ServiceCmdError
 from growbies.service.queue import IDQueue, ServiceQueue
 
 CMD = 'cmd'
@@ -72,25 +70,13 @@ def _run_cmd(cmd_: TBaseServiceCmd):
 if ServiceCmd.LS == cmd:
     print(_run_cmd(LsServiceCmd()))
 elif ServiceCmd.ACTIVATE == cmd:
-    ret = _run_cmd(ActivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
-    if ret is not None:
-        sys.stderr.write(f'{ret}\n')
-        sys.exit(1)
+    _run_cmd(ActivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
 elif ServiceCmd.DEACTIVATE == cmd:
-    ret = _run_cmd(DeactivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
-    if ret is not None:
-        sys.stderr.write(f'{ret}\n')
-        sys.exit(1)
-    sys.exit(0)
+    _run_cmd(DeactivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
 elif ServiceCmd.LOOPBACK == cmd:
-    ret = _run_cmd(LoopbackServiceCmd(serial=getattr(ns, PositionalParam.SERIAL)))
-    if isinstance(ret, ServiceCmdError):
-        raise ret
-    else:
-        ret: VoidDeviceResp
-        print(ret)
-
+    _run_cmd(LoopbackServiceCmd(serial=getattr(ns, PositionalParam.SERIAL)))
+elif ServiceCmd.ID == cmd:
+    print(_run_cmd(GetIdServiceCmd(serial=getattr(ns, PositionalParam.SERIAL))))
 else:
     fwd_cmd = shlex.split(f'{sys.executable} -m {__package__}.{getattr(ns, CMD)} ') + args
     os.execvp(sys.executable, fwd_cmd)
-

@@ -7,7 +7,7 @@ from growbies.utils import timestamp
 from growbies.utils.types import Serial_t, ModelNumber_t
 
 __all__ = ['BatteryType', 'DisplayType', 'LedType', 'FrameType', 'FootType', 'MassSensorType',
-           'PcbaType', 'TemperatureSensorType', 'WirelessType', 'Identify']
+           'PcbaType', 'TemperatureSensorType', 'WirelessType', 'Identify1']
 
 class BatteryType(IntEnum):
     GENERIC = 0
@@ -44,10 +44,35 @@ class NvmHeader(ctypes.Structure):
         MAGIC = '_magic'
         VERSION = '_version'
 
-class Identify(ctypes.Structure):
+class Identify0(ctypes.Structure):
     class Field:
         HEADER = '_header'
         FIRMWARE_VERSION = '_firmware_version'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.HEADER, NvmHeader),
+        (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
+    ]
+
+    @property
+    def header(self) -> NvmHeader:
+        return getattr(self, self.Field.HEADER)
+
+    @header.setter
+    def header(self, value: NvmHeader):
+        setattr(self, self.Field.HEADER, value)
+
+    @property
+    def firmware_version(self) -> Version:
+        return getattr(self, self.Field.FIRMWARE_VERSION)
+
+    @firmware_version.setter
+    def firmware_version(self, value: Version):
+        setattr(self, self.Field.FIRMWARE_VERSION, str(value))
+
+class Identify1(Identify0):
+    class Field(Identify0.Field):
         SERIAL_NUMBER = '_serial_number'
         MODEL_NUMBER = '_model_number'
         MANUFACTURE_DATE = '_manufacture_date'
@@ -66,8 +91,6 @@ class Identify(ctypes.Structure):
 
     _pack_ = 1
     _fields_ = [
-        (Field.HEADER, NvmHeader),
-        (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
         (Field.SERIAL_NUMBER, ctypes.c_char * 64),
         (Field.MODEL_NUMBER, ctypes.c_char * 64),
         (Field.MANUFACTURE_DATE, ctypes.c_float),
@@ -83,22 +106,6 @@ class Identify(ctypes.Structure):
         (Field.FRAME, ctypes.c_uint16),
         (Field.FOOT, ctypes.c_uint16),
     ]
-
-    @property
-    def header(self) -> NvmHeader:
-        return getattr(self, self.Field.HEADER)
-
-    @header.setter
-    def header(self, value: NvmHeader):
-        setattr(self, self.Field.HEADER, value)
-
-    @property
-    def firmware_version(self) -> Version:
-        return getattr(self, self.Field.FIRMWARE_VERSION)
-
-    @firmware_version.setter
-    def firmware_version(self, value: Version):
-        setattr(self, self.Field.FIRMWARE_VERSION, str(value))
 
     @property
     def serial_number(self) -> Serial_t:

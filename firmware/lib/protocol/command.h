@@ -25,22 +25,22 @@ enum class Resp: uint16_t {
     ERROR = 0xFFFF,
 };
 
-typedef enum Error: uint32_t {
+typedef enum ErrorCode: uint32_t {
     // bitfield
     ERROR_NONE                                  = 0x00000000,
     ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 0x00000001,
     ERROR_UNRECOGNIZED_COMMAND                  = 0x00000002,
     ERROR_OUT_OF_THRESHOLD_SAMPLE               = 0x00000004,
     ERROR_HX711_NOT_READY                       = 0x00000008,
-} Error;
+} ErrorCode;
 
 // Bitwise operators for Error
-inline Error operator|(const Error lhs, const Error rhs) {
-    return static_cast<Error>(
+inline ErrorCode operator|(const ErrorCode lhs, const ErrorCode rhs) {
+    return static_cast<ErrorCode>(
         static_cast<uint32_t>(lhs) | static_cast<uint32_t>(rhs));
 }
 
-inline Error& operator|=(Error& lhs, const Error rhs) {
+inline ErrorCode& operator|=(ErrorCode& lhs, const ErrorCode rhs) {
     lhs = lhs | rhs;
     return lhs;
 }
@@ -95,7 +95,7 @@ struct CmdGetDatapoint : BaseCmdWithTimesParam {
 };
 // --- Base Responses
 struct BaseResp : PacketHdr {
-    Error error = ERROR_NONE;
+    ErrorCode error = ERROR_NONE;
     explicit BaseResp(const Resp resp_type) : PacketHdr(resp_type) {};
 };
 
@@ -104,7 +104,7 @@ struct RespVoid : BaseResp {
 };
 
 struct RespError : BaseResp {
-    Error error;
+    ErrorCode error;
     explicit RespError(const Resp resp_type = Resp::ERROR) : BaseResp(resp_type), error() {
     };
 };

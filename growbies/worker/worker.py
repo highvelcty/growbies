@@ -9,7 +9,8 @@ from serial.serialutil import SerialException
 from growbies.db.engine import get_db_engine
 from growbies.intf import Intf
 from growbies.intf.cmd import TDeviceCmd
-from growbies.intf.resp import DeviceResp, ErrorDeviceResp, DataPointDeviceResp, TDeviceResp
+from growbies.intf.resp import (DeviceResp, ErrorDeviceResp, DataPointDeviceResp, TDeviceResp,
+                                DeviceError)
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
 from growbies.service.resp.structs import ServiceCmdError
@@ -44,11 +45,20 @@ class Worker(Thread):
 
     def cmd(self, cmd: TDeviceCmd, timeout: Optional[float] = _DEFAULT_CMD_TIMEOUT_SECONDS) \
             -> TDeviceResp | ServiceCmdError:
+        """
+        raises:
+            :class:`DeviceError`
+        """
         if not self._intf:
-            return ServiceCmdError('Worker thread for {self.name} is not ready.')
+            raise ServiceCmdError('Worker thread for {self.name} is not ready.')
 
         self._intf.send_cmd(cmd)
-        return self._out_queue.get(block=True, timeout=timeout)
+        resp = self._out_queue.get(block=True, timeout=timeout)
+
+        if isinstance(resp, ErrorDeviceResp):
+            raise DeviceError(resp.error)
+
+        return resp
 
     @property
     def name(self):

@@ -2,6 +2,7 @@ from enum import IntEnum
 from typing import Optional, Type, TypeVar
 import ctypes
 
+from ..common import Identify1
 from ..common import Calibration, Packet, PacketHeader
 from ..common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
@@ -29,7 +30,7 @@ class DeviceResp(IntEnum):
 
 
 error_t = ctypes.c_uint32
-class DeviceError(IntEnum):
+class DeviceErrorCode(IntEnum):
     # bitfield
     NONE                                  = 0x00000000
     CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 0x00000001
@@ -41,22 +42,6 @@ class DeviceError(IntEnum):
         return self.name
 
 class BaseDeviceResp(PacketHeader):
-    class Field(PacketHeader.Field):
-        ERROR = '_error'
-
-    _pack_ = 1
-    _fields_ = [
-        (Field.ERROR, error_t)
-    ]
-
-    @property
-    def error(self) -> DeviceError:
-        return getattr(self, self.Field.ERROR)
-
-    @error.setter
-    def error(self, error: DeviceError):
-        setattr(self, self.Field.ERROR, error)
-
     @property
     def type(self) -> DeviceResp:
         return DeviceResp(super().type)
@@ -67,23 +52,19 @@ class BaseDeviceResp(PacketHeader):
 TDeviceResp = TypeVar('TDeviceResp', bound=BaseDeviceResp)
 
 class ErrorDeviceResp(BaseDeviceResp):
-    class Field(BaseDeviceResp.Field):
+    class Field(PacketHeader.Field):
         ERROR = 'error'
 
     _fields_ = [
         (Field.ERROR, ctypes.c_uint32)
     ]
 
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = DeviceResp.ERROR
-        super().__init__(*args, **kw)
-
     @property
-    def error(self) -> DeviceError:
+    def error(self) -> DeviceErrorCode:
         return super().error
 
     @error.setter
-    def error(self, value: DeviceError):
+    def error(self, value: DeviceErrorCode):
         super().error = value
 
 
@@ -146,7 +127,14 @@ class GetCalibrationDeviceRespGetCalibration(BaseDeviceResp):
     def calibration(self) -> Calibration:
         return getattr(self, self.Field.CALIBRATION)
 
-class VoidDeviceResp(BaseDeviceResp):
+class GetIdentifyDeviceResp(BaseDeviceResp):
     def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = DeviceResp.VOID
         super().__init__(*args, **kw)
+
+class VoidDeviceResp(BaseDeviceResp): pass
+
+
+class DeviceError(Exception):
+    def __init__(self, error: DeviceErrorCode):
+        self.error = error
+        super().__init__(f'DeviceError 0x{error:08X} "{error}".')

@@ -51,10 +51,7 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
     else if (packet_hdr->cmd == Cmd::GET_DATAPOINT) {
         const auto* cmd = reinterpret_cast<CmdGetDatapoint *>(slip_buf->buf);
         if (validate_packet(*cmd)) {
-            // This constructs at location
-            auto* resp = new (this->outbuf) RespDataPoint;
-            this->get_datapoint(resp, cmd->times, cmd->raw);
-            send_packet(*this->outbuf, sizeof(*resp));
+            exec_read();
          }
     }
     else if (packet_hdr->cmd == Cmd::GET_CALIBRATION) {
@@ -117,8 +114,14 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
 #if BUTTERFLY
 void Growbies::exec_read() {
     auto* resp = new (this->outbuf) RespDataPoint;
-    this->get_datapoint(resp, BUTTERFLY_SAMPLES_PER_DATAPOINT);
-    send_packet(*this->outbuf, sizeof(*resp));
+    RespError resp_error;
+    this->get_datapoint(resp, resp_error, BUTTERFLY_SAMPLES_PER_DATAPOINT);
+    if (resp_error.error) {
+        send_packet(resp_error, sizeof(resp_error));
+    }
+    else {
+        send_packet(*this->outbuf, sizeof(*resp));
+    }
 }
 #endif
 
@@ -132,17 +135,12 @@ void Growbies::power_on() {
     delayMicroseconds(HX711_POWER_DELAY);
 }
 
-Error Growbies::median_avg_filter(float **iteration_sensor_sample,
-                                  int iterations, const int sensors,
-                                  const float thresh, float *out) {
+void Growbies::median_avg_filter(float **iteration_sensor_sample,
+                                  const int iterations, const int sensors,
+                                  const float thresh, float *out,
+                                  RespError& resp_error) {
     int iteration;
-    int middle;
     float median;
-    float sample;
-    float sum;
-    int sum_count;
-
-    Error error = ERROR_NONE;
 
     float samples[iterations];
 
@@ -152,14 +150,14 @@ Error Growbies::median_avg_filter(float **iteration_sensor_sample,
             samples[iteration] = iteration_sensor_sample[iteration][sensor_idx];
         }
 
-        sum = 0;
-        sum_count = 0;
+        float sum = 0;
+        int sum_count = 0;
 
         // Sort
         insertion_sort(samples, iterations);
 
         // Find median
-        middle = iterations / 2;
+        const int middle = iterations / 2;
         if (iterations % 2) {
             // Odd - simply take the middle number
             median = samples[middle];
@@ -170,33 +168,39 @@ Error Growbies::median_avg_filter(float **iteration_sensor_sample,
         }
 
         // Average samples that fall within a threshold
+        int error_count = 0;
         for (iteration = 0; iteration < iterations; ++iteration) {
-            sample = samples[iteration];
+            const float sample = samples[iteration];
             if (abs(median - sample) <= thresh) {
                 sum += sample;
                 ++sum_count;
             }
             else {
-                error |= ERROR_OUT_OF_THRESHOLD_SAMPLE;
+                ++error_count;
             }
+        }
+        if (error_count >= min(2, iterations)) {
+            resp_error.error = ERROR_OUT_OF_THRESHOLD_SAMPLE;
         }
         out[sensor_idx] = sum / sum_count;
     }
-    return error;
 }
 
 
-Error Growbies::sample_mass(float** iteration_mass_samples, int times, const HX711Gain gain) {
-    Error error = ERROR_NONE;
+void Growbies::sample_mass(float** iteration_mass_samples,
+                                const int times,
+                                const HX711Gain gain,
+                                RespError& resp_error) {
 	for (int iteration = 0; iteration < times; ++iteration) {
-        error |= this->wait_hx711_ready(WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS);
-        this->shift_all_in(iteration_mass_samples[iteration], gain);
+        resp_error.error = wait_hx711_ready(WAIT_READY_RETRIES, WAIT_READY_RETRY_DELAY_MS);
+	    if (resp_error.error) {
+	        return;
+	    }
+        shift_all_in(iteration_mass_samples[iteration], gain);
     }
-    return error;
 }
 
-Error Growbies::sample_temperature(float **iteration_temp_samples, const int times) {
-    Error error = ERROR_NONE;
+void Growbies::sample_temperature(float **iteration_temp_samples, const int times) {
     for (int iteration = 0; iteration < times; ++iteration) {
         for (int sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
         #if ARDUINO_ARCH_AVR
@@ -211,11 +215,11 @@ Error Growbies::sample_temperature(float **iteration_temp_samples, const int tim
 
         }
     }
-    return error;
 }
 
-void Growbies::get_datapoint(RespDataPoint *resp, const byte times,
-                             const bool raw, const HX711Gain gain) {
+void Growbies::get_datapoint(RespDataPoint *resp, RespError& resp_error,
+                             const byte times,
+                             const bool raw, const HX711Gain gain) const {
     int iteration;
     int sensor_idx;
     Calibration calibration_struct{};
@@ -236,26 +240,37 @@ void Growbies::get_datapoint(RespDataPoint *resp, const byte times,
 #if POWER_CONTROL
 	this->power_on();
 #endif
-    this->sample_mass(iteration_mass_samples, times, gain);
+    sample_mass(iteration_mass_samples, times, gain, resp_error);;
+    if (resp_error.error) {
+        return;
+    }
 #if TEMPERATURE_SENSOR_COUNT
-    resp->error |= this->sample_temperature(iteration_temp_samples, times);
+    sample_temperature(iteration_temp_samples, times);
 #endif
 #if POWER_CONTROL
 	this->power_off();
 #endif
 
-    resp->error |= median_avg_filter(iteration_mass_samples,
-                                     times,
-                                     MASS_SENSOR_COUNT,
-                                     INVALID_MASS_SAMPLE_THRESHOLD_DAC,
-                                     reinterpret_cast<float *>(&resp->mass_sensor));
+    median_avg_filter(iteration_mass_samples,
+                      times,
+                      MASS_SENSOR_COUNT,
+                      INVALID_MASS_SAMPLE_THRESHOLD_DAC,
+                      reinterpret_cast<float *>(&resp->mass_sensor),
+                      resp_error);
+    if (resp_error.error) {
+        return;
+    }
 
 #if TEMPERATURE_SENSOR_COUNT
-    resp->error |= median_avg_filter(iteration_temp_samples,
-                                     times,
-                                     TEMPERATURE_SENSOR_COUNT,
-                                     INVALID_MASS_SAMPLE_THRESHOLD_DAC,
-                                     reinterpret_cast<float *>(&resp->temperature_sensor));
+    median_avg_filter(iteration_temp_samples,
+              times,
+                      TEMPERATURE_SENSOR_COUNT,
+                      INVALID_MASS_SAMPLE_THRESHOLD_DAC,
+                      reinterpret_cast<float *>(&resp->temperature_sensor),
+                      resp_error);
+    if (resp_error.error) {
+        return;
+    }
 #endif
 
     resp->mass = 0;
@@ -302,7 +317,6 @@ void Growbies::get_datapoint(RespDataPoint *resp, const byte times,
 
 void Growbies::shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], const HX711Gain gain) {
     uint32_t a_bit;
-    uint8_t ii;
     uint8_t sensor;
 #if ARDUINO_ARCH_AVR
     uint8_t gpio_in_reg;
@@ -317,7 +331,7 @@ void Growbies::shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], const HX711G
 #elif ARDUINO_ARCH_ESP32
     noInterrupts();
 #endif
-        for (ii = 0; ii < HX711_DAC_BITS; ++ii) {
+        for (uint8_t ii = 0; ii < HX711_DAC_BITS; ++ii) {
             delayMicroseconds(HX711_BIT_BANG_DELAY);
             // Read in a byte, most significant bit first
             digitalWrite(HX711_SCK_PIN, HIGH);
@@ -374,7 +388,7 @@ void Growbies::shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], const HX711G
     }
 }
 
-Error Growbies::wait_hx711_ready(const int retries, const unsigned long delay_ms) {
+ErrorCode Growbies::wait_hx711_ready(const int retries, const unsigned long delay_ms) {
 	bool ready;
 	int sensor;
 #if ARDUINO_ARCH_AVR
@@ -383,7 +397,7 @@ Error Growbies::wait_hx711_ready(const int retries, const unsigned long delay_ms
     uint32_t gpio_in_reg;
 #endif
     bool all_ready;
-    Error error = ERROR_NONE;
+    ErrorCode error = ERROR_NONE;
 	int retry_count = 0;
 
 	do {
