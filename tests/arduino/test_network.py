@@ -70,7 +70,7 @@ class TestArduinoNetwork(BaseTest):
                           :self._arduino_serial._recv_buf_idx -
                            network.Network.CHECKSUM_BYTES]
             packet = Packet.make(decoded_buf)
-            payload_offset = ctypes.sizeof(packet.header)
+            payload_offset = ctypes.sizeof(packet.hdr)
             payload = memoryview(cast(bytes, packet)).cast('B')[payload_offset:payload_offset +
                                                                                len(packet.data)]
             self.assertEqual(bytes(payload), payload_bytes)

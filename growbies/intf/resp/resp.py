@@ -2,7 +2,7 @@ from enum import IntEnum
 from typing import Optional, Type, TypeVar
 import ctypes
 
-from ..common import Identify1
+from ..common import IdentifyPacket1, BaseStructure
 from ..common import Calibration, Packet, PacketHeader
 from ..common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
@@ -18,15 +18,15 @@ class DeviceResp(IntEnum):
 
     @classmethod
     def get_class(cls, packet: 'Packet') -> Optional[Type['TDeviceResp']]:
-        if packet.header.type == cls.VOID:
+        if packet.hdr.type == cls.VOID:
             return VoidDeviceResp
-        elif packet.header.type == cls.ERROR:
+        elif packet.hdr.type == cls.ERROR:
             return ErrorDeviceResp
-        elif packet.header.type == cls.DATAPOINT:
+        elif packet.hdr.type == cls.DATAPOINT:
             return DataPointDeviceResp
-        elif packet.header.type == cls.CALIBRATION:
+        elif packet.hdr.type == cls.CALIBRATION:
             return GetCalibrationDeviceRespGetCalibration
-        elif packet.header.type == cls.IDENTIFY:
+        elif packet.hdr.type == cls.IDENTIFY:
             return GetIdentifyDeviceResp
         else:
             return None
@@ -44,7 +44,7 @@ class DeviceErrorCode(IntEnum):
     def __str__(self):
         return self.name
 
-class BaseDeviceResp(PacketHeader):
+class RespPacketHeader(PacketHeader):
     @property
     def type(self) -> DeviceResp:
         return DeviceResp(super().type)
@@ -52,6 +52,19 @@ class BaseDeviceResp(PacketHeader):
     @type.setter
     def type(self, value: DeviceResp):
         setattr(self, self.Field.TYPE, value)
+
+
+class BaseDeviceResp(BaseStructure):
+    class Field:
+        HDR = '_hdr'
+
+    _fields_ = [
+        (Field.HDR, RespPacketHeader)
+    ]
+
+    @property
+    def hdr(self) -> RespPacketHeader:
+        return getattr(self, self.Field.HDR)
 TDeviceResp = TypeVar('TDeviceResp', bound=BaseDeviceResp)
 
 class ErrorDeviceResp(BaseDeviceResp):
@@ -113,10 +126,6 @@ class DataPointDeviceResp(BaseDeviceResp):
         str_list.append(f'temperature: {self.temperature}')
         return '\n'.join(str_list)
 
-    @classmethod
-    def from_packet(cls, packet) -> Optional['DataPointDeviceResp']:
-        return cls.make_class(packet).from_buffer(packet)
-
 class GetCalibrationDeviceRespGetCalibration(BaseDeviceResp):
     class Field(BaseDeviceResp.Field):
         CALIBRATION = '_calibration'
@@ -132,15 +141,16 @@ class GetCalibrationDeviceRespGetCalibration(BaseDeviceResp):
 
 class GetIdentifyDeviceResp(BaseDeviceResp):
     class Field(BaseDeviceResp.Field):
-        IDENTIFY = '_identify'
+        ID = '_id'
 
     _pack_ = 1
-    _fields_ = [
-        (Field.IDENTIFY, Identify1)
+    _fields_ =  [
+        (Field.ID, IdentifyPacket1)
     ]
 
-    _anonymous_ = [Field.IDENTIFY]
-
+    @property
+    def id(self) -> IdentifyPacket1:
+        return getattr(self, self.Field.ID)
 
 class VoidDeviceResp(BaseDeviceResp): pass
 

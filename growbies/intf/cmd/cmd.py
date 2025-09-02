@@ -3,7 +3,7 @@ from typing import Optional, TypeVar
 import ctypes
 import logging
 
-from ..common import Calibration, PacketHeader, Identify1
+from ..common import Calibration, PacketHeader, IdentifyPacket1
 
 __all__ = ['DeviceCmd', 'BaseDeviceCmd', 'TDeviceCmd',
            'LoopbackDeviceCmd',
@@ -114,15 +114,15 @@ class SetIdentifyDeviceCmd(BaseDeviceCmd):
         IDENTIFY = '_identify'
 
     _fields_ = [
-        (Field.IDENTIFY, Identify1)
+        (Field.IDENTIFY, IdentifyPacket1)
     ]
 
     @property
-    def identify(self) -> Identify1:
+    def identify(self) -> IdentifyPacket1:
         return getattr(self, self.Field.IDENTIFY)
 
     @identify.setter
-    def identify(self, identify: Identify1):
+    def identify(self, identify: IdentifyPacket1):
         setattr(self, self.Field.IDENTIFY, identify)
 
     def __init__(self, *args, **kw):

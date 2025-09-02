@@ -209,7 +209,7 @@ class Transport(Network, ABC):
 
         resp_class = DeviceResp.get_class(packet)
         if resp_class is None:
-            logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
+            logger.error(f'Transport layer unrecognized response type: {packet.hdr.type}')
             return None
         else:
             exp_len = ctypes.sizeof(resp_class)

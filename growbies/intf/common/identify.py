@@ -1,13 +1,16 @@
 from datetime import datetime
 from enum import IntEnum
 from packaging.version import Version
+from typing import Union
 import ctypes
 
+from .common import BaseStructure
 from growbies.utils import timestamp
 from growbies.utils.types import Serial_t, ModelNumber_t
 
 __all__ = ['BatteryType', 'DisplayType', 'LedType', 'FrameType', 'FootType', 'MassSensorType',
-           'PcbaType', 'TemperatureSensorType', 'WirelessType', 'Identify1']
+           'PcbaType', 'TemperatureSensorType', 'WirelessType',
+           'IdentifyPacket0', 'IdentifyPacket1', 'NvmHeader']
 
 class BatteryType(IntEnum):
     GENERIC = 0
@@ -39,7 +42,7 @@ class WirelessType(IntEnum):
     BLE = 1
 
 
-class NvmHeader(ctypes.Structure):
+class NvmHeader(BaseStructure):
     class Field:
         MAGIC = '_magic'
         VERSION = '_version'
@@ -50,24 +53,22 @@ class NvmHeader(ctypes.Structure):
         (Field.VERSION, ctypes.c_uint16)
     ]
 
-class Identify0(ctypes.Structure):
+    @property
+    def magic(self) -> int:
+        return getattr(self, self.Field.MAGIC)
+
+    @property
+    def version(self) -> int:
+        return getattr(self, self.Field.VERSION)
+
+class IdentifyPayload0(BaseStructure):
     class Field:
-        HEADER = '_header'
         FIRMWARE_VERSION = '_firmware_version'
 
     _pack_ = 1
     _fields_ = [
-        (Field.HEADER, NvmHeader),
         (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
     ]
-
-    @property
-    def header(self) -> NvmHeader:
-        return getattr(self, self.Field.HEADER)
-
-    @header.setter
-    def header(self, value: NvmHeader):
-        setattr(self, self.Field.HEADER, value)
 
     @property
     def firmware_version(self) -> Version:
@@ -77,8 +78,37 @@ class Identify0(ctypes.Structure):
     def firmware_version(self, value: Version):
         setattr(self, self.Field.FIRMWARE_VERSION, str(value))
 
-class Identify1(Identify0):
-    class Field(Identify0.Field):
+class IdentifyPacket0(BaseStructure):
+    class Field:
+        HDR = '_hdr'
+        PAYLOAD = '_payload'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.HDR, NvmHeader),
+        (Field.PAYLOAD, IdentifyPayload0),
+    ]
+
+    _anonymous_ = [Field.PAYLOAD]
+
+    @property
+    def hdr(self) -> NvmHeader:
+        return getattr(self, self.Field.HDR)
+
+    @hdr.setter
+    def hdr(self, value: NvmHeader):
+        setattr(self, self.Field.HDR, value)
+
+    @property
+    def payload(self) -> IdentifyPayload0:
+        return getattr(self, self.Field.PAYLOAD)
+
+    @property
+    def firmware_version(self) -> Version:
+        return getattr(self, IdentifyPayload0.Field.FIRMWARE_VERSION)
+
+class IdentifyPacket1(IdentifyPacket0):
+    class Field(IdentifyPacket0.Field):
         SERIAL_NUMBER = '_serial_number'
         MODEL_NUMBER = '_model_number'
         MANUFACTURE_DATE = '_manufacture_date'
@@ -86,7 +116,6 @@ class Identify1(Identify0):
         MASS_SENSOR_TYPE = '_mass_sensor_type'
         TEMPERATURE_SENSOR_COUNT = '_temperature_sensor_count'
         TEMPERATURE_SENSOR_TYPE = '_temperature_sensor_type'
-        ARCHITECTURE = '_architecture'
         PCBA = '_pcba'
         WIRELESS = '_wireless'
         BATTERY = '_battery'
@@ -104,7 +133,6 @@ class Identify1(Identify0):
         (Field.MASS_SENSOR_TYPE, ctypes.c_uint16),
         (Field.TEMPERATURE_SENSOR_COUNT, ctypes.c_uint16),
         (Field.TEMPERATURE_SENSOR_TYPE, ctypes.c_uint16),
-        (Field.ARCHITECTURE, ctypes.c_uint16),
         (Field.PCBA, ctypes.c_uint16),
         (Field.BATTERY, ctypes.c_uint16),
         (Field.DISPLAY, ctypes.c_uint16),
