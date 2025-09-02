@@ -32,7 +32,7 @@ class Growbies {
 
         void execute(const PacketHdr* packet_hdr);
 #if BUTTERFLY
-        void exec_read();
+        void exec_read(const PacketHdr* hdr = nullptr);
 #endif
 
     private:
@@ -65,6 +65,7 @@ bool check_and_respond_to_deserialization_underflow(const PacketType& packet) {
     }
     else{
         RespError resp;
+        resp.id = packet.id;
         resp.error = ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
         send_packet(resp);
         return false;

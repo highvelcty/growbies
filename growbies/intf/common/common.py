@@ -5,7 +5,9 @@ import logging
 if TYPE_CHECKING:
     from ..cmd import DeviceCmd
     from ..resp import DeviceResp
+
 from growbies.utils.bufstr import BufStr
+from growbies.service.resp.structs import ServiceCmdError
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +69,11 @@ class Packet(BasePacket):
         DATA = 'data'
 
     @classmethod
-    def make(cls, source: Union[ByteString, int]) -> Optional['Packet']:
+    def make(cls, source: Union[ByteString, int]) -> 'Packet':
+        """
+        raises:
+            :class:`ServiceCmdError`
+        """
         if isinstance(source, int):
             source = bytearray(source)
         buf_len = len(source)
@@ -81,10 +87,9 @@ class Packet(BasePacket):
 
 
         if buf_len < Packet.MIN_SIZE_IN_BYTES:
-            logger.error(f'Buffer underflow for deserializing to {Packet.__class__}. '
+            raise ServiceCmdError(f'Buffer underflow for deserializing to {Packet.__class__}. '
                          f'Expected at least {Packet.MIN_SIZE_IN_BYTES} bytes, '
                          f'observed {buf_len} bytes.')
-            return None
 
         packet = _Packet.from_buffer_copy(cast(bytes, source))
 

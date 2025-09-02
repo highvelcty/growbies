@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from enum import StrEnum
+import logging
 import os
 import shlex
 import sys
@@ -8,12 +9,15 @@ from . import __doc__ as pkg_doc
 from . import cfg, db, human_input, monitor, plot, sample, service
 from .constants import USERNAME
 from .utils.privileges import drop_privileges
-
+from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
+from growbies.intf.resp import DeviceError
 from growbies.service.cmd.structs import *
+from growbies.service.resp.structs import ServiceCmdError
 from growbies.service.queue import IDQueue, ServiceQueue
 
 CMD = 'cmd'
 
+logger = logging.getLogger(__name__)
 
 class Param:
     KEEP_PRIVILEGES = 'keep_privileges'
@@ -30,8 +34,7 @@ class PositionalParam(StrEnum):
             return 'A list of serial numbers. This can be unique partial matches.'
         raise ValueError(f'"{sub_cmd_} does not exist.')
 
-parser = ArgumentParser(description=pkg_doc,
-                        formatter_class=RawDescriptionHelpFormatter)
+parser = ArgumentParser(description=pkg_doc, formatter_class=RawDescriptionHelpFormatter)
 parsers = {CMD: parser}
 parser_adder = parser.add_subparsers(dest=CMD, required=True)
 
@@ -50,8 +53,9 @@ for sub_parser in (parsers[ServiceCmd.ACTIVATE], parsers[ServiceCmd.DEACTIVATE])
     sub_parser.add_argument(PositionalParam.SERIALS, nargs='+', type=str,
                             help=PositionalParam.get_help_str(PositionalParam.SERIALS))
 
-parsers[ServiceCmd.LOOPBACK].add_argument(PositionalParam.SERIAL, type=str,
-                                          help=PositionalParam.get_help_str(PositionalParam.SERIAL))
+for sub_parser in (parsers[ServiceCmd.LOOPBACK], parsers[ServiceCmd.ID]):
+    sub_parser.add_argument(PositionalParam.SERIAL, type=str,
+                            help=PositionalParam.get_help_str(PositionalParam.SERIAL))
 
 ns, args = parser.parse_known_args(sys.argv[1:])
 
@@ -61,11 +65,19 @@ delattr(ns, Param.KEEP_PRIVILEGES)
 
 cmd: ServiceCmd.type_ = getattr(ns, CMD)
 
-def _run_cmd(cmd_: TBaseServiceCmd):
+def _run_cmd(cmd_: TBaseServiceCmd, timeout = DEFAULT_CMD_TIMEOUT_SECONDS):
     with ServiceQueue() as cmd_q, IDQueue() as resp_q:
         cmd_.qid = resp_q.qid
         cmd_q.put(cmd_)
-        return next(resp_q.get())
+        try:
+            resp = next(resp_q.get_w_timeout(timeout=timeout))
+        except StopIteration:
+            resp = ServiceCmdError(f'Command {cmd_.cmd} timeout of {timeout} seconds.')
+
+    if isinstance(resp, (ServiceCmdError, DeviceError)):
+        sys.stderr.write(f'{resp}\n')
+        sys.exit(getattr(resp, 'error', 1))
+    return resp
 
 if ServiceCmd.LS == cmd:
     print(_run_cmd(LsServiceCmd()))

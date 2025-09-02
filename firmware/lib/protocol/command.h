@@ -95,51 +95,47 @@ struct CmdGetDatapoint : BaseCmdWithTimesParam {
 };
 // --- Base Responses
 struct BaseResp : PacketHdr {
-    ErrorCode error = ERROR_NONE;
-    explicit BaseResp(const Resp resp_type) : PacketHdr(resp_type) {};
+    explicit BaseResp(const Resp resp_type) : PacketHdr(resp_type) {}
 };
 
 struct RespVoid : BaseResp {
-    explicit RespVoid(const Resp resp_type = Resp::VOID) : BaseResp(resp_type) {};
+    explicit RespVoid(const Resp resp_type = Resp::VOID) : BaseResp(resp_type) {}
 };
 
 struct RespError : BaseResp {
-    ErrorCode error;
-    explicit RespError(const Resp resp_type = Resp::ERROR) : BaseResp(resp_type), error() {
-    };
+    ErrorCode error{};
+    explicit RespError(const Resp resp_type = Resp::ERROR) : BaseResp(resp_type) {}
 };
 
 // --- Responses
 struct RespLoopback : BaseResp {
-    RespLoopback(): BaseResp(Resp::VOID) {};
+    RespLoopback(): BaseResp(Resp::VOID) {}
 };
 
 struct RespGetCalibration : BaseResp {
-    Calibration calibration;
-    RespGetCalibration(): BaseResp(Resp::CALIBRATION), calibration() {
-    };
+    Calibration calibration{};
+    RespGetCalibration(): BaseResp(Resp::CALIBRATION) {}
 };
 static_assert(sizeof(RespGetCalibration) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 struct RespGetIdentify : BaseResp {
-    Identify1 identify;
-    RespGetIdentify(): BaseResp(Resp::IDENTIFY), identify() {
-    };
+    Identify1 identify{};
+    RespGetIdentify(): BaseResp(Resp::IDENTIFY) {}
 };
 static_assert(sizeof(RespGetIdentify) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 typedef float MassSensor[MASS_SENSOR_COUNT];
 typedef float TemperatureSensor[TEMPERATURE_SENSOR_COUNT];
 struct RespDataPoint : BaseResp {
-    MassSensor mass_sensor;
-    float mass;
-    TemperatureSensor temperature_sensor;
-    float temperature;
+    MassSensor mass_sensor{};
+    float mass{};
+    TemperatureSensor temperature_sensor{};
+    float temperature{};
 
-    RespDataPoint() : BaseResp(Resp::DATAPOINT), mass_sensor{}, mass(0), temperature_sensor{},
-                      temperature(0) {
-    };
+    RespDataPoint() : BaseResp(Resp::DATAPOINT) {}
 };
 static_assert(sizeof(RespDataPoint) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 #endif /* command_h */
+
+

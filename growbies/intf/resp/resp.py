@@ -10,6 +10,7 @@ class DeviceResp(IntEnum):
     VOID = 0
     DATAPOINT = 1
     CALIBRATION = 2
+    IDENTIFY = 3
     ERROR = 0xFFFF
 
     def __str__(self):
@@ -25,6 +26,8 @@ class DeviceResp(IntEnum):
             return DataPointDeviceResp
         elif packet.header.type == cls.CALIBRATION:
             return GetCalibrationDeviceRespGetCalibration
+        elif packet.header.type == cls.IDENTIFY:
+            return GetIdentifyDeviceResp
         else:
             return None
 
@@ -128,8 +131,16 @@ class GetCalibrationDeviceRespGetCalibration(BaseDeviceResp):
         return getattr(self, self.Field.CALIBRATION)
 
 class GetIdentifyDeviceResp(BaseDeviceResp):
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
+    class Field(BaseDeviceResp.Field):
+        IDENTIFY = '_identify'
+
+    _pack_ = 1
+    _fields_ = [
+        (Field.IDENTIFY, Identify1)
+    ]
+
+    _anonymous_ = [Field.IDENTIFY]
+
 
 class VoidDeviceResp(BaseDeviceResp): pass
 

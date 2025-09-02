@@ -28,14 +28,16 @@ class DeviceCmd(IntEnum):
 
     @classmethod
     def get_type(cls, cmd: 'TDeviceCmd') -> Optional['DeviceCmd']:
-        if isinstance(cmd, LoopbackDeviceCmd):
-            return DeviceCmd.LOOPBACK
-        elif isinstance(cmd, GetDatapointDeviceCmd):
+        if isinstance(cmd, GetDatapointDeviceCmd):
             return DeviceCmd.GET_CALIBRATION
         elif isinstance(cmd, SetCalibrationDeviceCmd):
             return DeviceCmd.SET_CALIBRATION
         elif isinstance(cmd, GetDatapointDeviceCmd):
             return DeviceCmd.GET_DATAPOINT
+        elif isinstance(cmd, GetIdentifyDeviceCmd):
+            return DeviceCmd.GET_IDENTIFY
+        elif isinstance(cmd, LoopbackDeviceCmd):
+            return DeviceCmd.LOOPBACK
         elif isinstance(cmd, PowerOnHx711DeviceCmd):
             return DeviceCmd.POWER_ON_HX711
         elif isinstance(cmd, PowerOffHx711DeviceCmd):

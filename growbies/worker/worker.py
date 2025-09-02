@@ -48,6 +48,7 @@ class Worker(Thread):
         """
         raises:
             :class:`DeviceError`
+            :class:`ServiceCmdError`
         """
         if not self._intf:
             raise ServiceCmdError('Worker thread for {self.name} is not ready.')
@@ -115,16 +116,13 @@ class Worker(Thread):
                 continue
             except Exception as err:
                 logger.exception(err)
-                return
+                continue
 
             if resp is None:
                 continue
             if resp.id:
                 logger.info(f'Received synchronous {resp.type} response.')
-                try:
-                    self._out_queue.put_nowait(resp)
-                except Full:
-                    logger.error('Worker output queue full.')
+                self._put_no_wait(resp)
             else:
                 self._process_async(resp)
 
@@ -138,6 +136,12 @@ class Worker(Thread):
             return not bool(self._reconnect_attempt % 10)
         else:
             return not bool(self._reconnect_attempt % 100)
+
+    def _put_no_wait(self, resp: TDeviceResp | DeviceError | ServiceCmdError):
+        try:
+            self._out_queue.put_nowait(resp)
+        except Full:
+            logger.error('Worker output queue full.')
 
     def run(self):
         log.thread_local.name = self.name

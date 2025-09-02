@@ -6,7 +6,7 @@ from growbies.utils.types import Serial_t
 
 __all__ = ['BaseServiceCmd', 'ServiceCmd', 'TBaseServiceCmd',
            'ActivateServiceCmd', 'DeactivateServiceCmd', 'GetIdServiceCmd', 'LsServiceCmd',
-           'LoopbackServiceCmd', 'ServiceStopServiceCmd']
+           'LoopbackServiceCmd']
 
 class ServiceCmd:
     # noinspection PyNewType
@@ -16,7 +16,6 @@ class ServiceCmd:
     ID = type_('id')
     LOOPBACK = type_('loopback')
     LS = type_('ls')
-    SERVICE_STOP = type_("service_stop")
 
     external_cmds = (ACTIVATE, DEACTIVATE, ID, LOOPBACK, LS)
 
@@ -33,8 +32,6 @@ class ServiceCmd:
             return f'List discovered devices merged with known devices in the DB.'
         elif cmd_ == cls.ID:
             return f'Identify device.'
-        elif cmd_ == cls.SERVICE_STOP:
-            return 'Stop the service.'
         else:
             raise ValueError(f'Sub-command "{cmd_}" does not exist')
 
@@ -67,7 +64,3 @@ class LoopbackServiceCmd(BaseServiceCmd):
     serial: Serial_t
     def __init__(self, **kw):
         super().__init__(cmd=ServiceCmd.LOOPBACK, **kw)
-
-class ServiceStopServiceCmd(BaseServiceCmd):
-    def __init__(self):
-        super().__init__(cmd=ServiceCmd.SERVICE_STOP)

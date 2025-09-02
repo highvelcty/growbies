@@ -1,4 +1,3 @@
-from service.resp.structs import ServiceCmdError
 from .worker import Worker
 from growbies.utils.types import DeviceID_t, WorkerID_t
 

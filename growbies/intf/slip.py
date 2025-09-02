@@ -16,8 +16,8 @@ import serial
 from .cmd import DeviceCmd, TDeviceCmd
 from .common import Packet, PacketHeader
 from .resp import TDeviceResp, DeviceResp
+from growbies.service.resp.structs import ServiceCmdError
 from growbies.session import log
-from growbies.utils.bufstr import BufStr
 from growbies.utils.crc import crc_ccitt16
 from growbies.utils.report import format_dropped_bytes
 
@@ -43,6 +43,8 @@ class BaseDataLink(threading.Thread, ABC):
         self._thread_name = thread_name
         self._frames: queue.Queue[bytes] = queue.Queue(maxsize=self._Q_SIZE)
         self._do_continue = True
+        # Prevent log flooding.
+        self._do_log_queue_full = True
 
     @abstractmethod
     def close(self):
@@ -140,8 +142,10 @@ class BaseDataLink(threading.Thread, ABC):
     def _enqueue(self, frame: bytes):
         try:
             self._frames.put_nowait(bytes(frame))
+            self._do_log_queue_full = True
         except queue.Full:
             logger.error('SLIP queue is full.')
+            self._do_log_queue_full = False
             # drop the newest frame if queue is full
             pass
 
@@ -182,7 +186,9 @@ class Network(BaseDataLink, ABC):
 
         if self._valid_crc(frame):
             return Packet.make(frame[:-self._CRC_BYTES])
-        return None
+        else:
+            logger.error(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
+            return None
 
     def send_packet(self, buf: bytes):
         crc = crc_ccitt16(buf).to_bytes(self._CRC_BYTES, 'little')
@@ -191,16 +197,12 @@ class Network(BaseDataLink, ABC):
     def _valid_crc(self, frame: bytes) -> bool:
         if len(frame) < self._CRC_BYTES:
             return False
-
         data, chk = frame[:-self._CRC_BYTES], frame[-self._CRC_BYTES:]
         calc_bytes = crc_ccitt16(data).to_bytes(self._CRC_BYTES, byteorder='little')
-        if chk != calc_bytes:
-            logger.warning(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
         return chk == calc_bytes
 
 class Transport(Network, ABC):
     def recv_resp(self, block=True, timeout: Optional[float] = None) -> Optional[TDeviceResp]:
-        resp = None
         packet = super().recv_packet(block=block, timeout=timeout)
         if packet is None:
             return None
@@ -208,29 +210,28 @@ class Transport(Network, ABC):
         resp_class = DeviceResp.get_class(packet)
         if resp_class is None:
             logger.error(f'Transport layer unrecognized response type: {packet.header.type}')
+            return None
         else:
             exp_len = ctypes.sizeof(resp_class)
             obs_len = ctypes.sizeof(packet)
             if exp_len != obs_len:
                 logger.error(f'Transport layer deserializing error to "'
-                             f'{resp_class.__qualname__}", '
-                             f'expected {ctypes.sizeof(resp_class)} bytes, observed {obs_len} '
-                             f'bytes.')
+                                      f'{resp_class.__qualname__}", '
+                                      f'expected {ctypes.sizeof(resp_class)} bytes, '
+                                      f'observed {obs_len} bytes.')
+                return None
             else:
-                resp = resp_class.from_buffer(packet)
-
-        if not resp:
-            buf_str = BufStr(bytes(packet), title='Transport layer received invalid packet.')
-            logger.debug(f'\n{buf_str}')
-
-        return resp
+                return resp_class.from_buffer(packet)
 
     def send_cmd(self, cmd: TDeviceCmd):
         packet_header = PacketHeader()
         packet_header.id = 1
         cmd_type = DeviceCmd.get_type(cmd)
         if cmd_type is None:
-            logger.error('Transport layer unrecognized command.')
+            raise ServiceCmdError('Transport layer unrecognized command.')
         else:
             packet_header.type = cmd_type
         self.send_packet(bytes(packet_header) + bytes(cmd))
+
+
+class Intf(Transport, SerialDatalink): pass

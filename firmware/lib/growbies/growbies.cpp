@@ -40,6 +40,7 @@ void Growbies::begin() const {
 #endif
 
     calibration_store->begin();
+    identify_store->begin();
 }
 
 void Growbies::execute(const PacketHdr* packet_hdr) {
@@ -51,7 +52,7 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
     else if (packet_hdr->cmd == Cmd::GET_DATAPOINT) {
         const auto* cmd = reinterpret_cast<CmdGetDatapoint *>(slip_buf->buf);
         if (validate_packet(*cmd)) {
-            exec_read();
+            exec_read(packet_hdr);
          }
     }
     else if (packet_hdr->cmd == Cmd::GET_CALIBRATION) {
@@ -91,32 +92,38 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
         const auto* cmd = reinterpret_cast<CmdGetIdentify *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
             auto* resp = new (this->outbuf) RespGetIdentify;
+            resp->id = packet_hdr->id;
             identify_store->get(resp->identify);
             send_packet(*this->outbuf, sizeof(*resp));
         }
     }
     else if (packet_hdr->cmd == Cmd::SET_IDENTIFY) {
-        auto* cmd = reinterpret_cast<CmdSetIdentify *>(slip_buf->buf);
+        const auto* cmd = reinterpret_cast<CmdSetIdentify *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
-            new (this->outbuf) RespVoid;
+            auto* resp = new (this->outbuf) RespVoid;
+            resp->id = packet_hdr->id;
             identify_store->put(cmd->identify);
-            send_packet(*this->outbuf, sizeof(RespVoid));
+            send_packet(*this->outbuf, sizeof(*resp));
         }
     }
 
     else{
         auto resp = new (this->outbuf) RespError;
         resp->error = ERROR_UNRECOGNIZED_COMMAND;
+        resp->id = packet_hdr->id;
         send_packet(resp, sizeof(RespError));
     }
 }
 
 #if BUTTERFLY
-void Growbies::exec_read() {
+void Growbies::exec_read(const PacketHdr* hdr) {
     auto* resp = new (this->outbuf) RespDataPoint;
     RespError resp_error;
     this->get_datapoint(resp, resp_error, BUTTERFLY_SAMPLES_PER_DATAPOINT);
     if (resp_error.error) {
+        if (hdr != nullptr) {
+            resp_error.id = hdr->id;
+        }
         send_packet(resp_error, sizeof(resp_error));
     }
     else {

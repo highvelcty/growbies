@@ -9,6 +9,7 @@ import time
 
 from inotify_simple import INotify, flags
 
+from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
 from growbies.service.cmd.structs import TBaseServiceCmd
 from growbies.utils.filelock import FileLock
 from growbies.utils.paths import InstallPaths
@@ -20,7 +21,6 @@ logger = logging.getLogger(__name__)
 class Queue:
     BLOCKING_IO_ERROR_RETRIES = 5
     BLOCKING_IO_ERROR_DELAY_SEC = 0.01
-    DEFAULT_GET_TIMEOUT_SEC = 10
     DEFAULT_POLLING_INTERVAL_SEC = 0.01
     def __init__(self,
                  path: Path,
@@ -60,7 +60,7 @@ class Queue:
 
         return contents
 
-    def get(self, timeout: int = DEFAULT_GET_TIMEOUT_SEC) -> Iterator[Pickleable_t]:
+    def get_w_timeout(self, timeout: int) -> Iterator[Pickleable_t]:
         contents = self._read_contents()
         if not contents:
             events = list()
@@ -153,8 +153,8 @@ class ServiceQueue(Queue):
     def __init__(self):
         super().__init__(self.PATH)
 
-    def get(self, *args) -> Iterator[TBaseServiceCmd]:
-        yield from super().get()
+    def get_w_timeout(self, *args, **kw) -> Iterator[TBaseServiceCmd]:
+        yield from super().get_w_timeout(*args, **kw)
 
     def put(self, cmd: TBaseServiceCmd):
         return super().put(cmd)

@@ -7,7 +7,15 @@ After=network.target growbies-init-tables.service
 User=growbies
 Group=growbies
 ExecStart=/usr/bin/growbies service start
-ExecStop=/usr/bin/growbies service stop
+
+# On stop, send SIGINT
+KillSignal=SIGINT
+KillMode=control-group
+
+# Give the service up to 20s to exit gracefully.
+# After that, systemd sends SIGKILL automatically.
+TimeoutStopSec=20
+
 RuntimeDirectory=growbies
 RuntimeDirectoryMode=2770
 SuccessExitStatus=0

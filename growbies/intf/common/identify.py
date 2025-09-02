@@ -44,6 +44,12 @@ class NvmHeader(ctypes.Structure):
         MAGIC = '_magic'
         VERSION = '_version'
 
+    _pack_ = 1
+    _fields_ = [
+        (Field.MAGIC, ctypes.c_uint16),
+        (Field.VERSION, ctypes.c_uint16)
+    ]
+
 class Identify0(ctypes.Structure):
     class Field:
         HEADER = '_header'

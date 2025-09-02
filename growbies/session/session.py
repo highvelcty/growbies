@@ -94,7 +94,6 @@ class Session2(object):
     def gateway(self) -> Gateway:
         return self._gateway
 
-
 session = None
 def get_session() -> Session2:
     global session
