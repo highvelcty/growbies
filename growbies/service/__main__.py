@@ -1,6 +1,6 @@
 import errno
 import logging
-from . service import Service
+from .service import Service
 from growbies.utils.filelock import PidFileLock
 from growbies.utils.paths import InstallPaths
 

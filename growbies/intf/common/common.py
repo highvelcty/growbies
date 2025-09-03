@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, ByteString, cast, Iterator, TYPE_CHECKING, TypeVar, Union
+from typing import Any, ByteString, cast, Iterator, TYPE_CHECKING, TypeVar, Union, NewType
 import ctypes
 import logging
 
@@ -12,7 +12,7 @@ from growbies.service.resp.structs import ServiceCmdError
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['BaseStructure', 'Packet', 'PacketHdr']
+__all__ = ['BaseStructure', 'TBaseStructure', 'Packet', 'PacketHdr']
 
 # --- Constants ------------------------------------------------------------------------------------
 
@@ -70,6 +70,7 @@ class BaseStructure(ctypes.Structure):
 
     def __str__(self):
         return self.get_str()
+TBaseStructure = NewType('TBaseStructure', BaseStructure)
 
 class PacketHdr(BaseStructure):
     class Field:

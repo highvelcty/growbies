@@ -3,7 +3,7 @@ from typing import Optional, TypeVar
 import ctypes
 import logging
 
-from ..common import  Identify0, Identify1, BaseStructure, NvmHeader
+from ..common import  Identify, Identify1, BaseStructure, TBaseStructure
 from ..common import Calibration, PacketHdr
 from ..common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
@@ -20,7 +20,7 @@ class DeviceResp(IntEnum):
         return self.name
 
     @classmethod
-    def from_hdr(cls, packet_hdr: PacketHdr) -> Optional['TDeviceResp']:
+    def from_hdr(cls, packet_hdr: PacketHdr) -> Optional['TBaseStructure']:
         try:
             if packet_hdr.type == cls.VOID:
                 return VoidDeviceResp.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
@@ -32,20 +32,15 @@ class DeviceResp(IntEnum):
                 return (GetCalibrationDeviceRespGetCalibration
                         .from_buffer(packet_hdr, ctypes.sizeof(packet_hdr)))
             elif packet_hdr.type == cls.IDENTIFY:
-                nvm_hdr = NvmHeader.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
-                if nvm_hdr.version == 0:
-                    return (Identify0.
-                            from_buffer(packet_hdr,
-                                        ctypes.sizeof(packet_hdr) + ctypes.sizeof(nvm_hdr)))
-                elif nvm_hdr.version == 1:
-                    return (Identify1.
-                            from_buffer(packet_hdr,
-                                        ctypes.sizeof(packet_hdr) + ctypes.sizeof(nvm_hdr)))
+                resp = Identify.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+                if resp.hdr.version == 0:
+                    pass
+                elif resp.hdr.version == 1:
+                    resp = Identify1.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
                 else:
-                    logger.warning(f'Unimplemented identify version {nvm_hdr.version}.')
-                    return (Identify1.
-                            from_buffer(packet_hdr,
-                                        ctypes.sizeof(packet_hdr) + ctypes.sizeof(nvm_hdr)))
+                    logger.warning(f'Unimplemented identify version {resp.hdr.version}.')
+
+                return resp
             else:
                 logger.error(f'Unrecognized response type: {packet_hdr.type}')
                 return None

@@ -2,9 +2,10 @@ from growbies.service.cmd.structs import GetIdServiceCmd
 from growbies.service.resp.structs import ServiceCmdError
 from growbies.service.cmd.serials_to_device_ids import serials_to_device_ids
 from growbies.intf.cmd import GetIdentifyDeviceCmd
+from growbies.intf.common import TIdentify
 from growbies.worker.pool import get_pool
 
-def get(cmd: GetIdServiceCmd) -> GetIdentifyDeviceResp:
+def get(cmd: GetIdServiceCmd) -> TIdentify:
     """
     raises:
         :class:`ServiceCmdError`

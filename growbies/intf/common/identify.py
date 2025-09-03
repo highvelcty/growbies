@@ -1,6 +1,7 @@
 from datetime import datetime
 from enum import IntEnum
 from packaging.version import Version
+from typing import Optional, NewType
 import ctypes
 
 from .common import BaseStructure
@@ -9,7 +10,7 @@ from growbies.utils.types import Serial_t, ModelNumber_t
 
 __all__ = ['BatteryType', 'DisplayType', 'LedType', 'FrameType', 'FootType', 'MassSensorType',
            'PcbaType', 'TemperatureSensorType', 'WirelessType',
-           'Identify0', 'Identify1', 'NvmHeader']
+           'Identify', 'Identify1', 'NvmHeader', 'TIdentify']
 
 class BatteryType(IntEnum):
     GENERIC = 0
@@ -59,25 +60,10 @@ class NvmHeader(BaseStructure):
     def version(self) -> int:
         return getattr(self, self.Field.VERSION)
 
-class Identify0(BaseStructure):
+class Identify(BaseStructure):
     class Field:
+        HDR = '_hdr'
         FIRMWARE_VERSION = '_firmware_version'
-
-    _pack_ = 1
-    _fields_ = [
-        (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
-    ]
-
-    @property
-    def firmware_version(self) -> Version:
-        return getattr(self, self.Field.FIRMWARE_VERSION)
-
-    @firmware_version.setter
-    def firmware_version(self, value: Version):
-        setattr(self, self.Field.FIRMWARE_VERSION, str(value))
-
-class Identify1(Identify0):
-    class Field(Identify0.Field):
         SERIAL_NUMBER = '_serial_number'
         MODEL_NUMBER = '_model_number'
         MANUFACTURE_DATE = '_manufacture_date'
@@ -95,20 +81,156 @@ class Identify1(Identify0):
 
     _pack_ = 1
     _fields_ = [
-        (Field.SERIAL_NUMBER, ctypes.c_char * 64),
-        (Field.MODEL_NUMBER, ctypes.c_char * 64),
-        (Field.MANUFACTURE_DATE, ctypes.c_float),
-        (Field.MASS_SENSOR_COUNT, ctypes.c_uint16),
-        (Field.MASS_SENSOR_TYPE, ctypes.c_uint16),
-        (Field.TEMPERATURE_SENSOR_COUNT, ctypes.c_uint16),
-        (Field.TEMPERATURE_SENSOR_TYPE, ctypes.c_uint16),
-        (Field.PCBA, ctypes.c_uint16),
-        (Field.WIRELESS, ctypes.c_uint16),
-        (Field.BATTERY, ctypes.c_uint16),
-        (Field.DISPLAY, ctypes.c_uint16),
-        (Field.LED, ctypes.c_uint16),
-        (Field.FRAME, ctypes.c_uint16),
-        (Field.FOOT, ctypes.c_uint16),
+        (Field.HDR, NvmHeader),
+        (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
+    ]
+
+    @property
+    def hdr(self) -> NvmHeader:
+        return getattr(self, self.Field.HDR)
+
+    @hdr.setter
+    def hdr(self, val: NvmHeader):
+        setattr(self, self.Field.HDR, val)
+
+    @property
+    def firmware_version(self) -> Version:
+        return getattr(self, self.Field.FIRMWARE_VERSION)
+
+    @firmware_version.setter
+    def firmware_version(self, value: Version):
+        setattr(self, self.Field.FIRMWARE_VERSION, str(value))
+
+    @property
+    def serial_number(self) -> Optional[Serial_t]:
+        return None
+
+    @serial_number.setter
+    def serial_number(self, value: Serial_t):
+        pass
+
+    @property
+    def model_number(self) -> Optional[ModelNumber_t]:
+        return None
+
+    @model_number.setter
+    def model_number(self, value: ModelNumber_t):
+        pass
+
+    @property
+    def manufacture_date(self) -> Optional[datetime]:
+        return None
+
+    @manufacture_date.setter
+    def manufacture_date(self, value: datetime):
+        pass
+
+    @property
+    def mass_sensor_count(self) -> Optional[int]:
+        return None
+
+    @mass_sensor_count.setter
+    def mass_sensor_count(self, value: int):
+        pass
+
+    @property
+    def mass_sensor_type(self) -> Optional[MassSensorType]:
+        return None
+
+    @mass_sensor_type.setter
+    def mass_sensor_type(self, value: MassSensorType):
+        pass
+
+    @property
+    def temperature_sensor_count(self) -> Optional[int]:
+        return None
+
+    @temperature_sensor_count.setter
+    def temperature_sensor_count(self, value: int):
+        pass
+
+    @property
+    def temperature_sensor_type(self) -> Optional[TemperatureSensorType]:
+        return None
+
+    @temperature_sensor_type.setter
+    def temperature_sensor_type(self, value: TemperatureSensorType):
+        pass
+
+    @property
+    def pcba(self) -> Optional[PcbaType]:
+        return None
+
+    @pcba.setter
+    def pcba(self, value: PcbaType):
+        pass
+
+    @property
+    def wireless(self) -> Optional[WirelessType]:
+        return None
+
+    @wireless.setter
+    def wireless(self, value: WirelessType):
+        pass
+
+    @property
+    def battery(self) -> Optional[BatteryType]:
+        return None
+
+    @battery.setter
+    def battery(self, value: BatteryType):
+        pass
+
+    @property
+    def display(self) -> Optional[DisplayType]:
+        return None
+
+    @display.setter
+    def display(self, value: DisplayType):
+        pass
+
+    @property
+    def led(self) -> Optional[LedType]:
+        return None
+
+    @led.setter
+    def led(self, value: LedType):
+        pass
+
+    @property
+    def frame(self) -> Optional[FrameType]:
+        return None
+
+    @frame.setter
+    def frame(self, value: FrameType):
+        pass
+
+    @property
+    def foot(self) -> Optional[FootType]:
+        return None
+
+    @foot.setter
+    def foot(self, value: FootType):
+        pass
+TIdentify = NewType('TIdentify', Identify)
+
+class Identify1(Identify):
+    _pack_ = 1
+    _fields_ = [
+        (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 64),
+        (Identify.Field.MODEL_NUMBER, ctypes.c_char * 64),
+        (Identify.Field.MANUFACTURE_DATE, ctypes.c_float),
+        (Identify.Field.MASS_SENSOR_COUNT, ctypes.c_uint16),
+        (Identify.Field.MASS_SENSOR_TYPE, ctypes.c_uint16),
+        (Identify.Field.TEMPERATURE_SENSOR_COUNT, ctypes.c_uint16),
+        (Identify.Field.TEMPERATURE_SENSOR_TYPE, ctypes.c_uint16),
+        (Identify.Field.PCBA, ctypes.c_uint16),
+        (Identify.Field.WIRELESS, ctypes.c_uint16),
+        (Identify.Field.BATTERY, ctypes.c_uint16),
+        (Identify.Field.DISPLAY, ctypes.c_uint16),
+        (Identify.Field.LED, ctypes.c_uint16),
+        (Identify.Field.FRAME, ctypes.c_uint16),
+        (Identify.Field.FOOT, ctypes.c_uint16),
     ]
 
     @property
@@ -144,11 +266,12 @@ class Identify1(Identify0):
         setattr(self, self.Field.MASS_SENSOR_COUNT, value)
 
     @property
-    def mass_sensor_type(self) -> MassSensorType:
+    def mass_sensor_type(self) -> MassSensorType | int:
+        val = getattr(self, self.Field.MASS_SENSOR_TYPE)
         try:
-            return MassSensorType(getattr(self, self.Field.MASS_SENSOR_TYPE))
+            return MassSensorType(val)
         except ValueError:
-            return MassSensorType.GENERIC
+            return val
 
     @mass_sensor_type.setter
     def mass_sensor_type(self, value: MassSensorType):
@@ -164,10 +287,11 @@ class Identify1(Identify0):
 
     @property
     def temperature_sensor_type(self) -> TemperatureSensorType:
+        val = getattr(self, self.Field.TEMPERATURE_SENSOR_TYPE)
         try:
-            return TemperatureSensorType(getattr(self, self.Field.TEMPERATURE_SENSOR_TYPE))
+            return TemperatureSensorType(val)
         except ValueError:
-            return TemperatureSensorType.GENERIC
+            return val
 
     @temperature_sensor_type.setter
     def temperature_sensor_type(self, value: TemperatureSensorType):
@@ -175,7 +299,11 @@ class Identify1(Identify0):
 
     @property
     def pcba(self) -> PcbaType:
-        return PcbaType(getattr(self, self.Field.PCBA))
+        val = getattr(self, self.Field.PCBA)
+        try:
+            return PcbaType(val)
+        except ValueError:
+            return val
 
     @pcba.setter
     def pcba(self, value: PcbaType):
@@ -183,7 +311,11 @@ class Identify1(Identify0):
 
     @property
     def wireless(self) -> WirelessType:
-        return WirelessType(getattr(self, self.Field.WIRELESS))
+        val = getattr(self, self.Field.WIRELESS)
+        try:
+            return WirelessType(val)
+        except ValueError:
+            return val
 
     @wireless.setter
     def wireless(self, value: WirelessType):
@@ -191,10 +323,11 @@ class Identify1(Identify0):
 
     @property
     def battery(self) -> BatteryType:
+        val = getattr(self, self.Field.BATTERY)
         try:
-            return BatteryType(getattr(self, self.Field.BATTERY))
+            return BatteryType(val)
         except ValueError:
-            return BatteryType.GENERIC
+            return val
 
     @battery.setter
     def battery(self, value: BatteryType):
@@ -202,10 +335,11 @@ class Identify1(Identify0):
 
     @property
     def display(self) -> DisplayType:
+        val = getattr(self, self.Field.DISPLAY)
         try:
-            return DisplayType(getattr(self, self.Field.DISPLAY))
+            return DisplayType(val)
         except ValueError:
-            return DisplayType.GENERIC
+            return val
 
     @display.setter
     def display(self, value: DisplayType):
@@ -213,10 +347,11 @@ class Identify1(Identify0):
 
     @property
     def led(self) -> LedType:
+        val = getattr(self, self.Field.LED)
         try:
-            return LedType(getattr(self, self.Field.LED))
+            return LedType(val)
         except ValueError:
-            return LedType.GENERIC
+            return val
 
     @led.setter
     def led(self, value: LedType):
@@ -224,10 +359,11 @@ class Identify1(Identify0):
 
     @property
     def frame(self) -> FrameType:
+        val = getattr(self, self.Field.FRAME)
         try:
-            return FrameType(getattr(self, self.Field.FRAME))
+            return FrameType(val)
         except ValueError:
-            return FrameType.GENERIC
+            return val
 
     @frame.setter
     def frame(self, value: FrameType):
@@ -235,10 +371,11 @@ class Identify1(Identify0):
 
     @property
     def foot(self) -> FootType:
+        val = getattr(self, self.Field.FOOT)
         try:
-            return FootType(getattr(self, self.Field.FOOT))
+            return FootType(val)
         except ValueError:
-            return FootType.GENERIC
+            return val
 
     @foot.setter
     def foot(self, value: FootType):
