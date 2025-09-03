@@ -5,7 +5,6 @@ See: https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol
 """
 from abc import ABC, abstractmethod
 from typing import Optional
-import ctypes
 import logging
 import threading
 import time
@@ -14,8 +13,7 @@ import queue
 import serial
 
 from .cmd import DeviceCmd, TDeviceCmd
-from .common import Packet, PacketHeader
-from .resp import TDeviceResp, DeviceResp
+from .resp import TDeviceResp, DeviceResp, RespPacketHdr
 from growbies.service.resp.structs import ServiceCmdError
 from growbies.session import log
 from growbies.utils.crc import crc_ccitt16
@@ -181,11 +179,11 @@ class SerialDatalink(BaseDataLink):
 
 class Network(BaseDataLink, ABC):
     _CRC_BYTES = 2
-    def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[Packet]:
+    def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[RespPacketHdr]:
         frame = super().recv_frame(block=block, timeout=timeout)
 
         if self._valid_crc(frame):
-            return Packet.make(frame[:-self._CRC_BYTES])
+            return RespPacketHdr.from_buffer(frame)
         else:
             logger.error(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
             return None
@@ -203,35 +201,21 @@ class Network(BaseDataLink, ABC):
 
 class Transport(Network, ABC):
     def recv_resp(self, block=True, timeout: Optional[float] = None) -> Optional[TDeviceResp]:
-        packet = super().recv_packet(block=block, timeout=timeout)
-        if packet is None:
+        packet_header = super().recv_packet(block=block, timeout=timeout)
+        if packet_header is None:
             return None
 
-        resp_class = DeviceResp.get_class(packet)
-        if resp_class is None:
-            logger.error(f'Transport layer unrecognized response type: {packet.hdr.type}')
-            return None
-        else:
-            exp_len = ctypes.sizeof(resp_class)
-            obs_len = ctypes.sizeof(packet)
-            if exp_len != obs_len:
-                logger.error(f'Transport layer deserializing error to "'
-                                      f'{resp_class.__qualname__}", '
-                                      f'expected {ctypes.sizeof(resp_class)} bytes, '
-                                      f'observed {obs_len} bytes.')
-                return None
-            else:
-                return resp_class.from_buffer(packet)
+        return DeviceResp.from_hdr(packet_header)
 
     def send_cmd(self, cmd: TDeviceCmd):
-        packet_header = PacketHeader()
-        packet_header.id = 1
-        cmd_type = DeviceCmd.get_type(cmd)
-        if cmd_type is None:
-            raise ServiceCmdError('Transport layer unrecognized command.')
-        else:
-            packet_header.type = cmd_type
-        self.send_packet(bytes(packet_header) + bytes(cmd))
-
+        """
+        raises:
+            :class:`ServiceCmdError`
+        """
+        cmd_packet_hdr = DeviceCmd.get_hdr(cmd)
+        if cmd_packet_hdr is None:
+            raise ServiceCmdError('Unknown cmd type: {type(cmd)}')
+        cmd_packet_hdr.id = 1
+        self.send_packet(bytes(cmd_packet_hdr) + bytes(cmd))
 
 class Intf(Transport, SerialDatalink): pass

@@ -1,10 +1,13 @@
 from enum import IntEnum
-from typing import Optional, Type, TypeVar
+from typing import Optional, TypeVar
 import ctypes
+import logging
 
-from ..common import IdentifyPacket1, BaseStructure
-from ..common import Calibration, Packet, PacketHeader
+from ..common import  Identify0, Identify1, BaseStructure, NvmHeader
+from ..common import Calibration, PacketHdr
 from ..common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
+
+logger = logging.getLogger(__name__)
 
 class DeviceResp(IntEnum):
     VOID = 0
@@ -17,18 +20,37 @@ class DeviceResp(IntEnum):
         return self.name
 
     @classmethod
-    def get_class(cls, packet: 'Packet') -> Optional[Type['TDeviceResp']]:
-        if packet.hdr.type == cls.VOID:
-            return VoidDeviceResp
-        elif packet.hdr.type == cls.ERROR:
-            return ErrorDeviceResp
-        elif packet.hdr.type == cls.DATAPOINT:
-            return DataPointDeviceResp
-        elif packet.hdr.type == cls.CALIBRATION:
-            return GetCalibrationDeviceRespGetCalibration
-        elif packet.hdr.type == cls.IDENTIFY:
-            return GetIdentifyDeviceResp
-        else:
+    def from_hdr(cls, packet_hdr: PacketHdr) -> Optional['TDeviceResp']:
+        try:
+            if packet_hdr.type == cls.VOID:
+                return VoidDeviceResp.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+            elif packet_hdr.type == cls.ERROR:
+                return ErrorDeviceResp.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+            elif packet_hdr.type == cls.DATAPOINT:
+                return DataPointDeviceResp.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+            elif packet_hdr.type == cls.CALIBRATION:
+                return (GetCalibrationDeviceRespGetCalibration
+                        .from_buffer(packet_hdr, ctypes.sizeof(packet_hdr)))
+            elif packet_hdr.type == cls.IDENTIFY:
+                nvm_hdr = NvmHeader.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+                if nvm_hdr.version == 0:
+                    return (Identify0.
+                            from_buffer(packet_hdr,
+                                        ctypes.sizeof(packet_hdr) + ctypes.sizeof(nvm_hdr)))
+                elif nvm_hdr.version == 1:
+                    return (Identify1.
+                            from_buffer(packet_hdr,
+                                        ctypes.sizeof(packet_hdr) + ctypes.sizeof(nvm_hdr)))
+                else:
+                    logger.warning(f'Unimplemented identify version {nvm_hdr.version}.')
+                    return (Identify1.
+                            from_buffer(packet_hdr,
+                                        ctypes.sizeof(packet_hdr) + ctypes.sizeof(nvm_hdr)))
+            else:
+                logger.error(f'Unrecognized response type: {packet_hdr.type}')
+                return None
+        except ValueError as err:
+            logger.error(f'Packet deserialization exception for type "{packet_hdr.type}": {err}')
             return None
 
 
@@ -44,7 +66,7 @@ class DeviceErrorCode(IntEnum):
     def __str__(self):
         return self.name
 
-class RespPacketHeader(PacketHeader):
+class RespPacketHdr(PacketHdr):
     @property
     def type(self) -> DeviceResp:
         return DeviceResp(super().type)
@@ -54,21 +76,11 @@ class RespPacketHeader(PacketHeader):
         setattr(self, self.Field.TYPE, value)
 
 
-class BaseDeviceResp(BaseStructure):
-    class Field:
-        HDR = '_hdr'
-
-    _fields_ = [
-        (Field.HDR, RespPacketHeader)
-    ]
-
-    @property
-    def hdr(self) -> RespPacketHeader:
-        return getattr(self, self.Field.HDR)
+class BaseDeviceResp(BaseStructure): pass
 TDeviceResp = TypeVar('TDeviceResp', bound=BaseDeviceResp)
 
 class ErrorDeviceResp(BaseDeviceResp):
-    class Field(PacketHeader.Field):
+    class Field(PacketHdr.Field):
         ERROR = 'error'
 
     _fields_ = [
@@ -85,7 +97,7 @@ class ErrorDeviceResp(BaseDeviceResp):
 
 
 class DataPointDeviceResp(BaseDeviceResp):
-    class Field(BaseDeviceResp.Field):
+    class Field:
         MASS_SENSOR = '_mass_sensor'
         MASS = '_mass'
         TEMPERATURE_SENSOR = '_temperature_sensor'
@@ -127,7 +139,7 @@ class DataPointDeviceResp(BaseDeviceResp):
         return '\n'.join(str_list)
 
 class GetCalibrationDeviceRespGetCalibration(BaseDeviceResp):
-    class Field(BaseDeviceResp.Field):
+    class Field:
         CALIBRATION = '_calibration'
 
     _pack_ = 1
@@ -139,18 +151,6 @@ class GetCalibrationDeviceRespGetCalibration(BaseDeviceResp):
     def calibration(self) -> Calibration:
         return getattr(self, self.Field.CALIBRATION)
 
-class GetIdentifyDeviceResp(BaseDeviceResp):
-    class Field(BaseDeviceResp.Field):
-        ID = '_id'
-
-    _pack_ = 1
-    _fields_ =  [
-        (Field.ID, IdentifyPacket1)
-    ]
-
-    @property
-    def id(self) -> IdentifyPacket1:
-        return getattr(self, self.Field.ID)
 
 class VoidDeviceResp(BaseDeviceResp): pass
 

@@ -2,7 +2,6 @@ from growbies.service.cmd.structs import GetIdServiceCmd
 from growbies.service.resp.structs import ServiceCmdError
 from growbies.service.cmd.serials_to_device_ids import serials_to_device_ids
 from growbies.intf.cmd import GetIdentifyDeviceCmd
-from growbies.intf.resp import GetIdentifyDeviceResp
 from growbies.worker.pool import get_pool
 
 def get(cmd: GetIdServiceCmd) -> GetIdentifyDeviceResp:

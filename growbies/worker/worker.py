@@ -9,8 +9,8 @@ from serial.serialutil import SerialException
 from growbies.db.engine import get_db_engine
 from growbies.intf import Intf
 from growbies.intf.cmd import TDeviceCmd
-from growbies.intf.resp import (DeviceResp, ErrorDeviceResp, DataPointDeviceResp, TDeviceResp,
-                                DeviceError)
+from growbies.intf.resp import (DeviceResp, ErrorDeviceResp, DataPointDeviceResp,
+                                DeviceError, BaseDeviceResp, TDeviceResp)
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
 from growbies.service.resp.structs import ServiceCmdError
@@ -51,7 +51,7 @@ class Worker(Thread):
             :class:`ServiceCmdError`
         """
         if not self._intf:
-            raise ServiceCmdError('Worker thread for {self.name} is not ready.')
+            raise ServiceCmdError(f'Worker thread for {self.name} is not ready.')
 
         self._intf.send_cmd(cmd)
         resp = self._out_queue.get(block=True, timeout=timeout)
@@ -99,19 +99,19 @@ class Worker(Thread):
             self._intf = None
 
     @staticmethod
-    def _process_async(resp: DataPointDeviceResp | ErrorDeviceResp):
-        if resp.type == DeviceResp.ERROR:
+    def _process_async(resp: TDeviceResp | ErrorDeviceResp):
+        if resp.hdr.type == DeviceResp.ERROR:
             resp: ErrorDeviceResp
             logger.error(f'Received asynchronous error response with error code 0x{resp.error:X}')
-        elif resp.type == DeviceResp.DATAPOINT:
-            logger.info(f'Received asynchronous {resp.type} response.')
+        elif resp.hdr.type == DeviceResp.DATAPOINT:
+            logger.info(f'Received asynchronous {resp.hdr.type} response.')
         else:
-            logger.error(f'Invalid response type received: {resp.type}.')
+            logger.error(f'Invalid response type received: {resp.hdr.type}.')
 
     def _service_cmds(self):
         while not self._stop_event.is_set() and self._intf and self._intf.is_alive():
             try:
-                resp = self._intf.recv_resp(timeout=self._RESP_Q_TIMEOUT_SECONDS)
+                resp: BaseDeviceResp = self._intf.recv_resp(timeout=self._RESP_Q_TIMEOUT_SECONDS)
             except Empty:
                 continue
             except Exception as err:
@@ -120,8 +120,8 @@ class Worker(Thread):
 
             if resp is None:
                 continue
-            if resp.id:
-                logger.info(f'Received synchronous {resp.type} response.')
+            if resp.hdr.id:
+                logger.info(f'Received synchronous {resp.hdr.type} response.')
                 self._put_no_wait(resp)
             else:
                 self._process_async(resp)

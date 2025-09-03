@@ -12,7 +12,7 @@ from growbies.service.resp.structs import ServiceCmdError
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['BaseStructure', 'Packet', 'PacketHeader']
+__all__ = ['BaseStructure', 'Packet', 'PacketHdr']
 
 # --- Constants ------------------------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ class BaseStructure(ctypes.Structure):
     def __str__(self):
         return self.get_str()
 
-class PacketHeader(BaseStructure):
+class PacketHdr(BaseStructure):
     class Field:
         TYPE = '_type'
         ID = '_id'
@@ -100,7 +100,7 @@ class PacketHeader(BaseStructure):
 
 
 class Packet(BaseStructure):
-    MIN_SIZE_IN_BYTES = ctypes.sizeof(PacketHeader)
+    MIN_SIZE_IN_BYTES = ctypes.sizeof(PacketHdr)
 
     class Field:
         HDR = '_header'
@@ -119,7 +119,7 @@ class Packet(BaseStructure):
         class _Packet(Packet):
             _pack_ = 1
             _fields_ = [
-                (cls.Field.HDR, PacketHeader),
+                (cls.Field.HDR, PacketHdr),
                 (cls.Field.DATA, ctypes.c_uint8 * data_len) # noqa - false positive pycharm 2025
             ]
 
@@ -134,7 +134,7 @@ class Packet(BaseStructure):
         return packet
 
     @property
-    def hdr(self) -> PacketHeader:
+    def hdr(self) -> PacketHdr:
         return getattr(self, self.Field.HDR)
 
     @property

@@ -3,9 +3,10 @@ from typing import Optional, TypeVar
 import ctypes
 import logging
 
-from ..common import Calibration, PacketHeader, IdentifyPacket1
+from ..common import Calibration, PacketHdr, Identify1, BaseStructure
 
 __all__ = ['DeviceCmd', 'BaseDeviceCmd', 'TDeviceCmd',
+           'CmdPacketHdr',
            'LoopbackDeviceCmd',
            'GetCalibrationDeviceCmd', 'SetCalibrationDeviceCmd',
            'GetIdentifyDeviceCmd', 'SetIdentifyDeviceCmd',
@@ -27,38 +28,46 @@ class DeviceCmd(IntEnum):
         return self.name
 
     @classmethod
-    def get_type(cls, cmd: 'TDeviceCmd') -> Optional['DeviceCmd']:
+    def get_hdr(cls, cmd: 'TDeviceCmd') -> Optional['CmdPacketHdr']:
+
         if isinstance(cmd, GetDatapointDeviceCmd):
-            return DeviceCmd.GET_CALIBRATION
+            return CmdPacketHdr(type=DeviceCmd.GET_CALIBRATION)
         elif isinstance(cmd, SetCalibrationDeviceCmd):
-            return DeviceCmd.SET_CALIBRATION
+            return CmdPacketHdr(type=DeviceCmd.SET_CALIBRATION)
         elif isinstance(cmd, GetDatapointDeviceCmd):
-            return DeviceCmd.GET_DATAPOINT
+            return CmdPacketHdr(type=DeviceCmd.GET_DATAPOINT)
         elif isinstance(cmd, GetIdentifyDeviceCmd):
-            return DeviceCmd.GET_IDENTIFY
+            return CmdPacketHdr(type=DeviceCmd.GET_IDENTIFY)
         elif isinstance(cmd, LoopbackDeviceCmd):
-            return DeviceCmd.LOOPBACK
+            return CmdPacketHdr(type=DeviceCmd.LOOPBACK)
         elif isinstance(cmd, PowerOnHx711DeviceCmd):
-            return DeviceCmd.POWER_ON_HX711
+            return CmdPacketHdr(type=DeviceCmd.POWER_ON_HX711)
         elif isinstance(cmd, PowerOffHx711DeviceCmd):
-            return DeviceCmd.POWER_OFF_HX711
+            return CmdPacketHdr(type=DeviceCmd.POWER_OFF_HX711)
         else:
+            logger.error(f'Unknown cmd type {type(cmd)}.')
             return None
 
-class BaseDeviceCmd(PacketHeader):
+class CmdPacketHdr(PacketHdr):
     @property
-    def type(self) -> DeviceCmd:
-        return DeviceCmd(getattr(self, self.Field.TYPE))
+    def type(self) -> DeviceCmd | int:
+        """Return :class:`DeviceCmd` if enumerated, integer otherwise."""
+        try:
+            return DeviceCmd(super().type)
+        except ValueError:
+            return super().type
 
     @type.setter
     def type(self, value: DeviceCmd):
-        setattr(self, self.Field.TYPE, value)
+        setattr(self, self.Field.TYPE, DeviceCmd(value))
+
+class BaseDeviceCmd(BaseStructure): pass
 TDeviceCmd = TypeVar('TDeviceCmd', bound=BaseDeviceCmd)
 
 class BaseDeviceCmdWithTimesParam(BaseDeviceCmd):
     DEFAULT_TIMES = 7
 
-    class Field(BaseDeviceCmd.Field):
+    class Field:
         TIMES = '_times'
 
     _fields_ = [
@@ -78,13 +87,10 @@ class BaseDeviceCmdWithTimesParam(BaseDeviceCmd):
     def times(self, value: int):
         super().times = value
 
-class GetCalibrationDeviceCmd(BaseDeviceCmd):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = DeviceCmd.GET_CALIBRATION
-        super().__init__(*args, **kw)
+class GetCalibrationDeviceCmd(BaseDeviceCmd): pass
 
 class SetCalibrationDeviceCmd(BaseDeviceCmd):
-    class Field(BaseDeviceCmd.Field):
+    class Field:
         CALIBRATION = '_calibration'
 
     _fields_ = [
@@ -100,34 +106,23 @@ class SetCalibrationDeviceCmd(BaseDeviceCmd):
     def calibration(self, calibration: Calibration):
         setattr(self, self.Field.CALIBRATION, calibration)
 
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = DeviceCmd.SET_CALIBRATION
-        super().__init__(*args, **kw)
-
-class GetIdentifyDeviceCmd(BaseDeviceCmd):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = DeviceCmd.GET_IDENTIFY
-        super().__init__(*args, **kw)
+class GetIdentifyDeviceCmd(BaseDeviceCmd): pass
 
 class SetIdentifyDeviceCmd(BaseDeviceCmd):
-    class Field(BaseDeviceCmd.Field):
+    class Field:
         IDENTIFY = '_identify'
 
     _fields_ = [
-        (Field.IDENTIFY, IdentifyPacket1)
+        (Field.IDENTIFY, Identify1)
     ]
 
     @property
-    def identify(self) -> IdentifyPacket1:
+    def identify(self) -> Identify1:
         return getattr(self, self.Field.IDENTIFY)
 
     @identify.setter
-    def identify(self, identify: IdentifyPacket1):
+    def identify(self, identify: Identify1):
         setattr(self, self.Field.IDENTIFY, identify)
-
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = DeviceCmd.SET_CALIBRATION
-        super().__init__(*args, **kw)
 
 
 class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
@@ -138,10 +133,6 @@ class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
         (Field.RAW, ctypes.c_bool)
     ]
 
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = DeviceCmd.GET_DATAPOINT
-        super().__init__(*args, **kw)
-
     @property
     def raw(self) -> bool:
         return getattr(self, self.Field.RAW)
@@ -150,17 +141,8 @@ class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
     def raw(self, val: bool):
         setattr(self, self.Field.RAW, val)
 
-class LoopbackDeviceCmd(BaseDeviceCmd):
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        self.type = DeviceCmd.LOOPBACK
+class LoopbackDeviceCmd(BaseDeviceCmd): pass
 
-class PowerOffHx711DeviceCmd(BaseDeviceCmd):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = DeviceCmd.POWER_OFF_HX711
-        super().__init__(*args, **kw)
+class PowerOffHx711DeviceCmd(BaseDeviceCmd): pass
 
-class PowerOnHx711DeviceCmd(BaseDeviceCmd):
-    def __init__(self, *args, **kw):
-        kw[self.Field.TYPE] = DeviceCmd.POWER_ON_HX711
-        super().__init__(*args, **kw)
+class PowerOnHx711DeviceCmd(BaseDeviceCmd): pass
