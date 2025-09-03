@@ -9,8 +9,8 @@ from serial.serialutil import SerialException
 from growbies.db.engine import get_db_engine
 from growbies.intf import Intf
 from growbies.intf.cmd import TDeviceCmd
-from growbies.intf.resp import (DeviceResp, ErrorDeviceResp, DataPointDeviceResp,
-                                DeviceError, BaseDeviceResp, TDeviceResp)
+from growbies.intf.resp import (BaseDeviceResp, DeviceResp, DataPointDeviceResp,
+                                DeviceError, ErrorDeviceResp, RespPacketHdr, TDeviceResp)
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
 from growbies.service.resp.structs import ServiceCmdError
@@ -99,19 +99,22 @@ class Worker(Thread):
             self._intf = None
 
     @staticmethod
-    def _process_async(resp: TDeviceResp | ErrorDeviceResp):
-        if resp.hdr.type == DeviceResp.ERROR:
+    def _process_async(hdr: RespPacketHdr, resp: TDeviceResp | ErrorDeviceResp):
+        if hdr.type == DeviceResp.ERROR:
             resp: ErrorDeviceResp
             logger.error(f'Received asynchronous error response with error code 0x{resp.error:X}')
-        elif resp.hdr.type == DeviceResp.DATAPOINT:
-            logger.info(f'Received asynchronous {resp.hdr.type} response.')
+        elif hdr.type == DeviceResp.DATAPOINT:
+            logger.info(f'Received asynchronous {hdr.type} response.')
         else:
-            logger.error(f'Invalid response type received: {resp.hdr.type}.')
+            logger.error(f'Invalid response type received: {hdr.type}.')
 
     def _service_cmds(self):
         while not self._stop_event.is_set() and self._intf and self._intf.is_alive():
             try:
-                resp: BaseDeviceResp = self._intf.recv_resp(timeout=self._RESP_Q_TIMEOUT_SECONDS)
+               hdr, resp = self._intf.recv_resp(timeout=self._RESP_Q_TIMEOUT_SECONDS)
+               hdr: RespPacketHdr
+               resp: BaseDeviceResp
+
             except Empty:
                 continue
             except Exception as err:
@@ -120,11 +123,11 @@ class Worker(Thread):
 
             if resp is None:
                 continue
-            if resp.hdr.id:
-                logger.info(f'Received synchronous {resp.hdr.type} response.')
+            if hdr.id:
+                logger.info(f'Received synchronous {hdr.type} response.')
                 self._put_no_wait(resp)
             else:
-                self._process_async(resp)
+                self._process_async(hdr, resp)
 
         if self._intf and not self._intf.is_alive():
             logger.error(f'SLIP thread died.')

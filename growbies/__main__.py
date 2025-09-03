@@ -88,7 +88,7 @@ elif ServiceCmd.DEACTIVATE == cmd:
 elif ServiceCmd.LOOPBACK == cmd:
     _run_cmd(LoopbackServiceCmd(serial=getattr(ns, PositionalParam.SERIAL)))
 elif ServiceCmd.ID == cmd:
-    print(_run_cmd(GetIdServiceCmd(serial=getattr(ns, PositionalParam.SERIAL))).id.payload)
+    print(_run_cmd(GetIdServiceCmd(serial=getattr(ns, PositionalParam.SERIAL))))
 else:
     fwd_cmd = shlex.split(f'{sys.executable} -m {__package__}.{getattr(ns, CMD)} ') + args
     os.execvp(sys.executable, fwd_cmd)

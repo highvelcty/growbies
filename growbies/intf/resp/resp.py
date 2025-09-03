@@ -3,8 +3,8 @@ from typing import Optional, TypeVar
 import ctypes
 import logging
 
-from ..common import  Identify, Identify1, BaseStructure, TBaseStructure
-from ..common import Calibration, PacketHdr
+from ..common import  BaseStructure, Identify, Identify1, PacketHdr, TBaseStructure
+from ..common import Calibration
 from ..common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
 logger = logging.getLogger(__name__)
@@ -20,33 +20,40 @@ class DeviceResp(IntEnum):
         return self.name
 
     @classmethod
-    def from_hdr(cls, packet_hdr: PacketHdr) -> Optional['TBaseStructure']:
+    def from_frame(cls, frame: bytearray) -> tuple[Optional['RespPacketHdr'],
+                                                   Optional['TBaseStructure']]:
+        packet_hdr = None
+        resp = None
+
+        try:
+            packet_hdr = RespPacketHdr.from_buffer(frame)
+        except ValueError as err:
+            logger.error(f'Packet header deserialization exception: {err}')
+            return packet_hdr, resp
         try:
             if packet_hdr.type == cls.VOID:
-                return VoidDeviceResp.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+                resp = VoidDeviceResp.from_buffer(frame, ctypes.sizeof(packet_hdr))
             elif packet_hdr.type == cls.ERROR:
-                return ErrorDeviceResp.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+                resp = ErrorDeviceResp.from_buffer(frame, ctypes.sizeof(packet_hdr))
             elif packet_hdr.type == cls.DATAPOINT:
-                return DataPointDeviceResp.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+                resp = DataPointDeviceResp.from_buffer(frame, ctypes.sizeof(packet_hdr))
             elif packet_hdr.type == cls.CALIBRATION:
-                return (GetCalibrationDeviceRespGetCalibration
-                        .from_buffer(packet_hdr, ctypes.sizeof(packet_hdr)))
+                resp = (GetCalibrationDeviceRespGetCalibration
+                        .from_buffer(frame, ctypes.sizeof(packet_hdr)))
             elif packet_hdr.type == cls.IDENTIFY:
-                resp = Identify.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+                resp = Identify.from_buffer(frame, ctypes.sizeof(packet_hdr))
                 if resp.hdr.version == 0:
                     pass
                 elif resp.hdr.version == 1:
-                    resp = Identify1.from_buffer(packet_hdr, ctypes.sizeof(packet_hdr))
+                    resp = Identify1.from_buffer(frame, ctypes.sizeof(packet_hdr))
                 else:
                     logger.warning(f'Unimplemented identify version {resp.hdr.version}.')
-
-                return resp
             else:
                 logger.error(f'Unrecognized response type: {packet_hdr.type}')
-                return None
         except ValueError as err:
             logger.error(f'Packet deserialization exception for type "{packet_hdr.type}": {err}')
-            return None
+
+        return packet_hdr, resp
 
 
 error_t = ctypes.c_uint32

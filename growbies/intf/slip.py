@@ -39,7 +39,7 @@ class BaseDataLink(threading.Thread, ABC):
     def __init__(self, thread_name: Optional[str] = None):
         super().__init__()
         self._thread_name = thread_name
-        self._frames: queue.Queue[bytes] = queue.Queue(maxsize=self._Q_SIZE)
+        self._frames: queue.Queue[bytearray] = queue.Queue(maxsize=self._Q_SIZE)
         self._do_continue = True
         # Prevent log flooding.
         self._do_log_queue_full = True
@@ -61,7 +61,7 @@ class BaseDataLink(threading.Thread, ABC):
     def write(self, data: bytes):
         ...
 
-    def recv_frame(self, block=True, timeout: Optional[float] = None) -> bytes:
+    def recv_frame(self, block=True, timeout: Optional[float] = None) -> bytearray:
         return self._frames.get(block=block, timeout=timeout)
 
     def send_frame(self, buf: bytes):
@@ -112,7 +112,7 @@ class BaseDataLink(threading.Thread, ABC):
                                        f'{format_dropped_bytes(buf)}')
                         buf.clear()
                     if byte_ == SLIP_END:
-                        self._enqueue(buf)
+                        self._put_not_wait(buf)
                         buf.clear()
                         escaping = False
                     elif byte_ == SLIP_ESC:
@@ -137,9 +137,11 @@ class BaseDataLink(threading.Thread, ABC):
                 break
         logger.info('Thread exit.')
 
-    def _enqueue(self, frame: bytes):
+    def _put_not_wait(self, frame: bytearray):
         try:
-            self._frames.put_nowait(bytes(frame))
+            # Must make a copy, otherwise clearing the buffer will propagate, even through the
+            # queue.
+            self._frames.put_nowait(bytearray(frame))
             self._do_log_queue_full = True
         except queue.Full:
             logger.error('SLIP queue is full.')
@@ -179,11 +181,10 @@ class SerialDatalink(BaseDataLink):
 
 class Network(BaseDataLink, ABC):
     _CRC_BYTES = 2
-    def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[RespPacketHdr]:
+    def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[bytearray]:
         frame = super().recv_frame(block=block, timeout=timeout)
-
         if self._valid_crc(frame):
-            return RespPacketHdr.from_buffer(frame)
+            return frame
         else:
             logger.error(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
             return None
@@ -200,12 +201,12 @@ class Network(BaseDataLink, ABC):
         return chk == calc_bytes
 
 class Transport(Network, ABC):
-    def recv_resp(self, block=True, timeout: Optional[float] = None) -> Optional[TDeviceResp]:
-        packet_header = super().recv_packet(block=block, timeout=timeout)
-        if packet_header is None:
-            return None
-
-        return DeviceResp.from_hdr(packet_header)
+    def recv_resp(self, block=True, timeout: Optional[float] = None) \
+            -> tuple[Optional[RespPacketHdr], Optional[TDeviceResp]]:
+        frame = super().recv_packet(block=block, timeout=timeout)
+        if frame is None:
+            return None, None
+        return DeviceResp.from_frame(frame)
 
     def send_cmd(self, cmd: TDeviceCmd):
         """
