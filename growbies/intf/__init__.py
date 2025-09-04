@@ -1,1 +1,0 @@
-from .slip import Intf

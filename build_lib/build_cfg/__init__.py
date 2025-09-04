@@ -1,1 +1,0 @@
-"""Provides functionality for generating build time configuration."""

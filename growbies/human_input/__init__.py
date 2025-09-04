@@ -1,1 +1,0 @@
-"""Gather human input, saving to an output file. This is process safe with sensor monitoring."""

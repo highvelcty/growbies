@@ -7,10 +7,11 @@ from typing import Optional
 from serial.serialutil import SerialException
 
 from growbies.db.engine import get_db_engine
-from growbies.intf import Intf
-from growbies.intf.cmd import TDeviceCmd
-from growbies.intf.common import BaseStructure
-from growbies.intf.resp import (DeviceResp, DataPointDeviceResp,
+from .slip import SerialIntf
+from growbies.worker.slip import SerialIntf
+from growbies.device.cmd import TDeviceCmd
+from growbies.device.common import BaseStructure
+from growbies.device.resp import (DeviceResp, DataPointDeviceResp,
                                 DeviceError, ErrorDeviceResp, RespPacketHdr, TDeviceResp)
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
@@ -36,7 +37,7 @@ class Worker(Thread):
         self._out_queue = Queue()
         self._engine = get_db_engine().devices.get_engine(device_id)
         self._device = self._engine.get(device_id)
-        self._intf: Optional[Intf] = None
+        self._intf: Optional[SerialIntf] = None
         self._stop_event = Event()
         self._reconnect_attempt = 0
 
