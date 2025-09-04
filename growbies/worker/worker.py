@@ -7,15 +7,14 @@ from typing import Optional
 from serial.serialutil import SerialException
 
 from growbies.db.engine import get_db_engine
-from .slip import SerialIntf
-from growbies.worker.slip import SerialIntf
 from growbies.device.cmd import TDeviceCmd
 from growbies.device.common import BaseStructure
 from growbies.device.resp import (DeviceResp, DataPointDeviceResp,
                                 DeviceError, ErrorDeviceResp, RespPacketHdr, TDeviceResp)
+from growbies.service.common import ServiceCmdError
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
-from growbies.service.resp.structs import ServiceCmdError
+from growbies.worker.slip import SerialIntf
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +74,7 @@ class Worker(Thread):
 
     def _connect(self) -> bool:
         try:
-            self._intf = Intf(port=self._device.path, thread_name=f'{self.name}_SLIP')
+            self._intf = SerialIntf(port=self._device.path, thread_name=f'{self.name}_SLIP')
         except (SerialException, PermissionError) as err:
             # SerialException may or may not have errno
             errno_ = getattr(err, 'errno', None)

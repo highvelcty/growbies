@@ -3,8 +3,8 @@ from enum import StrEnum
 import sys
 
 from . import __doc__ as pkg_doc
+from .cfg import Cfg
 from growbies.constants import APPNAME
-from growbies.cfg import Cfg
 
 SUBCMD = 'subcmd'
 

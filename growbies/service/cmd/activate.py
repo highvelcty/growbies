@@ -1,15 +1,14 @@
+from argparse import ArgumentParser
+from sqlmodel import Field
 import logging
 
+from ..common import BaseServiceCmd, PositionalParam, ServiceCmd
 from growbies.db.engine import get_db_engine
-from growbies.service.cli import serials_to_devices
-from growbies.service.cmd.structs import ActivateServiceCmd, DeactivateServiceCmd
+from growbies.service.common import serials_to_devices
+from growbies.utils.types import Serial_t
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
-
-from argparse import ArgumentParser
-
-from.common import PositionalParam
 
 def make_cli(parser: ArgumentParser):
     parser.add_argument(PositionalParam.SERIALS, nargs='+', type=str,

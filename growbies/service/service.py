@@ -1,12 +1,11 @@
 import logging
 
+from .common import ServiceCmd, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
-from .cmd.structs import ServiceCmd
-from growbies.intf.resp import DeviceError
+from growbies.device.resp import DeviceError
 from growbies.service.cmd import activate, discovery, loopback, identify
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
-from .resp.structs import ServiceCmdError
 
 logger = logging.getLogger(__name__)
 

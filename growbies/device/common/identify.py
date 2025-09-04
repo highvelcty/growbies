@@ -5,13 +5,9 @@ from typing import Optional, NewType
 import ctypes
 
 from .common import BaseStructure
+from .nvm import NvmHeader
 from growbies.utils import timestamp
 from growbies.utils.types import Serial_t, ModelNumber_t
-
-__all__ = ['BatteryType', 'DisplayType', 'LedType', 'FrameType', 'FootType',
-           'IdentifyVersion', 'MassSensorType',
-           'PcbaType', 'TemperatureSensorType', 'WirelessType',
-           'Identify', 'Identify1', 'NvmHeader', 'TIdentify']
 
 class BatteryType(IntEnum):
     GENERIC = 0
@@ -45,25 +41,6 @@ class WirelessType(IntEnum):
 class IdentifyVersion(IntEnum):
     ZERO = 0
     ONE = 1
-
-class NvmHeader(BaseStructure):
-    class Field(BaseStructure.Field):
-        MAGIC = '_magic'
-        VERSION = '_version'
-
-    _pack_ = 1
-    _fields_ = [
-        (Field.MAGIC, ctypes.c_uint16),
-        (Field.VERSION, ctypes.c_uint16)
-    ]
-
-    @property
-    def magic(self) -> int:
-        return getattr(self, self.Field.MAGIC)
-
-    @property
-    def version(self) -> int:
-        return getattr(self, self.Field.VERSION)
 
 class IdentifyHeader(NvmHeader):
     @property

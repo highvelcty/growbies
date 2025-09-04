@@ -1,15 +1,14 @@
-from growbies.service.cli import serials_to_devices
-from growbies.service.cmd.structs import LoopbackServiceCmd
-from growbies.service.resp.structs import ServiceCmdError
-from growbies.intf.cmd import LoopbackDeviceCmd
-from growbies.intf.resp import VoidDeviceResp
+from ..common import (BaseServiceCmd, PositionalParam, serials_to_devices, ServiceCmd,
+                      ServiceCmdError)
+from growbies.device.cmd import LoopbackDeviceCmd
+from growbies.device.resp import VoidDeviceResp
+from growbies.utils.types import Serial_t
 from growbies.worker.pool import get_pool
 
 from argparse import ArgumentParser
 
-from .common import PositionalParam
 
-def make(parser: ArgumentParser):
+def make_cli(parser: ArgumentParser):
     parser.add_argument(PositionalParam.SERIAL, type=str,
                             help=PositionalParam.get_help_str(PositionalParam.SERIAL))
 

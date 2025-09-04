@@ -4,7 +4,7 @@ import re
 import shlex
 import subprocess
 
-from . import constants
+from growbies import constants
 
 def _create_stuff(cmd: str):
     proc = _run_as_user(cmd, constants.ADMIN_DB_USER)

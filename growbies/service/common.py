@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from enum import StrEnum
 
-from growbies.db.models.addressing.device import Devices
+from growbies.db.models.device import Devices
 from growbies.service.cmd import discovery
 from growbies.utils.types import Serial_t
 

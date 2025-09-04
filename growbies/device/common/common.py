@@ -1,4 +1,4 @@
-from typing import Any, ByteString, cast, Optional, TYPE_CHECKING, Union, NewType
+from typing import Any, Optional, TYPE_CHECKING, Union, NewType
 import ctypes
 import logging
 
@@ -6,15 +6,10 @@ if TYPE_CHECKING:
     from ..cmd import DeviceCmd
     from ..resp import DeviceResp
 
-from growbies.utils.bufstr import BufStr
-from growbies.service.common import ServiceCmdError
-
 logger = logging.getLogger(__name__)
 
-__all__ = ['BaseStructure', 'BaseUnion', 'TBaseStructure', 'Packet', 'PacketHdr']
-
 # --- Constants ------------------------------------------------------------------------------------
-class StructUnionMixin:
+class _StructUnionMixin:
     class Field:
         @classmethod
         def lstrip(cls, val):
@@ -72,10 +67,10 @@ class StructUnionMixin:
     def __str__(self):
         return '\n'.join(self.get_str())
 
-class BaseStructure(ctypes.Structure, StructUnionMixin): pass
+class BaseStructure(ctypes.Structure, _StructUnionMixin): pass
 TBaseStructure = NewType('TBaseStructure', BaseStructure)
 
-class BaseUnion(ctypes.Union, StructUnionMixin): pass
+class BaseUnion(ctypes.Union, _StructUnionMixin): pass
 TBaseUnion = NewType('TBaseUnion', BaseUnion)
 
 class PacketHdr(BaseStructure):
@@ -104,46 +99,3 @@ class PacketHdr(BaseStructure):
     @type.setter
     def type(self, value: ['DeviceCmd', 'DeviceResp']):
         setattr(self, self.Field.TYPE, value)
-
-
-class Packet(BaseStructure):
-    MIN_SIZE_IN_BYTES = ctypes.sizeof(PacketHdr)
-
-    class Field(BaseStructure.Field):
-        HDR = '_header'
-        DATA = '_data'
-
-    @classmethod
-    def make(cls, source: Union[ByteString, int]) -> 'Packet':
-        """
-        raises:
-            :class:`ServiceCmdError`
-        """
-        if isinstance(source, int):
-            source = bytearray(source)
-        buf_len = len(source)
-        data_len = buf_len - cls.MIN_SIZE_IN_BYTES
-        class _Packet(Packet):
-            _pack_ = 1
-            _fields_ = [
-                (cls.Field.HDR, PacketHdr),
-                (cls.Field.DATA, ctypes.c_uint8 * data_len) # noqa - false positive pycharm 2025
-            ]
-
-
-        if buf_len < Packet.MIN_SIZE_IN_BYTES:
-            raise ServiceCmdError(f'Buffer underflow for deserializing to {Packet.__class__}. '
-                         f'Expected at least {Packet.MIN_SIZE_IN_BYTES} bytes, '
-                         f'observed {buf_len} bytes.')
-
-        packet = _Packet.from_buffer_copy(cast(bytes, source))
-
-        return packet
-
-    @property
-    def hdr(self) -> PacketHdr:
-        return getattr(self, self.Field.HDR)
-
-    @property
-    def data(self) -> ctypes.Array[ctypes.c_uint8]:
-        return getattr(self, self.Field.DATA)

@@ -5,15 +5,13 @@ import shlex
 import sys
 
 from . import __doc__ as pkg_doc
-from . import cfg, db, human_input, monitor, plot, sample, service
+from . import cfg, db, service
 from .constants import USERNAME
 from .utils.privileges import drop_privileges
 from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
-from growbies.intf.resp import DeviceError
-from growbies.service.cli import PositionalParam
-from growbies.service import cli
-from growbies.service.cmd.structs import *
-from growbies.service.resp.structs import ServiceCmdError
+from growbies.device.resp import DeviceError
+from growbies.service.cmd import activate, identify, loopback, ls
+from growbies.service.common import PositionalParam, ServiceCmd, ServiceCmdError, TBaseServiceCmd
 from growbies.service.queue import IDQueue, ServiceQueue
 
 CMD = 'cmd'
@@ -27,7 +25,7 @@ parser = ArgumentParser(description=pkg_doc, formatter_class=RawDescriptionHelpF
 parsers = {CMD: parser}
 parser_adder = parser.add_subparsers(dest=CMD, required=True)
 
-for pkg in (cfg, db, human_input, monitor, plot, sample, service):
+for pkg in (cfg, db, service):
     parser_adder.add_parser(pkg.__name__.split('.')[-1], help=pkg.__doc__, add_help=False)
 for cmd in ServiceCmd:
     help_str = ServiceCmd.get_help_str(cmd)
@@ -40,10 +38,10 @@ parser.add_argument(f'--{Param.KEEP_PRIVILEGES}', default=False, action='store_t
                          f'be dropped by switching to the "{USERNAME}" user. This is typically '
                          f'only seto to False during package installation work.')
 
-cli.activate.make(parsers[ServiceCmd.ACTIVATE])
-cli.deactivate.make(parsers[ServiceCmd.DEACTIVATE])
-cli.identify.make(parsers[ServiceCmd.ID])
-cli.loopback.make(parsers[ServiceCmd.LOOPBACK])
+activate.make_cli(parsers[ServiceCmd.ACTIVATE])
+activate.make_cli(parsers[ServiceCmd.DEACTIVATE])
+identify.make_cli(parsers[ServiceCmd.ACTIVATE])
+loopback.make_cli(parsers[ServiceCmd.LOOPBACK])
 
 ns, unknown = parser.parse_known_args(sys.argv[1:])
 ns_dict = vars(ns)
@@ -68,19 +66,19 @@ def _run_cmd(cmd_: TBaseServiceCmd, timeout = DEFAULT_CMD_TIMEOUT_SECONDS):
     return resp
 
 if ServiceCmd.LS == cmd:
-    print(_run_cmd(LsServiceCmd()))
+    print(_run_cmd(ls.LsServiceCmd()))
 elif ServiceCmd.ACTIVATE == cmd:
-    _run_cmd(ActivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
+    _run_cmd(activate.ActivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
 elif ServiceCmd.DEACTIVATE == cmd:
-    _run_cmd(DeactivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
+    _run_cmd(activate.DeactivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
 elif ServiceCmd.LOOPBACK == cmd:
-    _run_cmd(LoopbackServiceCmd(serial=getattr(ns, PositionalParam.SERIAL)))
+    _run_cmd(loopback.LoopbackServiceCmd(serial=getattr(ns, PositionalParam.SERIAL)))
 elif ServiceCmd.ID == cmd:
     serial = ns_dict.pop(PositionalParam.SERIAL)
     if unknown:
         unknown_str = ', '.join(unknown)
         parsers[ServiceCmd.ID].error(f"Unrecognized arguments: {unknown_str}")
-    print(_run_cmd(IdServiceCmd(serial=serial, device_cmd_kw=ns_dict)))
+    print(_run_cmd(identify.IdServiceCmd(serial=serial, device_cmd_kw=ns_dict)))
 else:
     fwd_cmd = shlex.split(f'{sys.executable} -m {__package__}.{cmd} ') + unknown
     os.execvp(sys.executable, fwd_cmd)

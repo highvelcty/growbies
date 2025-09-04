@@ -5,11 +5,10 @@ from typing import Any, Generator
 from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import create_engine, Session, SQLModel
 
-
-from .account import AccountEngine
-from .device import DevicesEngine
-from .gateway import GatewayEngine
-from growbies.db.constants import SQLMODEL_LOCAL_ADDRESS
+from .models.account import AccountEngine
+from .models.device import DevicesEngine
+from .models.gateway import GatewayEngine
+from growbies.constants import SQLMODEL_LOCAL_ADDRESS
 
 # All models representing tables found in the import space will be created, but the static
 # checker doesn't know this.

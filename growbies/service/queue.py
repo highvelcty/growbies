@@ -9,8 +9,7 @@ import time
 
 from inotify_simple import INotify, flags
 
-from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
-from growbies.service.cmd.structs import TBaseServiceCmd
+from growbies.service.common import TBaseServiceCmd
 from growbies.utils.filelock import FileLock
 from growbies.utils.paths import InstallPaths
 from growbies.utils.types import Pickleable_t

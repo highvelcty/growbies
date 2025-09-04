@@ -1,8 +1,6 @@
 from prettytable import PrettyTable
 PRECISION = 6
 
-from .bufstr import BufStr
-
 def format_float_table(title, headers: list[str], data: list[list[float]]) -> str:
     """
     Prints a 2D list of floats as a formatted table with title and column headers.
@@ -50,7 +48,6 @@ def format_dropped_bytes(buf: bytes) -> str:
         # Show first 8 and last 8 bytes with ellipsis
         first_part = buf[:max_display // 2]
         last_part = buf[-max_display // 2:]
-        truncated = first_part + b'...' + last_part  # will need a repr style
         # Format like a normal bytes literal
         repr_bytes = repr(first_part)[:-1] + '...' + repr(last_part)[2:]
         return f'{repr_bytes} of length {length}'

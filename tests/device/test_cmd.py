@@ -1,8 +1,7 @@
 from unittest import TestCase
 
-from growbies.intf.common.identify import *
-from growbies.intf.cmd import *
-
+from growbies.device.common.identify import Identify1
+from growbies.device.cmd import SetIdentifyDeviceCmd
 
 class TestSetIdentifyDeviceCmd(TestCase):
     def test(self):

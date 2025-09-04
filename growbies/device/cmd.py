@@ -1,10 +1,12 @@
 from enum import IntEnum
-from typing import Optional, TypeVar
+from typing import Optional
 import ctypes
 import logging
 
-from .common import (Calibration, PacketHdr, Identify, Identify1, TIdentify, BaseStructure,
-                      BaseUnion, NvmHeader)
+from .common.calibration import Calibration
+from .common import BaseStructure, BaseUnion, PacketHdr
+from .common.identify import Identify, Identify1, TIdentify
+from .common.nvm import NvmHeader
 
 logger = logging.getLogger(__name__)
 

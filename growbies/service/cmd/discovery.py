@@ -3,7 +3,7 @@ import logging
 import shlex
 import subprocess
 
-from growbies.db.models import Device, Devices, ConnectionState
+from growbies.db.models.device import Device, Devices, ConnectionState
 from growbies.db.engine import get_db_engine
 from growbies.utils.paths import InstallPaths
 from growbies.session import get_session

@@ -3,9 +3,9 @@ from typing import Optional
 import ctypes
 import logging
 
-from .common import  BaseStructure, BaseUnion, Identify, Identify1, PacketHdr, TBaseStructure
-from .common import Calibration
-from .common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
+from .common import  BaseStructure, BaseUnion, PacketHdr, TBaseStructure
+from .common.identify import Identify, Identify1
+from .common.calibration import Calibration, MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
 logger = logging.getLogger(__name__)
 

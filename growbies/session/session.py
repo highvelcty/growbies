@@ -4,9 +4,10 @@ from typing import Iterable, Optional
 import logging
 
 from . import log
-from growbies.cfg import Cfg
+from growbies.cfg.cfg import Cfg
 from growbies.db.engine import get_db_engine
-from growbies.db.models import Account, Gateway
+from growbies.db.models.account import Account
+from growbies.db.models.gateway import Gateway
 from growbies.utils.paths import InstallPaths, RepoPaths
 from growbies.utils import timestamp
 

@@ -12,13 +12,13 @@ import queue
 
 import serial
 
-from .cmd import DeviceCmd, TDeviceCmd
-from .resp import TDeviceResp, DeviceResp, RespPacketHdr
-from growbies.service.resp.structs import ServiceCmdError
+from growbies.device.cmd import DeviceCmd, TDeviceCmd
+from growbies.device.resp import TDeviceResp, DeviceResp, RespPacketHdr
+from growbies.service.common import ServiceCmdError
 from growbies.session import log
+from growbies.utils.bufstr import BufStr
 from growbies.utils.crc import crc_ccitt16
 from growbies.utils.report import format_dropped_bytes
-from growbies.utils.bufstr import BufStr
 
 logger = logging.getLogger(__name__)
 
