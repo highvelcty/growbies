@@ -8,7 +8,8 @@ from .common import BaseStructure
 from growbies.utils import timestamp
 from growbies.utils.types import Serial_t, ModelNumber_t
 
-__all__ = ['BatteryType', 'DisplayType', 'LedType', 'FrameType', 'FootType', 'MassSensorType',
+__all__ = ['BatteryType', 'DisplayType', 'LedType', 'FrameType', 'FootType',
+           'IdentifyVersion', 'MassSensorType',
            'PcbaType', 'TemperatureSensorType', 'WirelessType',
            'Identify', 'Identify1', 'NvmHeader', 'TIdentify']
 
@@ -41,8 +42,12 @@ class WirelessType(IntEnum):
     NONE = 0
     BLE = 1
 
+class IdentifyVersion(IntEnum):
+    ZERO = 0
+    ONE = 1
+
 class NvmHeader(BaseStructure):
-    class Field:
+    class Field(BaseStructure.Field):
         MAGIC = '_magic'
         VERSION = '_version'
 
@@ -60,8 +65,17 @@ class NvmHeader(BaseStructure):
     def version(self) -> int:
         return getattr(self, self.Field.VERSION)
 
+class IdentifyHeader(NvmHeader):
+    @property
+    def version(self) -> IdentifyVersion | int:
+        val = getattr(self, self.Field.VERSION)
+        try:
+            return IdentifyVersion(val)
+        except ValueError:
+            return val
+
 class Identify(BaseStructure):
-    class Field:
+    class Field(BaseStructure.Field):
         HDR = '_hdr'
         FIRMWARE_VERSION = '_firmware_version'
         SERIAL_NUMBER = '_serial_number'
@@ -81,7 +95,7 @@ class Identify(BaseStructure):
 
     _pack_ = 1
     _fields_ = [
-        (Field.HDR, NvmHeader),
+        (Field.HDR, IdentifyHeader),
         (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
     ]
 
@@ -243,11 +257,11 @@ class Identify1(Identify):
 
     @property
     def model_number(self) -> ModelNumber_t:
-        return getattr(self, self.Field.MODEL_NUMBER)
+        return getattr(self, self.Field.MODEL_NUMBER).decode()
 
     @model_number.setter
     def model_number(self, value: ModelNumber_t):
-        setattr(self, self.Field.MODEL_NUMBER, value)
+        setattr(self, self.Field.MODEL_NUMBER, value.encode())
 
     @property
     def manufacture_date(self) -> datetime:

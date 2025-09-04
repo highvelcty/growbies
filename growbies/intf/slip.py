@@ -18,6 +18,7 @@ from growbies.service.resp.structs import ServiceCmdError
 from growbies.session import log
 from growbies.utils.crc import crc_ccitt16
 from growbies.utils.report import format_dropped_bytes
+from growbies.utils.bufstr import BufStr
 
 logger = logging.getLogger(__name__)
 
@@ -187,6 +188,7 @@ class Network(BaseDataLink, ABC):
             return frame
         else:
             logger.error(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
+            logger.debug(BufStr(frame))
             return None
 
     def send_packet(self, buf: bytes):
@@ -215,7 +217,7 @@ class Transport(Network, ABC):
         """
         cmd_packet_hdr = DeviceCmd.get_hdr(cmd)
         if cmd_packet_hdr is None:
-            raise ServiceCmdError('Unknown cmd type: {type(cmd)}')
+            raise ServiceCmdError(f'Unknown device cmd type: {type(cmd)}')
         cmd_packet_hdr.id = 1
         self.send_packet(bytes(cmd_packet_hdr) + bytes(cmd))
 

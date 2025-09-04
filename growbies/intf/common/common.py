@@ -1,5 +1,4 @@
-from enum import Enum
-from typing import Any, ByteString, cast, Iterator, TYPE_CHECKING, TypeVar, Union, NewType
+from typing import Any, ByteString, cast, Optional, TYPE_CHECKING, Union, NewType
 import ctypes
 import logging
 
@@ -12,11 +11,15 @@ from growbies.service.resp.structs import ServiceCmdError
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['BaseStructure', 'TBaseStructure', 'Packet', 'PacketHdr']
+__all__ = ['BaseStructure', 'BaseUnion', 'TBaseStructure', 'Packet', 'PacketHdr']
 
 # --- Constants ------------------------------------------------------------------------------------
+class StructUnionMixin:
+    class Field:
+        @classmethod
+        def lstrip(cls, val):
+            return val.strip('_')
 
-class BaseStructure(ctypes.Structure):
     @classmethod
     def qualname(cls):
         return cls.__qualname__
@@ -32,15 +35,16 @@ class BaseStructure(ctypes.Structure):
         Derived class fields override base class fields with the same name.
         Each item is a tuple: (field_name, field_type, offset, size)
         """
-        seen = {}
+        seen = dict()
         # Walk MRO from base -> derived
         for base in cls.__mro__[::-1]:
-            if (issubclass(base, ctypes.Structure) and
-                    hasattr(base, '_fields_') and base is not ctypes.Structure):
+            if (issubclass(base, (ctypes.Structure, ctypes.Union)) and
+                    hasattr(base, '_fields_') and base not in (ctypes.Structure, ctypes.Union)):
                 for field_name, field_type in base._fields_:
                     # override previous base field if derived redefines it
                     seen[field_name] = (field_name, field_type,
                                         getattr(cls, field_name).offset, ctypes.sizeof(field_type))
+
         # preserve order in memory layout
         return list(seen.values())
 
@@ -50,30 +54,41 @@ class BaseStructure(ctypes.Structure):
         for name, ftype, offset, size in cls.all_fields():
             print(f"  {name:<24} offset={offset:3} size={size:3} type={ftype}")
 
-    def get_str(self, prefix: str = ''):
-        str_list = list()
+    def get_str(self, prefix: str = '', _str_list: Optional[list[str]] = None):
+        if _str_list is None:
+            _str_list = list()
         for field_name, field_type, field_offset, field_size in self.all_fields():
-            stripped_name = field_name.lstrip('_')
-            if field_name in getattr(self, '_anonymous_', []):
+            stripped_name = self.Field.lstrip(field_name)
+            is_anonymous = field_name in getattr(self, '_anonymous_', [])
+            if is_anonymous:
                 next_name = f'{prefix}'
             else:
                 next_name = f'{prefix}.{stripped_name}' if prefix else stripped_name
-            if issubclass(field_type, ctypes.Structure):
-                str_list.append(
-                    getattr(self, stripped_name).get_str(next_name))
+            if issubclass(field_type, (ctypes.Structure, ctypes.Union)):
+                if not is_anonymous:
+                    for next_str in getattr(self, stripped_name).get_str(next_name):
+                        if next_str not in _str_list:
+                            _str_list.append(next_str)
             else:
-                # full_name = f'{prefix}{stripped_name}' if prefix else stripped_name
-                str_list.append(f'0x{field_offset:04X} '
-                                f'{next_name}:' 
-                                f' {repr(getattr(self, stripped_name))}')
-        return '\n'.join(str_list)
+                next_str = (f'0x{field_offset:04X} '
+                            f'{next_name}: '
+                            f'{repr(getattr(self, stripped_name))}')
+                if next_str not in _str_list:
+                    _str_list.append(next_str)
+                    
+        return _str_list
 
     def __str__(self):
-        return self.get_str()
+        return '\n'.join(self.get_str())
+
+class BaseStructure(ctypes.Structure, StructUnionMixin): pass
 TBaseStructure = NewType('TBaseStructure', BaseStructure)
 
+class BaseUnion(ctypes.Union, StructUnionMixin): pass
+TBaseUnion = NewType('TBaseUnion', BaseUnion)
+
 class PacketHdr(BaseStructure):
-    class Field:
+    class Field(BaseStructure.Field):
         TYPE = '_type'
         ID = '_id'
 
@@ -103,7 +118,7 @@ class PacketHdr(BaseStructure):
 class Packet(BaseStructure):
     MIN_SIZE_IN_BYTES = ctypes.sizeof(PacketHdr)
 
-    class Field:
+    class Field(BaseStructure.Field):
         HDR = '_header'
         DATA = '_data'
 

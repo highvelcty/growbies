@@ -3,9 +3,10 @@ from typing import Optional, TypeVar
 import ctypes
 import logging
 
-from ..common import Calibration, PacketHdr, Identify1, BaseStructure
+from ..common import (Calibration, PacketHdr, Identify, Identify1, TIdentify, BaseStructure,
+                      BaseUnion, NvmHeader)
 
-__all__ = ['DeviceCmd', 'BaseDeviceCmd', 'TDeviceCmd',
+__all__ = ['DeviceCmd', 'TDeviceCmd',
            'CmdPacketHdr',
            'LoopbackDeviceCmd',
            'GetCalibrationDeviceCmd', 'SetCalibrationDeviceCmd',
@@ -38,6 +39,8 @@ class DeviceCmd(IntEnum):
             return CmdPacketHdr(type=DeviceCmd.GET_DATAPOINT)
         elif isinstance(cmd, GetIdentifyDeviceCmd):
             return CmdPacketHdr(type=DeviceCmd.GET_IDENTIFY)
+        elif isinstance(cmd, SetIdentifyDeviceCmd):
+            return CmdPacketHdr(type=DeviceCmd.SET_IDENTIFY)
         elif isinstance(cmd, LoopbackDeviceCmd):
             return CmdPacketHdr(type=DeviceCmd.LOOPBACK)
         elif isinstance(cmd, PowerOnHx711DeviceCmd):
@@ -45,7 +48,7 @@ class DeviceCmd(IntEnum):
         elif isinstance(cmd, PowerOffHx711DeviceCmd):
             return CmdPacketHdr(type=DeviceCmd.POWER_OFF_HX711)
         else:
-            logger.error(f'Unknown cmd type {type(cmd)}.')
+            logger.error(f'Unknown device cmd type {type(cmd)}.')
             return None
 
 class CmdPacketHdr(PacketHdr):
@@ -61,13 +64,12 @@ class CmdPacketHdr(PacketHdr):
     def type(self, value: DeviceCmd):
         setattr(self, self.Field.TYPE, DeviceCmd(value))
 
-class BaseDeviceCmd(BaseStructure): pass
-TDeviceCmd = TypeVar('TDeviceCmd', bound=BaseDeviceCmd)
+TDeviceCmd = BaseStructure | BaseUnion
 
-class BaseDeviceCmdWithTimesParam(BaseDeviceCmd):
+class BaseDeviceCmdWithTimesParam(BaseStructure):
     DEFAULT_TIMES = 7
 
-    class Field:
+    class Field(BaseStructure.Field):
         TIMES = '_times'
 
     _fields_ = [
@@ -87,10 +89,10 @@ class BaseDeviceCmdWithTimesParam(BaseDeviceCmd):
     def times(self, value: int):
         super().times = value
 
-class GetCalibrationDeviceCmd(BaseDeviceCmd): pass
+class GetCalibrationDeviceCmd(BaseStructure): pass
 
-class SetCalibrationDeviceCmd(BaseDeviceCmd):
-    class Field:
+class SetCalibrationDeviceCmd(BaseStructure):
+    class Field(BaseStructure.Field):
         CALIBRATION = '_calibration'
 
     _fields_ = [
@@ -106,24 +108,55 @@ class SetCalibrationDeviceCmd(BaseDeviceCmd):
     def calibration(self, calibration: Calibration):
         setattr(self, self.Field.CALIBRATION, calibration)
 
-class GetIdentifyDeviceCmd(BaseDeviceCmd): pass
+class GetIdentifyDeviceCmd(BaseStructure): pass
 
-class SetIdentifyDeviceCmd(BaseDeviceCmd):
-    class Field:
-        IDENTIFY = '_identify'
+class SetIdentifyUnion(BaseUnion):
+    class Field(BaseUnion.Field):
+        ANON0 = 'anon0'
+        ANON1 = 'anon1'
 
+    _pack_ = 1
     _fields_ = [
-        (Field.IDENTIFY, Identify1)
+        (Field.ANON0, Identify),
+        (Field.ANON1, Identify1)
     ]
 
+    _anonymous_ = [Field.ANON0, Field.ANON1]
+
     @property
-    def identify(self) -> Identify1:
-        return getattr(self, self.Field.IDENTIFY)
+    def hdr(self) -> NvmHeader:
+        return getattr(self, Identify.Field.HDR)
 
-    @identify.setter
-    def identify(self, identify: Identify1):
-        setattr(self, self.Field.IDENTIFY, identify)
+class SetIdentifyDeviceCmd(BaseUnion):
+    class Field(BaseUnion.Field):
+        PAYLOAD = '_payload'
+        ANON0 = '_anon0'
+        ANON1 = '_anon1'
 
+    _pack_ = 1
+    _fields_ = [
+        (Field.PAYLOAD, Identify),
+        (Field.ANON0, Identify),
+        (Field.ANON1, Identify1)
+    ]
+
+    _anonymous_ = [Field.ANON0, Field.ANON1]
+
+    @property
+    def payload(self) -> TIdentify:
+        id_struct = getattr(self, self.Field.PAYLOAD)
+        if id_struct.hdr.version == 0:
+            return id_struct
+        else:
+            return Identify1.from_buffer(self)
+
+    @payload.setter
+    def payload(self, val: TIdentify):
+        ctypes.memmove(
+            ctypes.addressof(self),
+            ctypes.addressof(val),
+            ctypes.sizeof(val)
+        )
 
 class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
     class Field(BaseDeviceCmdWithTimesParam.Field):
@@ -141,8 +174,8 @@ class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
     def raw(self, val: bool):
         setattr(self, self.Field.RAW, val)
 
-class LoopbackDeviceCmd(BaseDeviceCmd): pass
+class LoopbackDeviceCmd(BaseStructure): pass
 
-class PowerOffHx711DeviceCmd(BaseDeviceCmd): pass
+class PowerOffHx711DeviceCmd(BaseStructure): pass
 
-class PowerOnHx711DeviceCmd(BaseDeviceCmd): pass
+class PowerOnHx711DeviceCmd(BaseStructure): pass

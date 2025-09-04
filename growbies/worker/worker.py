@@ -9,7 +9,8 @@ from serial.serialutil import SerialException
 from growbies.db.engine import get_db_engine
 from growbies.intf import Intf
 from growbies.intf.cmd import TDeviceCmd
-from growbies.intf.resp import (BaseDeviceResp, DeviceResp, DataPointDeviceResp,
+from growbies.intf.common import BaseStructure
+from growbies.intf.resp import (DeviceResp, DataPointDeviceResp,
                                 DeviceError, ErrorDeviceResp, RespPacketHdr, TDeviceResp)
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
@@ -113,7 +114,7 @@ class Worker(Thread):
             try:
                hdr, resp = self._intf.recv_resp(timeout=self._RESP_Q_TIMEOUT_SECONDS)
                hdr: RespPacketHdr
-               resp: BaseDeviceResp
+               resp: BaseStructure
 
             except Empty:
                 continue

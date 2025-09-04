@@ -44,7 +44,6 @@ struct Identify0 {
 
     // Constructor with version parameter
     explicit Identify0(const uint16_t version = 0) : header(version) {
-        this->header = NvmHeader{};
         snprintf(this->firmware_version, sizeof(this->firmware_version), "%s", VERSION);
     }
 };
@@ -82,87 +81,96 @@ constexpr int PARTITION_E_OFFSET = 896;
 
 #endif
 
-class PersistentStore {
-    public:
-        void begin();
-
-    protected:
-    #if ARDUINO_ARCH_ESP32
-        Preferences prefs;
-        const char* ns = APPNAME;
-    #endif
+template <typename T>
+class NvmStoreBase {
+public:
+    virtual void begin() = 0;
+    virtual void get(T& value) = 0;
+    virtual void put(const T& value) = 0;
+    virtual ~NvmStoreBase() = default;
 };
 
-// Templated generic NVM store
+#if ARDUINO_ARCH_AVR
+
 template <typename T>
-class NvmStore : public PersistentStore {
+class AvrNvmStore : public NvmStoreBase<T> {
 public:
-#if ARDUINO_ARCH_AVR
-    explicit NvmStore(const int offset) : partition_offset(offset) {}
-#elif ARDUINO_ARCH_ESP32
-    explicit NvmStore(const char* key) : ns_key(key) {}
-#endif
-    void begin() {
-        PersistentStore::begin();
+    explicit AvrNvmStore(int offset) : partition_offset(offset) {}
 
-#if ARDUINO_ARCH_AVR
-        Identify0 id_struct;
-        EEPROM.get(this->partition_offset, id_struct);
+    void begin() override {
+        assert(sizeof(T) < EEPROM.length());
+        T value;
+        EEPROM.get(partition_offset, value);
 
-        if (!id_struct.header.is_initialized()) {
-            // Zero the entire Identify1 memory in EEPROM in 32-byte chunks
-            for (size_t offset = 0; offset < sizeof(Identify1); ++offset) {
+        if (!value.header.is_initialized()) {
+            // zero entire struct
+            for (size_t offset = 0; offset < sizeof(T); ++offset) {
                 EEPROM.update(partition_offset + offset, 0);
             }
-
-            // Initialize Identify0 portion with header + firmware_version
-            id_struct = Identify0{}; // default constructor sets header and firmware_version
-            EEPROM.put(this->partition_offset, id_struct);
+            // initialize default
+            value = T{};
+            EEPROM.put(partition_offset, value);
         }
-
-#elif ARDUINO_ARCH_ESP32
-        this->prefs.begin(this->ns, false);
-
-        // Initialize if the key does not exist
-        if (!this->prefs.isKey(this->ns_key)) {
-            Identify1 id_struct;
-            this->prefs.putBytes(this->ns_key, &id_struct, sizeof(id_struct));
-        }
-        this->prefs.end();
-#endif
     }
 
-    void get(T& value) {
-#if ARDUINO_ARCH_AVR
-        EEPROM.get(this->partition_offset, value);
-#elif ARDUINO_ARCH_ESP32
-        this->prefs.begin(this->ns, true);
-        this->prefs.getBytes(this->ns_key, &value, sizeof(value));
-        this->prefs.end();
-#endif
+    void get(T& value) override {
+        EEPROM.get(partition_offset, value);
     }
 
-    void put(const T& value) {
-#if ARDUINO_ARCH_AVR
-        EEPROM.put(this->partition_offset, value);
-#elif ARDUINO_ARCH_ESP32
-        this->prefs.begin(this->ns, false);
-        this->prefs.putBytes(this->ns_key, &value, sizeof(value));
-        this->prefs.end();
-#endif
+    void put(const T& value) override {
+        EEPROM.put(partition_offset, value);
     }
 
 private:
-#if ARDUINO_ARCH_AVR
     int partition_offset;
-#elif ARDUINO_ARCH_ESP32
-    const char* ns_key;
-#endif
 };
 
+#elif ARDUINO_ARCH_ESP32
 
-using CalibrationStore = NvmStore<Calibration>;
-using IdentifyStore = NvmStore<Identify1>;
+template <typename T>
+class Esp32NvmStore : public NvmStoreBase<T> {
+public:
+    explicit Esp32NvmStore(const char* key) : ns_key(key) {}
+
+    void begin() override {
+        this->prefs.begin(this->ns, false);
+
+        if (!this->prefs.isKey(this->ns_key)) {
+            T value{};
+            this->prefs.putBytes(this->ns_key, &value, sizeof(value));
+        }
+
+        this->prefs.end();
+    }
+
+    void get(T& value) override {
+        this->prefs.begin(this->ns, true);
+        this->prefs.getBytes(this->ns_key, &value, sizeof(value));
+        this->prefs.end();
+    }
+
+    void put(const T& value) override {
+        this->prefs.begin(this->ns, false);
+        this->prefs.putBytes(this->ns_key, &value, sizeof(value));
+        this->prefs.end();
+    }
+
+private:
+    const char* ns = APPNAME;
+    Preferences prefs;
+    const char* ns_key;
+};
+
+#endif
+
+
+#if ARDUINO_ARCH_AVR
+using CalibrationStore = AvrNvmStore<Calibration>;
+using IdentifyStore    = AvrNvmStore<Identify1>;
+#elif ARDUINO_ARCH_ESP32
+using CalibrationStore = Esp32NvmStore<Calibration>;
+using IdentifyStore    = Esp32NvmStore<Identify1>;
+#endif
 
 extern CalibrationStore* calibration_store;
 extern IdentifyStore* identify_store;

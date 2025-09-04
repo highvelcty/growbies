@@ -1,4 +1,4 @@
-from growbies.service.cmd.serials_to_device_ids import serials_to_device_ids
+from growbies.service.cli import serials_to_devices
 from growbies.service.cmd.structs import LoopbackServiceCmd
 from growbies.service.resp.structs import ServiceCmdError
 from growbies.intf.cmd import LoopbackDeviceCmd
@@ -14,10 +14,10 @@ def loopback(cmd: LoopbackServiceCmd) -> VoidDeviceResp:
     """
 
     pool = get_pool()
-    device_id = serials_to_device_ids(cmd.serial)[0]
+    device = serials_to_devices(cmd.serial)[0]
 
     try:
-        worker = pool.workers[device_id]
+        worker = pool.workers[device.id]
     except KeyError:
         raise ServiceCmdError(f'Serial number "{cmd.serial}" is inactive.')
 

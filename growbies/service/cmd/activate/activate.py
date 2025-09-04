@@ -1,21 +1,23 @@
 import logging
 
 from growbies.db.engine import get_db_engine
-from growbies.service.cmd.serials_to_device_ids import serials_to_device_ids
+from growbies.service.cli import serials_to_devices
 from growbies.service.cmd.structs import ActivateServiceCmd, DeactivateServiceCmd
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
 
 def activate(cmd: ActivateServiceCmd):
-    device_ids = serials_to_device_ids(*cmd.serials)
+    devices = serials_to_devices(*cmd.serials)
+    device_ids = [dev.id for dev in devices]
     engine = get_db_engine().devices
     worker_pool = get_pool()
     engine.set_active(*device_ids)
     worker_pool.connect(*device_ids)
 
 def deactivate(cmd: DeactivateServiceCmd):
-    device_ids = serials_to_device_ids(*cmd.serials)
+    devices = serials_to_devices(*cmd.serials)
+    device_ids = [dev.id for dev in devices]
     engine = get_db_engine().devices
     worker_pool = get_pool()
     engine.clear_active(*device_ids)

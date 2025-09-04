@@ -57,6 +57,8 @@ void loop() {
                 const PacketHdr *packet_hdr = recv_packet();
                 if (packet_hdr != nullptr) {
                     growbies.execute(packet_hdr);
+                    // Restart stay awake timer.
+                    startt = millis();
                 }
                 slip_buf->reset();
             }

@@ -1,9 +1,9 @@
 from enum import IntEnum
-from typing import Optional, TypeVar
+from typing import Optional
 import ctypes
 import logging
 
-from ..common import  BaseStructure, Identify, Identify1, PacketHdr, TBaseStructure
+from ..common import  BaseStructure, BaseUnion, Identify, Identify1, PacketHdr, TBaseStructure
 from ..common import Calibration
 from ..common import MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
 
@@ -77,11 +77,9 @@ class RespPacketHdr(PacketHdr):
     def type(self, value: DeviceResp):
         setattr(self, self.Field.TYPE, value)
 
+TDeviceResp = BaseStructure | BaseUnion
 
-class BaseDeviceResp(BaseStructure): pass
-TDeviceResp = TypeVar('TDeviceResp', bound=BaseDeviceResp)
-
-class ErrorDeviceResp(BaseDeviceResp):
+class ErrorDeviceResp(BaseStructure):
     class Field(PacketHdr.Field):
         ERROR = 'error'
 
@@ -98,8 +96,8 @@ class ErrorDeviceResp(BaseDeviceResp):
         super().error = value
 
 
-class DataPointDeviceResp(BaseDeviceResp):
-    class Field:
+class DataPointDeviceResp(BaseStructure):
+    class Field(BaseStructure.Field):
         MASS_SENSOR = '_mass_sensor'
         MASS = '_mass'
         TEMPERATURE_SENSOR = '_temperature_sensor'
@@ -140,8 +138,8 @@ class DataPointDeviceResp(BaseDeviceResp):
         str_list.append(f'temperature: {self.temperature}')
         return '\n'.join(str_list)
 
-class GetCalibrationDeviceRespGetCalibration(BaseDeviceResp):
-    class Field:
+class GetCalibrationDeviceRespGetCalibration(BaseStructure):
+    class Field(BaseStructure.Field):
         CALIBRATION = '_calibration'
 
     _pack_ = 1
@@ -154,7 +152,7 @@ class GetCalibrationDeviceRespGetCalibration(BaseDeviceResp):
         return getattr(self, self.Field.CALIBRATION)
 
 
-class VoidDeviceResp(BaseDeviceResp): pass
+class VoidDeviceResp(BaseStructure): pass
 
 
 class DeviceError(Exception):
