@@ -103,7 +103,8 @@ class Worker(Thread):
     def _process_async(hdr: RespPacketHdr, resp: TDeviceResp | ErrorDeviceResp):
         if hdr.type == DeviceResp.ERROR:
             resp: ErrorDeviceResp
-            logger.error(f'Received asynchronous error response with error code 0x{resp.error:X}')
+            logger.error(f'Received asynchronous error response with '
+                         f'error code {resp.error} 0x{resp.error:X}')
         elif hdr.type == DeviceResp.DATAPOINT:
             logger.info(f'Received asynchronous {hdr.type} response.')
         else:

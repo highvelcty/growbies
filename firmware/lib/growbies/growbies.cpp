@@ -30,7 +30,7 @@ void Growbies::begin() const {
         io_conf.mode = GPIO_MODE_INPUT;
         io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
         io_conf.pull_up_en = GPIO_PULLUP_ENABLE;
-        io_conf.pin_bit_mask = (1ULL << DOUT_0_PIN);
+        io_conf.pin_bit_mask = (1ULL << get_HX711_dout_pin(sensor));
         gpio_config(&io_conf);
     #endif
     }
