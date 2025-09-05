@@ -23,7 +23,7 @@ chown -R "${PATH_APPNAME}":"${PATH_APPNAME}" \
   "${PATH_ETC_GROWBIES}"
 
 ## Create a default configuration file if necessary.
-#growbies cfg init --yes
+python -m growbies.cfg init --yes
 
 # Enable the service so that it will start with system boot.
 systemctl enable "${PATH_APPNAME}"

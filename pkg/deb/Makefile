@@ -41,7 +41,7 @@ internal_build:
 		mv /growbies*.deb ${PATH_DIST}/; \
 		cd ${PATH_DIST}; \
 		dpkg-scanpackages --multiversion . | xz > Packages.xz; \
-		apt remove -y ${PATH_APPNAME}  || true; \
+		apt remove -y ${PATH_APPNAME} 2>/dev/null || true; \
 		apt install -y ./${PATH_APPNAME}*.deb; \
 	)
 
