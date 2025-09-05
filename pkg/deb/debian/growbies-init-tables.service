@@ -7,7 +7,7 @@ After=postgresql.service growbies-init-db-and-user.service
 User=growbies
 Group=growbies
 Type=oneshot
-ExecStart=/usr/bin/growbies db init_tables
+ExecStart=/usr/lib/growbies/venv/bin/python -m growbies.db init_tables
 
 [Install]
 WantedBy=multi-user.target

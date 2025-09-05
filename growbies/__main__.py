@@ -5,49 +5,35 @@ import shlex
 import sys
 
 from . import __doc__ as pkg_doc
-from . import db, service
-from .constants import USERNAME
 from .utils.privileges import drop_privileges
 from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
 from growbies.device.resp import DeviceError
-from growbies.service.cmd import activate, cfg, identify, loopback, ls
-from growbies.service.common import (CMD, SUBCMD, PositionalParam, ServiceCmd, ServiceCmdError,
+from growbies.service.cmd import activate, identify, loopback, ls
+from growbies.service.common import (CMD, PositionalParam, ServiceCmd, ServiceCmdError,
                                      TBaseServiceCmd)
 from growbies.service.queue import IDQueue, ServiceQueue
 
 logger = logging.getLogger(__name__)
 
-class Param:
-    KEEP_PRIVILEGES = 'keep_privileges'
+drop_privileges()
 
 parser = ArgumentParser(description=pkg_doc, formatter_class=RawDescriptionHelpFormatter)
 parsers = {CMD: parser}
 parser_adder = parser.add_subparsers(dest=CMD, required=True)
 
-for pkg in (db, service):
-    parser_adder.add_parser(pkg.__name__.split('.')[-1], help=pkg.__doc__, add_help=False)
 for cmd in ServiceCmd:
     help_str = ServiceCmd.get_help_str(cmd)
     desc_str = ServiceCmd.get_description_str(cmd)
     parsers[cmd] = parser_adder.add_parser(cmd, description=desc_str, help=help_str,
                                            formatter_class=RawDescriptionHelpFormatter)
 
-parser.add_argument(f'--{Param.KEEP_PRIVILEGES}', default=False, action='store_true',
-                    help=f'By default, if the program is executed with root privileges, these will '
-                         f'be dropped by switching to the "{USERNAME}" user. This is typically '
-                         f'only seto to False during package installation work.')
-
 activate.make_cli(parsers[ServiceCmd.ACTIVATE])
 activate.make_cli(parsers[ServiceCmd.DEACTIVATE])
-cfg.make_cli(parsers[ServiceCmd.CFG])
-identify.make_cli(parsers[ServiceCmd.ACTIVATE])
+identify.make_cli(parsers[ServiceCmd.ID])
 loopback.make_cli(parsers[ServiceCmd.LOOPBACK])
 
 ns, unknown = parser.parse_known_args(sys.argv[1:])
 ns_dict = vars(ns)
-
-if not ns_dict.pop(Param.KEEP_PRIVILEGES):
-    drop_privileges()
 
 cmd: ServiceCmd = ns_dict.pop(CMD)
 
@@ -71,8 +57,6 @@ elif ServiceCmd.ACTIVATE == cmd:
     _run_cmd(activate.ActivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
 elif ServiceCmd.DEACTIVATE == cmd:
     _run_cmd(activate.DeactivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
-elif ServiceCmd.CFG == cmd:
-    print(_run_cmd(cfg.CfgCmd(sub_cmd=ns_dict.pop(SUBCMD), sub_cmd_kw=ns_dict)))
 elif ServiceCmd.LOOPBACK == cmd:
     _run_cmd(loopback.LoopbackServiceCmd(serial=getattr(ns, PositionalParam.SERIAL)))
 elif ServiceCmd.ID == cmd:

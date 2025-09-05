@@ -150,12 +150,12 @@ class DevicesEngine:
         else:
             stmt = select(Device).where(Device.id == serial_or_id)
         # noinspection PyTypeChecker
-        return db_session.exec(stmt).first()
+        return db_session.exec(stmt).scalars().first()
 
     @staticmethod
     def _get_all(db_session: DBSession) -> Devices:
         stmt = select(Device)
-        results = db_session.exec(stmt).all()
+        results = db_session.exec(stmt).scalars().all()
         return Devices(devices=list(results))
 
     def _merge_with_discovered(self, discovered_devices: Devices, db_session: DBSession) -> Devices:
@@ -192,7 +192,7 @@ class DevicesEngine:
         )
         # Must assign to something to acquire the "with_for_update" lock
         # noinspection PyTypeChecker
-        _ = db_session.exec(stmt).first()
+        _ = db_session.exec(stmt).scalars().first()
         db_session.add(device)
         db_session.flush()
         db_session.refresh(device)
@@ -256,7 +256,7 @@ class DeviceEngine:
         else:
             stmt = select(Device).where(Device.id == serial_or_device_id)
         # noinspection PyTypeChecker
-        return db_session.exec(stmt).first()
+        return db_session.exec(stmt).scalars().first()
 
     def _set_flag(self, flag: ConnectionState, value: bool, db_session: DBSession):
         # Attached model

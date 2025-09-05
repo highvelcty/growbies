@@ -3,7 +3,7 @@ import logging
 from .common import ServiceCmd, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
 from growbies.device.resp import DeviceError
-from growbies.service.cmd import activate, cfg, loopback, ls, identify
+from growbies.service.cmd import activate, loopback, ls, identify
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
 
@@ -38,8 +38,6 @@ class Service:
                                 resp_q.put(activate.activate(cmd))
                             elif cmd.cmd == ServiceCmd.DEACTIVATE:
                                 resp_q.put(activate.deactivate(cmd))
-                            elif cmd.cmd == ServiceCmd.CFG:
-                                resp_q.put(cfg.execute(cmd))
                             elif cmd.cmd == ServiceCmd.ID:
                                 resp_q.put(identify.get_or_set(cmd))
                             elif cmd.cmd == ServiceCmd.LOOPBACK:

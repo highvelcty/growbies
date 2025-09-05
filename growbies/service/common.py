@@ -3,8 +3,6 @@ from typing import Optional, TypeVar
 
 from pydantic import BaseModel
 
-from growbies.utils.paths import InstallPaths
-
 class ServiceCmdError(Exception):
     pass
 
@@ -26,7 +24,6 @@ class PositionalParam(StrEnum):
 class ServiceCmd(StrEnum):
     ACTIVATE = 'activate'
     DEACTIVATE = 'deactivate'
-    CFG = 'cfg'
     ID = 'id'
     LOOPBACK = 'loopback'
     LS = 'ls'
@@ -37,8 +34,6 @@ class ServiceCmd(StrEnum):
             return f'Activate a device.'
         elif cmd_ == cls.DEACTIVATE:
             return 'Deactivate a device.'
-        elif cmd_ == cls.CFG:
-            return 'User configuration file interface.'
         elif cmd_ == cls.LOOPBACK:
             return 'A no operation command/response.'
         elif cmd_ == cls.LS:
@@ -55,8 +50,6 @@ class ServiceCmd(StrEnum):
             desc = 'Making it available for connection.'
         elif cmd_ == cls.DEACTIVATE:
             desc = 'Disconnecting as necessary and making it unavailable for connection.'
-        elif cmd_ == cls.CFG:
-            desc = f'Located at {InstallPaths.ETC_GROWBIES_YAML.value}'
         elif cmd_ == cls.LOOPBACK:
             desc = 'Used to test basic command/response functionality with a device.'
         elif cmd_ == cls.LS:
