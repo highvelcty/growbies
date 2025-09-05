@@ -1,5 +1,5 @@
-from ..common import (BaseServiceCmd, PositionalParam, serials_to_devices, ServiceCmd,
-                      ServiceCmdError)
+from ..common import BaseServiceCmd, PositionalParam, ServiceCmd, ServiceCmdError
+from ..serials_to_devices import serials_to_devices
 from growbies.device.cmd import LoopbackDeviceCmd
 from growbies.device.resp import VoidDeviceResp
 from growbies.utils.types import Serial_t

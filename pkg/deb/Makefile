@@ -41,7 +41,8 @@ internal_build:
 		mv /growbies*.deb ${PATH_DIST}/; \
 		cd ${PATH_DIST}; \
 		dpkg-scanpackages --multiversion . | xz > Packages.xz; \
-		apt install --reinstall -y ./growbies*.deb; \
+		apt remove -y ${PATH_APPNAME}  || true; \
+		apt install -y ./${PATH_APPNAME}*.deb; \
 	)
 
 image:
@@ -56,7 +57,8 @@ image:
 
 ${PATH_DIST}: $(src_watch)
 	podman container exec -it --env REPO_ROOT=${INTERNAL_WORKDIR}/${PATH_DEBIAN_SRC} \
-		${CONTAINER_NAME} make internal_build
+		${CONTAINER_NAME} \
+		make internal_build
 
 enter: start
 	podman exec -it ${CONTAINER_NAME} /bin/bash

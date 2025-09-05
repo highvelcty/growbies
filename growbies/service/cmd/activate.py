@@ -4,7 +4,7 @@ import logging
 
 from ..common import BaseServiceCmd, PositionalParam, ServiceCmd
 from growbies.db.engine import get_db_engine
-from growbies.service.common import serials_to_devices
+from growbies.service.serials_to_devices import serials_to_devices
 from growbies.utils.types import Serial_t
 from growbies.worker.pool import get_pool
 

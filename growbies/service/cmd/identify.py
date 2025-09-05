@@ -1,7 +1,7 @@
 import logging
 
-from ..common import (BaseServiceCmd, PositionalParam, serials_to_devices, ServiceCmd,
-                      ServiceCmdError)
+from ..common import BaseServiceCmd, PositionalParam, ServiceCmd, ServiceCmdError
+from ..serials_to_devices import serials_to_devices
 from growbies.device.cmd import GetIdentifyDeviceCmd, SetIdentifyDeviceCmd
 from growbies.device.common import identify as id_mod
 from growbies.utils.types import Serial_t
@@ -14,7 +14,6 @@ from argparse import ArgumentParser, Namespace
 
 def _field_to_param(field: str):
     return f'--{id_mod.Identify1.Field.lstrip(field)}'
-    # return f'--{Identify.Field.lstrip(field).replace("_", "-")}'
 
 def make_cli(parser: ArgumentParser):
     parser.add_argument(PositionalParam.SERIAL, type=str,

@@ -22,8 +22,8 @@ chown -R "${PATH_APPNAME}":"${PATH_APPNAME}" \
   "${PATH_USR_LIB_GROWBIES}" "${PATH_VAR_LIB_GROWBIES}" "${PATH_VAR_LOG_GROWBIES}" \
   "${PATH_ETC_GROWBIES}"
 
-# Create a default configuration file if necessary.
-growbies cfg init --yes
+## Create a default configuration file if necessary.
+#growbies cfg init --yes
 
 # Enable the service so that it will start with system boot.
 systemctl enable "${PATH_APPNAME}"

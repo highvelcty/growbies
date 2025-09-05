@@ -10,14 +10,13 @@ from .models.device import DevicesEngine
 from .models.gateway import GatewayEngine
 from growbies.constants import SQLMODEL_LOCAL_ADDRESS
 
+logger = logging.getLogger(__name__)
+
 # All models representing tables found in the import space will be created, but the static
 # checker doesn't know this.
 # noinspection PyUnresolvedReferences
-from growbies.db.models import addressing
+from growbies.db.models import account, gateway, device, endpoint, endpoint_types
 from growbies.db.models.endpoint_types import EndpointTypes
-
-logger = logging.getLogger(__name__)
-
 
 class DBEngine:
     def __init__(self):

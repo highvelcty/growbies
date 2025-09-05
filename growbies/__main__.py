@@ -5,16 +5,15 @@ import shlex
 import sys
 
 from . import __doc__ as pkg_doc
-from . import cfg, db, service
+from . import db, service
 from .constants import USERNAME
 from .utils.privileges import drop_privileges
 from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
 from growbies.device.resp import DeviceError
-from growbies.service.cmd import activate, identify, loopback, ls
-from growbies.service.common import PositionalParam, ServiceCmd, ServiceCmdError, TBaseServiceCmd
+from growbies.service.cmd import activate, cfg, identify, loopback, ls
+from growbies.service.common import (CMD, SUBCMD, PositionalParam, ServiceCmd, ServiceCmdError,
+                                     TBaseServiceCmd)
 from growbies.service.queue import IDQueue, ServiceQueue
-
-CMD = 'cmd'
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ parser = ArgumentParser(description=pkg_doc, formatter_class=RawDescriptionHelpF
 parsers = {CMD: parser}
 parser_adder = parser.add_subparsers(dest=CMD, required=True)
 
-for pkg in (cfg, db, service):
+for pkg in (db, service):
     parser_adder.add_parser(pkg.__name__.split('.')[-1], help=pkg.__doc__, add_help=False)
 for cmd in ServiceCmd:
     help_str = ServiceCmd.get_help_str(cmd)
@@ -40,6 +39,7 @@ parser.add_argument(f'--{Param.KEEP_PRIVILEGES}', default=False, action='store_t
 
 activate.make_cli(parsers[ServiceCmd.ACTIVATE])
 activate.make_cli(parsers[ServiceCmd.DEACTIVATE])
+cfg.make_cli(parsers[ServiceCmd.CFG])
 identify.make_cli(parsers[ServiceCmd.ACTIVATE])
 loopback.make_cli(parsers[ServiceCmd.LOOPBACK])
 
@@ -71,6 +71,8 @@ elif ServiceCmd.ACTIVATE == cmd:
     _run_cmd(activate.ActivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
 elif ServiceCmd.DEACTIVATE == cmd:
     _run_cmd(activate.DeactivateServiceCmd(serials=getattr(ns, PositionalParam.SERIALS)))
+elif ServiceCmd.CFG == cmd:
+    print(_run_cmd(cfg.CfgCmd(sub_cmd=ns_dict.pop(SUBCMD), sub_cmd_kw=ns_dict)))
 elif ServiceCmd.LOOPBACK == cmd:
     _run_cmd(loopback.LoopbackServiceCmd(serial=getattr(ns, PositionalParam.SERIAL)))
 elif ServiceCmd.ID == cmd:

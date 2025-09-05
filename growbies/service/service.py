@@ -3,7 +3,7 @@ import logging
 from .common import ServiceCmd, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
 from growbies.device.resp import DeviceError
-from growbies.service.cmd import activate, discovery, loopback, identify
+from growbies.service.cmd import activate, cfg, loopback, ls, identify
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
 
@@ -21,7 +21,7 @@ class Service:
 
     @staticmethod
     def _connect_all_active():
-        get_pool().connect(*(dev.id for dev in discovery.ls() if dev.is_active()))
+        get_pool().connect(*(dev.id for dev in ls.ls() if dev.is_active()))
 
     def run(self):
         logger.info('Service start.')
@@ -38,12 +38,14 @@ class Service:
                                 resp_q.put(activate.activate(cmd))
                             elif cmd.cmd == ServiceCmd.DEACTIVATE:
                                 resp_q.put(activate.deactivate(cmd))
+                            elif cmd.cmd == ServiceCmd.CFG:
+                                resp_q.put(cfg.execute(cmd))
                             elif cmd.cmd == ServiceCmd.ID:
                                 resp_q.put(identify.get_or_set(cmd))
                             elif cmd.cmd == ServiceCmd.LOOPBACK:
                                 resp_q.put(loopback.loopback(cmd))
                             elif cmd.cmd == ServiceCmd.LS:
-                                resp_q.put(discovery.ls())
+                                resp_q.put(ls.ls())
                             else:
                                 raise ServiceCmdError(f'Unknown command {cmd.cmd} received.')
                         except DeviceError as err:

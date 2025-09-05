@@ -8,7 +8,6 @@ build/paths.env: build_lib/export_paths.py
 
 include build/paths.env
 
-#src_watch = ${PATH_APPNAME}
 src_watch := $(shell find ${PATH_APPNAME} -type f)
 
 ### Interface ######################################################################################

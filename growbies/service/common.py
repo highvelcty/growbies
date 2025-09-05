@@ -1,15 +1,15 @@
+from enum import StrEnum
 from typing import Optional, TypeVar
 
 from pydantic import BaseModel
 
-from enum import StrEnum
-
-from growbies.db.models.device import Devices
-from growbies.service.cmd import discovery
-from growbies.utils.types import Serial_t
+from growbies.utils.paths import InstallPaths
 
 class ServiceCmdError(Exception):
     pass
+
+CMD = 'cmd'
+SUBCMD = 'subcmd'
 
 class PositionalParam(StrEnum):
     SERIAL = 'serial'
@@ -23,27 +23,10 @@ class PositionalParam(StrEnum):
             return 'A list of serial numbers. This can be unique partial matches.'
         raise ValueError(f'"{sub_cmd_} does not exist.')
 
-def serials_to_devices(*tgt_serials: Serial_t) -> Devices:
-    devices = discovery.ls()
-    matches = dict()
-
-    for tgt in tgt_serials:
-        for device in devices:
-        # for serial, device_id in serials_ids.items():
-            if tgt.lower() in device.serial.lower():
-                if matches.get(tgt):
-                    raise ServiceCmdError(f'Multiple hits for "{tgt}".')
-                matches[tgt] = device
-
-    for tgt in tgt_serials:
-        if tgt not in matches:
-            raise ServiceCmdError(f'"{tgt}" not found.')
-
-    return Devices(devices=list(matches.values()))
-
 class ServiceCmd(StrEnum):
     ACTIVATE = 'activate'
     DEACTIVATE = 'deactivate'
+    CFG = 'cfg'
     ID = 'id'
     LOOPBACK = 'loopback'
     LS = 'ls'
@@ -53,8 +36,9 @@ class ServiceCmd(StrEnum):
         if cmd_ == cls.ACTIVATE:
             return f'Activate a device.'
         elif cmd_ == cls.DEACTIVATE:
-            return ('Deactivate a device. Disconnecting as necessary and making it unavailable '
-                    'for connection.')
+            return 'Deactivate a device.'
+        elif cmd_ == cls.CFG:
+            return 'User configuration file interface.'
         elif cmd_ == cls.LOOPBACK:
             return 'A no operation command/response.'
         elif cmd_ == cls.LS:
@@ -71,6 +55,8 @@ class ServiceCmd(StrEnum):
             desc = 'Making it available for connection.'
         elif cmd_ == cls.DEACTIVATE:
             desc = 'Disconnecting as necessary and making it unavailable for connection.'
+        elif cmd_ == cls.CFG:
+            desc = f'Located at {InstallPaths.ETC_GROWBIES_YAML.value}'
         elif cmd_ == cls.LOOPBACK:
             desc = 'Used to test basic command/response functionality with a device.'
         elif cmd_ == cls.LS:
