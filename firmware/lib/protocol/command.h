@@ -2,6 +2,7 @@
 #define command_h
 
 #include "flags.h"
+#include "constants.h"
 #include "persistent_store.h"
 
 #pragma pack(1)
@@ -34,6 +35,28 @@ typedef enum ErrorCode: uint32_t {
     ERROR_HX711_NOT_READY                       = 0x00000008,
 } ErrorCode;
 
+typedef enum EndpointType: uint8_t {
+    MASS = 0,
+    TEMPERATURE = 1,
+    MASS_0 = 2,
+    MASS_1 = 3,
+    MASS_2 = 4,
+    MASS_3 = 5,
+    MASS_4 = 6,
+    MASS_5 = 7,
+    MASS_6 = 8,
+    MASS_7 = 9,
+    TEMPERATURE_0 = 7,
+    TEMPERATURE_1 = 8,
+    TEMPERATURE_2 = 9,
+    TEMPERATURE_3 = 10,
+    TEMPERATURE_4 = 11,
+    TEMPERATURE_5 = 12,
+    TEMPERATURE_6 = 13,
+    TEMPERATURE_7 = 14,
+    TARE_CRC = 15,
+} EndpointType;
+
 // Bitwise operators for Error
 inline ErrorCode operator|(const ErrorCode lhs, const ErrorCode rhs) {
     return static_cast<ErrorCode>(
@@ -45,37 +68,43 @@ inline ErrorCode& operator|=(ErrorCode& lhs, const ErrorCode rhs) {
     return lhs;
 }
 
-// --- Base Commands
+// Headers/
 struct PacketHdr {
     union {
         uint16_t type;
         Resp resp;
         Cmd cmd;
     };
-    uint16_t id = 0;  // Default is zero
+    uint8_t id = 0;
+    uint8_t version = 0;
 
     // Constructors
-    explicit PacketHdr(const uint16_t id_, const Resp r) : resp(r), id(id_) {}
-    explicit PacketHdr(const uint16_t id_, const Cmd c)  : cmd(c), id(id_) {}
-    explicit PacketHdr(const Cmd c) : PacketHdr(0, c) {}
-    explicit PacketHdr(const Resp r) : PacketHdr(0, r) {}
+    explicit PacketHdr(const Resp r,
+                       const uint8_t id_,
+                       const uint8_t version_)
+        : resp(r), id(id_), version(version_) {}
+
+    explicit PacketHdr(const Cmd c,
+                       const uint8_t id_,
+                       const uint8_t version_)
+        : cmd(c), id(id_), version(version_) {}
+
+    explicit PacketHdr(const Cmd c, const uint8_t version_ = 0)
+        : PacketHdr(c, 0, version_) {}
+
+    explicit PacketHdr(const Resp r, const uint8_t version_ = 0)
+        : PacketHdr(r, 0, version_) {}
 };
 
 // Verify size at compile time
 static_assert(sizeof(PacketHdr) == 4, "PacketHdr must be exactly 4 bytes");
 
-
-struct BaseCmd : PacketHdr {
-    explicit BaseCmd(const Cmd type_ = Cmd::LOOPBACK) : PacketHdr(type_) {};
-};
+// --- Base Commands
+struct BaseCmd {};
 
 struct BaseCmdWithTimesParam : BaseCmd {
-    explicit BaseCmdWithTimesParam(const Cmd type_ = Cmd::LOOPBACK, const uint8_t times = 0)
-        : BaseCmd(type_),
-          times(times) {
-    }
-
-    uint8_t times;
+    uint8_t times{0};
+    explicit BaseCmdWithTimesParam(const uint8_t times_) : times(times_) {}
 };
 
 // --- Commands
@@ -94,46 +123,109 @@ struct CmdGetDatapoint : BaseCmdWithTimesParam {
     bool raw{};
 };
 // --- Base Responses
-struct BaseResp : PacketHdr {
-    explicit BaseResp(const Resp resp_type) : PacketHdr(resp_type) {}
-};
-
-struct RespVoid : BaseResp {
-    explicit RespVoid(const Resp resp_type = Resp::VOID) : BaseResp(resp_type) {}
-};
-
-struct RespError : BaseResp {
-    ErrorCode error{};
-    explicit RespError(const Resp resp_type = Resp::ERROR) : BaseResp(resp_type) {}
-};
+struct BaseResp {};
 
 // --- Responses
-struct RespLoopback : BaseResp {
-    RespLoopback(): BaseResp(Resp::VOID) {}
+struct RespVoid : BaseResp {};
+
+struct RespError : BaseResp {
+    ErrorCode error = ErrorCode::ERROR_NONE;
+
+    explicit RespError(const ErrorCode ec = ErrorCode::ERROR_NONE)
+        : error(ec) {}
 };
+
+struct RespLoopback : BaseResp {};
 
 struct RespGetCalibration : BaseResp {
     Calibration calibration{};
-    RespGetCalibration(): BaseResp(Resp::CALIBRATION) {}
+
+    explicit RespGetCalibration(const Calibration& cal = Calibration{})
+        : calibration(cal) {}
 };
 static_assert(sizeof(RespGetCalibration) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 struct RespGetIdentify : BaseResp {
     Identify1 identify{};
-    RespGetIdentify(): BaseResp(Resp::IDENTIFY) {}
+
+    explicit RespGetIdentify(const Identify1& ident = Identify1{})
+        : identify(ident) {}
 };
 static_assert(sizeof(RespGetIdentify) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
-typedef float MassSensor[MASS_SENSOR_COUNT];
-typedef float TemperatureSensor[TEMPERATURE_SENSOR_COUNT];
-struct RespDataPoint : BaseResp {
-    MassSensor mass_sensor{};
-    float mass{};
-    TemperatureSensor temperature_sensor{};
-    float temperature{};
+struct TLVHdr {
+    EndpointType type;
+    uint8_t length; // number of values
 
-    RespDataPoint() : BaseResp(Resp::DATAPOINT) {}
+    explicit TLVHdr(const EndpointType t = EndpointType::MASS, const uint8_t len = 0)
+        : type(t), length(len) {}
 };
+
+template <typename T>
+struct TLV : TLVHdr {
+    T* value;         // pointer to array of T (can be single value too)
+
+    TLV(const EndpointType t, const uint8_t len, T* val)
+        : TLVHdr(t, len), value(val) {}
+
+    T& operator[](size_t i) { return value[i]; }
+    const T& operator[](size_t i) const { return value[i]; }
+};
+
+// Concrete TLV types
+using FloatTLV = TLV<float>;
+using Uint16TLV = TLV<uint16_t>;
+
+template <size_t MAX_DATAPOINT_SIZE>
+struct DataPoint {
+    uint32_t timestamp = 0;
+private:
+    size_t offset = sizeof(timestamp);  // relative offset into the buffer for adding data
+    TLVHdr* last_tlv = nullptr;         // pointer to last TLV header if any
+
+public:
+    explicit DataPoint(const uint32_t ts = 0) : timestamp(ts) {}
+
+    template <typename T>
+    bool add(const EndpointType type, const T& value) {
+        // Check if we need a new TLV header
+        const bool new_header = (last_tlv == nullptr) || (last_tlv->type != type);
+
+        const size_t required = sizeof(T) + (new_header ? sizeof(TLVHdr) : 0);
+        if (offset + required > MAX_DATAPOINT_SIZE) return false;
+
+        uint8_t* dst = reinterpret_cast<uint8_t*>(this) + offset;
+
+        if (new_header) {
+            last_tlv = reinterpret_cast<TLVHdr*>(dst);
+            last_tlv->type = type;
+            last_tlv->length = 1;
+            offset += sizeof(TLVHdr);
+            dst += sizeof(TLVHdr);
+        } else {
+            last_tlv->length += 1;
+        }
+
+        // Copy value
+        memcpy(dst, &value, sizeof(T));
+        offset += sizeof(T);
+        return true;
+    }
+    size_t getSize() const { return offset; }
+};
+
+
+
+// typedef float MassSensor[MASS_SENSOR_COUNT];
+// typedef float TemperatureSensor[TEMPERATURE_SENSOR_COUNT];
+// struct RespDataPoint : BaseResp {
+//     MassSensor mass_sensor{};
+//     float mass{};
+//     TemperatureSensor temperature_sensor{};
+//     float temperature{};
+//
+//     RespDataPoint() : BaseResp(Resp::DATAPOINT) {}
+// };
 static_assert(sizeof(RespDataPoint) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 #endif /* command_h */

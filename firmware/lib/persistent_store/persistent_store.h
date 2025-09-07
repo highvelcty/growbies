@@ -39,16 +39,21 @@ struct Calibration {
 };
 
 struct Identify0 {
+    // Meta-data that does not affect ABI
+    static constexpr uint8_t VERSION = 0;
+
     NvmHeader header{};
     char firmware_version[32]{};    // <major>.<minor>.<micro>+<short git hash>
 
     // Constructor with version parameter
     explicit Identify0(const uint16_t version = 0) : header(version) {
-        snprintf(this->firmware_version, sizeof(this->firmware_version), "%s", VERSION);
+        snprintf(this->firmware_version, sizeof(this->firmware_version), "%s", FIRMWARE_VERSION);
     }
 };
 
-struct Identify1 : public Identify0 {
+struct Identify1 : Identify0 {
+    static constexpr uint8_t VERSION = 1;
+
     char serial_number[64]{};
     char model_number[64]{};
     float manufacture_date{};       // seconds since epoch

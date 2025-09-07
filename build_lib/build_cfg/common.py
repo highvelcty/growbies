@@ -33,18 +33,15 @@ class Param(StrEnum):
             raise ValueError(f'Invalid parameter: "{param_}"')
 
 class Base(ABC):
+    MODEL_NUMBER = 'Default'
+
     class Key:
         # noinspection PyNewType
         type_ = NewType('Key', str)
-        MODEL_NUMBER: type_ = 'MODEL_NUMBER'
-        VERSION: type_ = 'VERSION'
-
-        all = (MODEL_NUMBER, VERSION)
+        all = tuple()
 
     def _constants(self) -> dict[Key.type_, Any]:
-        return {
-            self.Key.VERSION: '1.2.3-dev0+12345678'
-        }
+        ...
 
     def validate(self):
         constants = self._constants()

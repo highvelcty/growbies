@@ -45,9 +45,9 @@ void Growbies::begin() const {
 
 void Growbies::execute(const PacketHdr* packet_hdr) {
     if (packet_hdr->cmd == Cmd::LOOPBACK) {
-        const auto resp = new (this->outbuf) RespVoid;
+        const auto resp = new (this->packet_buf) RespVoid;
         resp->id = 1;
-        send_packet(this->outbuf, sizeof(RespVoid));
+        send_packet(this->packet_buf, sizeof(RespVoid));
     }
     else if (packet_hdr->cmd == Cmd::GET_DATAPOINT) {
         const auto* cmd = reinterpret_cast<CmdGetDatapoint *>(slip_buf->buf);
@@ -58,57 +58,57 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
     else if (packet_hdr->cmd == Cmd::GET_CALIBRATION) {
         const auto* cmd = reinterpret_cast<CmdGetCalibration *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
-            auto* resp = new (this->outbuf) RespGetCalibration;
+            auto* resp = new (this->packet_buf) RespGetCalibration;
             calibration_store->get(resp->calibration);
-            send_packet(*this->outbuf, sizeof(*resp));
+            send_packet(*this->packet_buf, sizeof(*resp));
         }
     }
     else if (packet_hdr->cmd == Cmd::SET_CALIBRATION) {
         auto* cmd = reinterpret_cast<CmdSetCalibration *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
-            new (this->outbuf) RespVoid;
+            new (this->packet_buf) RespVoid;
             calibration_store->put(cmd->calibration);
-            send_packet(*this->outbuf, sizeof(RespVoid));
+            send_packet(*this->packet_buf, sizeof(RespVoid));
         }
     }
     else if (packet_hdr->cmd == Cmd::POWER_ON_HX711) {
         const auto cmd = reinterpret_cast<CmdPowerOnHx711 *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
             this->power_on();
-            new (this->outbuf) RespVoid;
+            new (this->packet_buf) RespVoid;
 
-            send_packet(*this->outbuf, sizeof(RespVoid));
+            send_packet(*this->packet_buf, sizeof(RespVoid));
         }
     }
     else if (packet_hdr->cmd == Cmd::POWER_OFF_HX711) {
         const auto cmd = reinterpret_cast<CmdPowerOffHx711 *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
             this->power_off();
-            new (this->outbuf) RespVoid;
-            send_packet(*this->outbuf, sizeof(RespVoid));
+            new (this->packet_buf) RespVoid;
+            send_packet(*this->packet_buf, sizeof(RespVoid));
         }
     }
     else if (packet_hdr->cmd == Cmd::GET_IDENTIFY) {
         const auto* cmd = reinterpret_cast<CmdGetIdentify *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
-            auto* resp = new (this->outbuf) RespGetIdentify;
+            auto* resp = new (this->packet_buf) RespGetIdentify;
             resp->id = packet_hdr->id;
             identify_store->get(resp->identify);
-            send_packet(*this->outbuf, sizeof(*resp));
+            send_packet(*this->packet_buf, sizeof(*resp));
         }
     }
     else if (packet_hdr->cmd == Cmd::SET_IDENTIFY) {
         const auto* cmd = reinterpret_cast<CmdSetIdentify *>(slip_buf->buf);
         if(validate_packet(*cmd)) {
-            auto* resp = new (this->outbuf) RespVoid;
+            auto* resp = new (this->packet_buf) RespVoid;
             resp->id = packet_hdr->id;
             identify_store->put(cmd->identify);
-            send_packet(*this->outbuf, sizeof(*resp));
+            send_packet(*this->packet_buf, sizeof(*resp));
         }
     }
 
     else{
-        auto resp = new (this->outbuf) RespError;
+        auto resp = new (this->packet_buf) RespError;
         resp->error = ERROR_UNRECOGNIZED_COMMAND;
         resp->id = packet_hdr->id;
         send_packet(resp, sizeof(RespError));
@@ -117,7 +117,7 @@ void Growbies::execute(const PacketHdr* packet_hdr) {
 
 #if BUTTERFLY
 void Growbies::exec_read(const PacketHdr* hdr) {
-    auto* resp = new (this->outbuf) RespDataPoint;
+    auto* resp = new (this->packet_buf) RespDataPoint;
     RespError resp_error;
     this->get_datapoint(resp, resp_error, BUTTERFLY_SAMPLES_PER_DATAPOINT);
     if (resp_error.error) {
@@ -127,7 +127,7 @@ void Growbies::exec_read(const PacketHdr* hdr) {
         send_packet(resp_error, sizeof(resp_error));
     }
     else {
-        send_packet(*this->outbuf, sizeof(*resp));
+        send_packet(*this->packet_buf, sizeof(*resp));
     }
 }
 #endif

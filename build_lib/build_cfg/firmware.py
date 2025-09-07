@@ -8,8 +8,15 @@ from growbies.utils.paths import FirmwarePaths
 PIOENV = 'PIOENV'
 FILENAME = BASE_FILENAME + '.h'
 
-class BaseFw(Base):
+class Default(Base):
+    _FIRMWARE_VERSION = f'0.0.1-dev0'
+
+    class Key(Base.Key):
+        FIRMWARE_VERSION: Base.Key.type_ = 'FIRMWARE_VERSION'
+        all = (FIRMWARE_VERSION, )
+
     def save(self):
+        self.validate()
         path = FirmwarePaths.FIRMWARE_PIO_BUILD.value / os.environ[PIOENV] / FILENAME
         with open(path, 'w') as outf:
             outf.write(str(self))
@@ -34,14 +41,6 @@ class BaseFw(Base):
         return '\n'.join(str_list)
 
     def _constants(self) -> dict[Base.Key.type_, Any]:
-        ret_dict = super()._constants()
-        ret_dict[self.Key.VERSION] = f'0.0.1-dev0+{get_git_hash()}'
-        return ret_dict
-
-class Default(BaseFw):
-    MODEL_NUMBER = 'MICRO_ESP32C3-MASS_1-TEMP_1-COMM_USB-0'
-
-    def _constants(self) -> dict[Base.Key.type_, Any]:
-        ret_dict = super()._constants()
-        ret_dict[self.Key.MODEL_NUMBER] = self.MODEL_NUMBER
-        return ret_dict
+        return {
+            self.Key.FIRMWARE_VERSION: f'{self._FIRMWARE_VERSION}+{get_git_hash()}'
+        }

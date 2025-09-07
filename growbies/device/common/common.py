@@ -77,11 +77,13 @@ class PacketHdr(BaseStructure):
     class Field(BaseStructure.Field):
         TYPE = '_type'
         ID = '_id'
+        VERSION = 'version'
 
     _pack_ = 1
     _fields_ = [
         (Field.TYPE, ctypes.c_uint16),
-        (Field.ID, ctypes.c_uint16),
+        (Field.ID, ctypes.c_uint8),
+        (Field.VERSION, ctypes.c_uint8)
     ]
 
     @property
@@ -99,3 +101,11 @@ class PacketHdr(BaseStructure):
     @type.setter
     def type(self, value: ['DeviceCmd', 'DeviceResp']):
         setattr(self, self.Field.TYPE, value)
+
+    @property
+    def version(self) -> int:
+        return getattr(self, self.Field.VERSION)
+
+    @version.setter
+    def version(self, val: int):
+        setattr(self, self.Field.VERSION, val)

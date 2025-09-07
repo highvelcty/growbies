@@ -37,7 +37,9 @@ class Growbies {
 
     private:
         uint8_t tare_idx = 0;
-        byte outbuf[SLIP_BUF_ALLOC_BYTES] = {};
+        byte outbuf_[SLIP_BUF_ALLOC_BYTES] = {};
+        PacketHdr* packet_hdr = reinterpret_cast<PacketHdr *>(&packet_buf[0]);
+        byte* packet_buf = &packet_buf[0];
 
         static void power_off();
 
