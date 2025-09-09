@@ -28,55 +28,54 @@ typedef enum HX711Gain {
 class Growbies {
     public:
         Growbies();
-        void begin() const;
 
-        void execute(const PacketHdr* packet_hdr);
+        static void begin();
+
+        void execute(const PacketHdr* in_packet_hdr);
 #if BUTTERFLY
-        void exec_read(const PacketHdr* hdr = nullptr);
+        void exec_read(int packet_id = 0);
 #endif
 
     private:
         uint8_t tare_idx = 0;
-        byte outbuf_[SLIP_BUF_ALLOC_BYTES] = {};
-        PacketHdr* packet_hdr = reinterpret_cast<PacketHdr *>(&packet_buf[0]);
-        byte* packet_buf = &packet_buf[0];
+        uint8_t outbuf[SLIP_BUF_ALLOC_BYTES] = {};
+        PacketHdr* out_packet_hdr = reinterpret_cast<PacketHdr *>(outbuf);
+        uint8_t* packet_buf = outbuf + sizeof(PacketHdr);
 
         static void power_off();
 
         static void power_on();
 
-        static void median_avg_filter(float **iteration_sensor_sample,
-                                       int rows, int cols, float thresh, float* out,
-                                       RespError& resp_error);
-        static void sample_mass(float** iteration_mass_samples, int times, HX711Gain gain,
-                                RespError& resp_error);
-        static void sample_temperature(float** iteration_temp_samples, int times);
-        void get_datapoint(RespDataPoint* resp, RespError& resp_error,
+        static ErrorCode median_avg_filter(float **iteration_sensor_sample,
+                                       int iterations, EndpointType endpoint_type,
+                                       float thresh, DataPoint* data_point);
+        static ErrorCode sample_mass(float** iteration_mass_samples, int times, HX711Gain gain);
+        static ErrorCode sample_temperature(float** iteration_temp_samples, int times);
+        ErrorCode get_datapoint(DataPoint* resp,
                            byte times, bool raw = false,
                            HX711Gain gain = HX711_GAIN_128) const;
 
         static void shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], HX711Gain gain);
 
         static ErrorCode wait_hx711_ready(int retries, unsigned long delay_ms);
+
+        void send_payload(size_t num_bytes);
 };
 
-template <typename PacketType>
-bool check_and_respond_to_deserialization_underflow(const PacketType& packet) {
-    if (slip_buf->buf_len() >= sizeof(packet)) {
-        return true;
-    }
-    else{
-        RespError resp;
-        resp.id = packet.id;
-        resp.error = ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
-        send_packet(resp);
-        return false;
-    }
-};
+// Used to cast a payload structure after a packet header.
+template <typename T, typename U>
+constexpr T* after(U* base) {
+    return reinterpret_cast<T*>(
+        reinterpret_cast<uint8_t*>(base) + sizeof(U)
+    );
+}
 
 template <typename PacketType>
-bool validate_packet(const PacketType& packet) {
-    return check_and_respond_to_deserialization_underflow(packet);
+ErrorCode validate_packet(const PacketHdr& packet_hdr, const PacketType& packet) {
+    if (slip_buf->buf_len() >= sizeof(packet_hdr) + sizeof(packet)) {
+        return ErrorCode::ERROR_NONE;
+    }
+    return ErrorCode::ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
 }
 
 /**

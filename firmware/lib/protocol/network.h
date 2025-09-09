@@ -13,11 +13,11 @@ PacketHdr* recv_packet();
 
 
 template <typename PacketType>
-void send_packet(PacketType& structure, size_t packet_size = 0) {
-    byte* ptr = (byte*)&structure;
+void send_packet(PacketType& structure, const size_t packet_size = 0) {
+    const auto ptr = static_cast<byte *>(&structure);
     uint16_t crc = crc_ccitt16(ptr, packet_size);
     send_slip(ptr, packet_size);
-    send_slip((byte*)&crc, sizeof(crc));
+    send_slip(reinterpret_cast<byte *>(&crc), sizeof(crc));
     send_slip_end();
     // This is crucial for asynchronous communication. Without this, garbage is found on the serial
     // port at host connection time.

@@ -1,7 +1,6 @@
 #ifndef command_h
 #define command_h
 
-#include "flags.h"
 #include "constants.h"
 #include "persistent_store.h"
 
@@ -33,28 +32,13 @@ typedef enum ErrorCode: uint32_t {
     ERROR_UNRECOGNIZED_COMMAND                  = 0x00000002,
     ERROR_OUT_OF_THRESHOLD_SAMPLE               = 0x00000004,
     ERROR_HX711_NOT_READY                       = 0x00000008,
+    ERROR_INTERNAL                              = 0x00000010,
 } ErrorCode;
 
 typedef enum EndpointType: uint8_t {
-    MASS = 0,
-    TEMPERATURE = 1,
-    MASS_0 = 2,
-    MASS_1 = 3,
-    MASS_2 = 4,
-    MASS_3 = 5,
-    MASS_4 = 6,
-    MASS_5 = 7,
-    MASS_6 = 8,
-    MASS_7 = 9,
-    TEMPERATURE_0 = 7,
-    TEMPERATURE_1 = 8,
-    TEMPERATURE_2 = 9,
-    TEMPERATURE_3 = 10,
-    TEMPERATURE_4 = 11,
-    TEMPERATURE_5 = 12,
-    TEMPERATURE_6 = 13,
-    TEMPERATURE_7 = 14,
-    TARE_CRC = 15,
+    EP_MASS = 0,
+    EP_TEMPERATURE = 1,
+    EP_TARE_CRC = 2,
 } EndpointType;
 
 // Bitwise operators for Error
@@ -98,13 +82,14 @@ struct PacketHdr {
 
 // Verify size at compile time
 static_assert(sizeof(PacketHdr) == 4, "PacketHdr must be exactly 4 bytes");
+constexpr int MAX_RESP_BYTES = MAX_SLIP_UNENCODED_PACKET_BYTES - sizeof(PacketHdr);
 
 // --- Base Commands
 struct BaseCmd {};
 
 struct BaseCmdWithTimesParam : BaseCmd {
     uint8_t times{0};
-    explicit BaseCmdWithTimesParam(const uint8_t times_) : times(times_) {}
+    explicit BaseCmdWithTimesParam(const uint8_t times_ = 0) : times(times_) {}
 };
 
 // --- Commands
@@ -116,7 +101,7 @@ struct CmdGetIdentify: BaseCmd {};
 struct CmdSetIdentify : BaseCmd {
     Identify1 identify{};
 };
-
+struct CmdLoopback : BaseCmd {};
 struct CmdPowerOnHx711 : BaseCmd {};
 struct CmdPowerOffHx711 : BaseCmd {};
 struct CmdGetDatapoint : BaseCmdWithTimesParam {
@@ -157,7 +142,7 @@ struct TLVHdr {
     EndpointType type;
     uint8_t length; // number of values
 
-    explicit TLVHdr(const EndpointType t = EndpointType::MASS, const uint8_t len = 0)
+    explicit TLVHdr(const EndpointType t = EndpointType::EP_MASS, const uint8_t len = 0)
         : type(t), length(len) {}
 };
 
@@ -176,7 +161,6 @@ struct TLV : TLVHdr {
 using FloatTLV = TLV<float>;
 using Uint16TLV = TLV<uint16_t>;
 
-template <size_t MAX_DATAPOINT_SIZE>
 struct DataPoint {
     uint32_t timestamp = 0;
 private:
@@ -192,7 +176,7 @@ public:
         const bool new_header = (last_tlv == nullptr) || (last_tlv->type != type);
 
         const size_t required = sizeof(T) + (new_header ? sizeof(TLVHdr) : 0);
-        if (offset + required > MAX_DATAPOINT_SIZE) return false;
+        if (offset + required > MAX_RESP_BYTES) return false;
 
         uint8_t* dst = reinterpret_cast<uint8_t*>(this) + offset;
 
@@ -211,22 +195,22 @@ public:
         offset += sizeof(T);
         return true;
     }
+
+    template <typename T>
+    T* findValue(const EndpointType type) {
+        size_t pos = sizeof(timestamp);
+        while (pos + sizeof(TLVHdr) <= offset) {
+            auto* hdr = reinterpret_cast<TLVHdr*>(reinterpret_cast<uint8_t*>(this) + pos);
+            if (hdr->type == type && hdr->length * sizeof(T) + sizeof(TLVHdr) <= offset - pos) {
+                return reinterpret_cast<T*>(hdr + 1); // value follows header
+            }
+            pos += sizeof(TLVHdr) + hdr->length * sizeof(T);
+        }
+        return nullptr;
+    }
+
     size_t getSize() const { return offset; }
 };
-
-
-
-// typedef float MassSensor[MASS_SENSOR_COUNT];
-// typedef float TemperatureSensor[TEMPERATURE_SENSOR_COUNT];
-// struct RespDataPoint : BaseResp {
-//     MassSensor mass_sensor{};
-//     float mass{};
-//     TemperatureSensor temperature_sensor{};
-//     float temperature{};
-//
-//     RespDataPoint() : BaseResp(Resp::DATAPOINT) {}
-// };
-static_assert(sizeof(RespDataPoint) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 #endif /* command_h */
 

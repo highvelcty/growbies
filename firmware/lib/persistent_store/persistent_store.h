@@ -90,17 +90,38 @@ template <typename T>
 class NvmStoreBase {
 public:
     virtual void begin() = 0;
-    virtual void get(T& value) = 0;
     virtual void put(const T& value) = 0;
+
+
+    // Read-only accessor: returns const pointer
+    const T* view() const {
+        return heap_value;
+    }
+
     virtual ~NvmStoreBase() = default;
+
+protected:
+    T* heap_value{nullptr};
+
+private:
+    virtual void get(T& value) = 0;
+
+    // Load struct into heap and expose pointer
+    T* load() {
+        if (!heap_value) {
+            heap_value = new T{};
+            get(*heap_value);
+        }
+        return heap_value;
+    }
 };
 
 #if ARDUINO_ARCH_AVR
 
 template <typename T>
-class AvrNvmStore : public NvmStoreBase<T> {
+class AvrNvmStore final : public NvmStoreBase<T> {
 public:
-    explicit AvrNvmStore(int offset) : partition_offset(offset) {}
+    explicit AvrNvmStore(const int offset) : partition_offset(offset) {}
 
     void begin() override {
         assert(sizeof(T) < EEPROM.length());
@@ -116,10 +137,7 @@ public:
             value = T{};
             EEPROM.put(partition_offset, value);
         }
-    }
-
-    void get(T& value) override {
-        EEPROM.get(partition_offset, value);
+        this->load();
     }
 
     void put(const T& value) override {
@@ -128,12 +146,16 @@ public:
 
 private:
     int partition_offset;
+
+    void get(T& value) override {
+        EEPROM.get(partition_offset, value);
+    }
 };
 
 #elif ARDUINO_ARCH_ESP32
 
 template <typename T>
-class Esp32NvmStore : public NvmStoreBase<T> {
+class Esp32NvmStore final : public NvmStoreBase<T> {
 public:
     explicit Esp32NvmStore(const char* key) : ns_key(key) {}
 
@@ -146,12 +168,8 @@ public:
         }
 
         this->prefs.end();
-    }
 
-    void get(T& value) override {
-        this->prefs.begin(this->ns, true);
-        this->prefs.getBytes(this->ns_key, &value, sizeof(value));
-        this->prefs.end();
+        this->load();
     }
 
     void put(const T& value) override {
@@ -161,9 +179,15 @@ public:
     }
 
 private:
-    const char* ns = APPNAME;
     Preferences prefs;
     const char* ns_key;
+    const char* ns = APPNAME;
+
+    void get(T& value) override {
+        this->prefs.begin(this->ns, true);
+        this->prefs.getBytes(this->ns_key, &value, sizeof(value));
+        this->prefs.end();
+    }
 };
 
 #endif

@@ -2,7 +2,7 @@
 
 PacketHdr* recv_packet() {
     PacketHdr* packet_hdr = nullptr;
-    uint16_t buf_len = slip_buf->buf_len();
+    const uint16_t buf_len = slip_buf->buf_len();
     uint16_t calc_crc = 0;
     uint16_t crc = 0;
 

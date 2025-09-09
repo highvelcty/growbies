@@ -13,10 +13,9 @@ enum Slip {
 
 class SlipBuf {
     public:
-        uint8_t buf[SLIP_BUF_ALLOC_BYTES];
+        uint8_t buf[SLIP_BUF_ALLOC_BYTES]{};
         uint8_t* buf_ptr = buf;
         bool within_escape = false;
-
         uint16_t buf_len() const;
         void reset();
 };
