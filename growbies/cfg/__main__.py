@@ -16,7 +16,7 @@ class SubCmd(StrEnum):
         if sub_cmd_ == cls.INIT:
             return f'Restore the {APPNAME} configuration to default.'
         else:
-            raise ValueError(f'Database sub-command "{sub_cmd_}" does not exist')
+            raise ValueError(f'Sub-command "{sub_cmd_}" does not exist')
 
 class InitCmdParam(StrEnum):
     YES = 'yes'

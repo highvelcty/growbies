@@ -20,9 +20,6 @@ typedef float Tare[TARE_COUNT];
 constexpr uint16_t MAGIC = 0x7A3F;
 struct NvmHeader {
     uint16_t magic = MAGIC;
-    uint16_t version = 0;
-
-    explicit NvmHeader(const uint16_t v = 0) : version(v) {}
 
     bool is_initialized() const {
         return this->magic == MAGIC;
@@ -34,26 +31,19 @@ struct Calibration {
     MassTemperatureCoeff mass_temperature_coeff{};
     MassCoeff mass_coeff{};
     Tare tare{};
-
-    explicit Calibration(const uint16_t version = 1) : header(version) {}
 };
 
 struct Identify0 {
-    // Meta-data that does not affect ABI
-    static constexpr uint8_t VERSION = 0;
-
     NvmHeader header{};
     char firmware_version[32]{};    // <major>.<minor>.<micro>+<short git hash>
 
     // Constructor with version parameter
-    explicit Identify0(const uint16_t version = 0) : header(version) {
+    explicit Identify0() {
         snprintf(this->firmware_version, sizeof(this->firmware_version), "%s", FIRMWARE_VERSION);
     }
 };
 
 struct Identify1 : Identify0 {
-    static constexpr uint8_t VERSION = 1;
-
     char serial_number[64]{};
     char model_number[64]{};
     float manufacture_date{};       // seconds since epoch
@@ -72,9 +62,6 @@ struct Identify1 : Identify0 {
     uint16_t led{};
     uint16_t frame{};
     uint16_t foot{};
-
-    // Constructor with version parameter
-    explicit Identify1(const uint16_t version = 1) : Identify0(version) {}
 };
 
 #if ARDUINO_ARCH_AVR
@@ -90,30 +77,19 @@ template <typename T>
 class NvmStoreBase {
 public:
     virtual void begin() = 0;
+    virtual void get() = 0;
     virtual void put(const T& value) = 0;
 
 
     // Read-only accessor: returns const pointer
     const T* view() const {
-        return heap_value;
+        return &value_storage;
     }
 
     virtual ~NvmStoreBase() = default;
 
 protected:
-    T* heap_value{nullptr};
-
-private:
-    virtual void get(T& value) = 0;
-
-    // Load struct into heap and expose pointer
-    T* load() {
-        if (!heap_value) {
-            heap_value = new T{};
-            get(*heap_value);
-        }
-        return heap_value;
-    }
+    T value_storage{};
 };
 
 #if ARDUINO_ARCH_AVR
@@ -137,18 +113,19 @@ public:
             value = T{};
             EEPROM.put(partition_offset, value);
         }
-        this->load();
+        this->get();
     }
 
     void put(const T& value) override {
         EEPROM.put(partition_offset, value);
+        this->get();
     }
 
 private:
     int partition_offset;
 
-    void get(T& value) override {
-        EEPROM.get(partition_offset, value);
+    void get() override {
+        EEPROM.get(partition_offset, this->value_storage);
     }
 };
 
@@ -166,16 +143,21 @@ public:
             T value{};
             this->prefs.putBytes(this->ns_key, &value, sizeof(value));
         }
-
         this->prefs.end();
-
-        this->load();
+        this->get();
     }
 
     void put(const T& value) override {
         this->prefs.begin(this->ns, false);
-        this->prefs.putBytes(this->ns_key, &value, sizeof(value));
+        if (!value.header.is_initialized()) {
+            T default_value{};
+            this->prefs.putBytes(this->ns_key, &default_value, sizeof(default_value));
+        }
+        else {
+            this->prefs.putBytes(this->ns_key, &value, sizeof(value));
+        }
         this->prefs.end();
+        this->get();
     }
 
 private:
@@ -183,9 +165,10 @@ private:
     const char* ns_key;
     const char* ns = APPNAME;
 
-    void get(T& value) override {
-        this->prefs.begin(this->ns, true);
-        this->prefs.getBytes(this->ns_key, &value, sizeof(value));
+    void get() override {
+        this->prefs.begin(this->ns, false);
+        this->prefs.getBytes(this->ns_key,
+            &this->value_storage, sizeof(this->value_storage));
         this->prefs.end();
     }
 };

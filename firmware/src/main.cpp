@@ -1,5 +1,6 @@
 #include "constants.h"
 #include "flags.h"
+#include <network.h>
 #include <growbies.h>
 
 #if FEATURE_DISPLAY
@@ -43,7 +44,7 @@ void setup() {
 
 #if BUTTERFLY
 void loop() {
-    growbies.exec_read();
+    // growbies.exec_read();
 
     unsigned long startt = millis();
     do {

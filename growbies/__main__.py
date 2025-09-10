@@ -1,7 +1,5 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import logging
-import os
-import shlex
 import sys
 
 from . import __doc__ as pkg_doc
@@ -60,12 +58,7 @@ elif ServiceCmd.DEACTIVATE == cmd:
 elif ServiceCmd.LOOPBACK == cmd:
     _run_cmd(loopback.LoopbackServiceCmd(serial=getattr(ns, PositionalParam.SERIAL)))
 elif ServiceCmd.ID == cmd:
-    serial = ns_dict.pop(PositionalParam.SERIAL)
     if unknown:
         unknown_str = ', '.join(unknown)
         parsers[ServiceCmd.ID].error(f"Unrecognized arguments: {unknown_str}")
-    print(_run_cmd(identify.IdServiceCmd(serial=serial, device_cmd_kw=ns_dict)))
-else:
-    fwd_cmd = shlex.split(f'{sys.executable} -m {__package__}.{cmd} ') + unknown
-    os.execvp(sys.executable, fwd_cmd)
-
+    print(_run_cmd(identify.IdServiceCmd(cmd_kw=ns_dict)))

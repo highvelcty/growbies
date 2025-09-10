@@ -111,18 +111,25 @@ struct CmdGetDatapoint : BaseCmdWithTimesParam {
 struct BaseResp {};
 
 // --- Responses
-struct RespVoid : BaseResp {};
+struct RespVoid : BaseResp {
+    static constexpr auto VERSION = 0;
+    static constexpr auto TYPE = Resp::VOID;
+};
 
 struct RespError : BaseResp {
+    static constexpr auto VERSION = 0;
+    static constexpr auto TYPE = Resp::ERROR;
+
     ErrorCode error = ErrorCode::ERROR_NONE;
 
     explicit RespError(const ErrorCode ec = ErrorCode::ERROR_NONE)
         : error(ec) {}
 };
 
-struct RespLoopback : BaseResp {};
-
 struct RespGetCalibration : BaseResp {
+    static constexpr auto VERSION = 0;
+    static constexpr auto TYPE = Resp::CALIBRATION;
+
     Calibration calibration{};
 
     explicit RespGetCalibration(const Calibration& cal = Calibration{})
@@ -131,6 +138,9 @@ struct RespGetCalibration : BaseResp {
 static_assert(sizeof(RespGetCalibration) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 struct RespGetIdentify : BaseResp {
+    static constexpr auto VERSION = 1;
+    static constexpr auto TYPE = Resp::IDENTIFY;
+
     Identify1 identify{};
 
     explicit RespGetIdentify(const Identify1& ident = Identify1{})
@@ -148,7 +158,7 @@ struct TLVHdr {
 
 template <typename T>
 struct TLV : TLVHdr {
-    T* value;         // pointer to array of T (can be single value too)
+    T* value; // pointer to array of T (can be single value too)
 
     TLV(const EndpointType t, const uint8_t len, T* val)
         : TLVHdr(t, len), value(val) {}
@@ -157,18 +167,21 @@ struct TLV : TLVHdr {
     const T& operator[](size_t i) const { return value[i]; }
 };
 
-// Concrete TLV types
-using FloatTLV = TLV<float>;
-using Uint16TLV = TLV<uint16_t>;
-
-struct DataPoint {
+// --- Serialized ABI structure ---
+struct DataPointRaw {
     uint32_t timestamp = 0;
-private:
-    size_t offset = sizeof(timestamp);  // relative offset into the buffer for adding data
-    TLVHdr* last_tlv = nullptr;         // pointer to last TLV header if any
+};
 
+// --- Wrapper class for bookkeeping ---
+class DataPoint {
 public:
-    explicit DataPoint(const uint32_t ts = 0) : timestamp(ts) {}
+    static constexpr auto VERSION = 0;
+    static constexpr auto TYPE = Resp::DATAPOINT;
+
+    explicit DataPoint(uint32_t ts = 0)
+        : offset(sizeof(raw.timestamp)), last_tlv(nullptr) {
+        raw.timestamp = ts;
+    }
 
     template <typename T>
     bool add(const EndpointType type, const T& value) {
@@ -178,7 +191,7 @@ public:
         const size_t required = sizeof(T) + (new_header ? sizeof(TLVHdr) : 0);
         if (offset + required > MAX_RESP_BYTES) return false;
 
-        uint8_t* dst = reinterpret_cast<uint8_t*>(this) + offset;
+        uint8_t* dst = reinterpret_cast<uint8_t*>(&raw) + offset;
 
         if (new_header) {
             last_tlv = reinterpret_cast<TLVHdr*>(dst);
@@ -190,17 +203,16 @@ public:
             last_tlv->length += 1;
         }
 
-        // Copy value
         memcpy(dst, &value, sizeof(T));
         offset += sizeof(T);
         return true;
     }
 
     template <typename T>
-    T* findValue(const EndpointType type) {
-        size_t pos = sizeof(timestamp);
+    T* find_value(EndpointType type) {
+        size_t pos = sizeof(DataPointRaw);
         while (pos + sizeof(TLVHdr) <= offset) {
-            auto* hdr = reinterpret_cast<TLVHdr*>(reinterpret_cast<uint8_t*>(this) + pos);
+            auto* hdr = reinterpret_cast<TLVHdr*>(reinterpret_cast<uint8_t*>(&raw) + pos);
             if (hdr->type == type && hdr->length * sizeof(T) + sizeof(TLVHdr) <= offset - pos) {
                 return reinterpret_cast<T*>(hdr + 1); // value follows header
             }
@@ -209,7 +221,15 @@ public:
         return nullptr;
     }
 
-    size_t getSize() const { return offset; }
+    size_t get_size() const { return offset; }
+
+    const DataPointRaw* view() const { return &raw; }
+    DataPointRaw* view() { return &raw; }
+
+private:
+    DataPointRaw raw;
+    size_t offset;    // per-instance tracking
+    TLVHdr* last_tlv; // per-instance tracking
 };
 
 #endif /* command_h */

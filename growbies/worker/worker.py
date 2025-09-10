@@ -1,5 +1,6 @@
 import errno
 import logging
+import queue
 from queue import Queue, Empty, Full
 from threading import Event, Thread
 from typing import Optional
@@ -55,7 +56,10 @@ class Worker(Thread):
             raise ServiceCmdError(f'Worker thread for {self.name} is not ready.')
 
         self._intf.send_cmd(cmd)
-        resp = self._out_queue.get(block=True, timeout=timeout)
+        try:
+            resp = self._out_queue.get(block=True, timeout=timeout)
+        except queue.Empty as err:
+            raise ServiceCmdError from err
 
         if isinstance(resp, ErrorDeviceResp):
             raise DeviceError(resp.error)

@@ -111,6 +111,7 @@ class BaseDataLink(threading.Thread, ABC):
                     if len(buf) >= self._MAX_FRAME_BYTES:
                         logger.warning(f'Slip buffer overflow. Dropping data: '
                                        f'{format_dropped_bytes(buf)}')
+                        logger.debug(f'emey: {BufStr(buf)}')
                         buf.clear()
                     if byte_ == SLIP_END:
                         self._put_not_wait(buf)

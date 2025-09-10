@@ -11,9 +11,10 @@ constexpr int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
 constexpr int WAIT_READY_RETRIES = 100;
 constexpr int WAIT_READY_RETRY_DELAY_MS = 10;
 
-constexpr int SLIP_BUF_ALLOC_BYTES = 512;
+constexpr int SLIP_IN_BUF_ALLOC_BYTES = 256;
+constexpr int SLIP_OUT_BUF_ALLOC_BYTES = 512;
 // The worst case slip packet encoding
-constexpr int MAX_SLIP_UNENCODED_PACKET_BYTES = (SLIP_BUF_ALLOC_BYTES / 2) - 2;
+constexpr int MAX_SLIP_UNENCODED_PACKET_BYTES = (SLIP_OUT_BUF_ALLOC_BYTES / 2) - 2;
 constexpr float INVALID_TEMPERATURE = 1234.5;
 constexpr float INVALID_MASS_SAMPLE_THRESHOLD_DAC = 10000;
 constexpr float INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC = 50;

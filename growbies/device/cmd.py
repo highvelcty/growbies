@@ -139,11 +139,7 @@ class SetIdentifyDeviceCmd(BaseUnion):
 
     @property
     def payload(self) -> TIdentify:
-        id_struct = getattr(self, self.Field.PAYLOAD)
-        if id_struct.hdr.version == 0:
-            return id_struct
-        else:
-            return Identify1.from_buffer(self)
+        return Identify1.from_buffer(self)
 
     @payload.setter
     def payload(self, val: TIdentify):

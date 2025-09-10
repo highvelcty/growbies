@@ -41,13 +41,13 @@ class DeviceResp(IntEnum):
                 resp = (GetCalibrationDeviceRespGetCalibration
                         .from_buffer(frame, ctypes.sizeof(packet_hdr)))
             elif packet_hdr.type == cls.IDENTIFY:
-                resp = Identify.from_buffer(frame, ctypes.sizeof(packet_hdr))
-                if resp.hdr.version == 0:
-                    pass
-                elif resp.hdr.version == 1:
+                if packet_hdr.version == 0:
+                    resp = Identify.from_buffer(frame, ctypes.sizeof(packet_hdr))
+                elif packet_hdr.version == 1:
                     resp = Identify1.from_buffer(frame, ctypes.sizeof(packet_hdr))
                 else:
-                    logger.warning(f'Unimplemented identify version {resp.hdr.version}.')
+                    logger.warning(f'Unimplemented identify version {packet_hdr.version}.')
+                    resp = Identify1.from_buffer(frame, ctypes.sizeof(packet_hdr))
             else:
                 logger.error(f'Unrecognized response type: {packet_hdr.type}')
         except ValueError as err:

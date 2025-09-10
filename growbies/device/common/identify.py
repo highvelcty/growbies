@@ -42,14 +42,7 @@ class IdentifyVersion(IntEnum):
     ZERO = 0
     ONE = 1
 
-class IdentifyHeader(NvmHeader):
-    @property
-    def version(self) -> IdentifyVersion | int:
-        val = getattr(self, self.Field.VERSION)
-        try:
-            return IdentifyVersion(val)
-        except ValueError:
-            return val
+class IdentifyHeader(NvmHeader): pass
 
 class Identify(BaseStructure):
     class Field(BaseStructure.Field):

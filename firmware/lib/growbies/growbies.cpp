@@ -4,6 +4,7 @@
 
 #include "constants.h"
 #include "flags.h"
+#include <network.h>
 #include <growbies.h>
 #include <persistent_store.h>
 #include <sort.h>
@@ -49,101 +50,97 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
 
     if (in_packet_hdr->cmd == Cmd::LOOPBACK) {
         [[maybe_unused]] const auto resp = new (this->packet_buf) RespVoid;
-        send_payload(sizeof(*resp));
+        send_payload(resp, sizeof(*resp));
     }
     else if (in_packet_hdr->cmd == Cmd::GET_DATAPOINT) {
-        const auto* cmd = after<CmdGetDatapoint>(in_packet_hdr);
+        auto* cmd = after<CmdGetDatapoint>(in_packet_hdr);
         error = validate_packet(*in_packet_hdr, *cmd);
         if (!error) {
-            exec_read(in_packet_hdr->id);
+            exec_read(in_packet_hdr->id, cmd->times, cmd->raw);
         }
     }
     else if (in_packet_hdr->cmd == Cmd::GET_CALIBRATION) {
-        const auto* cmd = after<CmdGetCalibration>(in_packet_hdr);
+        auto* cmd = after<CmdGetCalibration>(in_packet_hdr);
         error = validate_packet(*in_packet_hdr, *cmd);
         if(!error) {
-            [[maybe_unused]] auto* resp = after<RespGetCalibration>(in_packet_hdr);
-            memmove(&resp->calibration, calibration_store->view(), sizeof(resp->calibration));
-            send_payload(sizeof(*resp));
+            auto* resp = const_cast<RespGetCalibration*>(after<RespGetCalibration>(in_packet_hdr));
+            memcpy(&resp->calibration, calibration_store->view(), sizeof(resp->calibration));
+            send_payload(resp, sizeof(*resp));
         }
     }
     else if (in_packet_hdr->cmd == Cmd::SET_CALIBRATION) {
-        const auto* cmd = reinterpret_cast<CmdSetCalibration *>(slip_buf->buf);
+        auto* cmd = after<CmdSetCalibration>(in_packet_hdr);
         error = validate_packet(*in_packet_hdr, *cmd);
         if (!error) {
             [[maybe_unused]] const auto resp = new (this->packet_buf) RespVoid;
-            send_payload(sizeof(*resp));
-        }
-    }
-    else if (in_packet_hdr->cmd == Cmd::POWER_ON_HX711) {
-        const auto cmd = reinterpret_cast<CmdPowerOnHx711 *>(slip_buf->buf);
-        error = validate_packet(*in_packet_hdr, *cmd);
-        if (!error) {
-            power_on();
-            new (this->packet_buf) RespVoid;
-
-            send_packet(*this->packet_buf, sizeof(RespVoid));
-        }
-    }
-    else if (in_packet_hdr->cmd == Cmd::POWER_OFF_HX711) {
-        const auto cmd = reinterpret_cast<CmdPowerOffHx711 *>(slip_buf->buf);
-        error = validate_packet(*in_packet_hdr, *cmd);
-        if (!error) {
-            power_off();
-            new (this->packet_buf) RespVoid;
-            send_packet(*this->packet_buf, sizeof(RespVoid));
+            send_payload(resp, sizeof(*resp));
         }
     }
     else if (in_packet_hdr->cmd == Cmd::GET_IDENTIFY) {
-        const auto* cmd = reinterpret_cast<CmdGetIdentify *>(slip_buf->buf);
+        auto* cmd = after<CmdGetIdentify>(in_packet_hdr);
         error = validate_packet(*in_packet_hdr, *cmd);
         if (!error) {
             auto* resp = new (this->packet_buf) RespGetIdentify;
-            memmove(&resp->identify, identify_store->view(), sizeof(resp->identify));
-            send_packet(*this->packet_buf, sizeof(*resp));
+            memcpy(&resp->identify, identify_store->view(), sizeof(resp->identify));
+            send_payload(resp, sizeof(*resp));
         }
     }
     else if (in_packet_hdr->cmd == Cmd::SET_IDENTIFY) {
-        const auto* cmd = reinterpret_cast<CmdSetIdentify *>(slip_buf->buf);
+        auto* cmd = after<CmdSetIdentify>(in_packet_hdr);
         error = validate_packet(*in_packet_hdr, *cmd);
         if (!error) {
-            auto* resp = new (this->packet_buf) RespVoid;
+            [[maybe_unused]] const auto* resp = new (this->packet_buf) RespVoid;
             identify_store->put(cmd->identify);
-            send_packet(*this->packet_buf, sizeof(*resp));
+            send_payload(resp, sizeof(*resp));
         }
     }
+    else if (in_packet_hdr->cmd == Cmd::POWER_ON_HX711) {
+        const auto* cmd = after<CmdPowerOnHx711>(in_packet_hdr);
+        error = validate_packet(*in_packet_hdr, *cmd);
+        if (!error) {
+            power_on();
+            [[maybe_unused]] const auto* resp = new (this->packet_buf) RespVoid;
 
+            send_payload(resp, sizeof(*resp));
+        }
+    }
+    else if (in_packet_hdr->cmd == Cmd::POWER_OFF_HX711) {
+        const auto* cmd = after<CmdPowerOffHx711>(in_packet_hdr);
+        error = validate_packet(*in_packet_hdr, *cmd);
+        if (!error) {
+            power_off();
+            [[maybe_unused]] const auto* resp = new (this->packet_buf) RespVoid;
+            send_payload(resp, sizeof(*resp));
+        }
+    }
     else{
         error = ERROR_UNRECOGNIZED_COMMAND;
     }
 
     if (error) {
-        [[maybe_unused]] auto* resp = after<RespError>(in_packet_hdr);
+        [[maybe_unused]] auto* resp = const_cast<RespError*>(after<RespError>(in_packet_hdr));
         resp->error = error;
-        send_payload(sizeof(*resp));
+        send_payload(resp, sizeof(*resp));
     }
 }
 
 #if BUTTERFLY
-void Growbies::exec_read(const int packet_id) {
-    this->out_packet_hdr->id = packet_id;
+void Growbies::exec_read(const uint8_t packet_hdr_id, int times, bool raw) {
+    ErrorCode error = ERROR_NONE;
 
+    this->out_packet_hdr->id = packet_hdr_id;
     auto* resp = new (this->packet_buf) DataPoint;
-    RespError resp_error;
-    this->get_datapoint(resp,BUTTERFLY_SAMPLES_PER_DATAPOINT);
-    if (resp_error.error) {
-        memmove(this->packet_buf, &resp_error, sizeof(RespError));
-        send_packet(this->out_packet_hdr, sizeof(&this->out_packet_hdr) + sizeof(resp_error));
+    error = this->get_datapoint(resp, times, raw);
+    if (error) {
+        auto* resp_error = new (this->packet_buf) RespError;
+        resp_error->error = error;
+        send_payload(resp, sizeof(*resp_error));
     }
     else {
-        send_packet(*this->packet_buf, sizeof(&this->out_packet_hdr) + resp->getSize());
+        send_payload(resp, resp->get_size());
     }
 }
 #endif
-
-void Growbies::send_payload(const size_t num_bytes) {
-    send_packet(out_packet_hdr, sizeof(*out_packet_hdr) + num_bytes);
-}
 
 void Growbies::power_off() {
     digitalWrite(HX711_SCK_PIN, HIGH);
@@ -156,12 +153,12 @@ void Growbies::power_on() {
 }
 
 ErrorCode Growbies::median_avg_filter(float **iteration_sensor_sample,
-                                      const int iterations, const EndpointType endpoint_type,
-                                      const float thresh, DataPoint* data_point) {
+                                      const int iterations, EndpointType endpoint_type,
+                                      const float thresh, DataPoint* datapoint) {
     int iteration;
     float median;
     float samples[iterations];
-    int sensor_count;
+    uint16_t sensor_count;
     ErrorCode error = ERROR_NONE;
     const Identify1* ident = identify_store->view();
 
@@ -176,7 +173,7 @@ ErrorCode Growbies::median_avg_filter(float **iteration_sensor_sample,
     }
 
     // Filter and average
-    for (int sensor_idx = 0; sensor_idx < sensor_count; ++sensor_idx) {
+    for (uint16_t sensor_idx = 0; sensor_idx < sensor_count; ++sensor_idx) {
         for (iteration = 0; iteration < iterations; ++iteration) {
             samples[iteration] = iteration_sensor_sample[iteration][sensor_idx];
         }
@@ -213,8 +210,7 @@ ErrorCode Growbies::median_avg_filter(float **iteration_sensor_sample,
         if (error_count >= min(2, iterations)) {
             error = ERROR_OUT_OF_THRESHOLD_SAMPLE;
         }
-        data_point->add(endpoint_type,
-                   static_cast<float>(sum) / static_cast<float>(sum_count));
+        datapoint->add(endpoint_type, sum / static_cast<float>(sum_count));
     }
     return error;
 }
@@ -231,10 +227,10 @@ ErrorCode Growbies::sample_mass(float** iteration_mass_samples,
 	    }
         shift_all_in(iteration_mass_samples[iteration], gain);
     }
+    return error;
 }
 
-ErrorCode Growbies::sample_temperature(float **iteration_temp_samples, const int times) {
-    ErrorCode error = ERROR_NONE;
+void Growbies::sample_temperature(float **iteration_temp_samples, const int times) {
     for (int iteration = 0; iteration < times; ++iteration) {
         for (int sensor_idx = 0; sensor_idx < TEMPERATURE_SENSOR_COUNT; ++sensor_idx) {
         #if ARDUINO_ARCH_AVR
@@ -246,17 +242,15 @@ ErrorCode Growbies::sample_temperature(float **iteration_temp_samples, const int
             iteration_temp_samples[iteration][sensor_idx] = \
                 static_cast<float>(analogReadMilliVolts(get_temperature_pin(sensor_idx))) / 1000.0;
         #endif
-
         }
     }
-    return error;
 }
 
-ErrorCode Growbies::get_datapoint(DataPoint* resp,
-                                  byte times, const bool raw,
+ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
+                                  const int times, const bool raw,
                                   const HX711Gain gain) const {
     int iteration;
-    int sensor_idx;
+    uint16_t sensor_idx;
     ErrorCode error = ERROR_NONE;
     const Calibration* cal_struct = calibration_store->view();
     const Identify1* ident = identify_store->view();
@@ -291,7 +285,7 @@ ErrorCode Growbies::get_datapoint(DataPoint* resp,
                               times,
                               EP_MASS,
                               INVALID_MASS_SAMPLE_THRESHOLD_DAC,
-                              resp);
+                              datapoint);
     if (error) {
         return error;
     }
@@ -301,7 +295,7 @@ ErrorCode Growbies::get_datapoint(DataPoint* resp,
                               times,
                               EP_TEMPERATURE,
                               INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC,
-                              resp);
+                              datapoint);
     if (error) {
         return error;
     }
@@ -310,17 +304,21 @@ ErrorCode Growbies::get_datapoint(DataPoint* resp,
     float mass = 0.0;
     float temperature = 0.0;
 
+    auto* mass_ptr = datapoint->find_value<float>(EP_MASS);
+    auto* temp_ptr = datapoint->find_value<float>(EP_TEMPERATURE);
+
+
     for (sensor_idx = 0; sensor_idx < ident->mass_sensor_count; ++sensor_idx) {
         if (!raw) {
             // mass/temperature compensation per sensor
-            resp->mass_sensor[sensor_idx] -= (
+            mass_ptr[sensor_idx] -= (
                 (cal_struct->mass_temperature_coeff[sensor_idx][0]
-                * resp->temperature_sensor[get_temperature_sensor_idx(sensor_idx)])
+                * temp_ptr[get_temperature_sensor_idx(sensor_idx)])
                 + cal_struct->mass_temperature_coeff[sensor_idx][1]);
         }
 
         // Sum  mass
-        mass += resp->mass_sensor[sensor_idx];
+        mass += mass_ptr[sensor_idx];
     }
     if (!raw) {
         // Mass calibration and tare
@@ -331,12 +329,11 @@ ErrorCode Growbies::get_datapoint(DataPoint* resp,
 
     for (sensor_idx = 0; sensor_idx < ident->temperature_sensor_count; ++sensor_idx) {
         if (!raw) {
-            resp->temperature_sensor[sensor_idx] = \
-                steinhart_hart(resp->temperature_sensor[sensor_idx]);
+            temp_ptr[sensor_idx] = steinhart_hart(temp_ptr[sensor_idx]);
         }
-        resp->temperature += resp->temperature_sensor[sensor_idx];
+        temperature += temp_ptr[sensor_idx];
      }
-    resp->temperature /= TEMPERATURE_SENSOR_COUNT;
+    temperature /= TEMPERATURE_SENSOR_COUNT;
 
     // Free 2D arrays
     for(iteration = 0; iteration < times; ++iteration) {
