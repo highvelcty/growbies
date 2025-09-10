@@ -21,36 +21,29 @@ def make_cli(parser: ArgumentParser):
                             help=PositionalParam.get_help_str(PositionalParam.SERIAL))
     parser.add_argument(f'--{Param.INIT}', action='store_true',
                         help='Set to initialize to default values.')
-    parser.add_argument(_field_to_param(id_mod.Identify.Field.MODEL_NUMBER),
-                        default=None, type=str)
-    parser.add_argument(_field_to_param(id_mod.Identify.Field.MASS_SENSOR_COUNT),
-                        default=None, type=int)
+    parser.add_argument(_field_to_param(id_mod.Identify.Field.MODEL_NUMBER), default=None, type=str)
+    parser.add_argument(_field_to_param(id_mod.Identify.Field.MASS_SENSOR_COUNT), default=None,
+                        type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.MASS_SENSOR_TYPE),
-                        choices=[None] + list(id_mod.MassSensorType), default=None,
-                        type=id_mod.MassSensorType)
+                        choices=[None] + list(id_mod.MassSensorType), default=None, type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.TEMPERATURE_SENSOR_COUNT),
                         default=None, type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.TEMPERATURE_SENSOR_TYPE),
-                        choices=[None] + list(id_mod.MassSensorType), default=None,
-                        type=id_mod.TemperatureSensorType)
+                        choices=[None] + list(id_mod.MassSensorType), default=None, type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.PCBA),
-                        choices=[None] + list(id_mod.PcbaType), default=None, type=id_mod.PcbaType)
+                        choices=[None] + list(id_mod.PcbaType), default=None, type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.WIRELESS),
-                        choices=[None] + list(id_mod.WirelessType), default=None,
-                        type=id_mod.WirelessType)
+                        choices=[None] + list(id_mod.WirelessType), default=None, type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.BATTERY),
-                        choices=[None] + list(id_mod.BatteryType), default=None,
-                        type=id_mod.BatteryType)
+                        choices=[None] + list(id_mod.BatteryType), default=None, type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.DISPLAY),
-                        choices=[None] + list(id_mod.DisplayType), default=None,
-                        type=id_mod.DisplayType)
+                        choices=[None] + list(id_mod.DisplayType), default=None, type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.LED),
-                        choices=[None] + list(id_mod.LedType), default=None, type=id_mod.LedType)
+                        choices=[None] + list(id_mod.LedType), default=None, type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.FRAME),
-                        choices=[None] + list(id_mod.FrameType), default=None,
-                        type=id_mod.FrameType)
+                        choices=[None] + list(id_mod.FrameType), default=None, type=int)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.FOOT),
-                        choices=[None] + list(id_mod.FootType), default=None, type=id_mod.FootType)
+                        choices=[None] + list(id_mod.FootType), default=None, type=int)
 
 class IdServiceCmd(BaseServiceCmd):
     cmd_kw: dict
@@ -59,10 +52,8 @@ class IdServiceCmd(BaseServiceCmd):
 
 def get_or_set(cmd: IdServiceCmd) -> id_mod.TIdentify:
     pool = get_pool()
-
     serial = cmd.cmd_kw.pop(PositionalParam.SERIAL)
     init = cmd.cmd_kw.pop(Param.INIT, None)
-
     device = serials_to_devices(serial)[0]
 
     try:
@@ -72,22 +63,24 @@ def get_or_set(cmd: IdServiceCmd) -> id_mod.TIdentify:
 
     identify: id_mod.TIdentify = worker.cmd(GetIdentifyDeviceCmd())
 
-    if all(value is None for value in cmd.cmd_kw.values()):
+    if not init and all(value is None for value in cmd.cmd_kw.values()):
         return identify
 
     if init:
         # Setting magic to the non-magic number will initialize the structure in non-volatile
         # memory, on device, with default values.
         identify.hdr.magic = 0
-    else:
-        for key, val in cmd.cmd_kw.items():
-            if getattr(identify, key) is None:
-                raise ServiceCmdError(f'Identify version {identify.hdr.version} does not support the '
-                                      f'"{key}" field.')
-            if val is not None:
-                setattr(identify, key, val)
 
-    _ = worker.cmd(SetIdentifyDeviceCmd(payload=identify))
+    for key, val in cmd.cmd_kw.items():
+        if getattr(identify, key) is None:
+            raise ServiceCmdError(f'Identify version {identify.hdr.version} does not support the '
+                                  f'"{key}" field.')
+        if val is not None:
+            setattr(identify, key, val)
+
+    cmd = SetIdentifyDeviceCmd(payload=identify)
+    _ = worker.cmd(cmd)
+
     return worker.cmd(GetIdentifyDeviceCmd())
 
 def get_service_cmd(ns: Namespace) -> IdServiceCmd:

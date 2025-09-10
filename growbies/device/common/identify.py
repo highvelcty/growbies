@@ -201,8 +201,8 @@ TIdentify = NewType('TIdentify', Identify)
 class Identify1(Identify):
     _pack_ = 1
     _fields_ = [
-        (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 64),
-        (Identify.Field.MODEL_NUMBER, ctypes.c_char * 64),
+        (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 32),
+        (Identify.Field.MODEL_NUMBER, ctypes.c_char * 32),
         (Identify.Field.MANUFACTURE_DATE, ctypes.c_float),
         (Identify.Field.MASS_SENSOR_COUNT, ctypes.c_uint16),
         (Identify.Field.MASS_SENSOR_TYPE, ctypes.c_uint16),

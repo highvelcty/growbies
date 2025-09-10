@@ -46,6 +46,7 @@ def _run_cmd(cmd_: TBaseServiceCmd, timeout = DEFAULT_CMD_TIMEOUT_SECONDS):
 
     if isinstance(resp, (ServiceCmdError, DeviceError)):
         sys.stderr.write(f'{resp}\n')
+        sys.stderr.flush()
         sys.exit(getattr(resp, 'error', 1))
     return resp
 

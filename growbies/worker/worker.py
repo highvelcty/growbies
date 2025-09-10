@@ -58,8 +58,8 @@ class Worker(Thread):
         self._intf.send_cmd(cmd)
         try:
             resp = self._out_queue.get(block=True, timeout=timeout)
-        except queue.Empty as err:
-            raise ServiceCmdError from err
+        except queue.Empty:
+            raise ServiceCmdError(f'Timeout {timeout} seconds waiting for response.')
 
         if isinstance(resp, ErrorDeviceResp):
             raise DeviceError(resp.error)

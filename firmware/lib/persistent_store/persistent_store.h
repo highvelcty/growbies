@@ -8,6 +8,7 @@
 #include <Preferences.h>
 #endif
 
+#include <Arduino.h>
 #include "build_cfg.h"
 #include "constants.h"
 
@@ -18,7 +19,7 @@ typedef float Tare[TARE_COUNT];
 #pragma pack(1)
 
 constexpr uint16_t MAGIC = 0x7A3F;
-struct NvmHeader {
+struct NvmHdr {
     uint16_t magic = MAGIC;
 
     bool is_initialized() const {
@@ -27,14 +28,14 @@ struct NvmHeader {
 };
 
 struct Calibration {
-    NvmHeader header;
+    NvmHdr hdr;
     MassTemperatureCoeff mass_temperature_coeff{};
     MassCoeff mass_coeff{};
     Tare tare{};
 };
 
 struct Identify0 {
-    NvmHeader header{};
+    NvmHdr hdr{};
     char firmware_version[32]{};    // <major>.<minor>.<micro>+<short git hash>
 
     // Constructor with version parameter
@@ -44,8 +45,8 @@ struct Identify0 {
 };
 
 struct Identify1 : Identify0 {
-    char serial_number[64]{};
-    char model_number[64]{};
+    char serial_number[32]{};
+    char model_number[32]{};
     float manufacture_date{};       // seconds since epoch
 
     // Sensor configuration
@@ -70,8 +71,9 @@ constexpr int PARTITION_B_OFFSET = 512;
 constexpr int PARTITION_C_OFFSET = 640;
 constexpr int PARTITION_D_OFFSET = 768;
 constexpr int PARTITION_E_OFFSET = 896;
-
 #endif
+
+
 
 template <typename T>
 class NvmStoreBase {
@@ -101,23 +103,23 @@ public:
 
     void begin() override {
         assert(sizeof(T) < EEPROM.length());
-        T value;
-        EEPROM.get(partition_offset, value);
+        NvmHdr hdr{};
+        EEPROM.get(partition_offset, this->value_storage);
 
-        if (!value.header.is_initialized()) {
-            // zero entire struct
-            for (size_t offset = 0; offset < sizeof(T); ++offset) {
-                EEPROM.update(partition_offset + offset, 0);
-            }
-            // initialize default
-            value = T{};
-            EEPROM.put(partition_offset, value);
+        if (!this->value_storage.hdr.is_initialized()) {
+            this->value_storage = T{};
+            EEPROM.put(partition_offset, this->value_storage);
         }
-        this->get();
     }
 
     void put(const T& value) override {
-        EEPROM.put(partition_offset, value);
+        if (!value.hdr.is_initialized()) {
+            this->value_storage = T{};
+            EEPROM.put(partition_offset, this->value_storage);
+        }
+        else {
+            EEPROM.put(partition_offset, value);
+        }
         this->get();
     }
 
@@ -140,24 +142,24 @@ public:
         this->prefs.begin(this->ns, false);
 
         if (!this->prefs.isKey(this->ns_key)) {
-            T value{};
-            this->prefs.putBytes(this->ns_key, &value, sizeof(value));
+            this->value_storage = T{};
+            this->prefs.putBytes(this->ns_key, &this->value_storage,
+                sizeof(this->value_storage));
         }
         this->prefs.end();
-        this->get();
     }
 
     void put(const T& value) override {
         this->prefs.begin(this->ns, false);
-        if (!value.header.is_initialized()) {
-            T default_value{};
-            this->prefs.putBytes(this->ns_key, &default_value, sizeof(default_value));
+        if (!value.hdr.is_initialized()) {
+            this->value_storage = T{};
         }
         else {
-            this->prefs.putBytes(this->ns_key, &value, sizeof(value));
+            this->value_storage = value;
         }
+        this->prefs.putBytes(this->ns_key, &this->value_storage,
+            sizeof(this->value_storage));
         this->prefs.end();
-        this->get();
     }
 
 private:
@@ -167,8 +169,7 @@ private:
 
     void get() override {
         this->prefs.begin(this->ns, false);
-        this->prefs.getBytes(this->ns_key,
-            &this->value_storage, sizeof(this->value_storage));
+        this->prefs.getBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
         this->prefs.end();
     }
 };

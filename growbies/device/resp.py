@@ -157,5 +157,9 @@ class VoidDeviceResp(BaseStructure): pass
 
 class DeviceError(Exception):
     def __init__(self, error: DeviceErrorCode):
-        self.error = error
-        super().__init__(f'DeviceError 0x{error:08X} "{error}".')
+        try:
+            error = int(error)
+            error_msg = f'DeviceError 0x{error:08X} "{error}".'
+        except ValueError:
+            error_msg = error
+        super().__init__(error_msg)
