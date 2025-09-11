@@ -1,6 +1,7 @@
+from typing import Optional
 import logging
 
-from ..common import BaseServiceCmd, PositionalParam, ServiceCmd, ServiceCmdError, SUBCMD
+from ..common import ServiceCmd, PositionalParam, ServiceCmdError
 from ..serials_to_devices import serials_to_devices
 from growbies.device.cmd import GetIdentifyDeviceCmd, SetIdentifyDeviceCmd
 from growbies.device.common import identify as id_mod
@@ -8,7 +9,7 @@ from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
 
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
 
 def _field_to_param(field: str):
     return f'--{id_mod.Identify1.Field.lstrip(field)}'
@@ -21,6 +22,8 @@ def make_cli(parser: ArgumentParser):
                             help=PositionalParam.get_help_str(PositionalParam.SERIAL))
     parser.add_argument(f'--{Param.INIT}', action='store_true',
                         help='Set to initialize to default values.')
+    parser.add_argument(_field_to_param(id_mod.Identify.Field.SERIAL_NUMBER), default=None,
+                        type=str)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.MODEL_NUMBER), default=None, type=str)
     parser.add_argument(_field_to_param(id_mod.Identify.Field.MASS_SENSOR_COUNT), default=None,
                         type=int)
@@ -45,46 +48,38 @@ def make_cli(parser: ArgumentParser):
     parser.add_argument(_field_to_param(id_mod.Identify.Field.FOOT),
                         choices=[None] + list(id_mod.FootType), default=None, type=int)
 
-class IdServiceCmd(BaseServiceCmd):
-    cmd_kw: dict
-    def __init__(self, **kw):
-        super().__init__(cmd=ServiceCmd.ID, **kw)
+def _init(worker):
+    cmd = SetIdentifyDeviceCmd(init=True)
+    cmd.init = True
+    _ = worker.cmd(cmd)
 
-def get_or_set(cmd: IdServiceCmd) -> id_mod.TIdentify:
+def get_or_set(cmd: ServiceCmd) -> Optional[id_mod.TIdentify]:
     pool = get_pool()
-    serial = cmd.cmd_kw.pop(PositionalParam.SERIAL)
-    init = cmd.cmd_kw.pop(Param.INIT, None)
+    serial = cmd.kw.pop(PositionalParam.SERIAL)
+    init = cmd.kw.pop(Param.INIT)
     device = serials_to_devices(serial)[0]
-
     try:
         worker = pool.workers[device.id]
     except KeyError:
         raise ServiceCmdError(f'Serial number "{device.serial}" is inactive.')
 
+    if init:
+        return _init(worker)
+
     identify: id_mod.TIdentify = worker.cmd(GetIdentifyDeviceCmd())
 
-    if not init and all(value is None for value in cmd.cmd_kw.values()):
+    if all(value is None for value in cmd.kw.values()):
         return identify
 
-    if init:
-        # Setting magic to the non-magic number will initialize the structure in non-volatile
-        # memory, on device, with default values.
-        identify.hdr.magic = 0
-
-    for key, val in cmd.cmd_kw.items():
+    for key, val in cmd.kw.items():
         if getattr(identify, key) is None:
             raise ServiceCmdError(f'Identify version {identify.hdr.version} does not support the '
                                   f'"{key}" field.')
         if val is not None:
             setattr(identify, key, val)
 
-    cmd = SetIdentifyDeviceCmd(payload=identify)
+    cmd = SetIdentifyDeviceCmd()
+    cmd.identify = identify
     _ = worker.cmd(cmd)
 
     return worker.cmd(GetIdentifyDeviceCmd())
-
-def get_service_cmd(ns: Namespace) -> IdServiceCmd:
-    partial_serial = getattr(ns, PositionalParam.SERIAL)
-    delattr(ns, PositionalParam.SERIAL)
-    device = serials_to_devices(partial_serial)[0]
-    return IdServiceCmd(serial=device.serial, kw=vars(ns))

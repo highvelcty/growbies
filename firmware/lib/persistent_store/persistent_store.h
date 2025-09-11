@@ -1,5 +1,10 @@
-#ifndef persistent_store_h
-#define persistent_store_h
+#pragma once
+
+#include <Arduino.h>
+
+#include "build_cfg.h"
+#include "constants.h"
+#include "types.h"
 
 #if ARDUINO_ARCH_AVR
 #include <stdio.h>
@@ -8,11 +13,7 @@
 #include <Preferences.h>
 #endif
 
-#include <Arduino.h>
-#include "build_cfg.h"
-#include "constants.h"
-
-typedef float MassTemperatureCoeff[MASS_SENSOR_COUNT][COEFF_COUNT];
+typedef float MassTemperatureCoeff[MAX_MASS_SENSOR_COUNT][COEFF_COUNT];
 typedef float MassCoeff[COEFF_COUNT];
 typedef float Tare[TARE_COUNT];
 
@@ -28,14 +29,12 @@ struct NvmHdr {
 };
 
 struct Calibration {
-    NvmHdr hdr;
     MassTemperatureCoeff mass_temperature_coeff{};
     MassCoeff mass_coeff{};
     Tare tare{};
 };
 
 struct Identify0 {
-    NvmHdr hdr{};
     char firmware_version[32]{};    // <major>.<minor>.<micro>+<short git hash>
 
     // Constructor with version parameter
@@ -50,19 +49,19 @@ struct Identify1 : Identify0 {
     float manufacture_date{};       // seconds since epoch
 
     // Sensor configuration
-    uint16_t mass_sensor_count{};
-    uint16_t mass_sensor_type{};
-    uint16_t temperature_sensor_count{};
-    uint16_t temperature_sensor_type{};
+    uint8_t mass_sensor_type{};
+    SensorIdx_t mass_sensor_count{};
+    uint8_t temperature_sensor_type{};
+    SensorIdx_t temperature_sensor_count{};
 
     // Hardware configuration
-    uint16_t pcba{};
-    uint16_t wireless{};
-    uint16_t battery{};
-    uint16_t display{};
-    uint16_t led{};
-    uint16_t frame{};
-    uint16_t foot{};
+    uint8_t pcba{};
+    uint8_t wireless{};
+    uint8_t battery{};
+    uint8_t display{};
+    uint8_t led{};
+    uint8_t frame{};
+    uint8_t foot{};
 };
 
 #if ARDUINO_ARCH_AVR
@@ -79,7 +78,11 @@ template <typename T>
 class NvmStoreBase {
 public:
     virtual void begin() = 0;
-    virtual void get() = 0;
+    virtual void update() = 0;
+    virtual void init() {
+        put(T{});
+    }
+
     virtual void put(const T& value) = 0;
 
 
@@ -89,6 +92,21 @@ public:
     }
 
     virtual ~NvmStoreBase() = default;
+
+    template<typename U = T>
+    typename std::enable_if<std::is_same<U, Identify1>::value>::type
+    set_firmware_version() {
+        snprintf(this->value_storage.firmware_version,
+                 sizeof(this->value_storage.firmware_version),
+                 "%s",
+                 FIRMWARE_VERSION);
+    }
+
+    template<typename U = T>
+    typename std::enable_if<!std::is_same<U, Identify1>::value>::type
+    set_firmware_version() {
+        // do nothing
+    }
 
 protected:
     T value_storage{};
@@ -102,32 +120,30 @@ public:
     explicit AvrNvmStore(const int offset) : partition_offset(offset) {}
 
     void begin() override {
-        assert(sizeof(T) < EEPROM.length());
+        assert(partition_offset + sizeof(T) < EEPROM.length());
         NvmHdr hdr{};
-        EEPROM.get(partition_offset, this->value_storage);
+        EEPROM.get(partition_offset, hdr);
 
-        if (!this->value_storage.hdr.is_initialized()) {
-            this->value_storage = T{};
-            EEPROM.put(partition_offset, this->value_storage);
+        if (!hdr.is_initialized()) {
+            init();
         }
+        update();
+
+        this->set_firmware_version();
+        put(this->value_storage);
     }
 
     void put(const T& value) override {
-        if (!value.hdr.is_initialized()) {
-            this->value_storage = T{};
-            EEPROM.put(partition_offset, this->value_storage);
-        }
-        else {
-            EEPROM.put(partition_offset, value);
-        }
-        this->get();
+        this->value_storage = value;
+        EEPROM.put(partition_offset, NvmHdr{});
+        EEPROM.put(partition_offset + sizeof(NvmHdr), value);
     }
 
 private:
     int partition_offset;
 
-    void get() override {
-        EEPROM.get(partition_offset, this->value_storage);
+    void update() override {
+        EEPROM.get(partition_offset + sizeof(NvmHdr), this->value_storage);
     }
 };
 
@@ -139,26 +155,30 @@ public:
     explicit Esp32NvmStore(const char* key) : ns_key(key) {}
 
     void begin() override {
+        bool do_init = false;
+
         this->prefs.begin(this->ns, false);
 
         if (!this->prefs.isKey(this->ns_key)) {
-            this->value_storage = T{};
-            this->prefs.putBytes(this->ns_key, &this->value_storage,
-                sizeof(this->value_storage));
+            do_init = true;
         }
         this->prefs.end();
+
+        if (do_init) {
+            init();
+        }
+
+        update();
+
+        this->set_firmware_version();
+        // Warning, putting this into set_firmware_version causes a crash
+        put(this->value_storage);
     }
 
     void put(const T& value) override {
         this->prefs.begin(this->ns, false);
-        if (!value.hdr.is_initialized()) {
-            this->value_storage = T{};
-        }
-        else {
-            this->value_storage = value;
-        }
-        this->prefs.putBytes(this->ns_key, &this->value_storage,
-            sizeof(this->value_storage));
+        this->value_storage = value;
+        this->prefs.putBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
         this->prefs.end();
     }
 
@@ -167,7 +187,7 @@ private:
     const char* ns_key;
     const char* ns = APPNAME;
 
-    void get() override {
+    void update() override {
         this->prefs.begin(this->ns, false);
         this->prefs.getBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
         this->prefs.end();
@@ -187,5 +207,3 @@ using IdentifyStore    = Esp32NvmStore<Identify1>;
 
 extern CalibrationStore* calibration_store;
 extern IdentifyStore* identify_store;
-
-#endif /* persistent_store_h */

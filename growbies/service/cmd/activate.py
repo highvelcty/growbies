@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from sqlmodel import Field
 import logging
 
-from ..common import BaseServiceCmd, PositionalParam, ServiceCmd
+from ..common import ServiceCmd, PositionalParam, ServiceOp
 from growbies.db.engine import get_db_engine
 from growbies.service.serials_to_devices import serials_to_devices
 from growbies.utils.types import Serial_t
@@ -15,26 +15,26 @@ def make_cli(parser: ArgumentParser):
                         help=PositionalParam.get_help_str(PositionalParam.SERIALS))
 
 
-class ActivateServiceCmd(BaseServiceCmd):
+class ActivateServiceCmd(ServiceCmd):
     serials: list[Serial_t] = Field(default_factory=list, min_length=1)
     def __init__(self, **kw):
-        super().__init__(cmd=ServiceCmd.ACTIVATE, **kw)
+        super().__init__(cmd=ServiceOp.ACTIVATE, **kw)
 
-class DeactivateServiceCmd(BaseServiceCmd):
+class DeactivateServiceCmd(ServiceCmd):
     serials: list[Serial_t] = Field(default_factory=list, min_length=1)
     def __init__(self, **kw):
-        super().__init__(cmd=ServiceCmd.DEACTIVATE, **kw)
+        super().__init__(cmd=ServiceOp.DEACTIVATE, **kw)
 
-def activate(cmd: ActivateServiceCmd):
-    devices = serials_to_devices(*cmd.serials)
+def activate(cmd: ServiceCmd):
+    devices = serials_to_devices(*cmd.kw[PositionalParam.SERIALS])
     device_ids = [dev.id for dev in devices]
     engine = get_db_engine().devices
     worker_pool = get_pool()
     engine.set_active(*device_ids)
     worker_pool.connect(*device_ids)
 
-def deactivate(cmd: DeactivateServiceCmd):
-    devices = serials_to_devices(*cmd.serials)
+def deactivate(cmd: ServiceCmd):
+    devices = serials_to_devices(*cmd.kw[PositionalParam.SERIALS])
     device_ids = [dev.id for dev in devices]
     engine = get_db_engine().devices
     worker_pool = get_pool()

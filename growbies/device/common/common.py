@@ -3,8 +3,8 @@ import ctypes
 import logging
 
 if TYPE_CHECKING:
-    from ..cmd import DeviceCmd
-    from ..resp import DeviceResp
+    from ..cmd import DeviceCmdOp
+    from ..resp import DeviceRespOp
 
 logger = logging.getLogger(__name__)
 
@@ -95,11 +95,11 @@ class PacketHdr(BaseStructure):
         setattr(self, self.Field.ID, value)
 
     @property
-    def type(self) -> Union['DeviceCmd', 'DeviceResp']:
+    def type(self) -> Union['DeviceCmdOp', 'DeviceRespOp']:
         return getattr(self, self.Field.TYPE)
 
     @type.setter
-    def type(self, value: ['DeviceCmd', 'DeviceResp']):
+    def type(self, value: ['DeviceCmdOp', 'DeviceRespOp']):
         setattr(self, self.Field.TYPE, value)
 
     @property

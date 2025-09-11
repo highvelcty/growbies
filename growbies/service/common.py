@@ -21,7 +21,7 @@ class PositionalParam(StrEnum):
             return 'A list of serial numbers. This can be unique partial matches.'
         raise ValueError(f'"{sub_cmd_} does not exist.')
 
-class ServiceCmd(StrEnum):
+class ServiceOp(StrEnum):
     ACTIVATE = 'activate'
     DEACTIVATE = 'deactivate'
     ID = 'id'
@@ -29,7 +29,7 @@ class ServiceCmd(StrEnum):
     LS = 'ls'
 
     @classmethod
-    def get_help_str(cls, cmd_: 'ServiceCmd') -> str:
+    def get_help_str(cls, cmd_: 'ServiceOp') -> str:
         if cmd_ == cls.ACTIVATE:
             return f'Activate a device.'
         elif cmd_ == cls.DEACTIVATE:
@@ -44,7 +44,7 @@ class ServiceCmd(StrEnum):
             raise ValueError(f'Sub-command "{cmd_}" does not exist')
 
     @classmethod
-    def get_description_str(cls, cmd_: 'ServiceCmd') -> Optional[str]:
+    def get_description_str(cls, cmd_: 'ServiceOp') -> Optional[str]:
         desc = ''
         if cmd_ == cls.ACTIVATE:
             desc = 'Making it available for connection.'
@@ -62,7 +62,8 @@ class ServiceCmd(StrEnum):
                 f'\n'
                 f'{desc}')
 
-class BaseServiceCmd(BaseModel):
-    cmd: ServiceCmd
+class ServiceCmd(BaseModel):
+    op: ServiceOp
     qid: Optional[int|str] = None
-TBaseServiceCmd = TypeVar('TBaseServiceCmd', bound=BaseServiceCmd)
+    kw: dict
+TBaseServiceCmd = TypeVar('TBaseServiceCmd', bound=ServiceCmd)

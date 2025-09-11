@@ -9,7 +9,7 @@ from .common.calibration import Calibration, MASS_SENSOR_COUNT, TEMPERATURE_SENS
 
 logger = logging.getLogger(__name__)
 
-class DeviceResp(IntEnum):
+class DeviceRespOp(IntEnum):
     VOID = 0
     DATAPOINT = 1
     CALIBRATION = 2
@@ -70,11 +70,11 @@ class DeviceErrorCode(IntEnum):
 
 class RespPacketHdr(PacketHdr):
     @property
-    def type(self) -> DeviceResp:
-        return DeviceResp(super().type)
+    def type(self) -> DeviceRespOp:
+        return DeviceRespOp(super().type)
 
     @type.setter
-    def type(self, value: DeviceResp):
+    def type(self, value: DeviceRespOp):
         setattr(self, self.Field.TYPE, value)
 
 TDeviceResp = BaseStructure | BaseUnion

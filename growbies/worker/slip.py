@@ -12,8 +12,8 @@ import queue
 
 import serial
 
-from growbies.device.cmd import DeviceCmd, TDeviceCmd
-from growbies.device.resp import TDeviceResp, DeviceResp, RespPacketHdr
+from growbies.device.cmd import DeviceCmdOp, TDeviceCmd, CmdPacketHdr
+from growbies.device.resp import TDeviceResp, DeviceRespOp, RespPacketHdr
 from growbies.service.common import ServiceCmdError
 from growbies.session import log
 from growbies.utils.bufstr import BufStr
@@ -208,17 +208,15 @@ class Transport(Network, ABC):
         frame = super().recv_packet(block=block, timeout=timeout)
         if frame is None:
             return None, None
-        return DeviceResp.from_frame(frame)
+        return DeviceRespOp.from_frame(frame)
 
     def send_cmd(self, cmd: TDeviceCmd):
         """
         raises:
             :class:`ServiceCmdError`
         """
-        cmd_packet_hdr = DeviceCmd.get_hdr(cmd)
-        if cmd_packet_hdr is None:
-            raise ServiceCmdError(f'Unknown device cmd type: {type(cmd)}')
-        cmd_packet_hdr.id = 1
-        self.send_packet(bytes(cmd_packet_hdr) + bytes(cmd))
+        op, version = cmd.get_op_and_version()
+        hdr = CmdPacketHdr(type=op, version=version, id=1)
+        self.send_packet(bytes(hdr) + bytes(cmd))
 
 class SerialIntf(Transport, SerialDatalink): pass

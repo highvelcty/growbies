@@ -1,13 +1,15 @@
 from datetime import datetime
 from enum import IntEnum
-from packaging.version import Version
 from typing import Optional, NewType
 import ctypes
 
+from packaging.version import InvalidVersion, Version
+
 from .common import BaseStructure
-from .nvm import NvmHeader
 from growbies.utils import timestamp
+from growbies.utils.ctypes_utils import cstring_to_str
 from growbies.utils.types import Serial_t, ModelNumber_t
+
 
 class BatteryType(IntEnum):
     GENERIC = 0
@@ -42,11 +44,10 @@ class IdentifyVersion(IntEnum):
     ZERO = 0
     ONE = 1
 
-class IdentifyHeader(NvmHeader): pass
+class IdentifyHeader(BaseStructure): pass
 
 class Identify(BaseStructure):
     class Field(BaseStructure.Field):
-        HDR = '_hdr'
         FIRMWARE_VERSION = '_firmware_version'
         SERIAL_NUMBER = '_serial_number'
         MODEL_NUMBER = '_model_number'
@@ -65,25 +66,16 @@ class Identify(BaseStructure):
 
     _pack_ = 1
     _fields_ = [
-        (Field.HDR, IdentifyHeader),
         (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
     ]
 
     @property
-    def hdr(self) -> NvmHeader:
-        return getattr(self, self.Field.HDR)
-
-    @hdr.setter
-    def hdr(self, val: NvmHeader):
-        setattr(self, self.Field.HDR, val)
-
-    @property
-    def firmware_version(self) -> Version:
-        return getattr(self, self.Field.FIRMWARE_VERSION)
-
-    @firmware_version.setter
-    def firmware_version(self, value: Version):
-        setattr(self, self.Field.FIRMWARE_VERSION, str(value))
+    def firmware_version(self) -> Version | str:
+        val = cstring_to_str(getattr(self, self.Field.FIRMWARE_VERSION))
+        try:
+            return Version(val)
+        except InvalidVersion:
+            return val
 
     @property
     def serial_number(self) -> Optional[Serial_t]:
@@ -204,30 +196,30 @@ class Identify1(Identify):
         (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 32),
         (Identify.Field.MODEL_NUMBER, ctypes.c_char * 32),
         (Identify.Field.MANUFACTURE_DATE, ctypes.c_float),
-        (Identify.Field.MASS_SENSOR_COUNT, ctypes.c_uint16),
-        (Identify.Field.MASS_SENSOR_TYPE, ctypes.c_uint16),
-        (Identify.Field.TEMPERATURE_SENSOR_COUNT, ctypes.c_uint16),
-        (Identify.Field.TEMPERATURE_SENSOR_TYPE, ctypes.c_uint16),
-        (Identify.Field.PCBA, ctypes.c_uint16),
-        (Identify.Field.WIRELESS, ctypes.c_uint16),
-        (Identify.Field.BATTERY, ctypes.c_uint16),
-        (Identify.Field.DISPLAY, ctypes.c_uint16),
-        (Identify.Field.LED, ctypes.c_uint16),
-        (Identify.Field.FRAME, ctypes.c_uint16),
-        (Identify.Field.FOOT, ctypes.c_uint16),
+        (Identify.Field.MASS_SENSOR_TYPE, ctypes.c_uint8),
+        (Identify.Field.MASS_SENSOR_COUNT, ctypes.c_uint8),
+        (Identify.Field.TEMPERATURE_SENSOR_TYPE, ctypes.c_uint8),
+        (Identify.Field.TEMPERATURE_SENSOR_COUNT, ctypes.c_uint8),
+        (Identify.Field.PCBA, ctypes.c_uint8),
+        (Identify.Field.WIRELESS, ctypes.c_uint8),
+        (Identify.Field.BATTERY, ctypes.c_uint8),
+        (Identify.Field.DISPLAY, ctypes.c_uint8),
+        (Identify.Field.LED, ctypes.c_uint8),
+        (Identify.Field.FRAME, ctypes.c_uint8),
+        (Identify.Field.FOOT, ctypes.c_uint8),
     ]
 
     @property
     def serial_number(self) -> Serial_t:
-        return getattr(self, self.Field.SERIAL_NUMBER)
+        return cstring_to_str(getattr(self, self.Field.SERIAL_NUMBER))
 
     @serial_number.setter
     def serial_number(self, value: Serial_t):
-        setattr(self, self.Field.SERIAL_NUMBER, value)
+        setattr(self, self.Field.SERIAL_NUMBER, value.encode())
 
     @property
     def model_number(self) -> ModelNumber_t:
-        return getattr(self, self.Field.MODEL_NUMBER).decode()
+        return cstring_to_str(getattr(self, self.Field.MODEL_NUMBER))
 
     @model_number.setter
     def model_number(self, value: ModelNumber_t):

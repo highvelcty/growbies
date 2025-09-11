@@ -1,11 +1,11 @@
-#ifndef constants_h
-#define constants_h
+#pragma once
 
 #include "assert.h"
 #include <pins_arduino.h>
 #include "flags.h"
+#include "types.h"
 
-constexpr const char* APPNAME = "growbies";
+constexpr auto APPNAME = "growbies";
 
 constexpr int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
 constexpr int WAIT_READY_RETRIES = 100;
@@ -18,6 +18,8 @@ constexpr int MAX_SLIP_UNENCODED_PACKET_BYTES = (SLIP_OUT_BUF_ALLOC_BYTES / 2) -
 constexpr float INVALID_TEMPERATURE = 1234.5;
 constexpr float INVALID_MASS_SAMPLE_THRESHOLD_DAC = 10000;
 constexpr float INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC = 50;
+constexpr int MAX_MASS_SENSOR_COUNT = 5;
+constexpr int MAX_TEMPERATURE_SENSOR_COUNT = MAX_MASS_SENSOR_COUNT;
 
 constexpr uint8_t COEFF_COUNT = 2;
 constexpr uint8_t TARE_COUNT = 1;
@@ -81,7 +83,7 @@ constexpr uint32_t DEEP_SLEEP_MILLIS = 1000; // 1 second
 constexpr auto DEEP_SLEEP_USECS = DEEP_SLEEP_MILLIS * 1000;
 #endif
 
-inline int get_HX711_dout_pin(int sensor){
+inline int get_HX711_dout_pin(SensorIdx_t sensor){
 #if HX711_PIN_CFG_0
     return DOUT_0_PIN + sensor;
 #elif HX711_PIN_CFG_1
@@ -98,7 +100,7 @@ inline int get_HX711_dout_pin(int sensor){
 #endif
 }
 
-inline int get_HX711_dout_port_bit(int sensor) {
+inline int get_HX711_dout_port_bit(SensorIdx_t sensor) {
 #if HX711_PIN_CFG_0
     return (1 << (get_HX711_dout_pin(sensor) - DOUT_0_PIN));
 #elif HX711_PIN_CFG_1
@@ -106,39 +108,3 @@ inline int get_HX711_dout_port_bit(int sensor) {
 #endif
 }
 
-inline int get_temperature_pin(int mass_sensor_idx) {
-#if HX711_PIN_CFG_0
-#if TEMPERATURE_SENSOR_COUNT == 1
-    return TEMPERATURE_PIN_0;
-#else
-    assert(false && "Multi-temperature sensor with this pin configuration is not implemented.");
-#endif
-#elif HX711_PIN_CFG_1
-#if TEMPERATURE_SENSOR_COUNT == 1
-    return TEMPERATURE_PIN_0;
-#elif TEMPERATURE_SENSOR_COUNT == 3
-    switch (mass_sensor_idx) {
-        case 0:
-            return TEMPERATURE_PIN_0;
-        case 1:
-            return TEMPERATURE_PIN_1;
-        case 2:
-            return TEMPERATURE_PIN_2;
-        default:
-            assert(false && "Temperature pin out of range.");
-    }
-#else
-    assert(false && "More than three temperature sensors has not been implemented.");
-#endif
-#endif
-}
-
-inline int get_temperature_sensor_idx(const int mass_sensor_idx) {
-    if (TEMPERATURE_SENSOR_COUNT == MASS_SENSOR_COUNT) {
-        return mass_sensor_idx;
-    }
-    else {
-        return 0;
-    }
-}
-#endif /* constants_h */

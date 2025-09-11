@@ -56,7 +56,7 @@ class Growbies {
                                 int times, bool raw = false,
                                 HX711Gain gain = HX711_GAIN_128) const;
 
-        static void shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], HX711Gain gain);
+        static void shift_all_in(float* sensor_sample, HX711Gain gain);
 
         static ErrorCode wait_hx711_ready(int retries, unsigned long delay_ms);
 
@@ -92,6 +92,10 @@ ErrorCode validate_packet([[maybe_unused]] const PacketHdr& packet_hdr,
     }
     return ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
 }
+
+int get_temperature_sensor_idx(int mass_sensor_idx);
+int get_temperature_pin(int mass_sensor_idx);
+
 
 /**
  * Application global

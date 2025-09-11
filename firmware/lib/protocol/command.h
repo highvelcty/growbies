@@ -99,6 +99,7 @@ struct CmdSetCalibration : BaseCmd {
 };
 struct CmdGetIdentify: BaseCmd {};
 struct CmdSetIdentify : BaseCmd {
+    bool init = false;
     Identify1 identify{};
 };
 struct CmdLoopback : BaseCmd {};

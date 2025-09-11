@@ -1,6 +1,6 @@
 import logging
 
-from .common import ServiceCmd, ServiceCmdError
+from .common import ServiceOp, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
 from growbies.device.resp import DeviceError
 from growbies.service.cmd import activate, loopback, ls, identify
@@ -31,21 +31,21 @@ class Service:
         try:
             while not done:
                 for cmd in self._queue.get_w_timeout(QUEUE_GET_TIMEOUT_SEC):
-                    logger.info(f'Servicing {cmd.cmd} command.')
+                    logger.info(f'Servicing {cmd.op} command.')
                     with IDQueue(cmd.qid) as resp_q:
                         try:
-                            if cmd.cmd == ServiceCmd.ACTIVATE:
+                            if cmd.op == ServiceOp.ACTIVATE:
                                 resp_q.put(activate.activate(cmd))
-                            elif cmd.cmd == ServiceCmd.DEACTIVATE:
+                            elif cmd.op == ServiceOp.DEACTIVATE:
                                 resp_q.put(activate.deactivate(cmd))
-                            elif cmd.cmd == ServiceCmd.ID:
+                            elif cmd.op == ServiceOp.ID:
                                 resp_q.put(identify.get_or_set(cmd))
-                            elif cmd.cmd == ServiceCmd.LOOPBACK:
+                            elif cmd.op == ServiceOp.LOOPBACK:
                                 resp_q.put(loopback.loopback(cmd))
-                            elif cmd.cmd == ServiceCmd.LS:
+                            elif cmd.op == ServiceOp.LS:
                                 resp_q.put(ls.ls())
                             else:
-                                raise ServiceCmdError(f'Unknown command {cmd.cmd} received.')
+                                raise ServiceCmdError(f'Unknown command {cmd.op} received.')
                         except DeviceError as err:
                             resp_q.put(err)
                         except ServiceCmdError as err:

@@ -10,8 +10,8 @@ from serial.serialutil import SerialException
 from growbies.db.engine import get_db_engine
 from growbies.device.cmd import TDeviceCmd
 from growbies.device.common import BaseStructure
-from growbies.device.resp import (DeviceResp, DataPointDeviceResp,
-                                DeviceError, ErrorDeviceResp, RespPacketHdr, TDeviceResp)
+from growbies.device.resp import (DeviceRespOp, DataPointDeviceResp,
+                                  DeviceError, ErrorDeviceResp, RespPacketHdr, TDeviceResp)
 from growbies.service.common import ServiceCmdError
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
@@ -105,11 +105,11 @@ class Worker(Thread):
 
     @staticmethod
     def _process_async(hdr: RespPacketHdr, resp: TDeviceResp | ErrorDeviceResp):
-        if hdr.type == DeviceResp.ERROR:
+        if hdr.type == DeviceRespOp.ERROR:
             resp: ErrorDeviceResp
             logger.error(f'Received asynchronous error response with '
                          f'error code {resp.error} 0x{resp.error:X}')
-        elif hdr.type == DeviceResp.DATAPOINT:
+        elif hdr.type == DeviceRespOp.DATAPOINT:
             logger.info(f'Received asynchronous {hdr.type} response.')
         else:
             logger.error(f'Invalid response type received: {hdr.type}.')

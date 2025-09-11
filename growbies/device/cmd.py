@@ -1,16 +1,16 @@
+from abc import ABC, ABCMeta, abstractmethod
 from enum import IntEnum
-from typing import Optional
+from typing import NewType, Optional
 import ctypes
 import logging
 
 from .common.calibration import Calibration
-from .common import BaseStructure, BaseUnion, PacketHdr
-from .common.identify import Identify, Identify1, TIdentify
-from .common.nvm import NvmHeader
+from .common import BaseStructure, PacketHdr
+from .common.identify import Identify1, TIdentify
 
 logger = logging.getLogger(__name__)
 
-class DeviceCmd(IntEnum):
+class DeviceCmdOp(IntEnum):
     LOOPBACK = 0
     GET_CALIBRATION = 1
     SET_CALIBRATION = 2
@@ -23,48 +23,36 @@ class DeviceCmd(IntEnum):
     def __str__(self):
         return self.name
 
-    @classmethod
-    def get_hdr(cls, cmd: 'TDeviceCmd') -> Optional['CmdPacketHdr']:
-
-        if isinstance(cmd, GetDatapointDeviceCmd):
-            return CmdPacketHdr(type=DeviceCmd.GET_CALIBRATION)
-        elif isinstance(cmd, SetCalibrationDeviceCmd):
-            return CmdPacketHdr(type=DeviceCmd.SET_CALIBRATION)
-        elif isinstance(cmd, GetDatapointDeviceCmd):
-            return CmdPacketHdr(type=DeviceCmd.GET_DATAPOINT)
-        elif isinstance(cmd, GetIdentifyDeviceCmd):
-            return CmdPacketHdr(type=DeviceCmd.GET_IDENTIFY)
-        elif isinstance(cmd, SetIdentifyDeviceCmd):
-            return CmdPacketHdr(type=DeviceCmd.SET_IDENTIFY)
-        elif isinstance(cmd, LoopbackDeviceCmd):
-            return CmdPacketHdr(type=DeviceCmd.LOOPBACK)
-        elif isinstance(cmd, PowerOnHx711DeviceCmd):
-            return CmdPacketHdr(type=DeviceCmd.POWER_ON_HX711)
-        elif isinstance(cmd, PowerOffHx711DeviceCmd):
-            return CmdPacketHdr(type=DeviceCmd.POWER_OFF_HX711)
-        else:
-            logger.error(f'Unknown device cmd type {type(cmd)}.')
-            return None
 
 class CmdPacketHdr(PacketHdr):
     @property
-    def type(self) -> DeviceCmd | int:
+    def type(self) -> DeviceCmdOp | int:
         """Return :class:`DeviceCmd` if enumerated, integer otherwise."""
         try:
-            return DeviceCmd(super().type)
+            return DeviceCmdOp(super().type)
         except ValueError:
             return super().type
 
     @type.setter
-    def type(self, value: DeviceCmd):
-        setattr(self, self.Field.TYPE, DeviceCmd(value))
+    def type(self, value: DeviceCmdOp):
+        setattr(self, self.Field.TYPE, DeviceCmdOp(value))
 
-TDeviceCmd = BaseStructure | BaseUnion
 
-class BaseDeviceCmdWithTimesParam(BaseStructure):
+class ABCStructureMeta(type(BaseStructure), ABCMeta): pass
+
+class BaseDeviceCmd(BaseStructure, metaclass=ABCStructureMeta):
+    # problems following the metaclass inheritance with pycharm 2025.1.3.1
+    # noinspection PyAbstractClass
+    @classmethod
+    @abstractmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        ...
+TDeviceCmd = NewType('TDeviceCmd', BaseDeviceCmd)
+
+class BaseDeviceCmdWithTimesParam(BaseDeviceCmd, ABC):
     DEFAULT_TIMES = 7
 
-    class Field(BaseStructure.Field):
+    class Field(BaseDeviceCmd.Field):
         TIMES = '_times'
 
     _fields_ = [
@@ -84,16 +72,24 @@ class BaseDeviceCmdWithTimesParam(BaseStructure):
     def times(self, value: int):
         super().times = value
 
-class GetCalibrationDeviceCmd(BaseStructure): pass
+class GetCalibrationDeviceCmd(BaseDeviceCmd):
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.GET_CALIBRATION, 0
 
-class SetCalibrationDeviceCmd(BaseStructure):
-    class Field(BaseStructure.Field):
+
+class SetCalibrationDeviceCmd(BaseDeviceCmd):
+    class Field(BaseDeviceCmd.Field):
         CALIBRATION = '_calibration'
 
     _fields_ = [
         (Field.CALIBRATION, Calibration)
 
     ]
+
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.SET_CALIBRATION, 0
 
     @property
     def calibration(self) -> Calibration:
@@ -103,51 +99,41 @@ class SetCalibrationDeviceCmd(BaseStructure):
     def calibration(self, calibration: Calibration):
         setattr(self, self.Field.CALIBRATION, calibration)
 
-class GetIdentifyDeviceCmd(BaseStructure): pass
+class GetIdentifyDeviceCmd(BaseDeviceCmd):
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.GET_IDENTIFY, 0
 
-class SetIdentifyUnion(BaseUnion):
-    class Field(BaseUnion.Field):
-        ANON0 = 'anon0'
-        ANON1 = 'anon1'
-
-    _pack_ = 1
-    _fields_ = [
-        (Field.ANON0, Identify),
-        (Field.ANON1, Identify1)
-    ]
-
-    _anonymous_ = [Field.ANON0, Field.ANON1]
-
-    @property
-    def hdr(self) -> NvmHeader:
-        return getattr(self, Identify.Field.HDR)
-
-class SetIdentifyDeviceCmd(BaseUnion):
-    class Field(BaseUnion.Field):
-        PAYLOAD = '_payload'
-        ANON0 = '_anon0'
-        ANON1 = '_anon1'
+class SetIdentifyDeviceCmd(BaseDeviceCmd):
+    class Field(BaseDeviceCmd.Field):
+        INIT = 'init'
+        IDENTIFY = '_identify'
 
     _pack_ = 1
     _fields_ = [
-        (Field.PAYLOAD, Identify),
-        (Field.ANON0, Identify),
-        (Field.ANON1, Identify1)
+        (Field.INIT, ctypes.c_bool),
+        (Field.IDENTIFY, Identify1),
     ]
 
-    _anonymous_ = [Field.ANON0, Field.ANON1]
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.SET_IDENTIFY, 1
 
     @property
-    def payload(self) -> TIdentify:
-        return Identify1.from_buffer(self)
+    def init(self) -> bool:
+        return getattr(self, self.Field.INIT)
 
-    @payload.setter
-    def payload(self, val: TIdentify):
-        ctypes.memmove(
-            ctypes.addressof(self),
-            ctypes.addressof(val),
-            ctypes.sizeof(val)
-        )
+    @init.setter
+    def init(self, value: bool):
+        setattr(self, self.Field.INIT, value)
+
+    @property
+    def identify(self) -> TIdentify:
+        return getattr(self, self.Field.IDENTIFY)
+
+    @identify.setter
+    def identify(self, val: TIdentify):
+        setattr(self, self.Field.IDENTIFY, val)
 
 class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
     class Field(BaseDeviceCmdWithTimesParam.Field):
@@ -157,6 +143,10 @@ class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
         (Field.RAW, ctypes.c_bool)
     ]
 
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.GET_DATAPOINT, 0
+
     @property
     def raw(self) -> bool:
         return getattr(self, self.Field.RAW)
@@ -165,8 +155,19 @@ class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
     def raw(self, val: bool):
         setattr(self, self.Field.RAW, val)
 
-class LoopbackDeviceCmd(BaseStructure): pass
+class LoopbackDeviceCmd(BaseDeviceCmd):
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.LOOPBACK, 0
 
-class PowerOffHx711DeviceCmd(BaseStructure): pass
 
-class PowerOnHx711DeviceCmd(BaseStructure): pass
+class PowerOffHx711DeviceCmd(BaseDeviceCmd):
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.POWER_OFF_HX711, 0
+
+
+class PowerOnHx711DeviceCmd(BaseDeviceCmd):
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.POWER_ON_HX711, 0
