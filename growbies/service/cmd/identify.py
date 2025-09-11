@@ -53,7 +53,7 @@ def _init(worker):
     cmd.init = True
     _ = worker.cmd(cmd)
 
-def get_or_set(cmd: ServiceCmd) -> Optional[id_mod.TIdentify]:
+def identify(cmd: ServiceCmd) -> Optional[id_mod.TIdentify]:
     pool = get_pool()
     serial = cmd.kw.pop(PositionalParam.SERIAL)
     init = cmd.kw.pop(Param.INIT)
@@ -66,20 +66,20 @@ def get_or_set(cmd: ServiceCmd) -> Optional[id_mod.TIdentify]:
     if init:
         return _init(worker)
 
-    identify: id_mod.TIdentify = worker.cmd(GetIdentifyDeviceCmd())
+    ident: id_mod.TIdentify = worker.cmd(GetIdentifyDeviceCmd())
 
     if all(value is None for value in cmd.kw.values()):
-        return identify
+        return ident
 
     for key, val in cmd.kw.items():
-        if getattr(identify, key) is None:
-            raise ServiceCmdError(f'Identify version {identify.hdr.version} does not support the '
+        if getattr(ident, key) is None:
+            raise ServiceCmdError(f'Identify version {ident.hdr.version} does not support the '
                                   f'"{key}" field.')
         if val is not None:
-            setattr(identify, key, val)
+            setattr(ident, key, val)
 
     cmd = SetIdentifyDeviceCmd()
-    cmd.identify = identify
+    cmd.identify = ident
     _ = worker.cmd(cmd)
 
     return worker.cmd(GetIdentifyDeviceCmd())

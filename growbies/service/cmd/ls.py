@@ -3,7 +3,6 @@ import logging
 import shlex
 import subprocess
 
-from ..common import ServiceCmd, ServiceOp
 from growbies.db.models.device import Device, Devices, ConnectionState
 from growbies.db.engine import get_db_engine
 from growbies.utils.paths import InstallPaths
@@ -17,10 +16,6 @@ class SupportedVidPid:
     FTDI_FT232 = (0x0403, 0x6001)
 
     all_ = (ESPRESSIF_DEBUG, FTDI_FT232)
-
-class LsServiceCmd(ServiceCmd):
-    def __init__(self, **kw):
-        super().__init__(cmd=ServiceOp.LS, **kw)
 
 def ls() -> Devices:
     discovered_devices = Devices()

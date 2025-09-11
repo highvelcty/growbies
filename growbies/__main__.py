@@ -29,8 +29,12 @@ activate.make_cli(parsers[ServiceOp.DEACTIVATE])
 identify.make_cli(parsers[ServiceOp.ID])
 loopback.make_cli(parsers[ServiceOp.LOOPBACK])
 
-kw = vars(parser.parse_args(sys.argv[1:]))
+known, unknown = parser.parse_known_args(sys.argv[1:])
+kw = vars(known)
 cmd: ServiceOp = kw.pop(CMD)
+
+if unknown:
+    parsers[cmd].error(f'Unknown arguments encountered "{unknown}"')
 
 def _run_cmd(cmd_: TBaseServiceCmd, timeout = DEFAULT_CMD_TIMEOUT_SECONDS):
     with ServiceQueue() as cmd_q, IDQueue() as resp_q:

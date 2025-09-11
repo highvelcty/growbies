@@ -24,6 +24,7 @@ class PositionalParam(StrEnum):
 class ServiceOp(StrEnum):
     ACTIVATE = 'activate'
     DEACTIVATE = 'deactivate'
+    CAL = 'cal'
     ID = 'id'
     LOOPBACK = 'loopback'
     LS = 'ls'

@@ -39,7 +39,7 @@ class Service:
                             elif cmd.op == ServiceOp.DEACTIVATE:
                                 resp_q.put(activate.deactivate(cmd))
                             elif cmd.op == ServiceOp.ID:
-                                resp_q.put(identify.get_or_set(cmd))
+                                resp_q.put(identify.identify(cmd))
                             elif cmd.op == ServiceOp.LOOPBACK:
                                 resp_q.put(loopback.loopback(cmd))
                             elif cmd.op == ServiceOp.LS:

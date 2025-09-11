@@ -1,11 +1,9 @@
 from argparse import ArgumentParser
-from sqlmodel import Field
 import logging
 
-from ..common import ServiceCmd, PositionalParam, ServiceOp
+from ..common import ServiceCmd, PositionalParam
 from growbies.db.engine import get_db_engine
 from growbies.service.serials_to_devices import serials_to_devices
-from growbies.utils.types import Serial_t
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
@@ -13,17 +11,6 @@ logger = logging.getLogger(__name__)
 def make_cli(parser: ArgumentParser):
     parser.add_argument(PositionalParam.SERIALS, nargs='+', type=str,
                         help=PositionalParam.get_help_str(PositionalParam.SERIALS))
-
-
-class ActivateServiceCmd(ServiceCmd):
-    serials: list[Serial_t] = Field(default_factory=list, min_length=1)
-    def __init__(self, **kw):
-        super().__init__(cmd=ServiceOp.ACTIVATE, **kw)
-
-class DeactivateServiceCmd(ServiceCmd):
-    serials: list[Serial_t] = Field(default_factory=list, min_length=1)
-    def __init__(self, **kw):
-        super().__init__(cmd=ServiceOp.DEACTIVATE, **kw)
 
 def activate(cmd: ServiceCmd):
     devices = serials_to_devices(*cmd.kw[PositionalParam.SERIALS])
