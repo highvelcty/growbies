@@ -24,19 +24,17 @@ def make_cli(parser: ArgumentParser):
         f'--{internal_to_external_field(cal_mod.Calibration.Field.MASS_TEMP_COEFF)}',
         action='append',
         default=argparse.SUPPRESS,
-        metavar=('SENSOR (ROW)', 'COEFF (COLUMN)', 'VALUE'),
-        nargs=3,
+        metavar=('SENSOR (ROW)', ) + (('VALUE',) * cal_mod.Calibration.COEFF_COUNT),
+        nargs=cal_mod.Calibration.COEFF_COUNT + 1,
         type=float,
-        help = f'Set mass/temperature correction coefficients where each row '
+        help = f'Set mass/temperature correction coefficients for a sensor. Each row '
                f'represents a sensor and each column a coefficient. The matrix '
                f'dimensions are '
                f'[{cal_mod.Calibration.MASS_SENSOR_COUNT}][{cal_mod.Calibration.COEFF_COUNT}].')
     parser.add_argument(
         f'--{internal_to_external_field(cal_mod.Calibration.Field.MASS_COEFF)}',
-        action='append',
         default=argparse.SUPPRESS,
-        metavar = ('COEFF IDX', 'VALUE'),
-        nargs = 2,
+        nargs = cal_mod.Calibration.COEFF_COUNT,
         type=float,
         help = f'Set mass calibration coefficients. There are '
                f'{cal_mod.Calibration.COEFF_COUNT} coefficients.')
@@ -69,25 +67,22 @@ def calibration(cmd: ServiceCmd) -> Optional[cal_mod.Calibration]:
         internal_to_external_field(cal_mod.Calibration.Field.MASS_TEMP_COEFF), list())
     matrix = cal.mass_temp_coeff
     for mass_temp_coeffs in mass_temp_coeffs_list:
-        sensor, coeff, value = mass_temp_coeffs
-        sensor = int(sensor)
-        coeff = int(coeff)
+        sensor = int(mass_temp_coeffs[0])
+        coeffs = mass_temp_coeffs[1:]
         try:
-            matrix[sensor][coeff] = value
+            matrix[sensor] = coeffs
         except IndexError:
-            raise ServiceCmdError(f'Index out of range for sensor {sensor} and coeff {coeff}. '
-                                  f'Matrix dimensions '
-                                  f'[{cal_mod.Calibration.MASS_SENSOR_COUNT}]'
-                                  f'[{cal_mod.Calibration.COEFF_COUNT}].')
+            raise ServiceCmdError(
+                f'Index out of range for sensor {sensor} and coeff count {len(coeffs)}. '
+                f'Matrix dimensions '
+                f'[{cal_mod.Calibration.MASS_SENSOR_COUNT}]'
+                f'[{cal_mod.Calibration.COEFF_COUNT}].')
     cal.mass_temp_coeff = matrix
 
     mass_coeff_list = cmd.kw.pop(internal_to_external_field(cal_mod.Calibration.Field.MASS_COEFF),
                                  list())
-    coeff_list = cal.mass_coeff
-    for mass_coeff in mass_coeff_list:
-        idx, val = mass_coeff
-        coeff_list[int(idx)] = val
-    cal.mass_coeff = coeff_list
+    if mass_coeff_list:
+        cal.mass_coeff = mass_coeff_list
 
     cmd = SetCalibrationDeviceCmd(calibration = cal)
 
