@@ -91,22 +91,9 @@ public:
         return &value_storage;
     }
 
+    void init_fields() {};
+
     virtual ~NvmStoreBase() = default;
-
-    template<typename U = T>
-    typename std::enable_if<std::is_same<U, Identify1>::value>::type
-    set_firmware_version() {
-        snprintf(this->value_storage.firmware_version,
-                 sizeof(this->value_storage.firmware_version),
-                 "%s",
-                 FIRMWARE_VERSION);
-    }
-
-    template<typename U = T>
-    typename std::enable_if<!std::is_same<U, Identify1>::value>::type
-    set_firmware_version() {
-        // do nothing
-    }
 
 protected:
     T value_storage{};
@@ -129,8 +116,7 @@ public:
         }
         update();
 
-        this->set_firmware_version();
-        put(this->value_storage);
+        this->init_fields();
     }
 
     void put(const T& value) override {
@@ -170,9 +156,7 @@ public:
 
         update();
 
-        this->set_firmware_version();
-        // Warning, putting this into set_firmware_version causes a crash
-        put(this->value_storage);
+        this->init_fields();
     }
 
     void put(const T& value) override {
@@ -197,12 +181,22 @@ private:
 #endif
 
 
+// Specialization for Identify1
+template <>
+inline void NvmStoreBase<Identify1>::init_fields() {
+    snprintf(this->value_storage.firmware_version,
+             sizeof(this->value_storage.firmware_version),
+             "%s",
+             FIRMWARE_VERSION);
+    this->put(this->value_storage);
+}
+
 #if ARDUINO_ARCH_AVR
 using CalibrationStore = AvrNvmStore<Calibration>;
 using IdentifyStore    = AvrNvmStore<Identify1>;
 #elif ARDUINO_ARCH_ESP32
 using CalibrationStore = Esp32NvmStore<Calibration>;
-using IdentifyStore    = Esp32NvmStore<Identify1>;
+using IdentifyStore = Esp32NvmStore<Identify1>;
 #endif
 
 extern CalibrationStore* calibration_store;
