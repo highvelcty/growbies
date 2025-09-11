@@ -95,6 +95,7 @@ struct BaseCmdWithTimesParam : BaseCmd {
 // --- Commands
 struct CmdGetCalibration : BaseCmd {};
 struct CmdSetCalibration : BaseCmd {
+    bool init = false;
     Calibration calibration{};
 };
 struct CmdGetIdentify: BaseCmd {};

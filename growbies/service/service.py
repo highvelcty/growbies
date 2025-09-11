@@ -3,7 +3,7 @@ import logging
 from .common import ServiceOp, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
 from growbies.device.resp import DeviceError
-from growbies.service.cmd import activate, loopback, ls, identify
+from growbies.service.cmd import activate, calibration, loopback, ls, identify
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
 
@@ -38,6 +38,8 @@ class Service:
                                 resp_q.put(activate.activate(cmd))
                             elif cmd.op == ServiceOp.DEACTIVATE:
                                 resp_q.put(activate.deactivate(cmd))
+                            elif cmd.op == ServiceOp.CAL:
+                                resp_q.put(calibration.calibration(cmd))
                             elif cmd.op == ServiceOp.ID:
                                 resp_q.put(identify.identify(cmd))
                             elif cmd.op == ServiceOp.LOOPBACK:
@@ -47,8 +49,10 @@ class Service:
                             else:
                                 raise ServiceCmdError(f'Unknown command {cmd.op} received.')
                         except DeviceError as err:
+                            logger.error(err)
                             resp_q.put(err)
                         except ServiceCmdError as err:
+                            logger.error(err)
                             resp_q.put(err)
         except KeyboardInterrupt:
             pass

@@ -80,9 +80,11 @@ class GetCalibrationDeviceCmd(BaseDeviceCmd):
 
 class SetCalibrationDeviceCmd(BaseDeviceCmd):
     class Field(BaseDeviceCmd.Field):
+        INIT = 'init'
         CALIBRATION = '_calibration'
 
     _fields_ = [
+        (Field.INIT, ctypes.c_bool),
         (Field.CALIBRATION, Calibration)
 
     ]
@@ -98,6 +100,14 @@ class SetCalibrationDeviceCmd(BaseDeviceCmd):
     @calibration.setter
     def calibration(self, calibration: Calibration):
         setattr(self, self.Field.CALIBRATION, calibration)
+
+    @property
+    def init(self) -> bool:
+        return getattr(self, self.Field.INIT)
+
+    @init.setter
+    def init(self, value: bool):
+        setattr(self, self.Field.INIT, value)
 
 class GetIdentifyDeviceCmd(BaseDeviceCmd):
     @classmethod

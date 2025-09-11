@@ -8,12 +8,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# --- Constants ------------------------------------------------------------------------------------
+_INTERNAL_FIELD_NAME_DELINEATOR = '_'
+
 class _StructUnionMixin:
-    class Field:
-        @classmethod
-        def lstrip(cls, val):
-            return val.strip('_')
+    class Field: pass
 
     @classmethod
     def qualname(cls):
@@ -44,21 +42,21 @@ class _StructUnionMixin:
         if _str_list is None:
             _str_list = list()
         for field_name, field_type, field_offset, field_size in self.all_fields():
-            stripped_name = self.Field.lstrip(field_name)
+            external_name = internal_to_external_field(field_name)
             is_anonymous = field_name in getattr(self, '_anonymous_', [])
             if is_anonymous:
                 next_name = f'{prefix}'
             else:
-                next_name = f'{prefix}.{stripped_name}' if prefix else stripped_name
+                next_name = f'{prefix}.{external_name}' if prefix else external_name
             if issubclass(field_type, (ctypes.Structure, ctypes.Union)):
                 if not is_anonymous:
-                    for next_str in getattr(self, stripped_name).get_str(next_name):
+                    for next_str in getattr(self, external_name).get_str(next_name):
                         if next_str not in _str_list:
                             _str_list.append(next_str)
             else:
                 next_str = (f'0x{field_offset:04X} '
                             f'{next_name}: '
-                            f'{repr(getattr(self, stripped_name))}')
+                            f'{repr(getattr(self, external_name))}')
                 if next_str not in _str_list:
                     _str_list.append(next_str)
                     
@@ -109,3 +107,6 @@ class PacketHdr(BaseStructure):
     @version.setter
     def version(self, val: int):
         setattr(self, self.Field.VERSION, val)
+
+def internal_to_external_field(field: str):
+    return field.lstrip(_INTERNAL_FIELD_NAME_DELINEATOR)

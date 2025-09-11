@@ -61,7 +61,8 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
         auto* cmd = after<CmdGetCalibration>(in_packet_hdr);
         error = validate_packet(*in_packet_hdr, *cmd);
         if(!error) {
-            auto* resp = const_cast<RespGetCalibration*>(after<RespGetCalibration>(in_packet_hdr));
+            // auto* resp = const_cast<RespGetCalibration*>(after<RespGetCalibration>(in_packet_hdr));
+            auto* resp = new (this->packet_buf) RespGetCalibration();
             memcpy(&resp->calibration, calibration_store->view(), sizeof(resp->calibration));
             send_payload(resp, sizeof(*resp));
         }
@@ -71,6 +72,13 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
         error = validate_packet(*in_packet_hdr, *cmd);
         if (!error) {
             [[maybe_unused]] const auto resp = new (this->packet_buf) RespVoid;
+            if (cmd->init) {
+                calibration_store->init();
+            }
+            else {
+                calibration_store->put(cmd->calibration);
+            }
+
             send_payload(resp, sizeof(*resp));
         }
     }
@@ -327,8 +335,8 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
     if (!raw) {
         // Mass calibration and tare
         mass = ((mass * cal_struct->mass_coeff[0])
-                + cal_struct->mass_coeff[1])
-                - cal_struct->tare[this->tare_idx];
+                + cal_struct->mass_coeff[1]);
+                // - cal_struct->tare[this->tare_idx];  // meyere, restore
         mass_ptr[ident->mass_sensor_count + 1] = mass;
     }
 

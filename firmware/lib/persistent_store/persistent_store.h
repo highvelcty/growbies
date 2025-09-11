@@ -15,7 +15,6 @@
 
 typedef float MassTemperatureCoeff[MAX_MASS_SENSOR_COUNT][COEFF_COUNT];
 typedef float MassCoeff[COEFF_COUNT];
-typedef float Tare[TARE_COUNT];
 
 #pragma pack(1)
 
@@ -31,7 +30,6 @@ struct NvmHdr {
 struct Calibration {
     MassTemperatureCoeff mass_temperature_coeff{};
     MassCoeff mass_coeff{};
-    Tare tare{};
 };
 
 struct Identify0 {

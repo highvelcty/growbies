@@ -5,7 +5,7 @@ import logging
 
 from .common import  BaseStructure, BaseUnion, PacketHdr, TBaseStructure
 from .common.identify import Identify, Identify1
-from .common.calibration import Calibration, MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT
+from .common.calibration import Calibration
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +38,7 @@ class DeviceRespOp(IntEnum):
             elif packet_hdr.type == cls.DATAPOINT:
                 resp = DataPointDeviceResp.from_buffer(frame, ctypes.sizeof(packet_hdr))
             elif packet_hdr.type == cls.CALIBRATION:
-                resp = (GetCalibrationDeviceRespGetCalibration
-                        .from_buffer(frame, ctypes.sizeof(packet_hdr)))
+                resp = (Calibration.from_buffer(frame, ctypes.sizeof(packet_hdr)))
             elif packet_hdr.type == cls.IDENTIFY:
                 if packet_hdr.version == 0:
                     resp = Identify.from_buffer(frame, ctypes.sizeof(packet_hdr))
@@ -105,9 +104,9 @@ class DataPointDeviceResp(BaseStructure):
 
     _pack_ = 1
     _fields_ = [
-        (Field.MASS_SENSOR, ctypes.c_float * MASS_SENSOR_COUNT),
+        (Field.MASS_SENSOR, ctypes.c_float * Calibration.MASS_SENSOR_COUNT),
         (Field.MASS, ctypes.c_float),
-        (Field.TEMPERATURE_SENSOR, ctypes.c_float * TEMPERATURE_SENSOR_COUNT),
+        (Field.TEMPERATURE_SENSOR, ctypes.c_float * 5),
         (Field.TEMPERATURE, ctypes.c_float)
     ]
 
@@ -138,7 +137,7 @@ class DataPointDeviceResp(BaseStructure):
         str_list.append(f'temperature: {self.temperature}')
         return '\n'.join(str_list)
 
-class GetCalibrationDeviceRespGetCalibration(BaseStructure):
+class GetCalibrationDeviceResp(BaseStructure):
     class Field(BaseStructure.Field):
         CALIBRATION = '_calibration'
 
@@ -150,6 +149,9 @@ class GetCalibrationDeviceRespGetCalibration(BaseStructure):
     @property
     def calibration(self) -> Calibration:
         return getattr(self, self.Field.CALIBRATION)
+
+    def __str__(self):
+        return str(self.calibration)
 
 
 class VoidDeviceResp(BaseStructure): pass

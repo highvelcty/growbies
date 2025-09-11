@@ -30,19 +30,21 @@ class ServiceOp(StrEnum):
     LS = 'ls'
 
     @classmethod
-    def get_help_str(cls, cmd_: 'ServiceOp') -> str:
-        if cmd_ == cls.ACTIVATE:
+    def get_help_str(cls, cmd: 'ServiceOp') -> str:
+        if cmd == cls.ACTIVATE:
             return f'Activate a device.'
-        elif cmd_ == cls.DEACTIVATE:
+        elif cmd == cls.DEACTIVATE:
             return 'Deactivate a device.'
-        elif cmd_ == cls.LOOPBACK:
+        elif cmd == cls.CAL:
+            return 'Get/set device calibration.'
+        elif cmd == cls.LOOPBACK:
             return 'A no operation command/response.'
-        elif cmd_ == cls.LS:
+        elif cmd == cls.LS:
             return f'List devices.'
-        elif cmd_ == cls.ID:
-            return f'Identify a device.'
+        elif cmd == cls.ID:
+            return f'Get/set device identify information.'
         else:
-            raise ValueError(f'Sub-command "{cmd_}" does not exist')
+            raise ValueError(f'Sub-command "{cmd}" does not exist')
 
     @classmethod
     def get_description_str(cls, cmd_: 'ServiceOp') -> Optional[str]:
@@ -51,13 +53,14 @@ class ServiceOp(StrEnum):
             desc = 'Making it available for connection.'
         elif cmd_ == cls.DEACTIVATE:
             desc = 'Disconnecting as necessary and making it unavailable for connection.'
+        elif cmd_ == cls.CAL:
+            desc = 'Read, modify or initialize device calibration.'
         elif cmd_ == cls.LOOPBACK:
             desc = 'Used to test basic command/response functionality with a device.'
         elif cmd_ == cls.LS:
             desc = 'A merge of discovered devices and devices in the DB'
         elif cmd_ == cls.ID:
-            desc = (f'If any keyword parameter is given, a read/mod/write/verify will occur. '
-                    f'Otherwise, only a read will occur.')
+            desc = f'Read, modify or initialize identify information.'
 
         return (f'{cls.get_help_str(cmd_)}\n'
                 f'\n'
