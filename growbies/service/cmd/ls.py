@@ -17,7 +17,7 @@ class SupportedVidPid:
 
     all_ = (ESPRESSIF_DEBUG, FTDI_FT232)
 
-def ls() -> Devices:
+def execute() -> Devices:
     discovered_devices = Devices()
     _discover_info(discovered_devices)
     return get_db_engine().devices.merge_with_discovered(discovered_devices)

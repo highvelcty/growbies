@@ -12,9 +12,8 @@ import queue
 
 import serial
 
-from growbies.device.cmd import DeviceCmdOp, TDeviceCmd, CmdPacketHdr
+from growbies.device.cmd import TDeviceCmd, CmdPacketHdr
 from growbies.device.resp import TDeviceResp, DeviceRespOp, RespPacketHdr
-from growbies.service.common import ServiceCmdError
 from growbies.session import log
 from growbies.utils.bufstr import BufStr
 from growbies.utils.crc import crc_ccitt16
@@ -182,13 +181,13 @@ class SerialDatalink(BaseDataLink):
 
 class Network(BaseDataLink, ABC):
     _CRC_BYTES = 2
+    # meyere, note to self, pass back a memory view, pulling off the crc in the process.
     def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[bytearray]:
         frame = super().recv_frame(block=block, timeout=timeout)
         if self._valid_crc(frame):
             return frame
         else:
             logger.error(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
-            logger.debug(BufStr(frame))
             return None
 
     def send_packet(self, buf: bytes):
@@ -203,9 +202,15 @@ class Network(BaseDataLink, ABC):
         return chk == calc_bytes
 
 class Transport(Network, ABC):
+    DEBUG = False
     def recv_resp(self, block=True, timeout: Optional[float] = None) \
             -> tuple[Optional[RespPacketHdr], Optional[TDeviceResp]]:
         frame = super().recv_packet(block=block, timeout=timeout)
+        if self.DEBUG:
+            if frame is None:
+                logger.debug(f'frame was returned as None')
+            else:
+                logger.debug(f'packet received:\n{BufStr(frame)}')
         if frame is None:
             return None, None
         return DeviceRespOp.from_frame(frame)
@@ -217,6 +222,9 @@ class Transport(Network, ABC):
         """
         op, version = cmd.get_op_and_version()
         hdr = CmdPacketHdr(type=op, version=version, id=1)
+        if self.DEBUG:
+            logger.debug(f'emey send hdr:\n{BufStr(bytes(hdr))}')
+            logger.debug(f'emey send payload:\n{BufStr(bytes(cmd))}')
         self.send_packet(bytes(hdr) + bytes(cmd))
 
 class SerialIntf(Transport, SerialDatalink): pass

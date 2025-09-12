@@ -4,8 +4,9 @@ import ctypes
 import logging
 
 from .common import  BaseStructure, BaseUnion, PacketHdr, TBaseStructure
-from .common.identify import Identify, Identify1
 from .common.calibration import Calibration
+from .common.identify import Identify, Identify1
+from .common.tare import Tare
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class DeviceRespOp(IntEnum):
     DATAPOINT = 1
     CALIBRATION = 2
     IDENTIFY = 3
+    TARE = 4
     ERROR = 0xFFFF
 
     def __str__(self):
@@ -47,6 +49,8 @@ class DeviceRespOp(IntEnum):
                 else:
                     logger.warning(f'Unimplemented identify version {packet_hdr.version}.')
                     resp = Identify1.from_buffer(frame, ctypes.sizeof(packet_hdr))
+            elif packet_hdr.type == cls.TARE:
+                resp = Tare.from_buffer(frame, ctypes.sizeof(packet_hdr))
             else:
                 logger.error(f'Unrecognized response type: {packet_hdr.type}')
         except ValueError as err:
@@ -55,7 +59,6 @@ class DeviceRespOp(IntEnum):
         return packet_hdr, resp
 
 
-error_t = ctypes.c_uint32
 class DeviceErrorCode(IntEnum):
     # bitfield
     NONE                                  = 0x00000000
@@ -80,7 +83,7 @@ TDeviceResp = BaseStructure | BaseUnion
 
 class ErrorDeviceResp(BaseStructure):
     class Field(PacketHdr.Field):
-        ERROR = 'error'
+        ERROR = '_error'
 
     _fields_ = [
         (Field.ERROR, ctypes.c_uint32)
@@ -88,11 +91,11 @@ class ErrorDeviceResp(BaseStructure):
 
     @property
     def error(self) -> DeviceErrorCode:
-        return super().error
+        return DeviceErrorCode(getattr(self, self.Field.ERROR))
 
     @error.setter
     def error(self, value: DeviceErrorCode):
-        super().error = value
+        setattr(self, self.Field.ERROR, value)
 
 
 class DataPointDeviceResp(BaseStructure):
@@ -102,7 +105,6 @@ class DataPointDeviceResp(BaseStructure):
         TEMPERATURE_SENSOR = '_temperature_sensor'
         TEMPERATURE = '_temperature'
 
-    _pack_ = 1
     _fields_ = [
         (Field.MASS_SENSOR, ctypes.c_float * Calibration.MASS_SENSOR_COUNT),
         (Field.MASS, ctypes.c_float),
@@ -141,7 +143,6 @@ class GetCalibrationDeviceResp(BaseStructure):
     class Field(BaseStructure.Field):
         CALIBRATION = '_calibration'
 
-    _pack_ = 1
     _fields_ = [
         (Field.CALIBRATION, Calibration)
     ]
@@ -160,7 +161,6 @@ class VoidDeviceResp(BaseStructure): pass
 class DeviceError(Exception):
     def __init__(self, error: DeviceErrorCode):
         try:
-            error = int(error)
             error_msg = f'DeviceError 0x{error:08X} "{error}".'
         except ValueError:
             error_msg = error

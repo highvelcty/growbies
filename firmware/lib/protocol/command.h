@@ -15,6 +15,8 @@ enum class Cmd: uint16_t {
     POWER_OFF_HX711 = 5,
     GET_IDENTIFY = 6,
     SET_IDENTIFY = 7,
+    GET_TARE = 8,
+    SET_TARE = 9,
 };
 
 enum class Resp: uint16_t {
@@ -22,6 +24,7 @@ enum class Resp: uint16_t {
     DATAPOINT = 1,
     CALIBRATION = 2,
     IDENTIFY = 3,
+    TARE = 4,
     ERROR = 0xFFFF,
 };
 
@@ -103,6 +106,12 @@ struct CmdSetIdentify : BaseCmd {
     bool init = false;
     Identify1 identify{};
 };
+struct CmdGetTare: BaseCmd {};
+struct CmdSetTare : BaseCmd {
+    bool init = false;
+    Tare tare{};
+};
+
 struct CmdLoopback : BaseCmd {};
 struct CmdPowerOnHx711 : BaseCmd {};
 struct CmdPowerOffHx711 : BaseCmd {};
@@ -149,6 +158,17 @@ struct RespGetIdentify : BaseResp {
         : identify(ident) {}
 };
 static_assert(sizeof(RespGetIdentify) < MAX_SLIP_UNENCODED_PACKET_BYTES);
+
+struct RespGetTare : BaseResp {
+    static constexpr auto VERSION = 0;
+    static constexpr auto TYPE = Resp::TARE;
+
+    Tare tare{};
+
+    explicit RespGetTare(const Tare& tare_ = Tare{})
+        : tare(tare_) {}
+};
+static_assert(sizeof(RespGetTare) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 struct TLVHdr {
     EndpointType type;

@@ -15,6 +15,7 @@
 
 typedef float MassTemperatureCoeff[MAX_MASS_SENSOR_COUNT][COEFF_COUNT];
 typedef float MassCoeff[COEFF_COUNT];
+typedef float TareValue[TARE_COUNT];
 
 #pragma pack(1)
 
@@ -25,6 +26,10 @@ struct NvmHdr {
     bool is_initialized() const {
         return this->magic == MAGIC;
     }
+};
+
+struct Tare {
+    TareValue values{};
 };
 
 struct Calibration {
@@ -192,10 +197,13 @@ inline void NvmStoreBase<Identify1>::init_fields() {
 #if ARDUINO_ARCH_AVR
 using CalibrationStore = AvrNvmStore<Calibration>;
 using IdentifyStore    = AvrNvmStore<Identify1>;
+using TareStore        = AvrNvmStore<Tare>;
 #elif ARDUINO_ARCH_ESP32
 using CalibrationStore = Esp32NvmStore<Calibration>;
 using IdentifyStore = Esp32NvmStore<Identify1>;
+using TareStore = Esp32NvmStore<Tare>;
 #endif
 
 extern CalibrationStore* calibration_store;
 extern IdentifyStore* identify_store;
+extern TareStore* tare_store;

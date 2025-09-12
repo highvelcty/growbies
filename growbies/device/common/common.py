@@ -65,7 +65,9 @@ class _StructUnionMixin:
     def __str__(self):
         return '\n'.join(self.get_str())
 
-class BaseStructure(ctypes.Structure, _StructUnionMixin): pass
+class BaseStructure(ctypes.Structure, _StructUnionMixin):
+    _pack_ = 1
+
 TBaseStructure = NewType('TBaseStructure', BaseStructure)
 
 class BaseUnion(ctypes.Union, _StructUnionMixin): pass
@@ -77,7 +79,6 @@ class PacketHdr(BaseStructure):
         ID = '_id'
         VERSION = 'version'
 
-    _pack_ = 1
     _fields_ = [
         (Field.TYPE, ctypes.c_uint16),
         (Field.ID, ctypes.c_uint8),

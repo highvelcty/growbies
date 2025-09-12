@@ -52,7 +52,7 @@ def _init(worker):
     cmd.init = True
     _ = worker.cmd(cmd)
 
-def identify(cmd: ServiceCmd) -> Optional[id_mod.TIdentify]:
+def execute(cmd: ServiceCmd) -> Optional[id_mod.TIdentify]:
     pool = get_pool()
     serial = cmd.kw.pop(PositionalParam.SERIAL)
     init = cmd.kw.pop(Param.INIT)

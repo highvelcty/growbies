@@ -64,7 +64,6 @@ class Identify(BaseStructure):
         FRAME = '_frame'
         FOOT = '_foot'
 
-    _pack_ = 1
     _fields_ = [
         (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
     ]
@@ -191,7 +190,6 @@ class Identify(BaseStructure):
 TIdentify = NewType('TIdentify', Identify)
 
 class Identify1(Identify):
-    _pack_ = 1
     _fields_ = [
         (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 32),
         (Identify.Field.MODEL_NUMBER, ctypes.c_char * 32),

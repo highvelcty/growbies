@@ -1,12 +1,13 @@
 from abc import ABC, ABCMeta, abstractmethod
 from enum import IntEnum
-from typing import NewType, Optional
+from typing import NewType
 import ctypes
 import logging
 
-from .common.calibration import Calibration
 from .common import BaseStructure, PacketHdr
+from .common.calibration import Calibration
 from .common.identify import Identify1, TIdentify
+from .common.tare import Tare
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,8 @@ class DeviceCmdOp(IntEnum):
     POWER_OFF_HX711 = 5
     GET_IDENTIFY = 6
     SET_IDENTIFY = 7
+    GET_TARE = 8
+    SET_TARE = 9
 
     def __str__(self):
         return self.name
@@ -80,7 +83,7 @@ class GetCalibrationDeviceCmd(BaseDeviceCmd):
 
 class SetCalibrationDeviceCmd(BaseDeviceCmd):
     class Field(BaseDeviceCmd.Field):
-        INIT = 'init'
+        INIT = '_init'
         CALIBRATION = '_calibration'
 
     _fields_ = [
@@ -116,10 +119,9 @@ class GetIdentifyDeviceCmd(BaseDeviceCmd):
 
 class SetIdentifyDeviceCmd(BaseDeviceCmd):
     class Field(BaseDeviceCmd.Field):
-        INIT = 'init'
+        INIT = '_init'
         IDENTIFY = '_identify'
 
-    _pack_ = 1
     _fields_ = [
         (Field.INIT, ctypes.c_bool),
         (Field.IDENTIFY, Identify1),
@@ -144,6 +146,41 @@ class SetIdentifyDeviceCmd(BaseDeviceCmd):
     @identify.setter
     def identify(self, val: TIdentify):
         setattr(self, self.Field.IDENTIFY, val)
+
+class GetTareDeviceCmd(BaseDeviceCmd):
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.GET_TARE, 0
+
+class SetTareDeviceCmd(BaseDeviceCmd):
+    class Field(BaseDeviceCmd.Field):
+        INIT = '_init'
+        TARE = '_tare'
+
+    _fields_ = [
+        (Field.INIT, ctypes.c_bool),
+        (Field.TARE, Tare),
+    ]
+
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.SET_TARE, 0
+
+    @property
+    def init(self) -> bool:
+        return getattr(self, self.Field.INIT)
+
+    @init.setter
+    def init(self, value: bool):
+        setattr(self, self.Field.INIT, value)
+
+    @property
+    def tare(self) -> Tare:
+        return getattr(self, self.Field.TARE)
+
+    @tare.setter
+    def tare(self, val: Tare):
+        setattr(self, self.Field.TARE, val)
 
 class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
     class Field(BaseDeviceCmdWithTimesParam.Field):

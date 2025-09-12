@@ -28,6 +28,7 @@ class ServiceOp(StrEnum):
     ID = 'id'
     LOOPBACK = 'loopback'
     LS = 'ls'
+    TARE = 'tare'
 
     @classmethod
     def get_help_str(cls, cmd: 'ServiceOp') -> str:
@@ -43,6 +44,8 @@ class ServiceOp(StrEnum):
             return f'List devices.'
         elif cmd == cls.ID:
             return f'Get/set device identify information.'
+        elif cmd == cls.TARE:
+            return f'Get/set tare.'
         else:
             raise ValueError(f'Sub-command "{cmd}" does not exist')
 
@@ -61,6 +64,8 @@ class ServiceOp(StrEnum):
             desc = 'A merge of discovered devices and devices in the DB'
         elif cmd_ == cls.ID:
             desc = f'Read, modify or initialize identify information.'
+        elif cmd_ == cls.TARE:
+            desc = f'Read, modify or initialize tare.'
 
         return (f'{cls.get_help_str(cmd_)}\n'
                 f'\n'

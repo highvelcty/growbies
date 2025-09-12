@@ -13,7 +13,6 @@ class Calibration(BaseStructure):
         MASS_TEMP_COEFF = '_mass_temp_coeff'
         MASS_COEFF = '_mass_coeff'
 
-    _pack_ = 1
     # Note: The rows must be assigned to a variable prior to use. Inlining with parenthesis does
     # not work.
     _row = ctypes.c_float * COEFF_COUNT
@@ -21,9 +20,6 @@ class Calibration(BaseStructure):
         (Field.MASS_TEMP_COEFF, _row * MASS_SENSOR_COUNT),
         (Field.MASS_COEFF, ctypes.c_float * COEFF_COUNT),
     ]
-
-    def set_sensor_data(self, field, sensor: int, *values):
-        getattr(self, field)[sensor] = values
 
     @property
     def mass_temp_coeff(self) -> list[list[float]]:

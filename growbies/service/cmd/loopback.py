@@ -11,7 +11,7 @@ def make_cli(parser: ArgumentParser):
     parser.add_argument(PositionalParam.SERIAL, type=str,
                             help=PositionalParam.get_help_str(PositionalParam.SERIAL))
 
-def loopback(cmd: ServiceCmd) -> VoidDeviceResp:
+def execute(cmd: ServiceCmd) -> VoidDeviceResp:
     """
     raises:
         :class:`ServiceCmdError`

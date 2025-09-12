@@ -17,7 +17,6 @@ def execute(cmd: ServiceCmd):
     device_ids = [dev.id for dev in devices]
     engine = get_db_engine().devices
     worker_pool = get_pool()
-    engine.set_active(*device_ids)
-    worker_pool.connect(*device_ids)
-
-
+    engine.clear_active(*device_ids)
+    worker_pool.disconnect(*device_ids)
+    worker_pool.join_all(*device_ids)

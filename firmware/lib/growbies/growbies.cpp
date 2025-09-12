@@ -124,19 +124,43 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
             send_payload(resp, sizeof(*resp));
         }
     }
+    else if (in_packet_hdr->cmd == Cmd::GET_TARE) {
+        auto* cmd = after<CmdGetTare>(in_packet_hdr);
+        error = validate_packet(*in_packet_hdr, *cmd);
+        if (!error) {
+            auto* resp = new (this->packet_buf) RespGetTare;
+            memcpy(&resp->tare, tare_store->view(), sizeof(resp->tare));
+            send_payload(resp, sizeof(*resp));
+        }
+    }
+    else if (in_packet_hdr->cmd == Cmd::SET_TARE) {
+        // auto* cmd = after<CmdSetTare>(in_packet_hdr);
+        auto* cmd = const_cast<CmdSetTare*>(after<CmdSetTare>(in_packet_hdr));
+        error = validate_packet(*in_packet_hdr, *cmd);
+        if (!error) {
+            [[maybe_unused]] const auto* resp = new (this->packet_buf) RespVoid;
+            if (cmd->init) {
+                tare_store->init();
+            }
+            else {
+                tare_store->put(cmd->tare);
+            }
+            send_payload(resp, sizeof(*resp));
+        }
+    }
     else{
         error = ERROR_UNRECOGNIZED_COMMAND;
     }
 
     if (error) {
-        [[maybe_unused]] auto* resp = const_cast<RespError*>(after<RespError>(in_packet_hdr));
+        [[maybe_unused]] auto* resp = new (this->packet_buf) RespError;
         resp->error = error;
         send_payload(resp, sizeof(*resp));
     }
 }
 
 #if BUTTERFLY
-void Growbies::exec_read(const uint8_t packet_hdr_id, int times, bool raw) {
+void Growbies::exec_read(const uint8_t packet_hdr_id, const int times, const bool raw) {
     ErrorCode error = ERROR_NONE;
 
     this->out_packet_hdr->id = packet_hdr_id;
