@@ -52,9 +52,10 @@ class Growbies {
                                        float thresh, DataPoint* datapoint);
         static ErrorCode sample_mass(float** iteration_mass_samples, int times, HX711Gain gain);
         static void sample_temperature(float** iteration_temp_samples, int times);
-        ErrorCode get_datapoint(DataPoint* datapoint,
-                                int times, bool raw = false,
-                                HX711Gain gain = HX711_GAIN_128) const;
+
+        static ErrorCode get_datapoint(DataPoint* datapoint,
+                                       int times, bool raw = false,
+                                       HX711Gain gain = HX711_GAIN_128);
 
         static void shift_all_in(float* sensor_sample, HX711Gain gain);
 

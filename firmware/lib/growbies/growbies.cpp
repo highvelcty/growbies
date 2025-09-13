@@ -164,15 +164,15 @@ void Growbies::exec_read(const uint8_t packet_hdr_id, const int times, const boo
     ErrorCode error = ERROR_NONE;
 
     this->out_packet_hdr->id = packet_hdr_id;
-    auto* resp = new (this->packet_buf) DataPoint;
-    error = this->get_datapoint(resp, times, raw);
+    auto resp = DataPoint(this->packet_buf, MAX_RESP_BYTES);
+    error = this->get_datapoint(&resp, times, raw);
     if (error) {
         auto* resp_error = new (this->packet_buf) RespError;
         resp_error->error = error;
-        send_payload(resp, sizeof(*resp_error));
+        send_payload(resp_error, sizeof(*resp_error));
     }
     else {
-        send_payload(resp, resp->get_size());
+        send_payload(&resp, resp.get_size());
     }
 }
 #endif
@@ -188,7 +188,7 @@ void Growbies::power_on() {
 }
 
 ErrorCode Growbies::median_avg_filter(float **iteration_sensor_sample,
-                                      const int iterations, EndpointType endpoint_type,
+                                      const int iterations, const EndpointType endpoint_type,
                                       const float thresh, DataPoint* datapoint) {
     int iteration;
     float median;
@@ -283,7 +283,7 @@ void Growbies::sample_temperature(float **iteration_temp_samples, const int time
 
 ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
                                   const int times, const bool raw,
-                                  const HX711Gain gain) const {
+                                  const HX711Gain gain) {
     int iteration;
     SensorIdx_t sensor_idx;
     ErrorCode error = ERROR_NONE;

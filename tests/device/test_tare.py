@@ -16,5 +16,4 @@ class Test(TestCase):
     def test2(self):
         buf = bytearray(b'\x00' * 6 + b'\x80\x3f' + (b'\x00' * 12))
         tare = Tare.from_buffer(buf)
-        print(tare)
-        print(tare.values[0])
+        self.assertAlmostEqual(1.0, tare.values[1])

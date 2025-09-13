@@ -178,51 +178,31 @@ struct TLVHdr {
         : type(t), length(len) {}
 };
 
-template <typename T>
-struct TLV : TLVHdr {
-    T* value; // pointer to array of T (can be single value too)
-
-    TLV(const EndpointType t, const uint8_t len, T* val)
-        : TLVHdr(t, len), value(val) {}
-
-    T& operator[](size_t i) { return value[i]; }
-    const T& operator[](size_t i) const { return value[i]; }
-};
-
-// --- Serialized ABI structure ---
-struct DataPointRaw {
-    uint32_t timestamp = 0;
-};
-
-// --- Wrapper class for bookkeeping ---
 class DataPoint {
 public:
     static constexpr auto VERSION = 0;
     static constexpr auto TYPE = Resp::DATAPOINT;
 
-    explicit DataPoint(uint32_t ts = 0)
-        : offset(sizeof(raw.timestamp)), last_tlv(nullptr) {
-        raw.timestamp = ts;
-    }
+    explicit DataPoint(uint8_t* buf, const size_t buf_size)
+        : buffer(buf), capacity(buf_size), offset(0), last_tlv(nullptr) {}
 
     template <typename T>
     bool add(const EndpointType type, const T& value) {
-        // Check if we need a new TLV header
         const bool new_header = (last_tlv == nullptr) || (last_tlv->type != type);
-
         const size_t required = sizeof(T) + (new_header ? sizeof(TLVHdr) : 0);
-        if (offset + required > MAX_RESP_BYTES) return false;
 
-        uint8_t* dst = reinterpret_cast<uint8_t*>(&raw) + offset;
+        if (offset + required > capacity) return false;
+
+        uint8_t* dst = buffer + offset;
 
         if (new_header) {
             last_tlv = reinterpret_cast<TLVHdr*>(dst);
             last_tlv->type = type;
-            last_tlv->length = 1;
+            last_tlv->length = sizeof(T);
             offset += sizeof(TLVHdr);
             dst += sizeof(TLVHdr);
         } else {
-            last_tlv->length += 1;
+            last_tlv->length += sizeof(T);
         }
 
         memcpy(dst, &value, sizeof(T));
@@ -231,27 +211,30 @@ public:
     }
 
     template <typename T>
-    T* find_value(EndpointType type) {
-        size_t pos = sizeof(DataPointRaw);
+    T* find_value(const EndpointType type) {
+        size_t pos = 0;
         while (pos + sizeof(TLVHdr) <= offset) {
-            auto* hdr = reinterpret_cast<TLVHdr*>(reinterpret_cast<uint8_t*>(&raw) + pos);
-            if (hdr->type == type && hdr->length * sizeof(T) + sizeof(TLVHdr) <= offset - pos) {
-                return reinterpret_cast<T*>(hdr + 1); // value follows header
+            auto* hdr = reinterpret_cast<TLVHdr*>(buffer + pos);
+            const size_t tlv_size = sizeof(TLVHdr) + hdr->length;
+
+            if (hdr->type == type && pos + tlv_size <= offset) {
+                return reinterpret_cast<T*>(hdr + 1); // values follow header
             }
-            pos += sizeof(TLVHdr) + hdr->length * sizeof(T);
+
+            pos += tlv_size;
         }
         return nullptr;
     }
 
     size_t get_size() const { return offset; }
-
-    const DataPointRaw* view() const { return &raw; }
-    DataPointRaw* view() { return &raw; }
+    const uint8_t* view() const { return buffer; }
+    uint8_t* view() { return buffer; }
 
 private:
-    DataPointRaw raw;
-    size_t offset;    // per-instance tracking
-    TLVHdr* last_tlv; // per-instance tracking
+    uint8_t* buffer;
+    size_t capacity;
+    size_t offset;
+    TLVHdr* last_tlv;
 };
 
 #endif /* command_h */
