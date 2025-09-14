@@ -10,8 +10,8 @@ from serial.serialutil import SerialException
 from growbies.db.engine import get_db_engine
 from growbies.device.cmd import TDeviceCmd
 from growbies.device.common import BaseStructure
-from growbies.device.resp import (DeviceRespOp, DataPointDeviceResp,
-                                  DeviceError, ErrorDeviceResp, RespPacketHdr, TDeviceResp)
+from growbies.device.resp import (DeviceRespOp, DeviceError, ErrorDeviceResp, RespPacketHdr,
+                                  TDeviceResp)
 from growbies.service.common import ServiceCmdError
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
@@ -26,7 +26,6 @@ class PipeCmd:
 class Worker(Thread):
     _RECONNECT_RETRY_DELAY_SECONDS = 3
     _RECONNECT_RETRY_POLLING_SECONDS = 0.1
-    _ASYNC_RESPONSES = (DataPointDeviceResp, ErrorDeviceResp)
     _PIPE_READ_BYTES = 1024
     _DEFAULT_CMD_TIMEOUT_SECONDS = 3
     _RESP_Q_TIMEOUT_SECONDS = 0.1

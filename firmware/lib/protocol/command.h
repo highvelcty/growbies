@@ -17,6 +17,7 @@ enum class Cmd: uint16_t {
     SET_IDENTIFY = 7,
     GET_TARE = 8,
     SET_TARE = 9,
+    READ = 10
 };
 
 enum class Resp: uint16_t {
@@ -42,6 +43,7 @@ typedef enum EndpointType: uint8_t {
     EP_MASS = 0,
     EP_TEMPERATURE = 1,
     EP_TARE_CRC = 2,
+    EP_MASS_FILTERED_SAMPLES = 3,
 } EndpointType;
 
 // Bitwise operators for Error
@@ -90,11 +92,6 @@ constexpr int MAX_RESP_BYTES = MAX_SLIP_UNENCODED_PACKET_BYTES - sizeof(PacketHd
 // --- Base Commands
 struct BaseCmd {};
 
-struct BaseCmdWithTimesParam : BaseCmd {
-    uint8_t times{0};
-    explicit BaseCmdWithTimesParam(const uint8_t times_ = 0) : times(times_) {}
-};
-
 // --- Commands
 struct CmdGetCalibration : BaseCmd {};
 struct CmdSetCalibration : BaseCmd {
@@ -115,9 +112,11 @@ struct CmdSetTare : BaseCmd {
 struct CmdLoopback : BaseCmd {};
 struct CmdPowerOnHx711 : BaseCmd {};
 struct CmdPowerOffHx711 : BaseCmd {};
-struct CmdGetDatapoint : BaseCmdWithTimesParam {
+struct CmdRead : BaseCmd {
+    uint8_t times{0};
     bool raw{};
 };
+
 // --- Base Responses
 struct BaseResp {};
 
@@ -238,5 +237,3 @@ private:
 };
 
 #endif /* command_h */
-
-

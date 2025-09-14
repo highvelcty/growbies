@@ -22,6 +22,7 @@ class DeviceCmdOp(IntEnum):
     SET_IDENTIFY = 7
     GET_TARE = 8
     SET_TARE = 9
+    READ = 10
 
     def __str__(self):
         return self.name
@@ -79,6 +80,40 @@ class GetCalibrationDeviceCmd(BaseDeviceCmd):
     @classmethod
     def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
         return DeviceCmdOp.GET_CALIBRATION, 0
+
+class ReadDeviceCmd(BaseDeviceCmd):
+    DEFAULT_TIMES = 7
+
+    class Field(BaseDeviceCmd.Field):
+        TIMES = '_times'
+        RAW = '_raw'
+
+    _fields_ = [
+        (Field.RAW, ctypes.c_uint8),
+        (Field.RAW, ctypes.c_bool)
+    ]
+
+    @classmethod
+    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
+        return DeviceCmdOp.READ, 0
+
+    @property
+    def raw(self) -> bool:
+        return getattr(self, self.Field.RAW)
+
+    @raw.setter
+    def raw(self, value: bool):
+        setattr(self, self.Field.RAW, value)
+
+    @property
+    def times(self) -> int:
+        return super().times
+
+    @times.setter
+    def times(self, value: int):
+        super().times = value
+
+
 
 
 class SetCalibrationDeviceCmd(BaseDeviceCmd):
@@ -181,26 +216,6 @@ class SetTareDeviceCmd(BaseDeviceCmd):
     @tare.setter
     def tare(self, val: Tare):
         setattr(self, self.Field.TARE, val)
-
-class GetDatapointDeviceCmd(BaseDeviceCmdWithTimesParam):
-    class Field(BaseDeviceCmdWithTimesParam.Field):
-        RAW = '_raw'
-
-    _fields_ = [
-        (Field.RAW, ctypes.c_bool)
-    ]
-
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.GET_DATAPOINT, 0
-
-    @property
-    def raw(self) -> bool:
-        return getattr(self, self.Field.RAW)
-
-    @raw.setter
-    def raw(self, val: bool):
-        setattr(self, self.Field.RAW, val)
 
 class LoopbackDeviceCmd(BaseDeviceCmd):
     @classmethod

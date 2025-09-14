@@ -1,30 +1,40 @@
 import ctypes
+import logging
 from ctypes import sizeof
 from enum import IntEnum
 from typing import Any
 
-from growbies.service.common import ServiceCmdError
 from .common import BaseStructure
+from growbies.constants import UINT8_MAX
+from growbies.service.common import ServiceCmdError
+
+logger = logging.getLogger(__name__)
 
 class EndpointType(IntEnum):
     MASS = 0,
     TEMPERATURE = 1
     TARE_CRC = 2
+    UNKNOWN = UINT8_MAX
 
 
 class TLVHdr(BaseStructure):
+    TYPE_FIELD_CTYPE = ctypes.c_uint8
     class Field(BaseStructure.Field):
         TYPE = '_type'
         LENGTH = '_length'
 
     _fields_ = [
-        (Field.TYPE, ctypes.c_uint8),
+        (Field.TYPE, TYPE_FIELD_CTYPE),
         (Field.LENGTH, ctypes.c_uint8)
     ]
 
     @property
-    def type(self) -> EndpointType:
-        return EndpointType(getattr(self, self.Field.TYPE))
+    def type(self) -> EndpointType | int:
+        val = getattr(self, self.Field.TYPE)
+        try:
+            return EndpointType(getattr(self, self.Field.TYPE))
+        except ValueError:
+            return val
 
     @type.setter
     def type(self, value: EndpointType):
@@ -48,14 +58,13 @@ class DataPoint:
             offset += sizeof(hdr)
 
             self._type_vals[hdr.type] = list()
-            if hdr.type in (EndpointType.MASS, EndpointType.TARE_CRC):
+            if hdr.type in (EndpointType.MASS, EndpointType.TEMPERATURE):
                 klass = ctypes.c_float
             else:
-                raise ServiceCmdError('Unknown ')
-
-            required = hdr.length * sizeof(klass)
+                # meyere, figure out what to do here.
+            required = sizeof(klass)
             if offset + required > len(buf):
-                raise ServiceCmdError(f'Buffer underflow while deserializing to'
+                raise ServiceCmdError(f'Buffer underflow while deserializing to '
                                       f'{DataPoint.__qualname__}')
             else:
                 for ii in range(hdr.length // sizeof(klass)):
@@ -71,15 +80,15 @@ class DataPoint:
             # Format label and units
             label = ep_type.name.capitalize()
             if ep_type == EndpointType.MASS:
-                formatted_vals = ", ".join(f"{v:.2f}" for v in vals[:-1])
-                total = vals[-1]
+                formatted_vals = ", ".join(f"{v.value:.2f}" for v in vals[:-1])
+                total = vals[-1].value
                 lines.append(f"{label}: {formatted_vals} | Total: {total:.2f}")
             elif ep_type == EndpointType.TEMPERATURE:
-                formatted_vals = ", ".join(f"{v:.2f}" for v in vals[:-1])
-                avg = vals[-1]
+                formatted_vals = ", ".join(f"{v.value:.2f}" for v in vals[:-1])
+                avg = vals[-1].value
                 lines.append(f"{label}: {formatted_vals} | Avg: {avg:.2f}")
             elif ep_type == EndpointType.TARE_CRC:
-                lines.append(f"{label}: 0x{vals[0]:.0f}")
+                lines.append(f"{label}: 0x{vals[0]:X}")
             else:
                 lines.append(f"{label}: {', '.join(str(v) for v in vals)}")
 

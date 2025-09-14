@@ -35,7 +35,7 @@ _CRC16_CCITT_TABLE = [
     0x6E17,0x7E36,0x4E55,0x5E74,0x2E93,0x3EB2,0x0ED1,0x1EF0
 ]
 
-def crc_ccitt16(data: bytes, crc: int = UINT16_MAX) -> int:
+def crc_ccitt16(data: memoryview | bytes | bytearray, crc: int = UINT16_MAX) -> int:
     for byte in data:
         tbl_idx = ((crc >> 8) ^ byte) & 0xFF
         crc = ((crc << 8) & 0xFFFF) ^ _CRC16_CCITT_TABLE[tbl_idx]

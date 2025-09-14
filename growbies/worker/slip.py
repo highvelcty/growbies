@@ -61,8 +61,8 @@ class BaseDataLink(threading.Thread, ABC):
     def write(self, data: bytes):
         ...
 
-    def recv_frame(self, block=True, timeout: Optional[float] = None) -> bytearray:
-        return self._frames.get(block=block, timeout=timeout)
+    def recv_frame(self, block=True, timeout: Optional[float] = None) -> memoryview:
+        return memoryview(self._frames.get(block=block, timeout=timeout))
 
     def send_frame(self, buf: bytes):
         encoded = bytearray()
@@ -181,11 +181,10 @@ class SerialDatalink(BaseDataLink):
 
 class Network(BaseDataLink, ABC):
     _CRC_BYTES = 2
-    # meyere, note to self, pass back a memory view, pulling off the crc in the process.
-    def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[bytearray]:
+    def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[memoryview]:
         frame = super().recv_frame(block=block, timeout=timeout)
         if self._valid_crc(frame):
-            return frame
+            return frame[:-self._CRC_BYTES]
         else:
             logger.error(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
             return None
@@ -194,7 +193,7 @@ class Network(BaseDataLink, ABC):
         crc = crc_ccitt16(buf).to_bytes(self._CRC_BYTES, 'little')
         super().send_frame(buf + crc)
 
-    def _valid_crc(self, frame: bytes) -> bool:
+    def _valid_crc(self, frame: memoryview) -> bool:
         if len(frame) < self._CRC_BYTES:
             return False
         data, chk = frame[:-self._CRC_BYTES], frame[-self._CRC_BYTES:]
@@ -202,15 +201,15 @@ class Network(BaseDataLink, ABC):
         return chk == calc_bytes
 
 class Transport(Network, ABC):
-    DEBUG = False
+    DEBUG = True
     def recv_resp(self, block=True, timeout: Optional[float] = None) \
             -> tuple[Optional[RespPacketHdr], Optional[TDeviceResp]]:
         frame = super().recv_packet(block=block, timeout=timeout)
         if self.DEBUG:
             if frame is None:
-                logger.debug(f'frame was returned as None')
+                logger.debug(f'Transport Receive None')
             else:
-                logger.debug(f'packet received:\n{BufStr(frame)}')
+                logger.debug(BufStr(frame, title="Transport Receive"))
         if frame is None:
             return None, None
         return DeviceRespOp.from_frame(frame)
@@ -223,8 +222,8 @@ class Transport(Network, ABC):
         op, version = cmd.get_op_and_version()
         hdr = CmdPacketHdr(type=op, version=version, id=1)
         if self.DEBUG:
-            logger.debug(f'emey send hdr:\n{BufStr(bytes(hdr))}')
-            logger.debug(f'emey send payload:\n{BufStr(bytes(cmd))}')
+            logger.debug(BufStr(bytes(hdr), title='Transport Send Header'))
+            logger.debug(BufStr(bytes(cmd), title='Transport Send Payload'))
         self.send_packet(bytes(hdr) + bytes(cmd))
 
 class SerialIntf(Transport, SerialDatalink): pass

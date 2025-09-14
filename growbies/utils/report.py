@@ -34,7 +34,7 @@ def format_8bit_binary(num: int) -> str:
     return ' '.join(bin_str[i:i+4] for i in range(0, 8, 4))
 
 
-def format_dropped_bytes(buf: bytes) -> str:
+def format_dropped_bytes(buf: bytearray | bytes | memoryview ) -> str:
     max_display = 16
     length = len(buf)
 

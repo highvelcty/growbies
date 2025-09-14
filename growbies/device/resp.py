@@ -6,6 +6,7 @@ import logging
 from .common import  BaseStructure, BaseUnion, PacketHdr, TBaseStructure
 from .common.calibration import Calibration
 from .common.identify import Identify, Identify1
+from .common.read import DataPoint
 from .common.tare import Tare
 
 logger = logging.getLogger(__name__)
@@ -22,8 +23,8 @@ class DeviceRespOp(IntEnum):
         return self.name
 
     @classmethod
-    def from_frame(cls, frame: bytearray) -> tuple[Optional['RespPacketHdr'],
-                                                   Optional['TBaseStructure']]:
+    def from_frame(cls, frame: bytearray | memoryview) \
+            -> tuple[Optional['RespPacketHdr'], Optional['TBaseStructure']]:
         packet_hdr = None
         resp = None
 
@@ -38,7 +39,7 @@ class DeviceRespOp(IntEnum):
             elif packet_hdr.type == cls.ERROR:
                 resp = ErrorDeviceResp.from_buffer(frame, ctypes.sizeof(packet_hdr))
             elif packet_hdr.type == cls.DATAPOINT:
-                resp = DataPointDeviceResp.from_buffer(frame, ctypes.sizeof(packet_hdr))
+                resp = DataPoint(frame[ctypes.sizeof(packet_hdr):])
             elif packet_hdr.type == cls.CALIBRATION:
                 resp = (Calibration.from_buffer(frame, ctypes.sizeof(packet_hdr)))
             elif packet_hdr.type == cls.IDENTIFY:
@@ -96,48 +97,6 @@ class ErrorDeviceResp(BaseStructure):
     @error.setter
     def error(self, value: DeviceErrorCode):
         setattr(self, self.Field.ERROR, value)
-
-
-class DataPointDeviceResp(BaseStructure):
-    class Field(BaseStructure.Field):
-        MASS_SENSOR = '_mass_sensor'
-        MASS = '_mass'
-        TEMPERATURE_SENSOR = '_temperature_sensor'
-        TEMPERATURE = '_temperature'
-
-    _fields_ = [
-        (Field.MASS_SENSOR, ctypes.c_float * Calibration.MASS_SENSOR_COUNT),
-        (Field.MASS, ctypes.c_float),
-        (Field.TEMPERATURE_SENSOR, ctypes.c_float * 5),
-        (Field.TEMPERATURE, ctypes.c_float)
-    ]
-
-    @property
-    def mass_sensor(self) -> list[float]:
-        return list(getattr(self, self.Field.MASS_SENSOR))
-
-    @property
-    def mass(self) -> float:
-        return getattr(self, self.Field.MASS)
-
-    @property
-    def temperature_sensor(self) -> list[float]:
-        return list(getattr(self, self.Field.TEMPERATURE_SENSOR))
-
-    @property
-    def temperature(self) -> float:
-        return getattr(self, self.Field.TEMPERATURE)
-
-    def __str__(self):
-        str_list = list()
-        for idx, val in enumerate(self.mass_sensor):
-            str_list.append(f'mass_sensor_{idx}: {val}')
-        str_list.append(f'mass: {self.mass}')
-        str_list.append('')
-        for idx, val in enumerate(self.temperature_sensor):
-            str_list.append(f'temperature_sensor_{idx}: {val}')
-        str_list.append(f'temperature: {self.temperature}')
-        return '\n'.join(str_list)
 
 class GetCalibrationDeviceResp(BaseStructure):
     class Field(BaseStructure.Field):
