@@ -23,41 +23,33 @@ class DeviceRespOp(IntEnum):
         return self.name
 
     @classmethod
-    def from_frame(cls, frame: bytearray | memoryview) \
-            -> tuple[Optional['RespPacketHdr'], Optional['TBaseStructure']]:
-        packet_hdr = None
-        resp = None
-
+    def from_frame(cls, hdr: 'RespPacketHdr', resp: bytearray | memoryview) \
+            -> Optional['TBaseStructure']:
         try:
-            packet_hdr = RespPacketHdr.from_buffer(frame)
-        except ValueError as err:
-            logger.error(f'Packet header deserialization exception: {err}')
-            return packet_hdr, resp
-        try:
-            if packet_hdr.type == cls.VOID:
-                resp = VoidDeviceResp.from_buffer(frame, ctypes.sizeof(packet_hdr))
-            elif packet_hdr.type == cls.ERROR:
-                resp = ErrorDeviceResp.from_buffer(frame, ctypes.sizeof(packet_hdr))
-            elif packet_hdr.type == cls.DATAPOINT:
-                resp = DataPoint(frame[ctypes.sizeof(packet_hdr):])
-            elif packet_hdr.type == cls.CALIBRATION:
-                resp = (Calibration.from_buffer(frame, ctypes.sizeof(packet_hdr)))
-            elif packet_hdr.type == cls.IDENTIFY:
-                if packet_hdr.version == 0:
-                    resp = Identify.from_buffer(frame, ctypes.sizeof(packet_hdr))
-                elif packet_hdr.version == 1:
-                    resp = Identify1.from_buffer(frame, ctypes.sizeof(packet_hdr))
+            if hdr.type == cls.VOID:
+                resp = VoidDeviceResp.from_buffer(resp)
+            elif hdr.type == cls.ERROR:
+                resp = ErrorDeviceResp.from_buffer(resp)
+            elif hdr.type == cls.DATAPOINT:
+                resp = DataPoint(resp)
+            elif hdr.type == cls.CALIBRATION:
+                resp = (Calibration.from_buffer(resp))
+            elif hdr.type == cls.IDENTIFY:
+                if hdr.version == 0:
+                    resp = Identify.from_buffer(resp)
+                elif hdr.version == 1:
+                    resp = Identify1.from_buffer(resp)
                 else:
-                    logger.warning(f'Unimplemented identify version {packet_hdr.version}.')
-                    resp = Identify1.from_buffer(frame, ctypes.sizeof(packet_hdr))
-            elif packet_hdr.type == cls.TARE:
-                resp = Tare.from_buffer(frame, ctypes.sizeof(packet_hdr))
+                    logger.warning(f'Unimplemented identify version {hdr.version}.')
+                    resp = Identify1.from_buffer(resp)
+            elif hdr.type == cls.TARE:
+                resp = Tare.from_buffer(resp)
             else:
-                logger.error(f'Unrecognized response type: {packet_hdr.type}')
+                logger.error(f'Unrecognized response type: {hdr.type}')
         except ValueError as err:
-            logger.error(f'Packet deserialization exception for type "{packet_hdr.type}": {err}')
+            logger.error(f'Packet deserialization exception for type "{hdr.type}": {err}')
 
-        return packet_hdr, resp
+        return resp
 
 
 class DeviceErrorCode(IntEnum):
@@ -91,8 +83,12 @@ class ErrorDeviceResp(BaseStructure):
     ]
 
     @property
-    def error(self) -> DeviceErrorCode:
-        return DeviceErrorCode(getattr(self, self.Field.ERROR))
+    def error(self) -> DeviceErrorCode | int:
+        val = getattr(self, self.Field.ERROR)
+        try:
+            return DeviceErrorCode(val)
+        except ValueError:
+            return val
 
     @error.setter
     def error(self, value: DeviceErrorCode):

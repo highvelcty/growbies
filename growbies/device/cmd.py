@@ -89,7 +89,7 @@ class ReadDeviceCmd(BaseDeviceCmd):
         RAW = '_raw'
 
     _fields_ = [
-        (Field.RAW, ctypes.c_uint8),
+        (Field.TIMES, ctypes.c_uint8),
         (Field.RAW, ctypes.c_bool)
     ]
 
@@ -107,14 +107,11 @@ class ReadDeviceCmd(BaseDeviceCmd):
 
     @property
     def times(self) -> int:
-        return super().times
+        return getattr(self, self.Field.TIMES)
 
     @times.setter
     def times(self, value: int):
-        super().times = value
-
-
-
+        setattr(self, self.Field.TIMES, value)
 
 class SetCalibrationDeviceCmd(BaseDeviceCmd):
     class Field(BaseDeviceCmd.Field):

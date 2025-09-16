@@ -162,10 +162,15 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
 #if BUTTERFLY
 void Growbies::exec_read(const uint8_t packet_hdr_id, const int times, const bool raw) {
     ErrorCode error = ERROR_NONE;
-
-    this->out_packet_hdr->id = packet_hdr_id;
     auto resp = DataPoint(this->packet_buf, MAX_RESP_BYTES);
-    error = this->get_datapoint(&resp, times, raw);
+    this->out_packet_hdr->id = packet_hdr_id;
+
+    if (!times) {
+        error = ERROR_INVALID_PARAMETER;
+    }
+    if (!error) {
+        error = this->get_datapoint(&resp, times, raw);
+    }
     if (error) {
         auto* resp_error = new (this->packet_buf) RespError;
         resp_error->error = error;
@@ -188,18 +193,18 @@ void Growbies::power_on() {
 }
 
 void Growbies::median_avg_filter(float **iteration_sensor_sample,
-                                      const int sample_count, const EndpointType endpoint_type,
+                                      const int times, const EndpointType endpoint_type,
                                       const float thresh, DataPoint* datapoint) {
     int sample_idx;
     float median;
-    float samples[sample_count];
+    float samples[times];
     SensorIdx_t sensor_count;
     const Identify1* ident = identify_store->view();
 
-    if (endpoint_type == EP_MASS) {
+    if (endpoint_type == EP_MASS_SENSOR) {
         sensor_count = ident->mass_sensor_count;
     }
-    else if (endpoint_type == EP_TEMPERATURE) {
+    else if (endpoint_type == EP_TEMPERATURE_SENSOR) {
         sensor_count = ident->temperature_sensor_count;
     }
     else {
@@ -208,7 +213,7 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
 
     // Filter and average
     for (SensorIdx_t sensor_idx = 0; sensor_idx < sensor_count; ++sensor_idx) {
-        for (sample_idx = 0; sample_idx < sample_count; ++sample_idx) {
+        for (sample_idx = 0; sample_idx < times; ++sample_idx) {
             samples[sample_idx] = iteration_sensor_sample[sample_idx][sensor_idx];
         }
 
@@ -216,11 +221,11 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
         int sum_count = 0;
 
         // Sort
-        insertion_sort(samples, sample_count);
+        insertion_sort(samples, times);
 
         // Find median
-        const int middle = sample_count / 2;
-        if (sample_count % 2) {
+        const int middle = times / 2;
+        if (times % 2) {
             // Odd - simply take the middle number
             median = samples[middle];
         }
@@ -231,7 +236,7 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
 
         // Average samples that fall within a threshold
         int error_count = 0;
-        for (sample_idx = 0; sample_idx < sample_count; ++sample_idx) {
+        for (sample_idx = 0; sample_idx < times; ++sample_idx) {
             const float sample = samples[sample_idx];
             if (abs(median - sample) <= thresh) {
                 sum += sample;
@@ -242,11 +247,11 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
             }
         }
 
-        if (endpoint_type == EP_MASS) {
+        if (endpoint_type == EP_MASS_SENSOR) {
             datapoint->add<uint8_t>(EP_MASS_FILTERED_SAMPLES, error_count);
         }
-        else if (endpoint_type == EP_TEMPERATURE) {
-            datapoint->add<uint8_t>(EP_TEMPERATURE, error_count);
+        else if (endpoint_type == EP_TEMPERATURE_SENSOR) {
+            datapoint->add<uint8_t>(EP_TEMPERATURE_FILTERED_SAMPLES, error_count);
         }
         if (sum_count) {
             datapoint->add<float>(endpoint_type, sum / static_cast<float>(sum_count));
@@ -300,43 +305,40 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
 
     get_temperature_datapoint(datapoint, times);
 
-
      float mass = 0.0;
      float temperature = 0.0;
 
-     auto* mass_ptr = datapoint->find_value<float>(EP_MASS);
-     auto* temp_ptr = datapoint->find_value<float>(EP_TEMPERATURE);
+     auto* mass_ptr = datapoint->find_value<float>(EP_MASS_SENSOR);
+     auto* temp_ptr = datapoint->find_value<float>(EP_TEMPERATURE_SENSOR);
 
+    for (sensor_idx = 0; sensor_idx < ident->mass_sensor_count; ++sensor_idx) {
+        if (!raw) {
+            // mass/temperature compensation per sensor
+            mass_ptr[sensor_idx] -= (
+                (cal_struct->mass_temperature_coeff[sensor_idx][0]
+                * temp_ptr[get_temperature_sensor_idx(sensor_idx)])
+                + cal_struct->mass_temperature_coeff[sensor_idx][1]);
+        }
 
-//     for (sensor_idx = 0; sensor_idx < ident->mass_sensor_count; ++sensor_idx) {
-//         if (!raw) {
-//             // mass/temperature compensation per sensor
-//             mass_ptr[sensor_idx] -= (
-//                 (cal_struct->mass_temperature_coeff[sensor_idx][0]
-//                 * temp_ptr[get_temperature_sensor_idx(sensor_idx)])
-//                 + cal_struct->mass_temperature_coeff[sensor_idx][1]);
-//         }
-//
-//         // Sum  mass
-//         mass += mass_ptr[sensor_idx];
-//     }
-//     if (!raw) {
-//         // Mass calibration and tare
-//         mass = ((mass * cal_struct->mass_coeff[0])
-//                 + cal_struct->mass_coeff[1]);
-//                 // - cal_struct->tare[this->tare_idx];  // meyere, restore
-//         mass_ptr[ident->mass_sensor_count + 1] = mass;
-//     }
-//
-//     for (sensor_idx = 0; sensor_idx < ident->temperature_sensor_count; ++sensor_idx) {
-//         if (!raw) {
-//             temp_ptr[sensor_idx] = steinhart_hart(temp_ptr[sensor_idx]);
-//         }
-//         temperature += temp_ptr[sensor_idx];
-//      }
-//     temperature /= ident->temperature_sensor_count;
-//     temp_ptr[ident->temperature_sensor_count + 1] = temperature;
+        // Sum  mass
+        mass += mass_ptr[sensor_idx];
+    }
+    if (!raw) {
+        // Mass calibration and tare
+        mass = ((mass * cal_struct->mass_coeff[0])
+                + cal_struct->mass_coeff[1]);
+    }
 
+    datapoint->add<float>(EP_MASS, mass);
+
+    for (sensor_idx = 0; sensor_idx < ident->temperature_sensor_count; ++sensor_idx) {
+        if (!raw) {
+            temp_ptr[sensor_idx] = steinhart_hart(temp_ptr[sensor_idx]);
+        }
+        temperature += temp_ptr[sensor_idx];
+    }
+    temperature /= ident->temperature_sensor_count;
+    datapoint->add<float>(EP_TEMPERATURE, temperature);
 
     return error;
 }
@@ -364,7 +366,7 @@ ErrorCode Growbies::get_mass_datapoint(DataPoint* datapoint,
     if (!error) {
         median_avg_filter(iteration_mass_samples,
                           times,
-                          EP_MASS,
+                          EP_MASS_SENSOR,
                           INVALID_MASS_SAMPLE_THRESHOLD_DAC,
                           datapoint);
     }
@@ -393,7 +395,7 @@ void Growbies::get_temperature_datapoint(DataPoint *datapoint,
     if (identify_store->view()->temperature_sensor_count) {
         median_avg_filter(iteration_temp_samples,
                           times,
-               EP_TEMPERATURE,
+               EP_TEMPERATURE_SENSOR,
                     INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC,
                           datapoint);
     }

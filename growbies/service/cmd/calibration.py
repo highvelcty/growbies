@@ -24,7 +24,7 @@ def make_cli(parser: ArgumentParser):
         f'--{internal_to_external_field(cal_mod.Calibration.Field.MASS_TEMP_COEFF)}',
         action='append',
         default=argparse.SUPPRESS,
-        metavar=('SENSOR (ROW)', ) + (('VALUE',) * cal_mod.Calibration.COEFF_COUNT),
+        metavar=('SENSOR_ROW', ) + (('VALUE',) * cal_mod.Calibration.COEFF_COUNT),
         nargs=cal_mod.Calibration.COEFF_COUNT + 1,
         type=float,
         help = f'Set mass/temperature correction coefficients for a sensor. Each row '

@@ -48,7 +48,7 @@ class Growbies {
         static void power_on();
 
         static void median_avg_filter(float **iteration_sensor_sample,
-                                       int sample_count, EndpointType endpoint_type,
+                                       int times, EndpointType endpoint_type,
                                        float thresh, DataPoint* datapoint);
         static ErrorCode sample_mass(float** iteration_mass_samples, int times, HX711Gain gain);
         static void sample_temperature(float** iteration_temp_samples, int times);

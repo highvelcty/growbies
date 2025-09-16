@@ -37,13 +37,17 @@ typedef enum ErrorCode: uint32_t {
     ERROR_OUT_OF_THRESHOLD_SAMPLE               = 0x00000004,
     ERROR_HX711_NOT_READY                       = 0x00000008,
     ERROR_INTERNAL                              = 0x00000010,
+    ERROR_INVALID_PARAMETER                     = 0x00000020,
 } ErrorCode;
 
 typedef enum EndpointType: uint8_t {
-    EP_MASS = 0,
-    EP_TEMPERATURE = 1,
-    EP_TARE_CRC = 2,
-    EP_MASS_FILTERED_SAMPLES = 3,
+    EP_MASS_SENSOR = 0,
+    EP_MASS = 1,
+    EP_MASS_FILTERED_SAMPLES = 2,
+    EP_TEMPERATURE_SENSOR = 3,
+    EP_TEMPERATURE = 4,
+    EP_TEMPERATURE_FILTERED_SAMPLES = 5,
+    EP_TARE_CRC = 6,
 } EndpointType;
 
 // Bitwise operators for Error
@@ -130,9 +134,9 @@ struct RespError : BaseResp {
     static constexpr auto VERSION = 0;
     static constexpr auto TYPE = Resp::ERROR;
 
-    ErrorCode error = ErrorCode::ERROR_NONE;
+    ErrorCode error = ERROR_NONE;
 
-    explicit RespError(const ErrorCode ec = ErrorCode::ERROR_NONE)
+    explicit RespError(const ErrorCode ec = ERROR_NONE)
         : error(ec) {}
 };
 
@@ -173,7 +177,7 @@ struct TLVHdr {
     EndpointType type;
     uint8_t length; // number of values
 
-    explicit TLVHdr(const EndpointType t = EndpointType::EP_MASS, const uint8_t len = 0)
+    explicit TLVHdr(const EndpointType t = EndpointType::EP_MASS_SENSOR, const uint8_t len = 0)
         : type(t), length(len) {}
 };
 

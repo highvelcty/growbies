@@ -4,18 +4,36 @@ from ctypes import sizeof
 from enum import IntEnum
 from typing import Any
 
+from prettytable import PrettyTable
+
 from .common import BaseStructure
-from growbies.constants import UINT8_MAX
+from growbies.constants import INDENT, UINT8_MAX
 from growbies.service.common import ServiceCmdError
+from growbies.utils.report import format_dropped_bytes
 
 logger = logging.getLogger(__name__)
 
 class EndpointType(IntEnum):
-    MASS = 0,
-    TEMPERATURE = 1
-    TARE_CRC = 2
+    MASS_SENSOR = 0
+    MASS = 1
+    MASS_FILTERED_SAMPLES = 2
+    TEMPERATURE_SENSOR = 3
+    TEMPERATURE = 4
+    TEMPERATURE_FILTERED_SAMPLES = 5
+    TARE_CRC = 6
     UNKNOWN = UINT8_MAX
 
+    @property
+    def type(self):
+        if self.value in (self.MASS_SENSOR, self.MASS, self.TEMPERATURE_SENSOR, self.TEMPERATURE):
+            return ctypes.c_float
+        elif self.value in (self.MASS_FILTERED_SAMPLES, self.TEMPERATURE_FILTERED_SAMPLES):
+            return ctypes.c_uint8
+        else:
+            return bytes
+
+    def __str__(self):
+        return self.name
 
 class TLVHdr(BaseStructure):
     TYPE_FIELD_CTYPE = ctypes.c_uint8
@@ -49,50 +67,92 @@ class TLVHdr(BaseStructure):
         setattr(self, self.Field.LENGTH, value)
 
 class DataPoint:
-    def __init__(self, buf: bytearray):
+    def __init__(self, buf: bytearray | memoryview):
         self._type_vals = dict()
+
+        if isinstance(buf, memoryview):
+            buf = bytearray(buf)
 
         offset = 0
         while offset <= len(buf) - sizeof(TLVHdr):
             hdr = TLVHdr.from_buffer(buf, offset)
             offset += sizeof(hdr)
 
-            self._type_vals[hdr.type] = list()
-            if hdr.type in (EndpointType.MASS, EndpointType.TEMPERATURE):
-                klass = ctypes.c_float
+            if hdr.type in EndpointType and not hdr.type == EndpointType.UNKNOWN:
+                klass = EndpointType(hdr.type).type
+                required = sizeof(klass)
+
+                if offset + required > len(buf):
+                    raise ServiceCmdError(f'Buffer underflow while deserializing to '
+                                          f'{DataPoint.__qualname__}. Endpoint type {hdr.type} '
+                                          f'requires {required} bytes starting at offset '
+                                          f'{offset}. Length of buffer is {len(buf)} bytes.')
+                else:
+                    if hdr.type not in self._type_vals:
+                        self._type_vals[hdr.type] = list()
+                    for ii in range(hdr.length // required):
+                        self._type_vals[hdr.type].append(klass.from_buffer(buf, offset))
+                        offset += required
             else:
-                # meyere, figure out what to do here.
-            required = sizeof(klass)
-            if offset + required > len(buf):
-                raise ServiceCmdError(f'Buffer underflow while deserializing to '
-                                      f'{DataPoint.__qualname__}')
-            else:
-                for ii in range(hdr.length // sizeof(klass)):
-                    self._type_vals[hdr.type].append(klass.from_buffer(buf, offset))
-                    offset += sizeof(klass)
+                offset -= sizeof(hdr)
+                datalen = sizeof(hdr) + hdr.length
+                if EndpointType.UNKNOWN not in self._type_vals:
+                    self._type_vals[EndpointType.UNKNOWN] = list()
+                self._type_vals[EndpointType.UNKNOWN].append(buf[offset:offset+datalen])
+                offset += datalen
+
+    def _get_mass_table(self) -> str:
+        mass_sensors = self._type_vals.get(EndpointType.MASS_SENSOR, [])
+        mass_errors = self._type_vals.get(EndpointType.MASS_FILTERED_SAMPLES,
+                                          [EndpointType.MASS_FILTERED_SAMPLES.type(0)])[0].value
+        total_mass = self._type_vals.get(EndpointType.MASS,
+                                         [EndpointType.MASS.type(0.0)])[0].value
+
+        mass_table = PrettyTable(title='Mass')
+        mass_columns = ["Total Mass (g)"] + [f"Sensor {i}" for i in range(len(mass_sensors))] + [
+            "Errors"]
+        mass_table.field_names = mass_columns
+
+        mass_row = [f"{total_mass:.2f}"] + [f"{v.value:.2f}" for v in mass_sensors] + [mass_errors]
+        mass_table.add_row(mass_row)
+
+        return str(mass_table)
+
+    def _get_temperature_table(self) -> str:
+        temp_sensors = self._type_vals.get(EndpointType.TEMPERATURE_SENSOR, [])
+        temp_errors = self._type_vals.get(
+            EndpointType.TEMPERATURE_FILTERED_SAMPLES,
+            [EndpointType.TEMPERATURE_FILTERED_SAMPLES.type(0)])[0].value
+        avg_temp = self._type_vals.get(EndpointType.TEMPERATURE,
+                                       [EndpointType.TEMPERATURE.type(0)])[0].value
+
+        temp_table = PrettyTable(title = 'Temperature')
+        temp_columns = ["Avg Temp (°C)"] + [f"Sensor {i}" for i in range(len(temp_sensors))] + [
+            "Errors"]
+        temp_table.field_names = temp_columns
+
+        temp_row = [f"{avg_temp:.2f}"] + [f"{v.value:.2f}" for v in temp_sensors] + [temp_errors]
+        temp_table.add_row(temp_row)
+
+        return str(temp_table)
+
+    def _get_unknown_endpoint_str(self) -> str:
+        unknown_bufs = self._type_vals.get(EndpointType.UNKNOWN, [])
+        str_list = list()
+        if unknown_bufs:
+            str_list.append('Unknown Endpoints:')
+            for buf in unknown_bufs:
+                str_list += [f'{INDENT}{format_dropped_bytes(buf)}']
+        return '\n'.join(str_list)
 
     def __str__(self) -> str:
-        lines = [f'{DataPoint.__qualname__}:']
-        for ep_type, vals in self._type_vals.items():
-            if not vals:
-                continue
+        str_list = [
+            self._get_mass_table(),
+            self._get_temperature_table(),
+            self._get_unknown_endpoint_str()
+        ]
+        return '\n'.join(str_list)
 
-            # Format label and units
-            label = ep_type.name.capitalize()
-            if ep_type == EndpointType.MASS:
-                formatted_vals = ", ".join(f"{v.value:.2f}" for v in vals[:-1])
-                total = vals[-1].value
-                lines.append(f"{label}: {formatted_vals} | Total: {total:.2f}")
-            elif ep_type == EndpointType.TEMPERATURE:
-                formatted_vals = ", ".join(f"{v.value:.2f}" for v in vals[:-1])
-                avg = vals[-1].value
-                lines.append(f"{label}: {formatted_vals} | Avg: {avg:.2f}")
-            elif ep_type == EndpointType.TARE_CRC:
-                lines.append(f"{label}: 0x{vals[0]:X}")
-            else:
-                lines.append(f"{label}: {', '.join(str(v) for v in vals)}")
-
-        return "\n".join(lines)
-
-    def endpoint_values(self) -> dict[EndpointType, Any]:
+    @property
+    def endpoints(self) -> dict[EndpointType, Any]:
         return self._type_vals

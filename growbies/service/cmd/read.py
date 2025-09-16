@@ -26,6 +26,7 @@ def execute(cmd: ServiceCmd) -> DataPoint:
     pool = get_pool()
     serial = cmd.kw.pop(PositionalParam.SERIAL)
     raw = cmd.kw.pop(Param.RAW)
+    times = cmd.kw.pop(Param.TIMES)
 
     device = serials_to_devices(serial)[0]
     try:
@@ -33,4 +34,4 @@ def execute(cmd: ServiceCmd) -> DataPoint:
     except KeyError:
         raise ServiceCmdError(f'Serial number "{device.serial}" is inactive.')
 
-    return worker.cmd(ReadDeviceCmd(raw=raw))
+    return worker.cmd(ReadDeviceCmd(raw=raw, times=times))

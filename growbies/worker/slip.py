@@ -3,6 +3,7 @@ An LSB-first implementation of SLIP with a two byte CRC.
 
 See: https://en.wikipedia.org/wiki/Serial_Line_Internet_Protocol
 """
+import ctypes
 from abc import ABC, abstractmethod
 from typing import Optional
 import logging
@@ -205,14 +206,21 @@ class Transport(Network, ABC):
     def recv_resp(self, block=True, timeout: Optional[float] = None) \
             -> tuple[Optional[RespPacketHdr], Optional[TDeviceResp]]:
         frame = super().recv_packet(block=block, timeout=timeout)
-        if self.DEBUG:
-            if frame is None:
-                logger.debug(f'Transport Receive None')
-            else:
-                logger.debug(BufStr(frame, title="Transport Receive"))
         if frame is None:
+            logger.error(f'Transport Receive None')
             return None, None
-        return DeviceRespOp.from_frame(frame)
+
+        try:
+            hdr = RespPacketHdr.from_buffer(frame)
+            resp = frame[ctypes.sizeof(hdr):]
+        except ValueError as err:
+            logger.error(f'Response packet header deserialization exception: {err}')
+            return None, None
+
+        if self.DEBUG:
+            logger.debug(BufStr(bytes(hdr), title='Transport Recv Header'))
+            logger.debug(BufStr(resp, title='Transport Recv Payload'))
+        return hdr, DeviceRespOp.from_frame(hdr, resp)
 
     def send_cmd(self, cmd: TDeviceCmd):
         """

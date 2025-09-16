@@ -36,6 +36,8 @@ def format_8bit_binary(num: int) -> str:
 
 def format_dropped_bytes(buf: bytearray | bytes | memoryview ) -> str:
     max_display = 16
+    buf = bytes(buf)
+
     length = len(buf)
 
     if length == 0:
