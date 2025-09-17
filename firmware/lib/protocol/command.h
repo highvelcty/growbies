@@ -175,7 +175,7 @@ static_assert(sizeof(RespGetTare) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 struct TLVHdr {
     EndpointType type;
-    uint8_t length; // number of values
+    uint8_t length; // number of bytes
 
     explicit TLVHdr(const EndpointType t = EndpointType::EP_MASS_SENSOR, const uint8_t len = 0)
         : type(t), length(len) {}

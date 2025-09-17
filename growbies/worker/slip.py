@@ -181,6 +181,7 @@ class SerialDatalink(BaseDataLink):
         return self._serial.write(data)
 
 class Network(BaseDataLink, ABC):
+    DEBUG = True
     _CRC_BYTES = 2
     def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[memoryview]:
         frame = super().recv_frame(block=block, timeout=timeout)
@@ -188,6 +189,8 @@ class Network(BaseDataLink, ABC):
             return frame[:-self._CRC_BYTES]
         else:
             logger.error(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
+            if self.DEBUG:
+                logger.debug(BufStr(frame))
             return None
 
     def send_packet(self, buf: bytes):

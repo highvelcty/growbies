@@ -45,10 +45,10 @@ class Calibration(BaseStructure):
         sensor_coeff_columns = ['Sensor'] + coeff_columns
 
         str_list = [
-            format_float_table('Mass/Temperature Compensation',
+            format_float_table('Mass/Temperature Correction',
                                sensor_coeff_columns,
                                self.mass_temp_coeff),
             format_float_list('Mass Calibration Coefficients', coeff_columns, self.mass_coeff),
         ]
 
-        return '\n\n'.join(str_list)
+        return '\n'.join(str_list)

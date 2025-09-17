@@ -40,6 +40,7 @@ void Growbies::begin() {
 
     calibration_store->begin();
     identify_store->begin();
+    tare_store->begin();
 }
 
 void Growbies::execute(const PacketHdr* in_packet_hdr) {
@@ -134,8 +135,7 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
         }
     }
     else if (in_packet_hdr->cmd == Cmd::SET_TARE) {
-        // auto* cmd = after<CmdSetTare>(in_packet_hdr);
-        auto* cmd = const_cast<CmdSetTare*>(after<CmdSetTare>(in_packet_hdr));
+        auto* cmd = after<CmdSetTare>(in_packet_hdr);
         error = validate_packet(*in_packet_hdr, *cmd);
         if (!error) {
             [[maybe_unused]] const auto* resp = new (this->packet_buf) RespVoid;
@@ -199,6 +199,7 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
     float median;
     float samples[times];
     SensorIdx_t sensor_count;
+    int error_count = 0;
     const Identify1* ident = identify_store->view();
 
     if (endpoint_type == EP_MASS_SENSOR) {
@@ -235,7 +236,6 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
         }
 
         // Average samples that fall within a threshold
-        int error_count = 0;
         for (sample_idx = 0; sample_idx < times; ++sample_idx) {
             const float sample = samples[sample_idx];
             if (abs(median - sample) <= thresh) {
@@ -246,19 +246,17 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
                 ++error_count;
             }
         }
-
-        if (endpoint_type == EP_MASS_SENSOR) {
-            datapoint->add<uint8_t>(EP_MASS_FILTERED_SAMPLES, error_count);
-        }
-        else if (endpoint_type == EP_TEMPERATURE_SENSOR) {
-            datapoint->add<uint8_t>(EP_TEMPERATURE_FILTERED_SAMPLES, error_count);
-        }
         if (sum_count) {
             datapoint->add<float>(endpoint_type, sum / static_cast<float>(sum_count));
         }
     }
+    if (endpoint_type == EP_MASS_SENSOR) {
+        datapoint->add<uint8_t>(EP_MASS_FILTERED_SAMPLES, error_count);
+    }
+    else if (endpoint_type == EP_TEMPERATURE_SENSOR) {
+        datapoint->add<uint8_t>(EP_TEMPERATURE_FILTERED_SAMPLES, error_count);
+    }
 }
-
 
 ErrorCode Growbies::sample_mass(float** iteration_mass_samples,
                                 const int times,
@@ -295,8 +293,11 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
                                   const HX711Gain gain) {
     SensorIdx_t sensor_idx;
     ErrorCode error = ERROR_NONE;
-    const Calibration* cal_struct = calibration_store->view();
+    const Calibration* cal = calibration_store->view();
     const Identify1* ident = identify_store->view();
+    const Tare* tare = tare_store->view();
+
+    // datapoint->add<uint16_t>(EP_TARE_CRC, tare->crc);
 
     error = get_mass_datapoint(datapoint, times, gain);
     if (error) {
@@ -315,9 +316,9 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
         if (!raw) {
             // mass/temperature compensation per sensor
             mass_ptr[sensor_idx] -= (
-                (cal_struct->mass_temperature_coeff[sensor_idx][0]
+                (cal->mass_temperature_coeff[sensor_idx][0]
                 * temp_ptr[get_temperature_sensor_idx(sensor_idx)])
-                + cal_struct->mass_temperature_coeff[sensor_idx][1]);
+                + cal->mass_temperature_coeff[sensor_idx][1]);
         }
 
         // Sum  mass
@@ -325,8 +326,8 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
     }
     if (!raw) {
         // Mass calibration and tare
-        mass = ((mass * cal_struct->mass_coeff[0])
-                + cal_struct->mass_coeff[1]);
+        mass = ((mass * cal->mass_coeff[0])
+                + cal->mass_coeff[1]);
     }
 
     datapoint->add<float>(EP_MASS, mass);

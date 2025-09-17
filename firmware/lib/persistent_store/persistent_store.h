@@ -5,6 +5,7 @@
 #include "build_cfg.h"
 #include "constants.h"
 #include "types.h"
+#include <crc.h>
 
 #if ARDUINO_ARCH_AVR
 #include <stdio.h>
@@ -30,6 +31,7 @@ struct NvmHdr {
 
 struct Tare {
     TareValue values{};
+    uint16_t crc{};
 };
 
 struct Calibration {
@@ -122,7 +124,7 @@ public:
         this->init_fields();
     }
 
-    void put(const T& value) override {
+    void put(T& value) override {
         this->value_storage = value;
         EEPROM.put(partition_offset, NvmHdr{});
         EEPROM.put(partition_offset + sizeof(NvmHdr), value);
@@ -144,13 +146,8 @@ public:
     explicit Esp32NvmStore(const char* key) : ns_key(key) {}
 
     void begin() override {
-        bool do_init = false;
-
         this->prefs.begin(this->ns, false);
-
-        if (!this->prefs.isKey(this->ns_key)) {
-            do_init = true;
-        }
+        const bool do_init = !this->prefs.isKey(this->ns_key);
         this->prefs.end();
 
         if (do_init) {
@@ -162,11 +159,15 @@ public:
         this->init_fields();
     }
 
-    void put(const T& value) override {
+    void init() override {
         this->prefs.begin(this->ns, false);
-        this->value_storage = value;
-        this->prefs.putBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
+        this->prefs.remove(this->ns_key);
         this->prefs.end();
+        NvmStoreBase<T>::init();
+    }
+
+    void put(const T& value) override {
+        this->_put(value);
     }
 
 private:
@@ -174,8 +175,24 @@ private:
     const char* ns_key;
     const char* ns = APPNAME;
 
-    void update() override {
+    void _put(const T& value) {
+        this->value_storage = value;
         this->prefs.begin(this->ns, false);
+        // Ignoring the boolean return indicating success.
+        // meyere, fix this
+        this->prefs.putBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
+        this->prefs.end();
+    }
+
+    void update() override {
+        _update();
+    }
+
+    void _update() {
+        this->value_storage = T{};
+        this->prefs.begin(this->ns, false);
+        // Ignoring the return value which is the number of bytes read.
+        // meyere, fix this.
         this->prefs.getBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
         this->prefs.end();
     }
@@ -183,6 +200,26 @@ private:
 
 #endif
 
+// Specialization for Tare
+template <>
+inline void Esp32NvmStore<Tare>::put(const Tare& value) {
+    this->value_storage = value;
+    this->value_storage.crc = crc_ccitt16(reinterpret_cast<const uint8_t*>(&this->value_storage),
+        offsetof(Tare, crc));
+    _put(this->value_storage);
+}
+
+template <>
+inline void Esp32NvmStore<Tare>::update() {
+    _update();
+
+    const uint16_t crc = crc_ccitt16(reinterpret_cast<const uint8_t*>(&this->value_storage),
+        offsetof(Tare, crc));
+
+    if (crc != this->value_storage.crc) {
+        this->value_storage.crc = crc;
+    }
+}
 
 // Specialization for Identify1
 template <>

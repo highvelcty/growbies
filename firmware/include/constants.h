@@ -22,7 +22,7 @@ constexpr int MAX_MASS_SENSOR_COUNT = 5;
 constexpr int MAX_TEMPERATURE_SENSOR_COUNT = MAX_MASS_SENSOR_COUNT;
 
 constexpr uint8_t COEFF_COUNT = 3;
-constexpr uint8_t TARE_COUNT = 5;
+constexpr uint8_t TARE_COUNT = 8;
 
 // Thermistor
 #if ARDUINO_ARCH_AVR

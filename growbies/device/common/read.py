@@ -29,6 +29,8 @@ class EndpointType(IntEnum):
             return ctypes.c_float
         elif self.value in (self.MASS_FILTERED_SAMPLES, self.TEMPERATURE_FILTERED_SAMPLES):
             return ctypes.c_uint8
+        elif self.value == self.TARE_CRC:
+            return ctypes.c_uint16
         else:
             return bytes
 
@@ -78,8 +80,23 @@ class DataPoint:
             hdr = TLVHdr.from_buffer(buf, offset)
             offset += sizeof(hdr)
 
-            if hdr.type in EndpointType and not hdr.type == EndpointType.UNKNOWN:
-                klass = EndpointType(hdr.type).type
+            try:
+                etype = EndpointType(hdr.type)
+                if etype == EndpointType.UNKNOWN:
+                    etype = None
+            except ValueError:
+                etype = None
+
+
+            if etype is None:
+                offset -= sizeof(hdr)
+                datalen = sizeof(hdr) + hdr.length
+                if EndpointType.UNKNOWN not in self._type_vals:
+                    self._type_vals[EndpointType.UNKNOWN] = list()
+                self._type_vals[EndpointType.UNKNOWN].append(buf[offset:offset+datalen])
+                offset += datalen
+            else:
+                klass = etype.type
                 required = sizeof(klass)
 
                 if offset + required > len(buf):
@@ -93,13 +110,6 @@ class DataPoint:
                     for ii in range(hdr.length // required):
                         self._type_vals[hdr.type].append(klass.from_buffer(buf, offset))
                         offset += required
-            else:
-                offset -= sizeof(hdr)
-                datalen = sizeof(hdr) + hdr.length
-                if EndpointType.UNKNOWN not in self._type_vals:
-                    self._type_vals[EndpointType.UNKNOWN] = list()
-                self._type_vals[EndpointType.UNKNOWN].append(buf[offset:offset+datalen])
-                offset += datalen
 
     def _get_mass_table(self) -> str:
         mass_sensors = self._type_vals.get(EndpointType.MASS_SENSOR, [])
@@ -146,10 +156,13 @@ class DataPoint:
         return '\n'.join(str_list)
 
     def __str__(self) -> str:
+        tare_crc = (self._type_vals.get(EndpointType.TARE_CRC,
+                                        [EndpointType.TARE_CRC.type(0)])[0].value)
         str_list = [
             self._get_mass_table(),
             self._get_temperature_table(),
-            self._get_unknown_endpoint_str()
+            self._get_unknown_endpoint_str(),
+            f'Tare CRC: 0x{tare_crc}'
         ]
         return '\n'.join(str_list)
 

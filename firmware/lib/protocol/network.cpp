@@ -1,8 +1,8 @@
 #include <Arduino.h>
 
 #include <network.h>
-#include "crc.h"
-#include "datalink.h"
+#include <crc.h>
+#include <datalink.h>
 
 PacketHdr* recv_packet() {
     PacketHdr* packet_hdr = nullptr;

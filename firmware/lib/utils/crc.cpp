@@ -39,9 +39,9 @@ const uint16_t crc16_table[256] PROGMEM = {
     0x6E17,0x7E36,0x4E55,0x5E74,0x2E93,0x3EB2,0x0ED1,0x1EF0
 };
 
-uint16_t crc_ccitt16(const uint8_t* data, size_t len, uint16_t crc) {
-    for (size_t i = 0; i < len; ++i) {
-        uint8_t tbl_idx = ((crc >> 8) ^ data[i]) & UINT8_MAX;
+uint16_t crc_ccitt16(const uint8_t* data, const size_t length, uint16_t crc) {
+    for (size_t i = 0; i < length; ++i) {
+        const uint8_t tbl_idx = ((crc >> 8) ^ data[i]) & UINT8_MAX;
         crc = (crc << 8) ^ pgm_read_word_near(crc16_table + tbl_idx);
     }
     return crc;

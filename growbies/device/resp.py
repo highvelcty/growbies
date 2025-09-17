@@ -8,6 +8,7 @@ from .common.calibration import Calibration
 from .common.identify import Identify, Identify1
 from .common.read import DataPoint
 from .common.tare import Tare
+from growbies.service.common import ServiceCmdError
 
 logger = logging.getLogger(__name__)
 
@@ -45,9 +46,10 @@ class DeviceRespOp(IntEnum):
             elif hdr.type == cls.TARE:
                 resp = Tare.from_buffer(resp)
             else:
-                logger.error(f'Unrecognized response type: {hdr.type}')
+                raise ServiceCmdError(f'Unrecognized response type: {hdr.type}')
         except ValueError as err:
-            logger.error(f'Packet deserialization exception for type "{hdr.type}": {err}')
+            raise ServiceCmdError(f'Packet deserialization exception for type "{hdr.type}". '
+                                  f'{err}') from err
 
         return resp
 

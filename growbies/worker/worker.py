@@ -123,7 +123,8 @@ class Worker(Thread):
             except Empty:
                 continue
             except Exception as err:
-                logger.exception(err)
+                # meyere, need to handle exceptions from async/sync
+                self._put_no_wait(err)
                 continue
 
             if resp is None:
