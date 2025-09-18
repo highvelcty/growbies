@@ -1,12 +1,9 @@
 #include <new> // Required for placement new
 
-// #include "esp_adc_cal.h"
-
 #include "constants.h"
 #include "flags.h"
-#include <network.h>
 #include <growbies.h>
-#include <persistent_store.h>
+#include <nvm.h>
 #include <sort.h>
 #include <thermistor.h>
 
@@ -20,7 +17,7 @@ Growbies::Growbies() = default;
 
 void Growbies::begin() {
     pinMode(HX711_SCK_PIN, OUTPUT);
-    for(SensorIdx_t sensor = 0; sensor < identify_store->view()->mass_sensor_count; ++sensor) {
+    for(SensorIdx_t sensor = 0; sensor < identify_store->payload()->mass_sensor_count; ++sensor) {
     #if ARDUINO_ARCH_AVR
         pinMode(get_HX711_dout_pin(sensor), INPUT_PULLUP);
     #elif ARDUINO_ARCH_ESP32
@@ -200,7 +197,7 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
     float samples[times];
     SensorIdx_t sensor_count;
     int error_count = 0;
-    const Identify1* ident = identify_store->view();
+    const Identify1* ident = identify_store->payload();
 
     if (endpoint_type == EP_MASS_SENSOR) {
         sensor_count = ident->mass_sensor_count;
@@ -274,7 +271,7 @@ ErrorCode Growbies::sample_mass(float** iteration_mass_samples,
 
 void Growbies::sample_temperature(float **iteration_temp_samples, const int times) {
     for (int iteration = 0; iteration < times; ++iteration) {
-        for (uint16_t idx = 0; idx < identify_store->view()->temperature_sensor_count; ++idx) {
+        for (uint16_t idx = 0; idx < identify_store->payload()->temperature_sensor_count; ++idx) {
         #if ARDUINO_ARCH_AVR
             iteration_temp_samples[iteration][idx] = \
                 (static_cast<float>(analogRead(get_temperature_pin(idx))) / ADC_RESOLUTION)
@@ -293,11 +290,10 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
                                   const HX711Gain gain) {
     SensorIdx_t sensor_idx;
     ErrorCode error = ERROR_NONE;
-    const Calibration* cal = calibration_store->view();
-    const Identify1* ident = identify_store->view();
-    const Tare* tare = tare_store->view();
+    const Calibration* cal = calibration_store->payload();
+    const Identify1* ident = identify_store->payload();
 
-    // datapoint->add<uint16_t>(EP_TARE_CRC, tare->crc);
+    datapoint->add<uint16_t>(EP_TARE_CRC, tare_store->hdr()->crc);
 
     error = get_mass_datapoint(datapoint, times, gain);
     if (error) {
@@ -353,7 +349,8 @@ ErrorCode Growbies::get_mass_datapoint(DataPoint* datapoint,
     const auto iteration_mass_samples = static_cast<float **>(malloc(times * sizeof(float *)));
     for (int iteration = 0; iteration < times; ++iteration) {
         iteration_mass_samples[iteration] = \
-            static_cast<float *>(malloc(identify_store->view()->mass_sensor_count * sizeof(float)));
+            static_cast<float *>(malloc(identify_store->payload()->mass_sensor_count
+                * sizeof(float)));
     }
 
 #if POWER_CONTROL
@@ -386,14 +383,14 @@ void Growbies::get_temperature_datapoint(DataPoint *datapoint,
     for (int iteration = 0; iteration < times; ++iteration) {
         iteration_temp_samples[iteration] = \
             static_cast<float *>(malloc(
-                identify_store->view()->temperature_sensor_count * sizeof(float)));
+                identify_store->payload()->temperature_sensor_count * sizeof(float)));
     }
-    if (identify_store->view()->temperature_sensor_count) {
+    if (identify_store->payload()->temperature_sensor_count) {
         sample_temperature(iteration_temp_samples, times);
     }
 
 
-    if (identify_store->view()->temperature_sensor_count) {
+    if (identify_store->payload()->temperature_sensor_count) {
         median_avg_filter(iteration_temp_samples,
                           times,
                EP_TEMPERATURE_SENSOR,
@@ -415,7 +412,7 @@ void Growbies::shift_all_in(float* sensor_sample, const HX711Gain gain) {
     uint32_t gpio_in_reg = 0;
 #endif
 
-    long long_data_points[identify_store->view()->mass_sensor_count] = {0};
+    long long_data_points[identify_store->payload()->mass_sensor_count] = {0};
 
 #if ARDUINO_ARCH_AVR
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
@@ -439,7 +436,7 @@ void Growbies::shift_all_in(float* sensor_sample, const HX711Gain gain) {
 
             // This time intensive task needs to happen after pulling SCK low to not perturb time
             // sensitive section when SCK is high.
-            for (sensor = 0; sensor < identify_store->view()->mass_sensor_count; ++sensor) {
+            for (sensor = 0; sensor < identify_store->payload()->mass_sensor_count; ++sensor) {
                 a_bit = static_cast<bool>(gpio_in_reg & get_HX711_dout_port_bit(sensor));
                 long_data_points[sensor] |= (a_bit << (HX711_DAC_BITS - 1 - ii));
             }
@@ -470,7 +467,7 @@ void Growbies::shift_all_in(float* sensor_sample, const HX711Gain gain) {
     interrupts();
 #endif
 
-    for (sensor = 0; sensor < identify_store->view()->mass_sensor_count; ++sensor) {
+    for (sensor = 0; sensor < identify_store->payload()->mass_sensor_count; ++sensor) {
         if (long_data_points[sensor] & (1UL << (HX711_DAC_BITS - 1))) {
             long_data_points[sensor] |= (0xFFUL << HX711_DAC_BITS);
         }
@@ -499,7 +496,7 @@ ErrorCode Growbies::wait_hx711_ready(const int retries, const unsigned long dela
         gpio_in_reg = REG_READ(GPIO_IN_REG);
     #endif
         all_ready = true;
-	    for (SensorIdx_t sensor = 0; sensor < identify_store->view()->mass_sensor_count; ++sensor) {
+	    for (SensorIdx_t sensor = 0; sensor < identify_store->payload()->mass_sensor_count; ++sensor) {
 	        ready = static_cast<bool>(gpio_in_reg & get_HX711_dout_port_bit(sensor)) == LOW;
 	        all_ready &= ready;
         }
@@ -519,15 +516,15 @@ ErrorCode Growbies::wait_hx711_ready(const int retries, const unsigned long dela
 }
 
 int get_temperature_sensor_idx(const int mass_sensor_idx) {
-    if (identify_store->view()->temperature_sensor_count ==
-        identify_store->view()->mass_sensor_count) {
+    if (identify_store->payload()->temperature_sensor_count ==
+        identify_store->payload()->mass_sensor_count) {
         return mass_sensor_idx;
     }
     return 0;
 }
 
 int get_temperature_pin(const int mass_sensor_idx) {
-    if (identify_store->view()->mass_sensor_count == 1) {
+    if (identify_store->payload()->mass_sensor_count == 1) {
         return TEMPERATURE_PIN_0;
     }
 #if HX711_PIN_CFG_0

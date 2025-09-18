@@ -2,7 +2,7 @@
 #define command_h
 
 #include "constants.h"
-#include "persistent_store.h"
+#include "nvm.h"
 
 #pragma pack(1)
 
@@ -100,17 +100,17 @@ struct BaseCmd {};
 struct CmdGetCalibration : BaseCmd {};
 struct CmdSetCalibration : BaseCmd {
     bool init = false;
-    Calibration calibration{};
+    NvmCalibration calibration{};
 };
 struct CmdGetIdentify: BaseCmd {};
 struct CmdSetIdentify : BaseCmd {
     bool init = false;
-    Identify1 identify{};
+    NvmIdentify1 identify{};
 };
 struct CmdGetTare: BaseCmd {};
 struct CmdSetTare : BaseCmd {
     bool init = false;
-    Tare tare{};
+    NvmTare tare{};
 };
 
 struct CmdLoopback : BaseCmd {};

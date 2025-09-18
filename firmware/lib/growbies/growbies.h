@@ -7,6 +7,7 @@
 #include "flags.h"
 #include "command.h"
 #include "datalink.h"
+#include "network.h"
 
 constexpr int HX711_DAC_BITS = 24;
 

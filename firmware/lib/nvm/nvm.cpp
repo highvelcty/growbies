@@ -1,4 +1,4 @@
-#include "persistent_store.h"
+#include "nvm.h"
 
 #if ARDUINO_ARCH_AVR
 IdentifyStore* identify_store       = new IdentifyStore(PARTITION_A_OFFSET);

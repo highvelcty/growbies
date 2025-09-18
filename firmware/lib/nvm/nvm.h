@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "types.h"
 #include <crc.h>
+#include <traits.h>
 
 #if ARDUINO_ARCH_AVR
 #include <stdio.h>
@@ -29,14 +30,40 @@ struct NvmHdr {
     }
 };
 
+struct NvmHdr2 {
+    Version_t version;
+    uint8_t reserved0;
+    Crc_t crc;
+    uint16_t length;
+    uint16_t reserved1;
+};
+
+struct NvmStructBase{
+    NvmHdr2 hdr{};   // all derived NVM structs will have hdr
+
+    static constexpr Version_t VERSION = 1;
+};
+
+
 struct Tare {
     TareValue values{};
-    uint16_t crc{};
+};
+
+struct NvmTare : NvmStructBase {
+    Tare payload{};
+
+    static constexpr Version_t VERSION = 1;
 };
 
 struct Calibration {
     MassTemperatureCoeff mass_temperature_coeff{};
     MassCoeff mass_coeff{};
+};
+
+struct NvmCalibration : NvmStructBase {
+    Calibration payload{};
+
+    static constexpr Version_t VERSION = 1;
 };
 
 struct Identify0 {
@@ -69,6 +96,12 @@ struct Identify1 : Identify0 {
     uint8_t foot{};
 };
 
+struct NvmIdentify1 : NvmStructBase {
+    Identify1 payload{};
+
+    static constexpr Version_t VERSION = 1;
+};
+
 #if ARDUINO_ARCH_AVR
 constexpr int PARTITION_A_OFFSET = 0;
 constexpr int PARTITION_B_OFFSET = 512;
@@ -78,31 +111,55 @@ constexpr int PARTITION_E_OFFSET = 896;
 #endif
 
 
-
+// Templated Base classes
 template <typename T>
 class NvmStoreBase {
+    static_assert(is_base_of<NvmStructBase, T>::value,
+                  "NvmStoreBase can only be instantiated with types derived from NvmStructBase");
 public:
     virtual void begin() = 0;
-    virtual void update() = 0;
     virtual void init() {
         put(T{});
     }
 
-    virtual void put(const T& value) = 0;
-
-
-    // Read-only accessor: returns const pointer
-    const T* view() const {
-        return &value_storage;
+    virtual void migrate() {
+        _migrate();
     }
 
-    void init_fields() {};
+    virtual void put(const T& value) {
+        this->value_storage = value;
+        migrate();
+    }
+
+    virtual void update() {
+        const Crc_t crc = this->value_storage.hdr.crc;
+        migrate();
+        if (this->value_storage.hdr.crc != crc) {
+            put(this->value_storage);
+        }
+    }
+
+    // Accessors
+    const decltype(T::hdr)* hdr() const { return &value_storage.hdr; }
+    const decltype(T::payload)* payload() const { return &value_storage.payload; }
+    const T* view() const { return &value_storage; }
 
     virtual ~NvmStoreBase() = default;
 
 protected:
     T value_storage{};
+
+    void _migrate() {
+                this->value_storage.hdr.version = this->value_storage.VERSION;
+        this->value_storage.hdr.crc = crc_ccitt16(
+            reinterpret_cast<const uint8_t*>(&this->value_storage.payload),
+            sizeof(this->value_storage.payload)
+        );
+        this->value_storage.hdr.length = sizeof(this->value_storage.payload);
+    }
 };
+
+// Templated concrete classes
 
 #if ARDUINO_ARCH_AVR
 
@@ -120,12 +177,11 @@ public:
             init();
         }
         update();
-
-        this->init_fields();
     }
 
-    void put(T& value) override {
-        this->value_storage = value;
+    void put(const T& value) override {
+        NvmStoreBase<T>::put(value);
+
         EEPROM.put(partition_offset, NvmHdr{});
         EEPROM.put(partition_offset + sizeof(NvmHdr), value);
     }
@@ -135,6 +191,7 @@ private:
 
     void update() override {
         EEPROM.get(partition_offset + sizeof(NvmHdr), this->value_storage);
+        NvmStoreBase<T>::update();
     }
 };
 
@@ -155,8 +212,6 @@ public:
         }
 
         update();
-
-        this->init_fields();
     }
 
     void init() override {
@@ -167,16 +222,8 @@ public:
     }
 
     void put(const T& value) override {
-        this->_put(value);
-    }
+        NvmStoreBase<T>::put(value);
 
-private:
-    Preferences prefs;
-    const char* ns_key;
-    const char* ns = APPNAME;
-
-    void _put(const T& value) {
-        this->value_storage = value;
         this->prefs.begin(this->ns, false);
         // Ignoring the boolean return indicating success.
         // meyere, fix this
@@ -184,61 +231,46 @@ private:
         this->prefs.end();
     }
 
-    void update() override {
-        _update();
-    }
+private:
+    Preferences prefs;
+    const char* ns_key;
+    const char* ns = APPNAME;
 
-    void _update() {
-        this->value_storage = T{};
+    void update() override {
         this->prefs.begin(this->ns, false);
         // Ignoring the return value which is the number of bytes read.
         // meyere, fix this.
         this->prefs.getBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
         this->prefs.end();
+
+        NvmStoreBase<T>::update();
     }
 };
 
 #endif
 
-// Specialization for Tare
+
+// Type specializations
 template <>
-inline void Esp32NvmStore<Tare>::put(const Tare& value) {
-    this->value_storage = value;
-    this->value_storage.crc = crc_ccitt16(reinterpret_cast<const uint8_t*>(&this->value_storage),
-        offsetof(Tare, crc));
-    _put(this->value_storage);
-}
-
-template <>
-inline void Esp32NvmStore<Tare>::update() {
-    _update();
-
-    const uint16_t crc = crc_ccitt16(reinterpret_cast<const uint8_t*>(&this->value_storage),
-        offsetof(Tare, crc));
-
-    if (crc != this->value_storage.crc) {
-        this->value_storage.crc = crc;
+inline void NvmStoreBase<NvmIdentify1>::migrate() {
+    if (strncmp(value_storage.payload.firmware_version, FIRMWARE_VERSION,
+                sizeof(value_storage.payload.firmware_version)) != 0) {
+        snprintf(value_storage.payload.firmware_version,
+                 sizeof(value_storage.payload.firmware_version),
+                 "%s",
+                 FIRMWARE_VERSION);
     }
-}
-
-// Specialization for Identify1
-template <>
-inline void NvmStoreBase<Identify1>::init_fields() {
-    snprintf(this->value_storage.firmware_version,
-             sizeof(this->value_storage.firmware_version),
-             "%s",
-             FIRMWARE_VERSION);
-    this->put(this->value_storage);
+    _migrate();
 }
 
 #if ARDUINO_ARCH_AVR
-using CalibrationStore = AvrNvmStore<Calibration>;
-using IdentifyStore    = AvrNvmStore<Identify1>;
-using TareStore        = AvrNvmStore<Tare>;
+using CalibrationStore = AvrNvmStore<NvmCalibration>;
+using IdentifyStore    = AvrNvmStore<NvmIdentify1>;
+using TareStore        = AvrNvmStore<NvmTare>;
 #elif ARDUINO_ARCH_ESP32
-using CalibrationStore = Esp32NvmStore<Calibration>;
-using IdentifyStore = Esp32NvmStore<Identify1>;
-using TareStore = Esp32NvmStore<Tare>;
+using CalibrationStore = Esp32NvmStore<NvmCalibration>;
+using IdentifyStore = Esp32NvmStore<NvmIdentify1>;
+using TareStore = Esp32NvmStore<NvmTare>;
 #endif
 
 extern CalibrationStore* calibration_store;
