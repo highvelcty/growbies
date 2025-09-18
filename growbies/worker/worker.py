@@ -62,6 +62,8 @@ class Worker(Thread):
 
         if isinstance(resp, ErrorDeviceResp):
             raise DeviceError(resp.error)
+        elif isinstance(resp, ServiceCmdError):
+            raise resp
 
         return resp
 
@@ -131,7 +133,7 @@ class Worker(Thread):
                 continue
             if hdr.id:
                 logger.info(f'Received synchronous {hdr.type} response.')
-                self._put_no_wait(resp)
+                self._put_no_wait(bytes(resp) if isinstance(resp, memoryview) else resp)
             else:
                 self._process_async(hdr, resp)
 

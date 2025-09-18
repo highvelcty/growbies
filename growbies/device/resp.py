@@ -4,10 +4,10 @@ import ctypes
 import logging
 
 from .common import  BaseStructure, BaseUnion, PacketHdr, TBaseStructure
-from .common.calibration import Calibration
-from .common.identify import Identify, Identify1
+from .common.calibration import NvmCalibration
+from .common.identify import NvmIdentify
 from .common.read import DataPoint
-from .common.tare import Tare
+from .common.tare import NvmTare
 from growbies.service.common import ServiceCmdError
 
 logger = logging.getLogger(__name__)
@@ -26,25 +26,40 @@ class DeviceRespOp(IntEnum):
     @classmethod
     def from_frame(cls, hdr: 'RespPacketHdr', resp: bytearray | memoryview) \
             -> Optional['TBaseStructure']:
+
+        def _raise_version_error(hdr_):
+            raise ServiceCmdError(f'Unsupported version {hdr_.version} for "{hdr_.type}.')
         try:
             if hdr.type == cls.VOID:
-                resp = VoidDeviceResp.from_buffer(resp)
-            elif hdr.type == cls.ERROR:
-                resp = ErrorDeviceResp.from_buffer(resp)
-            elif hdr.type == cls.DATAPOINT:
-                resp = DataPoint(resp)
-            elif hdr.type == cls.CALIBRATION:
-                resp = (Calibration.from_buffer(resp))
-            elif hdr.type == cls.IDENTIFY:
-                if hdr.version == 0:
-                    resp = Identify.from_buffer(resp)
-                elif hdr.version == 1:
-                    resp = Identify1.from_buffer(resp)
+                if hdr.version >= 1:
+                    resp = VoidDeviceResp.from_buffer(resp)
                 else:
-                    logger.warning(f'Unimplemented identify version {hdr.version}.')
-                    resp = Identify1.from_buffer(resp)
+                    _raise_version_error(hdr)
+            elif hdr.type == cls.ERROR:
+                if hdr.version >= 1:
+                    resp = ErrorDeviceResp.from_buffer(resp)
+                else:
+                    _raise_version_error(hdr)
+            elif hdr.type == cls.DATAPOINT:
+                if hdr.version >= 1:
+                    resp = DataPoint(resp)
+                else:
+                    _raise_version_error(hdr)
+            elif hdr.type == cls.CALIBRATION:
+                if hdr.version >= 1:
+                    resp = NvmCalibration.from_buffer(resp)
+                else:
+                    _raise_version_error(hdr)
+            elif hdr.type == cls.IDENTIFY:
+                if hdr.version >= 1:
+                    resp = NvmIdentify.from_buffer(resp)
+                else:
+                    _raise_version_error(hdr)
             elif hdr.type == cls.TARE:
-                resp = Tare.from_buffer(resp)
+                if hdr.version >= 1:
+                    resp = NvmTare.from_buffer(resp)
+                else:
+                    _raise_version_error(hdr)
             else:
                 raise ServiceCmdError(f'Unrecognized response type: {hdr.type}')
         except ValueError as err:
@@ -52,7 +67,6 @@ class DeviceRespOp(IntEnum):
                                   f'{err}') from err
 
         return resp
-
 
 class DeviceErrorCode(IntEnum):
     # bitfield
@@ -95,22 +109,6 @@ class ErrorDeviceResp(BaseStructure):
     @error.setter
     def error(self, value: DeviceErrorCode):
         setattr(self, self.Field.ERROR, value)
-
-class GetCalibrationDeviceResp(BaseStructure):
-    class Field(BaseStructure.Field):
-        CALIBRATION = '_calibration'
-
-    _fields_ = [
-        (Field.CALIBRATION, Calibration)
-    ]
-
-    @property
-    def calibration(self) -> Calibration:
-        return getattr(self, self.Field.CALIBRATION)
-
-    def __str__(self):
-        return str(self.calibration)
-
 
 class VoidDeviceResp(BaseStructure): pass
 

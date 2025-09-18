@@ -50,22 +50,22 @@ def execute(cmd: ServiceCmd) -> Optional[tare_mod.Tare]:
         _init(worker)
         return None
 
-    tare: tare_mod.Tare = worker.cmd(GetTareDeviceCmd())
+    tare: tare_mod.NvmTare = worker.cmd(GetTareDeviceCmd())
 
     if all(value is None for value in cmd.kw.values()):
-        return tare
+        return tare.payload
 
-    tare_list = cmd.kw.pop(internal_to_external_field(tare.Field.VALUES), list())
-    existing = tare.values
+    tare_list = cmd.kw.pop(internal_to_external_field(tare.payload.Field.VALUES), list())
+    existing = tare.payload.values
     for idx, val in tare_list:
         try:
             existing[int(idx)] = val
         except IndexError:
             raise ServiceCmdError(
                 f'Index out of range, length of tare array is {tare_mod.Tare.TARE_COUNT}.')
-    tare.values = existing
+    tare.payload.values = existing
 
-    cmd = SetTareDeviceCmd(tare = tare)
+    cmd = SetTareDeviceCmd(tare=tare)
 
     _ = worker.cmd(cmd)
     return None

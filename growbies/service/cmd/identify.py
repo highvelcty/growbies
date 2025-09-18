@@ -52,7 +52,7 @@ def _init(worker):
     cmd.init = True
     _ = worker.cmd(cmd)
 
-def execute(cmd: ServiceCmd) -> Optional[id_mod.TIdentify]:
+def execute(cmd: ServiceCmd) -> Optional[id_mod.Identify1]:
     pool = get_pool()
     serial = cmd.kw.pop(PositionalParam.SERIAL)
     init = cmd.kw.pop(Param.INIT)
@@ -66,18 +66,17 @@ def execute(cmd: ServiceCmd) -> Optional[id_mod.TIdentify]:
         _init(worker)
         return None
 
-    ident: id_mod.TIdentify = worker.cmd(GetIdentifyDeviceCmd())
+    ident: id_mod.NvmIdentify = worker.cmd(GetIdentifyDeviceCmd())
 
     if all(value is None for value in cmd.kw.values()):
-        return ident
+        return ident.payload
 
     for key, val in cmd.kw.items():
-        if getattr(ident, key) is None:
-            _, version = ident.get_op_and_version()
-            raise ServiceCmdError(f'Identify version {version} does not support the '
+        if getattr(ident.payload, key, None) is None:
+            raise ServiceCmdError(f'Identify version {ident.VERSION} does not support the '
                                   f'"{key}" field.')
         if val is not None:
-            setattr(ident, key, val)
+            setattr(ident.payload, key, val)
 
     cmd = SetIdentifyDeviceCmd()
     cmd.identify = ident

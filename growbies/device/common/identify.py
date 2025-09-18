@@ -1,10 +1,12 @@
+from ctypes import sizeof
 from datetime import datetime
 from enum import IntEnum
-from typing import Optional, NewType
+from typing import Optional
 import ctypes
 
 from packaging.version import InvalidVersion, Version
 
+from . import nvm
 from .common import BaseStructure
 from growbies.utils import timestamp
 from growbies.utils.ctypes_utils import cstring_to_str
@@ -187,7 +189,6 @@ class Identify(BaseStructure):
     @foot.setter
     def foot(self, value: FootType):
         pass
-TIdentify = NewType('TIdentify', Identify)
 
 class Identify1(Identify):
     _fields_ = [
@@ -354,3 +355,17 @@ class Identify1(Identify):
     @foot.setter
     def foot(self, value: FootType):
         setattr(self, self.Field.FOOT, value)
+
+class NvmIdentify(nvm.BaseNvm):
+    VERSION = 1
+
+    _fields_ = [
+        (nvm.BaseNvm.Field.HDR, nvm.NvmHdr),
+        (nvm.BaseNvm.Field.PAYLOAD, Identify1)
+    ]
+
+    def __init__(self):
+        super().__init__()
+
+        self.hdr.version = self.VERSION
+        self.hdr.length = sizeof(self.payload)

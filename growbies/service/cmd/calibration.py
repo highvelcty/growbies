@@ -61,11 +61,11 @@ def execute(cmd: ServiceCmd) -> Optional[cal_mod.Calibration]:
     cal: cal_mod.Calibration = worker.cmd(GetCalibrationDeviceCmd())
 
     if all(value is None for value in cmd.kw.values()):
-        return cal
+        return cal.payload
 
     mass_temp_coeffs_list = cmd.kw.pop(
         internal_to_external_field(cal_mod.Calibration.Field.MASS_TEMP_COEFF), list())
-    matrix = cal.mass_temp_coeff
+    matrix = cal.payload.mass_temp_coeff
     for mass_temp_coeffs in mass_temp_coeffs_list:
         sensor = int(mass_temp_coeffs[0])
         coeffs = mass_temp_coeffs[1:]
@@ -77,14 +77,14 @@ def execute(cmd: ServiceCmd) -> Optional[cal_mod.Calibration]:
                 f'Matrix dimensions '
                 f'[{cal_mod.Calibration.MASS_SENSOR_COUNT}]'
                 f'[{cal_mod.Calibration.COEFF_COUNT}].')
-    cal.mass_temp_coeff = matrix
+    cal.payload.mass_temp_coeff = matrix
 
     mass_coeff_list = cmd.kw.pop(internal_to_external_field(cal_mod.Calibration.Field.MASS_COEFF),
                                  list())
     if mass_coeff_list:
-        cal.mass_coeff = mass_coeff_list
+        cal.payload.mass_coeff = mass_coeff_list
 
-    cmd = SetCalibrationDeviceCmd(calibration = cal)
+    cmd = SetCalibrationDeviceCmd(calibration=cal)
 
     _ = worker.cmd(cmd)
     return None

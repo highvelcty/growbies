@@ -1,9 +1,9 @@
 import ctypes
 
+from . import nvm
 from .common import BaseStructure
 from growbies.utils.ctypes_utils import get_ctypes_2d_array, set_ctypes_2d_array
 from growbies.utils.report import format_float_list, format_float_table
-
 
 class Calibration(BaseStructure):
     COEFF_COUNT = 3
@@ -52,3 +52,11 @@ class Calibration(BaseStructure):
         ]
 
         return '\n'.join(str_list)
+
+
+class NvmCalibration(nvm.BaseNvm):
+    _fields_ = [
+        (nvm.BaseNvm.Field.HDR, nvm.NvmHdr),
+        (nvm.BaseNvm.Field.PAYLOAD, Calibration)
+    ]
+

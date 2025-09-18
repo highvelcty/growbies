@@ -1,13 +1,12 @@
-from abc import ABC, ABCMeta, abstractmethod
 from enum import IntEnum
 from typing import NewType
 import ctypes
 import logging
 
 from .common import BaseStructure, PacketHdr
-from .common.calibration import Calibration
-from .common.identify import Identify1, TIdentify
-from .common.tare import Tare
+from .common.calibration import NvmCalibration
+from .common.identify import NvmIdentify
+from .common.tare import NvmTare
 
 logger = logging.getLogger(__name__)
 
@@ -42,18 +41,10 @@ class CmdPacketHdr(PacketHdr):
         setattr(self, self.Field.TYPE, DeviceCmdOp(value))
 
 
-class ABCStructureMeta(type(BaseStructure), ABCMeta): pass
-
-class BaseDeviceCmd(BaseStructure, metaclass=ABCStructureMeta):
-    # problems following the metaclass inheritance with pycharm 2025.1.3.1
-    # noinspection PyAbstractClass
-    @classmethod
-    @abstractmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        ...
+class BaseDeviceCmd(BaseStructure): pass
 TDeviceCmd = NewType('TDeviceCmd', BaseDeviceCmd)
 
-class BaseDeviceCmdWithTimesParam(BaseDeviceCmd, ABC):
+class BaseDeviceCmdWithTimesParam(BaseDeviceCmd):
     DEFAULT_TIMES = 7
 
     class Field(BaseDeviceCmd.Field):
@@ -77,12 +68,13 @@ class BaseDeviceCmdWithTimesParam(BaseDeviceCmd, ABC):
         super().times = value
 
 class GetCalibrationDeviceCmd(BaseDeviceCmd):
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.GET_CALIBRATION, 0
+    OP = DeviceCmdOp.GET_CALIBRATION
+    VERSION = 1
 
 class ReadDeviceCmd(BaseDeviceCmd):
     DEFAULT_TIMES = 7
+    OP = DeviceCmdOp.READ
+    VERSION = 1
 
     class Field(BaseDeviceCmd.Field):
         TIMES = '_times'
@@ -92,10 +84,6 @@ class ReadDeviceCmd(BaseDeviceCmd):
         (Field.TIMES, ctypes.c_uint8),
         (Field.RAW, ctypes.c_bool)
     ]
-
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.READ, 0
 
     @property
     def raw(self) -> bool:
@@ -114,26 +102,25 @@ class ReadDeviceCmd(BaseDeviceCmd):
         setattr(self, self.Field.TIMES, value)
 
 class SetCalibrationDeviceCmd(BaseDeviceCmd):
+    OP = DeviceCmdOp.SET_CALIBRATION
+    VERSION = 1
+
     class Field(BaseDeviceCmd.Field):
         INIT = '_init'
         CALIBRATION = '_calibration'
 
     _fields_ = [
         (Field.INIT, ctypes.c_bool),
-        (Field.CALIBRATION, Calibration)
+        (Field.CALIBRATION, NvmCalibration)
 
     ]
 
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.SET_CALIBRATION, 0
-
     @property
-    def calibration(self) -> Calibration:
+    def calibration(self) -> NvmCalibration:
         return getattr(self, self.Field.CALIBRATION)
 
     @calibration.setter
-    def calibration(self, calibration: Calibration):
+    def calibration(self, calibration: NvmCalibration):
         setattr(self, self.Field.CALIBRATION, calibration)
 
     @property
@@ -145,23 +132,21 @@ class SetCalibrationDeviceCmd(BaseDeviceCmd):
         setattr(self, self.Field.INIT, value)
 
 class GetIdentifyDeviceCmd(BaseDeviceCmd):
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.GET_IDENTIFY, 0
+    OP = DeviceCmdOp.GET_IDENTIFY
+    VERSION = 1
 
 class SetIdentifyDeviceCmd(BaseDeviceCmd):
+    OP = DeviceCmdOp.SET_IDENTIFY
+    VERSION = 1
+
     class Field(BaseDeviceCmd.Field):
         INIT = '_init'
         IDENTIFY = '_identify'
 
     _fields_ = [
         (Field.INIT, ctypes.c_bool),
-        (Field.IDENTIFY, Identify1),
+        (Field.IDENTIFY, NvmIdentify),
     ]
-
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.SET_IDENTIFY, 1
 
     @property
     def init(self) -> bool:
@@ -172,31 +157,29 @@ class SetIdentifyDeviceCmd(BaseDeviceCmd):
         setattr(self, self.Field.INIT, value)
 
     @property
-    def identify(self) -> TIdentify:
+    def identify(self) -> NvmIdentify:
         return getattr(self, self.Field.IDENTIFY)
 
     @identify.setter
-    def identify(self, val: TIdentify):
+    def identify(self, val: NvmIdentify):
         setattr(self, self.Field.IDENTIFY, val)
 
 class GetTareDeviceCmd(BaseDeviceCmd):
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.GET_TARE, 0
+    OP = DeviceCmdOp.GET_TARE
+    VERSION = 1
 
 class SetTareDeviceCmd(BaseDeviceCmd):
+    OP = DeviceCmdOp.SET_TARE
+    VERSION = 1
+
     class Field(BaseDeviceCmd.Field):
         INIT = '_init'
         TARE = '_tare'
 
     _fields_ = [
         (Field.INIT, ctypes.c_bool),
-        (Field.TARE, Tare),
+        (Field.TARE, NvmTare),
     ]
-
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.SET_TARE, 0
 
     @property
     def init(self) -> bool:
@@ -207,26 +190,22 @@ class SetTareDeviceCmd(BaseDeviceCmd):
         setattr(self, self.Field.INIT, value)
 
     @property
-    def tare(self) -> Tare:
+    def tare(self) -> NvmTare:
         return getattr(self, self.Field.TARE)
 
     @tare.setter
-    def tare(self, val: Tare):
+    def tare(self, val: NvmTare):
         setattr(self, self.Field.TARE, val)
 
 class LoopbackDeviceCmd(BaseDeviceCmd):
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.LOOPBACK, 0
-
+    OP = DeviceCmdOp.LOOPBACK
+    VERSION = 1
 
 class PowerOffHx711DeviceCmd(BaseDeviceCmd):
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.POWER_OFF_HX711, 0
+    OP = DeviceCmdOp.POWER_OFF_HX711
+    VERSION = 1
 
 
 class PowerOnHx711DeviceCmd(BaseDeviceCmd):
-    @classmethod
-    def get_op_and_version(cls) -> tuple[DeviceCmdOp, int]:
-        return DeviceCmdOp.POWER_ON_HX711, 0
+    OP = DeviceCmdOp.POWER_ON_HX711
+    VERSION = 1

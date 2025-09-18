@@ -21,16 +21,7 @@ typedef float TareValue[TARE_COUNT];
 
 #pragma pack(1)
 
-constexpr uint16_t MAGIC = 0x7A3F;
 struct NvmHdr {
-    uint16_t magic = MAGIC;
-
-    bool is_initialized() const {
-        return this->magic == MAGIC;
-    }
-};
-
-struct NvmHdr2 {
     Version_t version;
     uint8_t reserved0;
     Crc_t crc;
@@ -39,7 +30,7 @@ struct NvmHdr2 {
 };
 
 struct NvmStructBase{
-    NvmHdr2 hdr{};   // all derived NVM structs will have hdr
+    NvmHdr hdr{};   // all derived NVM structs will have hdr
 
     static constexpr Version_t VERSION = 1;
 };
@@ -117,7 +108,15 @@ class NvmStoreBase {
     static_assert(is_base_of<NvmStructBase, T>::value,
                   "NvmStoreBase can only be instantiated with types derived from NvmStructBase");
 public:
-    virtual void begin() = 0;
+    virtual void begin() {
+        _get();
+
+        Crc_t crc = this->calc_crc();
+        if (crc != this->value_storage.hdr.crc) {
+            init();
+        }
+        update();
+    }
     virtual void init() {
         put(T{});
     }
@@ -129,14 +128,7 @@ public:
     virtual void put(const T& value) {
         this->value_storage = value;
         migrate();
-    }
-
-    virtual void update() {
-        const Crc_t crc = this->value_storage.hdr.crc;
-        migrate();
-        if (this->value_storage.hdr.crc != crc) {
-            put(this->value_storage);
-        }
+        _put(this->value_storage);
     }
 
     // Accessors
@@ -150,17 +142,33 @@ protected:
     T value_storage{};
 
     void _migrate() {
-                this->value_storage.hdr.version = this->value_storage.VERSION;
-        this->value_storage.hdr.crc = crc_ccitt16(
+        this->value_storage.hdr.version = this->value_storage.VERSION;
+        this->value_storage.hdr.crc = calc_crc();
+        this->value_storage.hdr.length = sizeof(this->value_storage.payload);
+    }
+
+    Crc_t calc_crc() {
+        return crc_ccitt16(
             reinterpret_cast<const uint8_t*>(&this->value_storage.payload),
             sizeof(this->value_storage.payload)
         );
-        this->value_storage.hdr.length = sizeof(this->value_storage.payload);
+    }
+
+    virtual void _get() = 0;
+    virtual void _put(const T& value) = 0;
+
+    virtual void update() {
+        _get();
+
+        const Crc_t crc = this->value_storage.hdr.crc;
+        migrate();
+        if (this->value_storage.hdr.crc != crc) {
+            put(this->value_storage);
+        }
     }
 };
 
 // Templated concrete classes
-
 #if ARDUINO_ARCH_AVR
 
 template <typename T>
@@ -169,30 +177,26 @@ public:
     explicit AvrNvmStore(const int offset) : partition_offset(offset) {}
 
     void begin() override {
-        assert(partition_offset + sizeof(T) < EEPROM.length());
-        NvmHdr hdr{};
-        EEPROM.get(partition_offset, hdr);
-
-        if (!hdr.is_initialized()) {
-            init();
-        }
-        update();
+        EEPROM.get(partition_offset, this->value_storage);
+        NvmStoreBase<T>::begin();
     }
 
     void put(const T& value) override {
         NvmStoreBase<T>::put(value);
+        EEPROM.put(partition_offset, value);
+    }
 
-        EEPROM.put(partition_offset, NvmHdr{});
-        EEPROM.put(partition_offset + sizeof(NvmHdr), value);
+protected:
+    void _get() override {
+        EEPROM.get(partition_offset, this->value_storage);
+    }
+
+    void _put(const T& value) override {
+        EEPROM.put(partition_offset, value);
     }
 
 private:
     int partition_offset;
-
-    void update() override {
-        EEPROM.get(partition_offset + sizeof(NvmHdr), this->value_storage);
-        NvmStoreBase<T>::update();
-    }
 };
 
 #elif ARDUINO_ARCH_ESP32
@@ -202,28 +206,24 @@ class Esp32NvmStore final : public NvmStoreBase<T> {
 public:
     explicit Esp32NvmStore(const char* key) : ns_key(key) {}
 
-    void begin() override {
-        this->prefs.begin(this->ns, false);
-        const bool do_init = !this->prefs.isKey(this->ns_key);
-        this->prefs.end();
-
-        if (do_init) {
-            init();
-        }
-
-        update();
-    }
-
     void init() override {
         this->prefs.begin(this->ns, false);
         this->prefs.remove(this->ns_key);
         this->prefs.end();
+
         NvmStoreBase<T>::init();
     }
 
-    void put(const T& value) override {
-        NvmStoreBase<T>::put(value);
+protected:
+    void _get() override {
+        this->prefs.begin(this->ns, false);
+        // Ignoring the return value which is the number of bytes read.
+        // meyere, fix this.
+        this->prefs.getBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
+        this->prefs.end();
+    }
 
+    void _put(const T& value) override {
         this->prefs.begin(this->ns, false);
         // Ignoring the boolean return indicating success.
         // meyere, fix this
@@ -235,16 +235,6 @@ private:
     Preferences prefs;
     const char* ns_key;
     const char* ns = APPNAME;
-
-    void update() override {
-        this->prefs.begin(this->ns, false);
-        // Ignoring the return value which is the number of bytes read.
-        // meyere, fix this.
-        this->prefs.getBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
-        this->prefs.end();
-
-        NvmStoreBase<T>::update();
-    }
 };
 
 #endif

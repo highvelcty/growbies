@@ -126,12 +126,12 @@ struct BaseResp {};
 
 // --- Responses
 struct RespVoid : BaseResp {
-    static constexpr auto VERSION = 0;
+    static constexpr auto VERSION = 1;
     static constexpr auto TYPE = Resp::VOID;
 };
 
 struct RespError : BaseResp {
-    static constexpr auto VERSION = 0;
+    static constexpr auto VERSION = 1;
     static constexpr auto TYPE = Resp::ERROR;
 
     ErrorCode error = ERROR_NONE;
@@ -141,12 +141,12 @@ struct RespError : BaseResp {
 };
 
 struct RespGetCalibration : BaseResp {
-    static constexpr auto VERSION = 0;
+    static constexpr auto VERSION = 1;
     static constexpr auto TYPE = Resp::CALIBRATION;
 
-    Calibration calibration{};
+    NvmCalibration calibration{};
 
-    explicit RespGetCalibration(const Calibration& cal = Calibration{})
+    explicit RespGetCalibration(const NvmCalibration& cal = NvmCalibration{})
         : calibration(cal) {}
 };
 static_assert(sizeof(RespGetCalibration) < MAX_SLIP_UNENCODED_PACKET_BYTES);
@@ -155,20 +155,20 @@ struct RespGetIdentify : BaseResp {
     static constexpr auto VERSION = 1;
     static constexpr auto TYPE = Resp::IDENTIFY;
 
-    Identify1 identify{};
+    NvmIdentify1 identify{};
 
-    explicit RespGetIdentify(const Identify1& ident = Identify1{})
+    explicit RespGetIdentify(const NvmIdentify1& ident = NvmIdentify1{})
         : identify(ident) {}
 };
 static_assert(sizeof(RespGetIdentify) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 struct RespGetTare : BaseResp {
-    static constexpr auto VERSION = 0;
+    static constexpr auto VERSION = 1;
     static constexpr auto TYPE = Resp::TARE;
 
-    Tare tare{};
+    NvmTare tare{};
 
-    explicit RespGetTare(const Tare& tare_ = Tare{})
+    explicit RespGetTare(const NvmTare& tare_ = NvmTare{})
         : tare(tare_) {}
 };
 static_assert(sizeof(RespGetTare) < MAX_SLIP_UNENCODED_PACKET_BYTES);
@@ -183,7 +183,7 @@ struct TLVHdr {
 
 class DataPoint {
 public:
-    static constexpr auto VERSION = 0;
+    static constexpr auto VERSION = 1;
     static constexpr auto TYPE = Resp::DATAPOINT;
 
     explicit DataPoint(uint8_t* buf, const size_t buf_size)

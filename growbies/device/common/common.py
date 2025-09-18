@@ -38,9 +38,8 @@ class _StructUnionMixin:
         # preserve order in memory layout
         return list(seen.values())
 
-    def get_str(self, prefix: str = '', _str_list: Optional[list[str]] = None):
-        if _str_list is None:
-            _str_list = list()
+    def get_str(self, prefix: str = '', offset = 0):
+        _str_list = list()
         for field_name, field_type, field_offset, field_size in self.all_fields():
             external_name = internal_to_external_field(field_name)
             is_anonymous = field_name in getattr(self, '_anonymous_', [])
@@ -50,11 +49,11 @@ class _StructUnionMixin:
                 next_name = f'{prefix}.{external_name}' if prefix else external_name
             if issubclass(field_type, (ctypes.Structure, ctypes.Union)):
                 if not is_anonymous:
-                    for next_str in getattr(self, external_name).get_str(next_name):
+                    for next_str in getattr(self, external_name).get_str(next_name, field_offset):
                         if next_str not in _str_list:
                             _str_list.append(next_str)
             else:
-                next_str = (f'0x{field_offset:04X} '
+                next_str = (f'0x{offset + field_offset:04X} '
                             f'{next_name}: '
                             f'{repr(getattr(self, external_name))}')
                 if next_str not in _str_list:
@@ -66,6 +65,9 @@ class _StructUnionMixin:
         return '\n'.join(self.get_str())
 
 class BaseStructure(ctypes.Structure, _StructUnionMixin):
+    OP = None
+    VERSION = None
+
     _pack_ = 1
 
 TBaseStructure = NewType('TBaseStructure', BaseStructure)

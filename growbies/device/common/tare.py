@@ -1,5 +1,6 @@
 import ctypes
 
+from . import nvm
 from .common import BaseStructure
 from growbies.utils.report import format_float_list
 
@@ -8,20 +9,10 @@ class Tare(BaseStructure):
 
     class Field(BaseStructure.Field):
         VALUES = '_values'
-        CRC = '_crc'
 
     _fields_ = [
         (Field.VALUES, ctypes.c_float * TARE_COUNT),
-        (Field.CRC, ctypes.c_uint16),
     ]
-
-    @property
-    def crc(self) -> int:
-        return getattr(self, self.Field.CRC)
-
-    @crc.setter
-    def crc(self, value: int):
-        setattr(self, self.Field.CRC, value)
 
     @property
     def values(self) -> list[float]:
@@ -37,7 +28,12 @@ class Tare(BaseStructure):
 
         str_list = [
             format_float_list('Tare Values', tare_columns, self.values),
-            f'CRC: 0x{self.crc:04X}'
         ]
 
         return '\n\n'.join(str_list)
+
+class NvmTare(nvm.BaseNvm):
+    _fields_ = [
+        (nvm.BaseNvm.Field.HDR, nvm.NvmHdr),
+        (nvm.BaseNvm.Field.PAYLOAD, Tare)
+    ]

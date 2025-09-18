@@ -1,6 +1,7 @@
+from ctypes import sizeof
 from unittest import TestCase
 
-from growbies.device.common.tare import Tare
+from growbies.device.common.tare import Tare, NvmTare
 
 class Test(TestCase):
     def test(self):
@@ -17,3 +18,6 @@ class Test(TestCase):
         buf = bytearray(b'\x00' * 6 + b'\x80\x3f' + (b'\x00' * 12))
         tare = Tare.from_buffer(buf)
         self.assertAlmostEqual(1.0, tare.values[1])
+
+    def test_size(self):
+        self.assertEqual(40, sizeof(NvmTare))

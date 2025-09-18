@@ -42,7 +42,7 @@ void Growbies::begin() {
 
 void Growbies::execute(const PacketHdr* in_packet_hdr) {
     out_packet_hdr->id = in_packet_hdr->id;
-    ErrorCode error = ErrorCode::ERROR_NONE;
+    ErrorCode error = ERROR_NONE;
 
     if (in_packet_hdr->cmd == Cmd::LOOPBACK) {
         [[maybe_unused]] const auto resp = new (this->packet_buf) RespVoid;

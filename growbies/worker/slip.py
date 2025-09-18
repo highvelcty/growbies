@@ -230,8 +230,7 @@ class Transport(Network, ABC):
         raises:
             :class:`ServiceCmdError`
         """
-        op, version = cmd.get_op_and_version()
-        hdr = CmdPacketHdr(type=op, version=version, id=1)
+        hdr = CmdPacketHdr(type=cmd.OP, version=cmd.VERSION, id=1)
         if self.DEBUG:
             logger.debug(BufStr(bytes(hdr), title='Transport Send Header'))
             logger.debug(BufStr(bytes(cmd), title='Transport Send Payload'))
