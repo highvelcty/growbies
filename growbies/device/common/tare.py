@@ -37,3 +37,11 @@ class NvmTare(nvm.BaseNvm):
         (nvm.BaseNvm.Field.HDR, nvm.NvmHdr),
         (nvm.BaseNvm.Field.PAYLOAD, Tare)
     ]
+
+    @property
+    def payload(self) -> Tare:
+        return super().payload
+
+    @payload.setter
+    def payload(self, value: Tare):
+        super().payload = value

@@ -10,6 +10,7 @@ from .common import BaseStructure
 from growbies.constants import INDENT, UINT8_MAX
 from growbies.service.common import ServiceCmdError
 from growbies.utils.report import format_dropped_bytes
+from growbies.utils.timestamp import get_utc_iso_ts_str
 
 logger = logging.getLogger(__name__)
 
@@ -111,40 +112,42 @@ class DataPoint:
                         self._type_vals[hdr.type].append(klass.from_buffer(buf, offset))
                         offset += required
 
-    def _get_mass_table(self) -> str:
+    def _get_table(self) -> PrettyTable:
         mass_sensors = self._type_vals.get(EndpointType.MASS_SENSOR, [])
-        mass_errors = self._type_vals.get(EndpointType.MASS_FILTERED_SAMPLES,
-                                          [EndpointType.MASS_FILTERED_SAMPLES.type(0)])[0].value
+        mass_sensors = [f'{x.value:.2f}' for x in mass_sensors]
+        mass_sensors = f'[{", ".join(mass_sensors)}]'
+        mass_errors = self._type_vals.get(EndpointType.MASS_FILTERED_SAMPLES, [])
+        mass_errors = [x.value for x in mass_errors]
         total_mass = self._type_vals.get(EndpointType.MASS,
                                          [EndpointType.MASS.type(0.0)])[0].value
-
-        mass_table = PrettyTable(title='Mass')
-        mass_columns = ["Total Mass (g)"] + [f"Sensor {i}" for i in range(len(mass_sensors))] + [
-            "Errors"]
-        mass_table.field_names = mass_columns
-
-        mass_row = [f"{total_mass:.2f}"] + [f"{v.value:.2f}" for v in mass_sensors] + [mass_errors]
-        mass_table.add_row(mass_row)
-
-        return str(mass_table)
-
-    def _get_temperature_table(self) -> str:
+        total_mass = f'{total_mass:.2f}'
         temp_sensors = self._type_vals.get(EndpointType.TEMPERATURE_SENSOR, [])
-        temp_errors = self._type_vals.get(
-            EndpointType.TEMPERATURE_FILTERED_SAMPLES,
-            [EndpointType.TEMPERATURE_FILTERED_SAMPLES.type(0)])[0].value
+        temp_sensors = [f'{x.value:.2f}' for x in temp_sensors]
+        temp_sensors = f'[{", ".join(temp_sensors)}]'
+        temp_errors = self._type_vals.get(EndpointType.TEMPERATURE_FILTERED_SAMPLES, [])
+        temp_errors = [x.value for x in temp_errors]
         avg_temp = self._type_vals.get(EndpointType.TEMPERATURE,
-                                       [EndpointType.TEMPERATURE.type(0)])[0].value
+                                       [EndpointType.TEMPERATURE.type(0.0)])[0].value
+        avg_temp = f'{avg_temp:.2f}'
+        tare_crc = (self._type_vals.get(EndpointType.TARE_CRC,
+                                        [EndpointType.TARE_CRC.type(0)])[0].value)
+        tare_crc = f'0x{tare_crc:04X}'
 
-        temp_table = PrettyTable(title = 'Temperature')
-        temp_columns = ["Avg Temp (°C)"] + [f"Sensor {i}" for i in range(len(temp_sensors))] + [
-            "Errors"]
-        temp_table.field_names = temp_columns
+        table = PrettyTable(title = 'DataPoint')
+        table.field_names = ['Field', 'Value']
+        for field in table.field_names:
+            table.align[field] = 'l'
+        table.add_row(['Mass (g)', total_mass])
+        table.add_row(['Mass Sensors (DAC)', mass_sensors])
+        table.add_row(['Mass Errors', mass_errors])
+        table.add_row(['Temperature (*C)', avg_temp])
+        table.add_row(['Temperature Sensors (DAC)', temp_sensors])
+        table.add_row(['Temperature Errors', temp_errors])
+        table.add_row(['Timestamp', get_utc_iso_ts_str(timespec='seconds')])
+        table.add_row(['Tare CRC', tare_crc])
 
-        temp_row = [f"{avg_temp:.2f}"] + [f"{v.value:.2f}" for v in temp_sensors] + [temp_errors]
-        temp_table.add_row(temp_row)
+        return table
 
-        return str(temp_table)
 
     def _get_unknown_endpoint_str(self) -> str:
         unknown_bufs = self._type_vals.get(EndpointType.UNKNOWN, [])
@@ -156,14 +159,12 @@ class DataPoint:
         return '\n'.join(str_list)
 
     def __str__(self) -> str:
-        tare_crc = (self._type_vals.get(EndpointType.TARE_CRC,
-                                        [EndpointType.TARE_CRC.type(0)])[0].value)
         str_list = [
-            self._get_mass_table(),
-            self._get_temperature_table(),
-            self._get_unknown_endpoint_str(),
-            f'Tare CRC: 0x{tare_crc}'
+            str(self._get_table()),
         ]
+        unknown_endpoint_str = self._get_unknown_endpoint_str()
+        if unknown_endpoint_str:
+            str_list.append(unknown_endpoint_str)
         return '\n'.join(str_list)
 
     @property

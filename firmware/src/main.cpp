@@ -44,7 +44,7 @@ void setup() {
 
 #if BUTTERFLY
 void loop() {
-    // growbies.exec_read();
+    growbies.exec_read();
 
     unsigned long startt = millis();
     do {

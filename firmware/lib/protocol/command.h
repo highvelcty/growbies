@@ -48,6 +48,7 @@ typedef enum EndpointType: uint8_t {
     EP_TEMPERATURE = 4,
     EP_TEMPERATURE_FILTERED_SAMPLES = 5,
     EP_TARE_CRC = 6,
+    EP_UNKNOWN = 0xFF
 } EndpointType;
 
 // Bitwise operators for Error

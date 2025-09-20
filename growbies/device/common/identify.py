@@ -369,3 +369,11 @@ class NvmIdentify(nvm.BaseNvm):
 
         self.hdr.version = self.VERSION
         self.hdr.length = sizeof(self.payload)
+
+    @property
+    def payload(self) -> Identify1:
+        return super().payload
+
+    @payload.setter
+    def payload(self, value: Identify1):
+        super().payload = value

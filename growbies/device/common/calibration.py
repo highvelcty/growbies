@@ -60,3 +60,10 @@ class NvmCalibration(nvm.BaseNvm):
         (nvm.BaseNvm.Field.PAYLOAD, Calibration)
     ]
 
+    @property
+    def payload(self) -> Calibration:
+        return super().payload
+
+    @payload.setter
+    def payload(self, value: Calibration):
+        super().payload = value
