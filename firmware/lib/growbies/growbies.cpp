@@ -421,20 +421,22 @@ void Growbies::shift_all_in(float* sensor_sample, const HX711Gain gain) {
 #elif ARDUINO_ARCH_ESP32
     noInterrupts();
 #endif
-        for (uint8_t ii = 0; ii < HX711_DAC_BITS; ++ii) {
+    // Read bit by bit in parallel. Most significant bit first.
+    for (uint8_t ii = 0; ii < HX711_DAC_BITS; ++ii) {
             delayMicroseconds(HX711_BIT_BANG_DELAY);
-            // Read in a byte, most significant bit first
             digitalWrite(HX711_SCK_PIN, HIGH);
 
+        {
             // This is a time critical block
             delayMicroseconds(HX711_BIT_BANG_DELAY);
-        #if ARDUINO_ARCH_AVR
-            // Read pins 8-13
-            gpio_in_reg = PINB;
-        #elif ARDUINO_ARCH_ESP32
-            gpio_in_reg = REG_READ(GPIO_IN_REG);
-        #endif
-            digitalWrite(HX711_SCK_PIN, LOW);
+            #if ARDUINO_ARCH_AVR
+                // Read pins 8-13
+                gpio_in_reg = PINB;
+            #elif ARDUINO_ARCH_ESP32
+                gpio_in_reg = REG_READ(GPIO_IN_REG);
+            #endif
+                digitalWrite(HX711_SCK_PIN, LOW);
+        }
 
             // This time intensive task needs to happen after pulling SCK low to not perturb time
             // sensitive section when SCK is high.

@@ -148,7 +148,6 @@ class DataPoint:
 
         return table
 
-
     def _get_unknown_endpoint_str(self) -> str:
         unknown_bufs = self._type_vals.get(EndpointType.UNKNOWN, [])
         str_list = list()
