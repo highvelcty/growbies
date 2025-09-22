@@ -9,7 +9,7 @@ from prettytable import PrettyTable
 from .common import BaseStructure
 from growbies.constants import INDENT, UINT8_MAX
 from growbies.service.common import ServiceCmdError
-from growbies.utils.report import format_dropped_bytes
+from growbies.utils.report import format_dropped_bytes, list_str_wrap
 from growbies.utils.timestamp import get_utc_iso_ts_str
 
 logger = logging.getLogger(__name__)
@@ -21,17 +21,16 @@ class EndpointType(IntEnum):
     TEMPERATURE_SENSOR = 3
     TEMPERATURE = 4
     TEMPERATURE_FILTERED_SAMPLES = 5
-    TARE_CRC = 6
+    TARE = 6
     UNKNOWN = UINT8_MAX
 
     @property
     def type(self):
-        if self.value in (self.MASS_SENSOR, self.MASS, self.TEMPERATURE_SENSOR, self.TEMPERATURE):
+        if self.value in (self.MASS_SENSOR, self.MASS, self.TARE,
+                          self.TEMPERATURE_SENSOR, self.TEMPERATURE):
             return ctypes.c_float
         elif self.value in (self.MASS_FILTERED_SAMPLES, self.TEMPERATURE_FILTERED_SAMPLES):
             return ctypes.c_uint8
-        elif self.value == self.TARE_CRC:
-            return ctypes.c_uint16
         else:
             return bytes
 
@@ -109,29 +108,21 @@ class DataPoint:
                     if hdr.type not in self._type_vals:
                         self._type_vals[hdr.type] = list()
                     for ii in range(hdr.length // required):
-                        self._type_vals[hdr.type].append(klass.from_buffer(buf, offset))
+                        self._type_vals[hdr.type].append(klass.from_buffer(buf, offset).value)
                         offset += required
 
     def _get_table(self) -> PrettyTable:
-        mass_sensors = self._type_vals.get(EndpointType.MASS_SENSOR, [])
-        mass_sensors = [f'{x.value:.2f}' for x in mass_sensors]
-        mass_sensors = f'[{", ".join(mass_sensors)}]'
-        mass_errors = self._type_vals.get(EndpointType.MASS_FILTERED_SAMPLES, [])
-        mass_errors = [x.value for x in mass_errors]
-        total_mass = self._type_vals.get(EndpointType.MASS,
-                                         [EndpointType.MASS.type(0.0)])[0].value
+        mass_sensors = list_str_wrap(self._type_vals.get(EndpointType.MASS_SENSOR, []))
+        mass_errors = list_str_wrap(self._type_vals.get(EndpointType.MASS_FILTERED_SAMPLES, []))
+        total_mass = self._type_vals.get(EndpointType.MASS, [EndpointType.MASS.type(0.0)])[0]
         total_mass = f'{total_mass:.2f}'
-        temp_sensors = self._type_vals.get(EndpointType.TEMPERATURE_SENSOR, [])
-        temp_sensors = [f'{x.value:.2f}' for x in temp_sensors]
-        temp_sensors = f'[{", ".join(temp_sensors)}]'
-        temp_errors = self._type_vals.get(EndpointType.TEMPERATURE_FILTERED_SAMPLES, [])
-        temp_errors = [x.value for x in temp_errors]
+        temp_sensors = list_str_wrap(self._type_vals.get(EndpointType.TEMPERATURE_SENSOR, []))
+        temp_errors = list_str_wrap(self._type_vals.get(
+            EndpointType.TEMPERATURE_FILTERED_SAMPLES, []))
         avg_temp = self._type_vals.get(EndpointType.TEMPERATURE,
-                                       [EndpointType.TEMPERATURE.type(0.0)])[0].value
+                                       [EndpointType.TEMPERATURE.type(0.0)])[0]
         avg_temp = f'{avg_temp:.2f}'
-        tare_crc = (self._type_vals.get(EndpointType.TARE_CRC,
-                                        [EndpointType.TARE_CRC.type(0)])[0].value)
-        tare_crc = f'0x{tare_crc:04X}'
+        tare_values = list_str_wrap(self._type_vals.get(EndpointType.TARE, []))
 
         table = PrettyTable(title = 'DataPoint')
         table.field_names = ['Field', 'Value']
@@ -141,10 +132,10 @@ class DataPoint:
         table.add_row(['Mass Sensors (DAC)', mass_sensors])
         table.add_row(['Mass Errors', mass_errors])
         table.add_row(['Temperature (*C)', avg_temp])
-        table.add_row(['Temperature Sensors (DAC)', temp_sensors])
+        table.add_row(['Temperature Sensors (*C)', temp_sensors])
         table.add_row(['Temperature Errors', temp_errors])
+        table.add_row(['Tare', tare_values])
         table.add_row(['Timestamp', get_utc_iso_ts_str(timespec='seconds')])
-        table.add_row(['Tare CRC', tare_crc])
 
         return table
 

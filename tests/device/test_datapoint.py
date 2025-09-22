@@ -1,3 +1,4 @@
+import ctypes
 from unittest import TestCase
 from growbies.device.common.read import DataPoint, EndpointType
 

@@ -38,6 +38,11 @@ struct NvmStructBase{
 
 struct Tare {
     TareValue values{};
+    Tare() {
+        for (auto &v : values) {
+            v = NAN;
+        }
+    }
 };
 
 struct NvmTare : NvmStructBase {

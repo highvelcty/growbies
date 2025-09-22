@@ -61,6 +61,7 @@ class Growbies {
         static ErrorCode get_mass_datapoint(DataPoint* datapoint,
                                             int times,
                                             HX711Gain gain);
+        static void get_tare_datapoint(DataPoint* datapoint);
         static void get_temperature_datapoint(DataPoint *datapoint, int times);
         static void shift_all_in(float* sensor_sample, HX711Gain gain);
 

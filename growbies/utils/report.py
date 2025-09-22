@@ -53,3 +53,18 @@ def format_dropped_bytes(buf: bytearray | bytes | memoryview ) -> str:
         # Format like a normal bytes literal
         repr_bytes = repr(first_part)[:-1] + '...' + repr(last_part)[2:]
         return f'{repr_bytes} of length {length}'
+
+def list_str_wrap(the_list, wrap=4, indent=1) -> str:
+    """Return a string of floats with line breaks every `wrap` elements,
+    indented `indent` spaces after the first line."""
+    if not the_list:
+        return "[]"
+    the_list = [f'{x:.2f}' for x in the_list]
+    lines = []
+    for i in range(0, len(the_list), wrap):
+        lines.append(", ".join(the_list[i:i+wrap]))
+    result = "[" + lines[0]
+    for line in lines[1:]:
+        result += ",\n" + " " * indent + line
+    result += "]"
+    return result

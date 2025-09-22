@@ -296,7 +296,7 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
     const Calibration* cal = calibration_store->payload();
     const Identify1* ident = identify_store->payload();
 
-    datapoint->add<uint16_t>(EP_TARE_CRC, tare_store->hdr()->crc);
+    get_tare_datapoint(datapoint);
 
 #if POWER_CONTROL
     power_on();
@@ -342,7 +342,7 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
         }
         temperature += temp_ptr[sensor_idx];
     }
-    temperature /= ident->temperature_sensor_count;
+    temperature /= static_cast<float>(ident->temperature_sensor_count);
     datapoint->add<float>(EP_TEMPERATURE, temperature);
 
     return error;
@@ -379,8 +379,17 @@ ErrorCode Growbies::get_mass_datapoint(DataPoint* datapoint,
     return error;
 }
 
+void Growbies::get_tare_datapoint(DataPoint* datapoint) {
+    for (auto value : tare_store->payload()->values) {
+        if (!isnan(value)) {
+            datapoint->add<float>(EP_TARE, value);
+        }
+    }
+}
+
+
 void Growbies::get_temperature_datapoint(DataPoint *datapoint,
-                                              const int times) {
+                                         const int times) {
     const auto iteration_temp_samples = static_cast<float **>(malloc(times * sizeof(float *)));
     for (int iteration = 0; iteration < times; ++iteration) {
         iteration_temp_samples[iteration] = \
