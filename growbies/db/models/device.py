@@ -9,7 +9,6 @@ from sqlalchemy import Column, Integer, ForeignKey, String, select
 
 from .gateway import Gateway
 if TYPE_CHECKING:
-    from .endpoint import Endpoint
     from growbies.db.engine import DBEngine
 from growbies.utils.report import format_8bit_binary
 from growbies.utils.types import Serial_t, DeviceID_t, SerialOrDeviceID_t
@@ -52,8 +51,6 @@ class Device(SQLModel, table=True):
         Field(sa_column=Column(Integer, nullable=False, default=ConnectionState.INITIAL))
 
     gateway_relation: Gateway = Relationship(back_populates='devices')
-    endpoints: list['Endpoint'] = Relationship(back_populates='device_relation',
-                                               cascade_delete=True)
 
     def init_discovery_info(self):
         self.state &= ~ConnectionState.DISCOVERED

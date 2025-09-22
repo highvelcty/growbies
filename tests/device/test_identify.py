@@ -9,11 +9,12 @@ from growbies.device.cmd import SetIdentifyDeviceCmd
 class TestSetIdentifyDeviceCmd(TestCase):
     def test(self):
         test_model_name = 'test_model_name'
-        identify = Identify1(model_number=test_model_name)
+        identify = NvmIdentify()
+        identify.payload.model_number = test_model_name
 
         cmd = SetIdentifyDeviceCmd(identify=identify)
 
-        self.assertEqual(test_model_name, cmd.identify.model_number)
+        self.assertEqual(test_model_name, cmd.identify.payload.model_number)
         self.assertFalse(cmd.init)
 
     def test2(self):
@@ -27,8 +28,8 @@ class TestSetIdentifyDeviceCmd(TestCase):
 
         identify = Identify1.from_buffer(buf)
         cmd = SetIdentifyDeviceCmd()
-        cmd.identify = identify
-        self.assertEqual(bytes(identify), bytes(cmd.identify))
+        cmd.payload = identify
+        self.assertEqual(bytes(identify), bytes(cmd.payload))
         self.assertFalse(cmd.init)
 
 class TestNvmIdentify(TestCase):

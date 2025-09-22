@@ -14,10 +14,5 @@ class Test(TestCase):
 
         self.assertAlmostEqual(tare.values[0], 1.0)
 
-    def test2(self):
-        buf = bytearray(b'\x00' * 6 + b'\x80\x3f' + (b'\x00' * 12))
-        tare = Tare.from_buffer(buf)
-        self.assertAlmostEqual(1.0, tare.values[1])
-
     def test_size(self):
         self.assertEqual(40, sizeof(NvmTare))

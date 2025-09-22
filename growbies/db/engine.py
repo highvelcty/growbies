@@ -8,6 +8,8 @@ from sqlmodel import create_engine, Session, SQLModel
 from .models.account import AccountEngine
 from .models.device import DevicesEngine
 from .models.gateway import GatewayEngine
+from .models.tare import TareEngine
+from .models.datapoint import DataPointEngine
 from growbies.constants import SQLMODEL_LOCAL_ADDRESS
 
 logger = logging.getLogger(__name__)
@@ -15,7 +17,7 @@ logger = logging.getLogger(__name__)
 # All models representing tables found in the import space will be created, but the static
 # checker doesn't know this.
 # noinspection PyUnresolvedReferences
-from growbies.db.models import account, gateway, device, endpoint, endpoint_types
+from growbies.db.models import account, gateway, device, datapoint
 from growbies.db.models.endpoint_types import EndpointTypes
 
 class DBEngine:
@@ -24,6 +26,8 @@ class DBEngine:
         self.account = AccountEngine(self)
         self.gateway = GatewayEngine(self)
         self.devices = DevicesEngine(self)
+        self.tare = TareEngine(self)
+        self.datapoint = DataPointEngine(self)
 
     @property
     def _engine(self):

@@ -23,7 +23,3 @@ class Test(TestCase):
         self.assertAlmostEqual(cal.mass_temp_coeff[0][-1], Calibration.COEFF_COUNT - 1)
         self.assertAlmostEqual(cal.mass_temp_coeff[-1][-1],
                                (Calibration.MASS_SENSOR_COUNT * Calibration.COEFF_COUNT) - 1)
-
-    def test_construction(self):
-
-        cmd = SetCalibrationDeviceCmd(calibration=cal)

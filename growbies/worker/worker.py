@@ -10,8 +10,8 @@ from serial.serialutil import SerialException
 from growbies.db.engine import get_db_engine
 from growbies.device.cmd import TDeviceCmd
 from growbies.device.common import BaseStructure
-from growbies.device.resp import (DeviceRespOp, DeviceError, ErrorDeviceResp, RespPacketHdr,
-                                  TDeviceResp)
+from growbies.device.resp import (DeviceRespOp, DeviceError, DataPoint, ErrorDeviceResp,
+                                  RespPacketHdr, TDeviceResp)
 from growbies.service.common import ServiceCmdError
 from growbies.session import log
 from growbies.utils.types import DeviceID_t, WorkerID_t
@@ -33,9 +33,11 @@ class Worker(Thread):
 
     def __init__(self, device_id: DeviceID_t):
         super().__init__()
+        self._device_id = device_id
         self._out_queue = Queue()
-        self._engine = get_db_engine().devices.get_engine(device_id)
-        self._device = self._engine.get(device_id)
+        self._db_engine = get_db_engine()
+        self._device_engine = self._db_engine.devices.get_engine(device_id)
+        self._device = self._device_engine.get(device_id)
         self._intf: Optional[SerialIntf] = None
         self._stop_event = Event()
         self._reconnect_attempt = 0
@@ -104,13 +106,16 @@ class Worker(Thread):
             self._intf.stop()
             self._intf = None
 
-    @staticmethod
-    def _process_async(hdr: RespPacketHdr, resp: TDeviceResp | ErrorDeviceResp):
+    def _process_async(self, hdr: RespPacketHdr, resp: TDeviceResp | ErrorDeviceResp):
         if hdr.type == DeviceRespOp.ERROR:
             resp: ErrorDeviceResp
             logger.error(f'Received asynchronous error response with '
                          f'error code {resp.error} 0x{resp.error:X}')
         elif hdr.type == DeviceRespOp.DATAPOINT:
+            resp: DataPoint
+            tare_id = self._db_engine.tare.insert(resp.tare).id
+            self._db_engine.datapoint.insert(self._device_id, tare_id, resp)
+
             logger.info(f'Received asynchronous {hdr.type} response.')
         else:
             logger.error(f'Invalid response type received: {hdr.type}.')
@@ -161,10 +166,10 @@ class Worker(Thread):
         # Outer loop
         while not self._stop_event.is_set():
             try:
-                self._engine.init_start_connection()
+                self._device_engine.init_start_connection()
                 logger.info('Device connecting.')
                 if self._connect():
-                    self._engine.set_connected()
+                    self._device_engine.set_connected()
                     logger.info('Device connected.')
 
                     # Inner loop
@@ -175,11 +180,11 @@ class Worker(Thread):
             # Cleanup
             self._disconnect()
             logger.info('Device disconnected.')
-            self._engine.clear_connected()
+            self._device_engine.clear_connected()
 
             # Reconnect
             if not self._stop_event.is_set():
-                self._engine.set_error()
+                self._device_engine.set_error()
                 if not self._stop_event.wait(self._RECONNECT_RETRY_DELAY_SECONDS):
                     self._reconnect_attempt += 1
                     if self._do_report_reconnect():

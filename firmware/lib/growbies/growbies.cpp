@@ -200,7 +200,7 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
     if (endpoint_type == EP_MASS_SENSOR) {
         sensor_count = ident->mass_sensor_count;
     }
-    else if (endpoint_type == EP_TEMPERATURE_SENSOR) {
+    else if (endpoint_type == EP_TEMPERATURE_SENSORS) {
         sensor_count = ident->temperature_sensor_count;
     }
     else {
@@ -249,12 +249,21 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
         }
     }
 
+    // Zero fill until the last non-zero error count.
     const EndpointType filtered_samples_type =
-        (endpoint_type == EP_MASS_SENSOR) ? EP_MASS_FILTERED_SAMPLES
-      : (endpoint_type == EP_TEMPERATURE_SENSOR) ? EP_TEMPERATURE_FILTERED_SAMPLES
+        (endpoint_type == EP_MASS_SENSOR) ? EP_MASS_ERRORS
+      : (endpoint_type == EP_TEMPERATURE_SENSORS) ? EP_TEMPERATURE_ERRORS
       : EP_UNKNOWN;  // default
+    SensorIdx_t last_idx = 0;
     for (SensorIdx_t sensor_idx = 0; sensor_idx < sensor_count; ++sensor_idx) {
-        datapoint->add<uint8_t>(filtered_samples_type, error_counts[sensor_idx]);
+        if ( error_counts[sensor_idx] != 0) {
+            last_idx = sensor_idx + 1;
+        }
+    }
+    if (last_idx != 0) {
+        for (SensorIdx_t sensor_idx = 0; sensor_idx < last_idx; ++sensor_idx) {
+            datapoint->add<uint8_t>(filtered_samples_type, error_counts[sensor_idx]);
+        }
     }
 }
 
@@ -314,7 +323,7 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
      float temperature = 0.0;
 
      auto* mass_ptr = datapoint->find_value<float>(EP_MASS_SENSOR);
-     auto* temp_ptr = datapoint->find_value<float>(EP_TEMPERATURE_SENSOR);
+     auto* temp_ptr = datapoint->find_value<float>(EP_TEMPERATURE_SENSORS);
 
     for (sensor_idx = 0; sensor_idx < ident->mass_sensor_count; ++sensor_idx) {
         if (!raw) {
@@ -380,13 +389,26 @@ ErrorCode Growbies::get_mass_datapoint(DataPoint* datapoint,
 }
 
 void Growbies::get_tare_datapoint(DataPoint* datapoint) {
-    for (auto value : tare_store->payload()->values) {
-        if (!isnan(value)) {
-            datapoint->add<float>(EP_TARE, value);
+    auto* values = tare_store->payload()->values;
+    size_t last_idx = 0;
+
+    // Find the index of the last non-NaN value
+    for (size_t i = 0; i < TARE_COUNT; ++i) {
+        if (!std::isnan(values[i])) {
+            last_idx = i;
         }
     }
-}
 
+    // If all NaNs, last_idx will be 0 and isnan(values[0]) is true
+    if (last_idx == 0 && std::isnan(values[0])) {
+        return; // nothing to add
+    }
+
+    // Add all values up to last non-NaN
+    for (size_t i = 0; i <= last_idx; ++i) {
+        datapoint->add<float>(EP_TARE, values[i]);
+    }
+}
 
 void Growbies::get_temperature_datapoint(DataPoint *datapoint,
                                          const int times) {
@@ -404,7 +426,7 @@ void Growbies::get_temperature_datapoint(DataPoint *datapoint,
     if (identify_store->payload()->temperature_sensor_count) {
         median_avg_filter(iteration_temp_samples,
                           times,
-               EP_TEMPERATURE_SENSOR,
+               EP_TEMPERATURE_SENSORS,
                     INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC,
                           datapoint);
     }

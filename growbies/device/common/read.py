@@ -1,8 +1,10 @@
 import ctypes
 import logging
 from ctypes import sizeof
+from datetime import datetime
 from enum import IntEnum
-from typing import Any
+from math import nan
+from typing import Optional
 
 from prettytable import PrettyTable
 
@@ -10,34 +12,34 @@ from .common import BaseStructure
 from growbies.constants import INDENT, UINT8_MAX
 from growbies.service.common import ServiceCmdError
 from growbies.utils.report import format_dropped_bytes, list_str_wrap
-from growbies.utils.timestamp import get_utc_iso_ts_str
+from growbies.utils.timestamp import get_utc_iso_ts_str, get_utc_dt, TS_t
 
 logger = logging.getLogger(__name__)
 
-class EndpointType(IntEnum):
-    MASS_SENSOR = 0
-    MASS = 1
-    MASS_FILTERED_SAMPLES = 2
-    TEMPERATURE_SENSOR = 3
-    TEMPERATURE = 4
-    TEMPERATURE_FILTERED_SAMPLES = 5
-    TARE = 6
-    UNKNOWN = UINT8_MAX
-
-    @property
-    def type(self):
-        if self.value in (self.MASS_SENSOR, self.MASS, self.TARE,
-                          self.TEMPERATURE_SENSOR, self.TEMPERATURE):
-            return ctypes.c_float
-        elif self.value in (self.MASS_FILTERED_SAMPLES, self.TEMPERATURE_FILTERED_SAMPLES):
-            return ctypes.c_uint8
-        else:
-            return bytes
-
-    def __str__(self):
-        return self.name
-
 class TLVHdr(BaseStructure):
+    class EndpointType(IntEnum):
+        MASS_SENSORS = 0
+        MASS = 1
+        MASS_ERRORS = 2
+        TEMPERATURE_SENSORS = 3
+        TEMPERATURE = 4
+        TEMPERATURE_ERRORS = 5
+        TARE = 6
+        UNKNOWN = UINT8_MAX
+
+        @property
+        def type(self):
+            if self.value in (self.MASS_SENSORS, self.MASS, self.TARE,
+                              self.TEMPERATURE_SENSORS, self.TEMPERATURE):
+                return ctypes.c_float
+            elif self.value in (self.MASS_ERRORS, self.TEMPERATURE_ERRORS):
+                return ctypes.c_uint8
+            else:
+                return bytes
+
+        def __str__(self):
+            return self.name
+
     TYPE_FIELD_CTYPE = ctypes.c_uint8
     class Field(BaseStructure.Field):
         TYPE = '_type'
@@ -52,7 +54,7 @@ class TLVHdr(BaseStructure):
     def type(self) -> EndpointType | int:
         val = getattr(self, self.Field.TYPE)
         try:
-            return EndpointType(getattr(self, self.Field.TYPE))
+            return self.EndpointType(getattr(self, self.Field.TYPE))
         except ValueError:
             return val
 
@@ -69,7 +71,11 @@ class TLVHdr(BaseStructure):
         setattr(self, self.Field.LENGTH, value)
 
 class DataPoint:
-    def __init__(self, buf: bytearray | memoryview):
+    def __init__(self, buf: bytearray | memoryview, timestamp:  Optional[TS_t] = None):
+        if timestamp is None:
+            self._timestamp = get_utc_dt()
+        else:
+            self._timestamp = timestamp
         self._type_vals = dict()
 
         if isinstance(buf, memoryview):
@@ -81,8 +87,8 @@ class DataPoint:
             offset += sizeof(hdr)
 
             try:
-                etype = EndpointType(hdr.type)
-                if etype == EndpointType.UNKNOWN:
+                etype = TLVHdr.EndpointType(hdr.type)
+                if etype == TLVHdr.EndpointType.UNKNOWN:
                     etype = None
             except ValueError:
                 etype = None
@@ -91,9 +97,9 @@ class DataPoint:
             if etype is None:
                 offset -= sizeof(hdr)
                 datalen = sizeof(hdr) + hdr.length
-                if EndpointType.UNKNOWN not in self._type_vals:
-                    self._type_vals[EndpointType.UNKNOWN] = list()
-                self._type_vals[EndpointType.UNKNOWN].append(buf[offset:offset+datalen])
+                if TLVHdr.EndpointType.UNKNOWN not in self._type_vals:
+                    self._type_vals[TLVHdr.EndpointType.UNKNOWN] = list()
+                self._type_vals[TLVHdr.EndpointType.UNKNOWN].append(buf[offset:offset+datalen])
                 offset += datalen
             else:
                 klass = etype.type
@@ -112,35 +118,37 @@ class DataPoint:
                         offset += required
 
     def _get_table(self) -> PrettyTable:
-        mass_sensors = list_str_wrap(self._type_vals.get(EndpointType.MASS_SENSOR, []))
-        mass_errors = list_str_wrap(self._type_vals.get(EndpointType.MASS_FILTERED_SAMPLES, []))
-        total_mass = self._type_vals.get(EndpointType.MASS, [EndpointType.MASS.type(0.0)])[0]
+        mass_sensors = list_str_wrap(self._type_vals.get(TLVHdr.EndpointType.MASS_SENSORS, []))
+        mass_errors = list_str_wrap(self._type_vals.get(TLVHdr.EndpointType.MASS_ERRORS, []))
+        total_mass = self._type_vals.get(TLVHdr.EndpointType.MASS,
+                                         [TLVHdr.EndpointType.MASS.type(nan)])[0]
         total_mass = f'{total_mass:.2f}'
-        temp_sensors = list_str_wrap(self._type_vals.get(EndpointType.TEMPERATURE_SENSOR, []))
+        temp_sensors = list_str_wrap(
+            self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE_SENSORS, []))
         temp_errors = list_str_wrap(self._type_vals.get(
-            EndpointType.TEMPERATURE_FILTERED_SAMPLES, []))
-        avg_temp = self._type_vals.get(EndpointType.TEMPERATURE,
-                                       [EndpointType.TEMPERATURE.type(0.0)])[0]
+            TLVHdr.EndpointType.TEMPERATURE_ERRORS, []))
+        avg_temp = self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE,
+                                       [TLVHdr.EndpointType.TEMPERATURE.type(nan)])[0]
         avg_temp = f'{avg_temp:.2f}'
-        tare_values = list_str_wrap(self._type_vals.get(EndpointType.TARE, []))
+        tare_values = list_str_wrap(self._type_vals.get(TLVHdr.EndpointType.TARE, []))
 
         table = PrettyTable(title = 'DataPoint')
         table.field_names = ['Field', 'Value']
         for field in table.field_names:
             table.align[field] = 'l'
+        table.add_row(['Timestamp', get_utc_iso_ts_str(self._timestamp, timespec='seconds')])
         table.add_row(['Mass (g)', total_mass])
         table.add_row(['Mass Sensors (DAC)', mass_sensors])
         table.add_row(['Mass Errors', mass_errors])
+        table.add_row(['Tare', tare_values])
         table.add_row(['Temperature (*C)', avg_temp])
         table.add_row(['Temperature Sensors (*C)', temp_sensors])
         table.add_row(['Temperature Errors', temp_errors])
-        table.add_row(['Tare', tare_values])
-        table.add_row(['Timestamp', get_utc_iso_ts_str(timespec='seconds')])
 
         return table
 
     def _get_unknown_endpoint_str(self) -> str:
-        unknown_bufs = self._type_vals.get(EndpointType.UNKNOWN, [])
+        unknown_bufs = self._type_vals.get(TLVHdr.EndpointType.UNKNOWN, [])
         str_list = list()
         if unknown_bufs:
             str_list.append('Unknown Endpoints:')
@@ -158,5 +166,37 @@ class DataPoint:
         return '\n'.join(str_list)
 
     @property
-    def endpoints(self) -> dict[EndpointType, Any]:
-        return self._type_vals
+    def mass_sensors(self) -> list[float]:
+        return self._type_vals.get(TLVHdr.EndpointType.MASS_SENSORS, list())
+
+    @property
+    def mass(self) -> float:
+        return self._type_vals.get(TLVHdr.EndpointType.MASS, [float('nan')])[0]
+
+    @property
+    def mass_errors(self) -> list[float]:
+        return self._type_vals.get(TLVHdr.EndpointType.MASS_ERRORS, list())
+
+    @property
+    def temperature_sensors(self) -> list[float]:
+        return self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE_SENSORS, list())
+
+    @property
+    def temperature(self) -> float:
+        return self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE, [float('nan')])[0]
+
+    @property
+    def temperature_errors(self) -> list[float]:
+        return self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE_ERRORS, list())
+
+    @property
+    def tare(self) -> list[float]:
+        return self._type_vals.get(TLVHdr.EndpointType.TARE, list())
+
+    @property
+    def timestamp(self) -> datetime:
+        return self._timestamp
+
+    @property
+    def unknown(self) -> list[bytes]:
+        return self._type_vals.get(TLVHdr.EndpointType.UNKNOWN, list())
