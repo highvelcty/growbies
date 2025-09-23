@@ -2,7 +2,6 @@ from contextlib import contextmanager
 import logging
 from typing import Any, Generator
 
-from sqlalchemy.dialects.postgresql import insert
 from sqlmodel import create_engine, Session, SQLModel
 
 from .models.account import AccountEngine
@@ -17,8 +16,7 @@ logger = logging.getLogger(__name__)
 # All models representing tables found in the import space will be created, but the static
 # checker doesn't know this.
 # noinspection PyUnresolvedReferences
-from growbies.db.models import account, gateway, device, datapoint
-from growbies.db.models.endpoint_types import EndpointTypes
+from growbies.db.models import account, gateway, device, datapoint, session, tag
 
 class DBEngine:
     def __init__(self):
@@ -43,25 +41,6 @@ class DBEngine:
             SQLModel.metadata.create_all(self._engine)
             session.commit()
             session.close()
-
-    def _init_endpoint_type_table(self):
-        default_endpoint_types = [
-            {EndpointTypes.Key.NAME: 'mass',
-             EndpointTypes.Key.DESCRIPTION: 'Weight measured in DAC.'},
-            {EndpointTypes.Key.NAME: 'temperature',
-             EndpointTypes.Key.DESCRIPTION: 'Temperature measured in DAC.'}
-        ]
-
-        with Session(self._engine) as session:
-            for row in default_endpoint_types:
-                # The postgres sqlalchemy insert is used here because it supports on conflict do
-                # nothing. Whereas, the native sqlmodel `add` statement does not.
-                stmt = insert(EndpointTypes).values(**row).on_conflict_do_nothing(
-                    index_elements=["name"]  # ensures unique name prevents duplicates
-                )
-                # noinspection PyTypeChecker
-                session.exec(stmt)
-            session.commit()
 
     def _merge(self, thing):
         with self.new_session() as session:

@@ -114,7 +114,7 @@ class Worker(Thread):
         elif hdr.type == DeviceRespOp.DATAPOINT:
             resp: DataPoint
             tare_id = self._db_engine.tare.insert(resp.tare).id
-            self._db_engine.datapoint.insert(self._device_id, tare_id, resp)
+            db_dp = self._db_engine.datapoint.insert(self._device_id, tare_id, resp)
 
             logger.info(f'Received asynchronous {hdr.type} response.')
         else:

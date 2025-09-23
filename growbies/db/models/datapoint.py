@@ -1,9 +1,10 @@
 from datetime import datetime
 from sqlalchemy import ARRAY, Float, ForeignKey, Integer
-from sqlmodel import Column, SQLModel, Field
+from sqlmodel import Column, SQLModel, Field, Relationship
 from typing import List, Optional
 
 from .common import BaseTableEngine
+from .session import Session, SessionDataPointLink
 from growbies.device.common.read import DataPoint as DeviceDataPoint
 from growbies.utils.types import DeviceID_t, TareID_t
 
@@ -34,6 +35,12 @@ class DataPoint(SQLModel, table=True):
     # Individual temperature sensor readings
     temperature_sensors: List[float] = Field(sa_column=Column(ARRAY(Float), nullable=False))
     temperature_errors: List[int] = Field(sa_column=Column(ARRAY(Integer), nullable=False))
+
+    # Relationship, not a field/column.
+    sessions: List['Session'] = Relationship(
+        back_populates="datapoints",
+        link_model=SessionDataPointLink
+    )
 
 class DataPointEngine(BaseTableEngine):
     def insert(self, device_id: DeviceID_t, tare_id: TareID_t, device_dp: DeviceDataPoint) \
