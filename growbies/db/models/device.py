@@ -52,8 +52,8 @@ class Device(SQLModel, table=True):
         Field(sa_column=Column(Integer, nullable=False, default=ConnectionState.INITIAL))
 
     gateway_relation: Gateway = Relationship(back_populates='devices')
-    active_sessions: list[Session] = Relationship(
-        back_populates="active_devices",
+    sessions: list[Session] = Relationship(
+        back_populates="devices",
         link_model=SessionDeviceLink
     )
 

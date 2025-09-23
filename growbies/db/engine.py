@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # All models representing tables found in the import space will be created, but the static
 # checker doesn't know this.
 # noinspection PyUnresolvedReferences
-from growbies.db.models import account, gateway, device, datapoint, session, tag
+from growbies.db.models import account, gateway, device, datapoint, session, tag, user
 
 class DBEngine:
     def __init__(self):
@@ -37,27 +37,27 @@ class DBEngine:
         return self._lazy_init_engine
 
     def init_tables(self):
-        with Session(self._engine) as session:
+        with Session(self._engine) as sess:
             SQLModel.metadata.create_all(self._engine)
-            session.commit()
-            session.close()
+            sess.commit()
+            sess.close()
 
     def _merge(self, thing):
-        with self.new_session() as session:
-            merged = session.merge(thing)
-            session.commit()
+        with self.new_session() as sess:
+            merged = sess.merge(thing)
+            sess.commit()
             # To make dynamically created (such as id fields) accessible after session close
             # (detachment)
-            session.refresh(merged)
+            sess.refresh(merged)
             return merged
 
     @contextmanager
     def new_session(self) -> Generator[Session, Any, None]:
-        session = Session(self._engine)
+        sess = Session(self._engine)
         try:
-            yield session
+            yield sess
         finally:
-            session.close()
+            sess.close()
 
 
 # Application global singleton.

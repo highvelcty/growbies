@@ -1,6 +1,5 @@
-from sqlmodel import SQLModel, select, Field, UniqueConstraint
+from sqlmodel import ARRAY, SQLModel, select, Field, Float, UniqueConstraint
 from typing import List
-from sqlalchemy.dialects.postgresql import ARRAY, FLOAT
 from sqlalchemy import Column
 
 from .common import BaseTableEngine
@@ -10,7 +9,7 @@ class Tare(SQLModel, table=True):
     __table_args__ = (UniqueConstraint('values'),)
 
     id: TareID_t = Field(default=None, primary_key=True)
-    values: List[float] = Field(sa_column=Column(ARRAY(FLOAT), nullable=False))
+    values: List[float] = Field(sa_column=Column(ARRAY(Float), nullable=False))
 
 class TareEngine(BaseTableEngine):
     def insert(self, values: List[float]) -> Tare:
