@@ -3,6 +3,7 @@ from typing import Iterator, Optional, TYPE_CHECKING
 import textwrap
 
 from prettytable import PrettyTable
+from sqlalchemy.orm import selectinload
 from sqlmodel import select, SQLModel, Field, Relationship
 
 from .common import BaseTableEngine
@@ -39,39 +40,81 @@ class Tag(SQLModel, table=True):
     description: Optional[str] = None
     sessions: list['Session'] = Relationship(back_populates='tags', link_model=SessionTagLink)
 
-for key in Tag.Key:
-    assert(hasattr(Tag, key))
+    def __str__(self):
+        lines = []
+
+        # Prepare all field strings using Tag.Key
+        fields = {
+            str(Tag.Key.ID): str(self.id),
+            str(Tag.Key.NAME): self.name,
+            str(Tag.Key.BUILTIN): str(self.builtin),
+            str(Tag.Key.DESCRIPTION): self.description or "",
+            str(Tag.Key.SESSIONS): ', '.join(
+                s.name for s in self.sessions) if self.sessions else ""
+        }
+
+        # Wrap text and align after the colon
+        for key, val in fields.items():
+            wrapped = textwrap.fill(val, width=60)
+            wrapped_lines = wrapped.splitlines() or ['']
+            lines.append(f'{key}: {wrapped_lines[0]}')
+            for wline in wrapped_lines[1:]:
+                lines.append(' ' * (len(key) + 2) + wline)
+
+        return '\n'.join(lines)
+
+for key_ in Tag.Key:
+    assert(hasattr(Tag, key_))
 
 class Tags:
-    def __init__(self, tags: list[Tag]):
-        self.tags = tags
-
-    def get(self, name) -> Optional[Tag]:
-        for tag in self.tags:
-            if tag.name == name:
-                return tag
-        return None
+    def __init__(self, tags: list[Tag] = None):
+        if tags is None:
+            self._tags = list()
+        else:
+            self._tags = tags
+        self.sort()
 
     def append(self, tag: Tag):
-        self.tags.append(tag)
+        self._tags.append(tag)
+
+    def sort(self, reverse: bool = False):
+        """Sort tags in place by name."""
+        self._tags.sort(key=lambda tag: tag.name.lower(), reverse=reverse)
 
     def __getitem__(self, index):
-        return self.tags[index]
+        return self._tags[index]
 
     def __len__(self):
-        return len(self.tags)
+        return len(self._tags)
 
     def __iter__(self) -> Iterator[Tag]:
-        return iter(self.tags)
+        return iter(self._tags)
 
     def __str__(self):
-        table = PrettyTable()
-        table.field_names = ["ID", "Name", "Builtin", "Description"]
-        table.align["Description"] = "l"  # left-align description
+        table = PrettyTable(title='Tags')
+        # Use Tag.Key enum values for headers
+        table.field_names = [str(x) for x in Tag.Key]
 
-        for tag in self.tags:
-            wrapped_desc = textwrap.fill(tag.description or "", width=60)
-            table.add_row([tag.id, tag.name, tag.builtin, wrapped_desc])
+        # Wrap text for description and sessions
+        table.align[Tag.Key.NAME] = 'l'
+        table.align[Tag.Key.DESCRIPTION.value] = 'l'
+        table.align[Tag.Key.SESSIONS.value] = 'l'
+
+        for tag in self._tags:
+            wrapped_desc = textwrap.fill(tag.description or '', width=40)
+
+            # Prepare session list string
+            session_names = [f'{s.name}' for s in tag.sessions]  # Could be id or start_ts
+            session_str = ', '.join(session_names)
+            wrapped_sessions = textwrap.fill(session_str, width=40)
+
+            table.add_row([
+                tag.id,
+                tag.name,
+                tag.builtin,
+                wrapped_desc,
+                wrapped_sessions
+            ])
 
         return str(table)
 
@@ -80,22 +123,11 @@ class TagEngine(BaseTableEngine):
         super().__init__(*args, **kw)
         self._init_builtin_tags()
 
-    def add(self, tag: Tag):
-        with self._engine.new_session() as sess:
-            # Try to find existing tag
-            statement = select(Tag).where(Tag.name == tag.name)
-            existing_tag = sess.exec(statement).first()
-
-            if existing_tag:
-                # Update fields
-                existing_tag.builtin = tag.builtin
-                existing_tag.description = tag.description
-                sess.add(existing_tag)  # SQLModel needs add() even for updates
-            else:
-                # Insert new tag
-                sess.add(tag)
-
-            sess.commit()
+    def upsert(self, model: Tag, update_fields: Optional[dict] = None) -> Tag:
+        return super().upsert(
+            model,
+            {Tag.Key.BUILTIN: model.builtin, Tag.Key.DESCRIPTION: model.description}
+        )
 
     def remove(self, tag: Tag):
         if tag.builtin:
@@ -107,18 +139,22 @@ class TagEngine(BaseTableEngine):
                 sess.delete(existing_tag)
                 sess.commit()
 
-    def get(self, name: str) -> Tag:
+    def get(self, name: Optional[str]) -> Optional[Tag]:
+        if name is None:
+            return None
+
         with self._engine.new_session() as sess:
-            statement = select(Tag).where(Tag.name == name)
+            statement = select(Tag).where(Tag.name == name).options(selectinload(Tag.sessions))
             return sess.exec(statement).first()
 
     def list(self) -> Tags:
         with self._engine.new_session() as sess:
-            statement = select(Tag)
-            results = sess.exec(statement).all()
-            return Tags(results)
+            tags = sess.exec(
+                select(Tag).options(selectinload(Tag.sessions))
+            ).all()
+        return Tags(tags)
 
     def _init_builtin_tags(self):
         for name in BuiltinName:
             tag = Tag(name=name, builtin=True, description=name.description)
-            self.add(tag)
+            self.upsert(tag)

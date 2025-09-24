@@ -6,7 +6,7 @@ from . import __doc__ as pkg_doc
 from .utils.privileges import drop_privileges
 from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
 from growbies.device.resp import DeviceError
-from growbies.service.cmd import activate, calibration, identify, loopback, read, tare
+from growbies.service.cmd import activate, calibration, identify, loopback, read, tag, tare
 from growbies.service.common import (CMD, ServiceCmd, ServiceOp, ServiceCmdError, TBaseServiceCmd)
 from growbies.service.queue import IDQueue, ServiceQueue
 
@@ -30,6 +30,7 @@ calibration.make_cli(parsers[ServiceOp.CAL])
 identify.make_cli(parsers[ServiceOp.ID])
 loopback.make_cli(parsers[ServiceOp.LOOPBACK])
 read.make_cli(parsers[ServiceOp.READ])
+tag.make_cli(parsers[ServiceOp.TAG])
 tare.make_cli(parsers[ServiceOp.TARE])
 
 known, unknown = parser.parse_known_args(sys.argv[1:])

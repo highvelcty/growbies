@@ -29,6 +29,7 @@ class ServiceOp(StrEnum):
     LOOPBACK = 'loopback'
     LS = 'ls'
     READ = 'read'
+    TAG = 'tag'
     TARE = 'tare'
 
     @classmethod
@@ -47,8 +48,10 @@ class ServiceOp(StrEnum):
             return f'Get/set device identify information.'
         elif cmd == cls.READ:
             return f'Read a datapoint from a device.'
+        elif cmd == cls.TAG:
+            return f'Interface to session tagging.'
         elif cmd == cls.TARE:
-            return f'Get/set tare.'
+            return f'Get/set mass tare.'
         else:
             raise ValueError(f'Sub-command "{cmd}" does not exist')
 

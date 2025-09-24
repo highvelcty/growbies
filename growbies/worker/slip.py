@@ -181,7 +181,7 @@ class SerialDatalink(BaseDataLink):
         return self._serial.write(data)
 
 class Network(BaseDataLink, ABC):
-    DEBUG = True
+    DEBUG = False
     _CRC_BYTES = 2
     def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[memoryview]:
         frame = super().recv_frame(block=block, timeout=timeout)
@@ -205,7 +205,7 @@ class Network(BaseDataLink, ABC):
         return chk == calc_bytes
 
 class Transport(Network, ABC):
-    DEBUG = True
+    DEBUG = False
     def recv_resp(self, block=True, timeout: Optional[float] = None) \
             -> tuple[Optional[RespPacketHdr], Optional[TDeviceResp]]:
         frame = super().recv_packet(block=block, timeout=timeout)
