@@ -9,7 +9,6 @@ def serials_to_devices(*tgt_serials: Serial_t) -> Devices:
 
     for tgt in tgt_serials:
         for device in devices:
-        # for serial, device_id in serials_ids.items():
             if tgt.lower() in device.serial.lower():
                 if matches.get(tgt):
                     raise ServiceCmdError(f'Multiple hits for "{tgt}".')

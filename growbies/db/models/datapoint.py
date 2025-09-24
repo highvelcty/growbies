@@ -1,10 +1,12 @@
 from datetime import datetime
 from sqlalchemy import ARRAY, Float, ForeignKey, Integer
 from sqlmodel import Column, SQLModel, Field, Relationship
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from .common import BaseTableEngine
-from .session import Session, SessionDataPointLink
+from .links import SessionDataPointLink
+if TYPE_CHECKING:
+    from .session import Session
 from growbies.device.common.read import DataPoint as DeviceDataPoint
 from growbies.utils.types import DeviceID_t, TareID_t
 

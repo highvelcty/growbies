@@ -6,31 +6,15 @@ from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import JSONB
 
 from .common import BaseTableEngine
+from .links import SessionDataPointLink, SessionDeviceLink, SessionUserLink, SessionTagLink
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import SessionID_t
-
 
 if TYPE_CHECKING:
     from .datapoint import DataPoint
     from .device import Device
     from .tag import Tag
     from .user import User
-
-class SessionDataPointLink(SQLModel, table=True):
-    session_id: int = Field(foreign_key="session.id", primary_key=True)
-    datapoint_id: int = Field(foreign_key="datapoint.id", primary_key=True)
-
-class SessionDeviceLink(SQLModel, table=True):
-    session_id: int = Field(foreign_key="session.id", primary_key=True)
-    device_id: int = Field(foreign_key="device.id", primary_key=True)
-
-class SessionTagLink(SQLModel, table=True):
-    session_id: int = Field(foreign_key="session.id", primary_key=True)
-    tag_id: int = Field(foreign_key="tag.id", primary_key=True)
-
-class SessionUserLink(SQLModel, table=True):
-    session_id: int = Field(foreign_key="session.id", primary_key=True)
-    user_id: int = Field(foreign_key="user.id", primary_key=True)
 
 class Session(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -44,6 +28,7 @@ class Session(SQLModel, table=True):
     notes: Optional[str] = None
     meta: Optional[dict] = Field(sa_column=Column(JSONB), default=None)
 
+    # Edric, uncommenting any of the following relationships causes a circular import problem
     participants: list['User'] = Relationship(
         back_populates="sessions",
         link_model=SessionUserLink

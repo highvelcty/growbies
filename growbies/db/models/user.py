@@ -1,8 +1,12 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlmodel import SQLModel, Field, Relationship
 
-from .session import Session, SessionUserLink
+from .common import BaseTableEngine
+from .links import SessionUserLink
+
+if TYPE_CHECKING:
+    from .session import Session
 
 class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -13,3 +17,5 @@ class User(SQLModel, table=True):
         back_populates='participants',
         link_model=SessionUserLink
     )
+
+class UserEngine(BaseTableEngine): pass

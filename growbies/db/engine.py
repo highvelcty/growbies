@@ -2,54 +2,39 @@ from contextlib import contextmanager
 import logging
 from typing import Any, Generator
 
+from sqlalchemy import Engine
 from sqlmodel import create_engine, Session, SQLModel
 
-from .models.account import AccountEngine
-from .models.device import DevicesEngine
-from .models.gateway import GatewayEngine
-from .models.tare import TareEngine
-from .models.datapoint import DataPointEngine
+from .models import account, gateway, device, datapoint, session, tag, tare, user
 from growbies.constants import SQLMODEL_LOCAL_ADDRESS
 
 logger = logging.getLogger(__name__)
 
-# All models representing tables found in the import space will be created, but the static
-# checker doesn't know this.
-# noinspection PyUnresolvedReferences
-from growbies.db.models import account, gateway, device, datapoint, session, tag, user
-
 class DBEngine:
     def __init__(self):
-        self._lazy_init_engine = None
-        self.account = AccountEngine(self)
-        self.gateway = GatewayEngine(self)
-        self.devices = DevicesEngine(self)
-        self.tare = TareEngine(self)
-        self.datapoint = DataPointEngine(self)
+        self._engine = self._create_engine()
+        self._init_tables()
 
-    @property
-    def _engine(self):
-        if self._lazy_init_engine is None:
-            # echo_pool and echo can be set to "debug" for more details.
-            self._lazy_init_engine = create_engine(SQLMODEL_LOCAL_ADDRESS, echo_pool=False,
-                                                   echo=False)
+        self.account = account.AccountEngine(self)
+        self.datapoint = datapoint.DataPointEngine(self)
+        self.gateway = gateway.GatewayEngine(self)
+        self.devices = device.DevicesEngine(self)
+        self.session = session.SessionEngine(self)
+        self.tag = tag.TagEngine(self)
+        self.tare = tare.TareEngine(self)
+        self.user = user.UserEngine(self)
 
-        return self._lazy_init_engine
+    @staticmethod
+    def _create_engine() -> Engine:
+        return create_engine(SQLMODEL_LOCAL_ADDRESS, echo=False, echo_pool=False)
 
-    def init_tables(self):
+
+    def _init_tables(self):
+        # All table models found in the import space at this point will be created.
         with Session(self._engine) as sess:
             SQLModel.metadata.create_all(self._engine)
             sess.commit()
             sess.close()
-
-    def _merge(self, thing):
-        with self.new_session() as sess:
-            merged = sess.merge(thing)
-            sess.commit()
-            # To make dynamically created (such as id fields) accessible after session close
-            # (detachment)
-            sess.refresh(merged)
-            return merged
 
     @contextmanager
     def new_session(self) -> Generator[Session, Any, None]:

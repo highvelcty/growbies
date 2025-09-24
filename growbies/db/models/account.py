@@ -3,11 +3,9 @@ from typing import Optional, TYPE_CHECKING
 from sqlmodel import Field, Relationship, SQLModel
 from sqlalchemy import Column, String
 
-if TYPE_CHECKING:
-    from .gateway import Gateway
-
 from .common import BaseTableEngine
-
+if TYPE_CHECKING:
+    from . import Gateway
 
 class Account(SQLModel, table=True):
     class Key:

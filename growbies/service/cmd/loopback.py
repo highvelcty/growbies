@@ -1,5 +1,5 @@
 from ..common import ServiceCmd, PositionalParam, ServiceCmdError
-from ..serials_to_devices import serials_to_devices
+from ..utils import serials_to_devices
 from growbies.device.cmd import LoopbackDeviceCmd
 from growbies.device.resp import VoidDeviceResp
 from growbies.worker.pool import get_pool

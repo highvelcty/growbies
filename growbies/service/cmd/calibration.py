@@ -4,7 +4,7 @@ from typing import Optional
 import logging
 
 from ..common import ServiceCmd, PositionalParam, ServiceCmdError
-from ..serials_to_devices import serials_to_devices
+from ..utils import serials_to_devices
 from growbies.device.common import calibration as cal_mod
 from growbies.device.common import internal_to_external_field
 from growbies.device.cmd import GetCalibrationDeviceCmd, SetCalibrationDeviceCmd

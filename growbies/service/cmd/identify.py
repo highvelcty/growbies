@@ -3,7 +3,7 @@ from typing import Optional
 from argparse import ArgumentParser
 
 from ..common import ServiceCmd, PositionalParam, ServiceCmdError
-from ..serials_to_devices import serials_to_devices
+from ..utils import serials_to_devices
 from growbies.device.cmd import GetIdentifyDeviceCmd, SetIdentifyDeviceCmd
 from growbies.device.common import identify as id_mod
 from growbies.device.common import internal_to_external_field

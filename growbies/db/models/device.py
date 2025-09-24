@@ -8,8 +8,9 @@ from sqlmodel import Session as DBSession
 from sqlalchemy import Column, Integer, ForeignKey, String, select
 
 from .gateway import Gateway
-from .session import Session, SessionDeviceLink
+from .links import SessionDeviceLink
 if TYPE_CHECKING:
+    from .session import Session
     from growbies.db.engine import DBEngine
 from growbies.utils.report import format_8bit_binary
 from growbies.utils.types import Serial_t, DeviceID_t, SerialOrDeviceID_t
@@ -52,7 +53,7 @@ class Device(SQLModel, table=True):
         Field(sa_column=Column(Integer, nullable=False, default=ConnectionState.INITIAL))
 
     gateway_relation: Gateway = Relationship(back_populates='devices')
-    sessions: list[Session] = Relationship(
+    sessions: list['Session'] = Relationship(
         back_populates="devices",
         link_model=SessionDeviceLink
     )

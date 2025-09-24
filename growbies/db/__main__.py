@@ -41,4 +41,4 @@ sub_cmd = ns_dict[CMD]
 if SubCmd.INIT_DB_AND_USER == sub_cmd:
     init_db_and_user()
 elif SubCmd.INIT_TABLES == sub_cmd:
-    get_db_engine().init_tables()
+    get_db_engine()

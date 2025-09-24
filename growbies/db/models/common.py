@@ -28,5 +28,3 @@ class BaseTableEngine(ABC):
                 session.commit()
                 session.refresh(model)
             return model
-
-

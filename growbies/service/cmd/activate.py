@@ -3,7 +3,7 @@ import logging
 
 from ..common import ServiceCmd, PositionalParam
 from growbies.db.engine import get_db_engine
-from growbies.service.serials_to_devices import serials_to_devices
+from growbies.service.utils import serials_to_devices
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
