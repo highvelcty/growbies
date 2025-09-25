@@ -40,29 +40,6 @@ class Tag(SQLModel, table=True):
     description: Optional[str] = None
     sessions: list['Session'] = Relationship(back_populates='tags', link_model=SessionTagLink)
 
-    def __str__(self):
-        lines = []
-
-        # Prepare all field strings using Tag.Key
-        fields = {
-            str(Tag.Key.ID): str(self.id),
-            str(Tag.Key.NAME): self.name,
-            str(Tag.Key.BUILTIN): str(self.builtin),
-            str(Tag.Key.DESCRIPTION): self.description or "",
-            str(Tag.Key.SESSIONS): ', '.join(
-                s.name for s in self.sessions) if self.sessions else ""
-        }
-
-        # Wrap text and align after the colon
-        for key, val in fields.items():
-            wrapped = textwrap.fill(val, width=60)
-            wrapped_lines = wrapped.splitlines() or ['']
-            lines.append(f'{key}: {wrapped_lines[0]}')
-            for wline in wrapped_lines[1:]:
-                lines.append(' ' * (len(key) + 2) + wline)
-
-        return '\n'.join(lines)
-
 for key_ in Tag.Key:
     assert(hasattr(Tag, key_))
 
@@ -97,8 +74,8 @@ class Tags:
 
         # Wrap text for description and sessions
         table.align[Tag.Key.NAME] = 'l'
-        table.align[Tag.Key.DESCRIPTION.value] = 'l'
-        table.align[Tag.Key.SESSIONS.value] = 'l'
+        table.align[Tag.Key.DESCRIPTION] = 'l'
+        table.align[Tag.Key.SESSIONS] = 'l'
 
         for tag in self._tags:
             wrapped_desc = textwrap.fill(tag.description or '', width=40)
@@ -123,19 +100,25 @@ class TagEngine(BaseTableEngine):
         super().__init__(*args, **kw)
         self._init_builtin_tags()
 
-    def upsert(self, model: Tag, update_fields: Optional[dict] = None) -> Tag:
+    def upsert(self, model: Tag,
+               update_fields: Optional[dict] = None,
+               _override_builtin_check: bool = False) -> Tag:
+        if model.builtin and not _override_builtin_check:
+            raise ServiceCmdError(f"Cannot modify builtin tag: {model.name}")
         return super().upsert(
             model,
-            {Tag.Key.BUILTIN: model.builtin, Tag.Key.DESCRIPTION: model.description}
+            {Tag.Key.NAME: model.name,
+             Tag.Key.BUILTIN: model.builtin,
+             Tag.Key.DESCRIPTION: model.description}
         )
 
-    def remove(self, tag: Tag):
-        if tag.builtin:
-            raise ServiceCmdError(f"Cannot remove builtin tag: {tag.name}")
+    def remove(self, name: str):
         with self._engine.new_session() as sess:
-            statement = select(Tag).where(Tag.name == tag.name)
+            statement = select(Tag).where(Tag.name == name)
             existing_tag = sess.exec(statement).first()
             if existing_tag:
+                if existing_tag.builtin:
+                    raise ServiceCmdError(f"Cannot remove builtin tag: {name}")
                 sess.delete(existing_tag)
                 sess.commit()
 
@@ -157,4 +140,4 @@ class TagEngine(BaseTableEngine):
     def _init_builtin_tags(self):
         for name in BuiltinName:
             tag = Tag(name=name, builtin=True, description=name.description)
-            self.upsert(tag)
+            self.upsert(tag, _override_builtin_check=True)

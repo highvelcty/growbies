@@ -4,7 +4,7 @@ from .common import ServiceOp, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
 from growbies.device.resp import DeviceError
 from growbies.service.cmd import (activate, calibration, deactivate, identify, loopback, ls, read,
-                                  tag, tare)
+                                  tag, tare, user)
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
 
@@ -53,6 +53,8 @@ class Service:
                                 resp_q.put(tag.execute(cmd))
                             elif cmd.op == ServiceOp.TARE:
                                 resp_q.put(tare.execute(cmd))
+                            elif cmd.op == ServiceOp.USER:
+                                resp_q.put(user.execute(cmd))
                             else:
                                 raise ServiceCmdError(f'Unknown command {cmd.op} received.')
                         except DeviceError as err:

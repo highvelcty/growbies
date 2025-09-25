@@ -31,6 +31,7 @@ class ServiceOp(StrEnum):
     READ = 'read'
     TAG = 'tag'
     TARE = 'tare'
+    USER = 'user'
 
     @classmethod
     def get_help_str(cls, cmd: 'ServiceOp') -> str:
@@ -52,6 +53,8 @@ class ServiceOp(StrEnum):
             return f'Interface to session tagging.'
         elif cmd == cls.TARE:
             return f'Get/set mass tare.'
+        elif cmd == cls.USER:
+            return f'Get/set user accounts.'
         else:
             raise ValueError(f'Sub-command "{cmd}" does not exist')
 

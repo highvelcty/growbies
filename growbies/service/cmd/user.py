@@ -5,7 +5,7 @@ import logging
 
 from ..common import ServiceCmd, ServiceCmdError
 from growbies.db.engine import get_db_engine
-from growbies.db.models import tag
+from growbies.db.models import user
 
 logger = logging.getLogger(__name__)
 
@@ -15,23 +15,23 @@ class PositionalParam(StrEnum):
     @property
     def help(self) -> str:
         if self == self.GET_NAME:
-            return 'Get a tag by name'
+            return 'Get a user by name'
         else:
             return ''
 
 class KwParam(StrEnum):
     SET_NAME = 'set_name'
-    DESCRIPTION = 'description'
+    EMAIL = 'email'
     REMOVE = 'remove'
 
     @property
     def help(self) -> str:
         if self == self.SET_NAME:
-            return 'Rename a tag.'
-        elif self == self.DESCRIPTION:
-            return 'Set description text.'
+            return 'Rename a user.'
+        elif self == self.EMAIL:
+            return 'Set email.'
         elif self == self.REMOVE:
-            return 'Remove a tag.'
+            return 'Remove a user.'
         else:
             return ''
 
@@ -43,7 +43,7 @@ def make_cli(parser: ArgumentParser):
         help=PositionalParam.GET_NAME.help
     )
 
-    for param in (KwParam.SET_NAME, KwParam.DESCRIPTION):
+    for param in (KwParam.SET_NAME, KwParam.EMAIL):
         parser.add_argument(
             f'--{param}',
             type=str,
@@ -57,36 +57,36 @@ def make_cli(parser: ArgumentParser):
         help=KwParam.REMOVE.help
     )
 
-def execute(cmd: ServiceCmd) -> Optional[tag.Tags]:
+def execute(cmd: ServiceCmd) -> Optional[user.Users]:
     engine = get_db_engine()
     get_name = cmd.kw.pop(PositionalParam.GET_NAME)
-    description = cmd.kw.pop(KwParam.DESCRIPTION)
+    email = cmd.kw.pop(KwParam.EMAIL)
     remove = cmd.kw.pop(KwParam.REMOVE)
     set_name = cmd.kw.pop(KwParam.SET_NAME)
 
     if remove:
         if get_name is None:
-            raise ServiceCmdError(f'Must provide {PositionalParam.GET_NAME} to remove a tag.')
-        if not engine.tag.remove(get_name):
-            raise ServiceCmdError(f'Failed to remove tag "{get_name}"')
+            raise ServiceCmdError(f'Must provide {PositionalParam.GET_NAME} to remove a user.')
+        if not engine.user.remove(get_name):
+            raise ServiceCmdError(f'Failed to remove user "{get_name}"')
         return None
 
-    tag_ = engine.tag.get(get_name)
+    user_ = engine.user.get(get_name)
 
-    if description is None and set_name is None:
-        if tag_ is None:
-            return engine.tag.list()
+    if email is None and set_name is None:
+        if user_ is None:
+            return engine.user.list()
         else:
-            return tag.Tags([tag_])
+            return user.Users([user_])
     else:
-        if tag_ is None:
+        if user_ is None:
             if set_name is None:
-                raise ServiceCmdError(f'Must provide --{KwParam.SET_NAME} to create a new tag.')
-            tag_ = tag.Tag(name=set_name, description=description)
+                raise ServiceCmdError(f'Must provide --{KwParam.SET_NAME} to create a new user.')
+            user_ = user.User(name=set_name, email=email)
         else:
             if set_name:
-                tag_.name = set_name
-            if description:
-                tag_.description = description
-        engine.tag.upsert(tag_)
+                user_.name = set_name
+            if email:
+                user_.email = email
+        engine.user.upsert(user_)
         return None
