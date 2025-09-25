@@ -225,7 +225,7 @@ def _over_time(timestamps: list[datetime], y1: list[list[float]], y2: list[list[
 
     fig, ax1 = plt.subplots(figsize=(13,8), constrained_layout=True)
 
-    plt.title('Mass & Temperature over Time')
+    plt.title('Mass & Temperature over Time\nCorrected and Calibrated Mass')
 
     shared_cycler = iter(cycler(color=plt.rcParams['axes.prop_cycle'].by_key()['color']))
 
@@ -269,7 +269,7 @@ def mass_temperature_cal(path: Path):
     fig, ax = plt.subplots(figsize=(13,8), constrained_layout=True)
     for mass in masses:
         ax.plot(temperatures[-1], mass, linestyle='none', marker='.')
-    ax.set_title('Mass vs Temperature\n3x electrically averaged thermistors')
+    ax.set_title('Mass vs Temperature\nCorrected and Calibrated Mass')
     ax.set_ylabel('Mass (grams)')
     ax.set_xlabel('Temperature (DAC)')
     fig.legend(legend[:-1], loc='outside upper right')
