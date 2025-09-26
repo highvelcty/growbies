@@ -1,11 +1,13 @@
 from enum import IntFlag
 from typing import Iterator, Optional, TYPE_CHECKING
+import uuid
 
 from prettytable import PrettyTable
 from pydantic import BaseModel
+from sqlalchemy import Column, Integer, ForeignKey, String, select
+from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import Field, Relationship, SQLModel
 from sqlmodel import Session as DBSession
-from sqlalchemy import Column, Integer, ForeignKey, String, select
 
 from .gateway import Gateway
 from .links import SessionDeviceLink
@@ -13,7 +15,7 @@ if TYPE_CHECKING:
     from .session import Session
     from growbies.db.engine import DBEngine
 from growbies.utils.report import format_8bit_binary
-from growbies.utils.types import Serial_t, DeviceID_t, SerialOrDeviceID_t
+from growbies.utils.types import Serial_t, DeviceID_t, GatewayID_t, SerialOrDeviceID_t
 
 class ConnectionState(IntFlag):
     INITIAL     = 0x00
@@ -33,11 +35,11 @@ class Device(SQLModel, table=True):
         PATH = 'path'
         STATE = 'state'
 
-    id: DeviceID_t = Field(default=None, primary_key=True)
-    name: str = 'Default'
-    gateway: int = Field(
+    id: Optional[DeviceID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(default='Default')
+    gateway: GatewayID_t = Field(
         sa_column=Column(
-            Integer,
+            UUID(as_uuid=True),
             ForeignKey(
                 f'{Gateway.__tablename__}.id',
                 ondelete="CASCADE"

@@ -1,6 +1,7 @@
 from enum import StrEnum
 from typing import Iterator, Optional, TYPE_CHECKING
 import textwrap
+import uuid
 
 from prettytable import PrettyTable
 from sqlalchemy.orm import selectinload
@@ -8,6 +9,8 @@ from sqlmodel import select, SQLModel, Field, Relationship
 
 from .common import BaseTableEngine
 from .links import SessionUserLink
+from growbies.constants import TABLE_COLUMN_WIDTH
+from growbies.utils.types import UserID_t
 
 if TYPE_CHECKING:
     from .session import Session
@@ -18,8 +21,7 @@ class User(SQLModel, table=True):
         NAME = 'name'
         EMAIL = 'email'
         SESSIONS = 'sessions'
-
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: Optional[UserID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
     email: Optional[str] = None
 
@@ -53,7 +55,7 @@ class Users:
         return iter(self._users)
 
     def __str__(self):
-        table = PrettyTable(title='Tags')
+        table = PrettyTable(title='Users')
         # Use Tag.Key enum values for headers
         table.field_names = [str(x) for x in User.Key]
 
@@ -65,7 +67,7 @@ class Users:
             # Prepare session list string
             session_names = [f'{s.name}' for s in user.sessions]  # Could be id or start_ts
             session_str = ', '.join(session_names)
-            wrapped_sessions = textwrap.fill(session_str, width=40)
+            wrapped_sessions = textwrap.fill(session_str, width=TABLE_COLUMN_WIDTH)
 
             table.add_row([
                 user.id,
@@ -77,22 +79,6 @@ class Users:
         return str(table)
 
 class UserEngine(BaseTableEngine):
-    def upsert(self, model: User, update_fields: Optional[dict] = None) -> User:
-        return super().upsert(
-            model,
-            {User.Key.NAME: model.name, User.Key.EMAIL: model.email}
-        )
-
-    def remove(self, name: str) -> bool:
-        with self._engine.new_session() as sess:
-            statement = select(User).where(User.name == name)
-            existing_user = sess.exec(statement).first()
-            if existing_user:
-                sess.delete(existing_user)
-                sess.commit()
-                return True
-        return False
-
     def get(self, name: Optional[str]) -> Optional[User]:
         if name is None:
             return None
@@ -107,3 +93,19 @@ class UserEngine(BaseTableEngine):
                 select(User).options(selectinload(User.sessions))
             ).all()
         return Users(users)
+
+    def remove(self, name: str) -> bool:
+        with self._engine.new_session() as sess:
+            statement = select(User).where(User.name == name)
+            existing_user = sess.exec(statement).first()
+            if existing_user:
+                sess.delete(existing_user)
+                sess.commit()
+                return True
+        return False
+
+    def upsert(self, model: User, update_fields: Optional[dict] = None) -> User:
+        return super().upsert(
+            model,
+            {User.Key.NAME: model.name, User.Key.EMAIL: model.email}
+        )

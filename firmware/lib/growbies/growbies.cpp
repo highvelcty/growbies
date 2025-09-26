@@ -518,7 +518,7 @@ ErrorCode Growbies::wait_hx711_ready(const int retries, const unsigned long dela
 #elif ARDUINO_ARCH_ESP32
     uint32_t gpio_in_reg;
 #endif
-    bool all_ready;1
+    bool all_ready;
     ErrorCode error = ERROR_NONE;
 	int retry_count = 0;
 

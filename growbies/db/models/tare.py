@@ -1,5 +1,8 @@
+import uuid
+
 from sqlmodel import ARRAY, SQLModel, select, Field, Float, UniqueConstraint
-from typing import List
+from typing import List, Optional
+
 from sqlalchemy import Column
 
 from .common import BaseTableEngine
@@ -8,7 +11,7 @@ from growbies.utils.types import TareID_t
 class Tare(SQLModel, table=True):
     __table_args__ = (UniqueConstraint('values'),)
 
-    id: TareID_t = Field(default=None, primary_key=True)
+    id: Optional[TareID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
     values: List[float] = Field(sa_column=Column(ARRAY(Float), nullable=False))
 
 class TareEngine(BaseTableEngine):

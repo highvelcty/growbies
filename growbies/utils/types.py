@@ -1,10 +1,20 @@
+from uuid import UUID
 from typing import Any, Annotated
 
 Pickleable_t = Any
-DeviceID_t = Annotated[int, 'DeviceID_t']
 Serial_t = Annotated[str, 'Serial_t']
-SerialOrDeviceID_t = DeviceID_t | Serial_t
-SessionID_t = Annotated[int, 'SessionID_t']
-TareID_t = Annotated[int, 'TareID_t']
 WorkerID_t = Annotated[int, 'WorkerID_t']
 ModelNumber_t = Annotated[str, 'ModelNumber_t']
+
+# Table IDs
+AccountID_t = Annotated[UUID, 'AccountID_t']
+DataPointID_t = Annotated[UUID, 'DataPointID_t']
+DeviceID_t = Annotated[UUID, 'DeviceID_t']
+GatewayID_t = Annotated[UUID, 'GatewayID_t']
+SessionID_t = Annotated[UUID, 'SessionID_t']
+TagID_t = Annotated[UUID, 'TagID_t']
+TareID_t = Annotated[UUID, 'TareID_t']
+UserID_t = Annotated[UUID, 'UserID_t']
+
+# Composites
+SerialOrDeviceID_t = DeviceID_t | Serial_t

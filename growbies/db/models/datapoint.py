@@ -1,24 +1,27 @@
 from datetime import datetime
 from sqlalchemy import ARRAY, Float, ForeignKey, Integer
+from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import Column, SQLModel, Field, Relationship
 from typing import List, Optional, TYPE_CHECKING
+import uuid
 
 from .common import BaseTableEngine
 from .links import SessionDataPointLink
 if TYPE_CHECKING:
     from .session import Session
 from growbies.device.common.read import DataPoint as DeviceDataPoint
-from growbies.utils.types import DeviceID_t, TareID_t
+from growbies.utils.types import DataPointID_t, DeviceID_t, TareID_t
 
 class DataPoint(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: Optional[DataPointID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
 
     # Timestamp for the measurement
     timestamp: datetime = Field(nullable=False, index=True)
 
     # Associated device
-    device_id: int = Field(
-        sa_column=Column(ForeignKey("device.id", ondelete="CASCADE"), nullable=False)
+    device_id: DeviceID_t = Field(
+        sa_column=Column(UUID(as_uuid=True), ForeignKey("device.id", ondelete="CASCADE"),
+                         nullable=False)
     )
 
     # Total mass
@@ -27,8 +30,9 @@ class DataPoint(SQLModel, table=True):
     mass_errors: List[int] = Field(sa_column=Column(ARRAY(Integer), nullable=False))
 
     # Tare foreign key
-    tare_id: int = Field(
-        sa_column=Column(ForeignKey("tare.id", ondelete="CASCADE"), nullable=False)
+    tare_id: TareID_t = Field(
+        sa_column=Column(UUID(as_uuid=True), ForeignKey("tare.id", ondelete="CASCADE"),
+                         nullable=False)
     )
 
     # Average temperature
