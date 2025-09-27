@@ -2,17 +2,20 @@ from argparse import ArgumentParser, RawDescriptionHelpFormatter
 import logging
 import sys
 
+import argcomplete
+
 from . import __doc__ as pkg_doc
 from .utils.privileges import drop_privileges
 from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
 from growbies.device.resp import DeviceError
-from growbies.service.cmd import activate, calibration, identify, loopback, read, tag, tare, user
+from growbies.service.cmd import (activate, calibration, identify, loopback, project, read, tag,
+                                  tare, user)
 from growbies.service.common import (CMD, ServiceCmd, ServiceOp, ServiceCmdError, TBaseServiceCmd)
 from growbies.service.queue import IDQueue, ServiceQueue
 
-logger = logging.getLogger(__name__)
-
 drop_privileges()
+
+logger = logging.getLogger(__name__)
 
 parser = ArgumentParser(description=pkg_doc, formatter_class=RawDescriptionHelpFormatter)
 parsers = {CMD: parser}
@@ -29,11 +32,16 @@ activate.make_cli(parsers[ServiceOp.DEACTIVATE])
 calibration.make_cli(parsers[ServiceOp.CAL])
 identify.make_cli(parsers[ServiceOp.ID])
 loopback.make_cli(parsers[ServiceOp.LOOPBACK])
+project.make_cli(parsers[ServiceOp.PROJECT])
 read.make_cli(parsers[ServiceOp.READ])
 tag.make_cli(parsers[ServiceOp.TAG])
 tare.make_cli(parsers[ServiceOp.TARE])
 user.make_cli(parsers[ServiceOp.USER])
 
+# Execution exits on tab completion with the following line.
+argcomplete.autocomplete(parser)
+
+# Execution continues here on execution not invoked by tab.
 known, unknown = parser.parse_known_args(sys.argv[1:])
 kw = vars(known)
 cmd: ServiceOp = kw.pop(CMD)

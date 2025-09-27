@@ -80,3 +80,6 @@ def list_str_wrap(the_list, wrap=4, indent=1) -> str:
         result += ",\n" + " " * indent + line
     result += "]"
     return result
+
+def short_uuid(uuid: str):
+    return uuid[:7]

@@ -1,13 +1,23 @@
 from abc import ABC
 from typing import Generic, Optional, TYPE_CHECKING, TypeVar
+import uuid
 
-from sqlmodel import SQLModel, select
+from sqlmodel import Field, SQLModel, select
 
 if TYPE_CHECKING:
     from growbies.db.engine import DBEngine
+from growbies.utils.report import short_uuid
 
 
 TSQLModel = TypeVar('TSQLModel', bound='SQLModel')
+
+class BaseTable(SQLModel, table=True):
+    id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
+
+    @property
+    def short_uuid(self) -> str:
+        return short_uuid(str(self.id))
+
 
 class BaseTableEngine(Generic[TSQLModel], ABC):
     def __init__(self, engine: 'DBEngine'):

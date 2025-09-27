@@ -26,7 +26,7 @@ class User(SQLModel, table=True):
     email: Optional[str] = None
 
     sessions: list['Session'] = Relationship(
-        back_populates='participants',
+        back_populates='users',
         link_model=SessionUserLink
     )
 
@@ -59,7 +59,6 @@ class Users:
         # Use Tag.Key enum values for headers
         table.field_names = [str(x) for x in User.Key]
 
-        # Wrap text for description and sessions
         table.align[User.Key.NAME] = 'l'
         table.align[User.Key.EMAIL] = 'l'
 

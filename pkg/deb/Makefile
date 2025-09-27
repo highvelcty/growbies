@@ -60,8 +60,15 @@ ${PATH_DIST}: $(src_watch)
 		${CONTAINER_NAME} \
 		make internal_build
 
+#enter: start
+#	podman exec -it ${CONTAINER_NAME} /bin/bash
+
 enter: start
-	podman exec -it ${CONTAINER_NAME} /bin/bash
+	podman exec -it ${CONTAINER_NAME} /bin/bash -c "\
+		source ${PATH_USR_LIB_GROWBIES_VENV_ACTIVATE} && \
+		exec bash \
+	"
+
 
 restart:
 	( \

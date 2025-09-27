@@ -10,7 +10,8 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, SQLModel, Field, Relationship
 
 from .common import BaseTableEngine
-from .links import SessionDataPointLink, SessionDeviceLink, SessionUserLink, SessionTagLink
+from .links import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, SessionTagLink,
+                    SessionUserLink)
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import SessionID_t
@@ -18,6 +19,7 @@ from growbies.utils.types import SessionID_t
 if TYPE_CHECKING:
     from .datapoint import DataPoint
     from .device import Device
+    from .project import Project
     from .tag import Tag
     from .user import User
 
@@ -33,10 +35,13 @@ class Session(SQLModel, table=True):
         END_TIME = 'end_time'
         NOTES = 'notes'
         META = 'meta'
-        PARTICIPANTS = 'participants'
-        DEVICES = 'devices'
+
         DATAPOINTS = 'datapoints'
+        DEVICES = 'devices'
+        PROJECTS = 'projects'
         TAGS = 'tags'
+        USERS = 'users'
+
 
     id: Optional[SessionID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
@@ -49,9 +54,9 @@ class Session(SQLModel, table=True):
     notes: Optional[str] = None
     meta: Optional[dict] = Field(sa_column=Column(JSONB), default=None)
 
-    participants: list['User'] = Relationship(
+    datapoints: list['DataPoint'] = Relationship(
         back_populates="sessions",
-        link_model=SessionUserLink
+        link_model=SessionDataPointLink
     )
 
     devices: list['Device'] = Relationship(
@@ -59,9 +64,9 @@ class Session(SQLModel, table=True):
         link_model=SessionDeviceLink
     )
 
-    datapoints: list['DataPoint'] = Relationship(
+    projects: list['Project'] = Relationship(
         back_populates="sessions",
-        link_model=SessionDataPointLink
+        link_model=SessionProjectLink
     )
 
     tags: list['Tag'] = Relationship(
@@ -69,8 +74,13 @@ class Session(SQLModel, table=True):
         link_model=SessionTagLink
     )
 
+    users: list['User'] = Relationship(
+        back_populates="sessions",
+        link_model=SessionUserLink
+    )
+
 @event.listens_for(Session, "before_update")
-def update_timestamp(mapper, connection, target):
+def update_timestamp(_mapper, _connection, target):
     target.updated_at = get_utc_dt()
 
 class Sessions:

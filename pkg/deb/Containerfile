@@ -6,8 +6,7 @@ ARG PATH_SRC=${PATH_CODE}/debian/src
 ENV PATHS_ENV=${PATH_SRC}/build/paths.env
 
 # Install  build dependencies
-RUN \
-    apt update -y && \
+RUN apt update -y && \
     apt install systemd -y && \
     apt install dh-make -y && \
     apt install debmake -y && \
@@ -15,7 +14,10 @@ RUN \
     # Install package specific build dependencies
     apt-get build-dep -y .
 
-    # Build and install
+# Build and install
 RUN REPO_ROOT=${PATH_SRC} make internal_build
+
+# Configure
+RUN echo 'eval "$(register-python-argcomplete growbies)"' >> /root/.bashrc
 
 CMD [ "/usr/lib/systemd/systemd" ]

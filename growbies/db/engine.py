@@ -5,7 +5,7 @@ from typing import Any, Generator
 from sqlalchemy import Engine
 from sqlmodel import create_engine, Session, SQLModel
 
-from .models import account, gateway, device, datapoint, session, tag, tare, user
+from .models import account, gateway, device, datapoint, project, session, tag, tare, user
 from growbies.constants import SQLMODEL_LOCAL_ADDRESS
 
 logger = logging.getLogger(__name__)
@@ -19,6 +19,7 @@ class DBEngine:
         self.datapoint = datapoint.DataPointEngine(self)
         self.gateway = gateway.GatewayEngine(self)
         self.devices = device.DevicesEngine(self)
+        self.project = project.ProjectEngine(self)
         self.session = session.SessionEngine(self)
         self.tag = tag.TagEngine(self)
         self.tare = tare.TareEngine(self)
@@ -43,7 +44,6 @@ class DBEngine:
             yield sess
         finally:
             sess.close()
-
 
 # Application global singleton.
 _db_engine = None

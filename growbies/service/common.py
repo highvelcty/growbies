@@ -28,6 +28,7 @@ class ServiceOp(StrEnum):
     ID = 'id'
     LOOPBACK = 'loopback'
     LS = 'ls'
+    PROJECT = 'project'
     READ = 'read'
     TAG = 'tag'
     TARE = 'tare'
@@ -47,6 +48,8 @@ class ServiceOp(StrEnum):
             return f'List devices.'
         elif cmd == cls.ID:
             return f'Get/set device identify information.'
+        elif cmd == cls.PROJECT:
+            return f'Project management.'
         elif cmd == cls.READ:
             return f'Read a datapoint from a device.'
         elif cmd == cls.TAG:
@@ -73,6 +76,8 @@ class ServiceOp(StrEnum):
             desc = 'A merge of discovered devices and devices in the DB'
         elif cmd_ == cls.ID:
             desc = f'Read, modify or initialize identify information.'
+        elif cmd_ == cls.PROJECT:
+            desc = f'Projects contain sessions.'
         elif cmd_ == cls.READ:
             desc = (f'A data point is a collection of measurements associated with a point in '
                     f'time.')

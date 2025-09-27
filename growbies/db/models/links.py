@@ -2,7 +2,8 @@ from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import SQLModel, Field
 
-from growbies.utils.types import SessionID_t, DataPointID_t, DeviceID_t, TagID_t, UserID_t
+from growbies.utils.types import (DataPointID_t, DeviceID_t, ProjectID_t, SessionID_t, TagID_t,
+                                  UserID_t)
 
 class SessionDataPointLink(SQLModel, table=True):
     session_id: SessionID_t = Field(
@@ -50,5 +51,17 @@ class SessionUserLink(SQLModel, table=True):
     user_id: UserID_t = Field(
         sa_column=Column(UUID(as_uuid=True),
                          ForeignKey("user.id", ondelete="CASCADE"),
+                         primary_key=True)
+    )
+
+class SessionProjectLink(SQLModel, table=True):
+    session_id: SessionID_t = Field(
+        sa_column=Column(UUID(as_uuid=True),
+                         ForeignKey("session.id", ondelete="CASCADE"),
+                         primary_key=True)
+    )
+    user_id: ProjectID_t = Field(
+        sa_column=Column(UUID(as_uuid=True),
+                         ForeignKey("project.id", ondelete="CASCADE"),
                          primary_key=True)
     )
