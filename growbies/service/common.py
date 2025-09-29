@@ -1,25 +1,8 @@
 from enum import StrEnum
 from typing import Optional, TypeVar
 
-from pydantic import BaseModel
-
 class ServiceCmdError(Exception):
     pass
-
-CMD = 'cmd'
-SUBCMD = 'subcmd'
-
-class PositionalParam(StrEnum):
-    SERIAL = 'serial'
-    SERIALS = 'serials'
-
-    @classmethod
-    def get_help_str(cls, sub_cmd_: 'PositionalParam') -> str:
-        if sub_cmd_ == cls.SERIAL:
-            return 'The serial number of a device.'
-        elif sub_cmd_ == cls.SERIALS:
-            return 'A list of serial numbers. This can be unique partial matches.'
-        raise ValueError(f'"{sub_cmd_} does not exist.')
 
 class ServiceOp(StrEnum):
     ACTIVATE = 'activate'
@@ -88,8 +71,9 @@ class ServiceOp(StrEnum):
                 f'\n'
                 f'{desc}')
 
-class ServiceCmd(BaseModel):
-    op: ServiceOp
-    qid: Optional[int|str] = None
-    kw: dict
-TBaseServiceCmd = TypeVar('TBaseServiceCmd', bound=ServiceCmd)
+class ServiceCmd:
+    def __init__(self, op: ServiceOp, kw: dict, qid: Optional[int | str] = None):
+        self.op = op
+        self.qid = qid
+        self.kw = kw
+TBaseServiceCmd = TypeVar("TBaseServiceCmd", bound=ServiceCmd)

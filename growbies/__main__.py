@@ -1,21 +1,18 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-import logging
-import sys
-
+from growbies.cli import activate, calibration, identify, loopback, project, read, tag, tare, user
+from growbies.cli.common import CMD
+from growbies.service.common import ServiceOp
 import argcomplete
-
 from . import __doc__ as pkg_doc
-from .utils.privileges import drop_privileges
-from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
-from growbies.device.resp import DeviceError
-from growbies.service.cmd import (activate, calibration, identify, loopback, project, read, tag,
-                                  tare, user)
-from growbies.service.common import (CMD, ServiceCmd, ServiceOp, ServiceCmdError, TBaseServiceCmd)
-from growbies.service.queue import IDQueue, ServiceQueue
 
-drop_privileges()
+"""
+This command will evaluate the import time of the CLI tab completion, sorting by cumulative time
 
-logger = logging.getLogger(__name__)
+python -X importtime -m growbies 2>&1 \
+    | awk -F'|' '{cum=$2; gsub(/ /,"",cum); print cum "|" $0}' \
+    | sort -nr \
+    | cut -d'|' -f2-
+"""
 
 parser = ArgumentParser(description=pkg_doc, formatter_class=RawDescriptionHelpFormatter)
 parsers = {CMD: parser}
@@ -40,6 +37,20 @@ user.make_cli(parsers[ServiceOp.USER])
 
 # Execution exits on tab completion with the following line.
 argcomplete.autocomplete(parser)
+
+# Delayed import for CLI responsiveness
+import logging
+import sys
+from .utils.privileges import drop_privileges
+
+from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
+from growbies.device.resp import DeviceError
+from growbies.service.common import (ServiceCmd, ServiceOp, ServiceCmdError, TBaseServiceCmd)
+from growbies.service.queue import IDQueue, ServiceQueue
+
+drop_privileges()
+logger = logging.getLogger(__name__)
+
 
 # Execution continues here on execution not invoked by tab.
 known, unknown = parser.parse_known_args(sys.argv[1:])

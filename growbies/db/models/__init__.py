@@ -11,6 +11,7 @@ from .links import (
     SessionTagLink,
     SessionUserLink,
 )
+from .project import Project
 from .session import Session
 from .tag import Tag
 from .tare import Tare

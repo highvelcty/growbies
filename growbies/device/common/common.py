@@ -1,14 +1,14 @@
-from typing import Any, Optional, TYPE_CHECKING, Union, NewType
+from typing import Any, TYPE_CHECKING, Union, NewType
 import ctypes
 import logging
 
+from growbies.cli.common import internal_to_external_field
 if TYPE_CHECKING:
     from ..cmd import DeviceCmdOp
     from ..resp import DeviceRespOp
 
-logger = logging.getLogger(__name__)
 
-_INTERNAL_FIELD_NAME_DELINEATOR = '_'
+logger = logging.getLogger(__name__)
 
 class _StructUnionMixin:
     class Field: pass
@@ -110,6 +110,3 @@ class PacketHdr(BaseStructure):
     @version.setter
     def version(self, val: int):
         setattr(self, self.Field.VERSION, val)
-
-def internal_to_external_field(field: str):
-    return field.lstrip(_INTERNAL_FIELD_NAME_DELINEATOR)

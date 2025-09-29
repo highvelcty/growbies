@@ -1,15 +1,9 @@
-from ..common import ServiceCmd, PositionalParam, ServiceCmdError
+from ..common import ServiceCmd, ServiceCmdError
 from ..utils import serials_to_devices
+from growbies.cli.common import PositionalParam
 from growbies.device.cmd import LoopbackDeviceCmd
 from growbies.device.resp import VoidDeviceResp
 from growbies.worker.pool import get_pool
-
-from argparse import ArgumentParser
-
-
-def make_cli(parser: ArgumentParser):
-    parser.add_argument(PositionalParam.SERIAL, type=str,
-                            help=PositionalParam.get_help_str(PositionalParam.SERIAL))
 
 def execute(cmd: ServiceCmd) -> VoidDeviceResp:
     """

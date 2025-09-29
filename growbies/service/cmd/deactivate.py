@@ -1,7 +1,8 @@
 from argparse import ArgumentParser
 import logging
 
-from ..common import ServiceCmd, PositionalParam
+from ..common import ServiceCmd
+from growbies.cli.common import PositionalParam
 from growbies.db.engine import get_db_engine
 from growbies.service.utils import serials_to_devices
 from growbies.worker.pool import get_pool

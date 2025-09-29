@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "flags.h"
 #include <growbies.h>
+#include <math.h>
 #include <nvm.h>
 #include <sort.h>
 #include <thermistor.h>
@@ -394,13 +395,13 @@ void Growbies::get_tare_datapoint(DataPoint* datapoint) {
 
     // Find the index of the last non-NaN value
     for (size_t i = 0; i < TARE_COUNT; ++i) {
-        if (!std::isnan(values[i])) {
+        if (!isnan(values[i])) {
             last_idx = i;
         }
     }
 
     // If all NaNs, last_idx will be 0 and isnan(values[0]) is true
-    if (last_idx == 0 && std::isnan(values[0])) {
+    if (last_idx == 0 && isnan(values[0])) {
         return; // nothing to add
     }
 

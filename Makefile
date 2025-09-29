@@ -43,6 +43,7 @@ ${PATH_PKG_DEB_DEBIAN_SRC}: $(src_watch)
 		rm -rf ${PATH_PKG_DEB_DEBIAN_SRC}; \
 		mkdir -p ${PATH_PKG_DEB_DEBIAN_SRC}; \
 		tar --exclude=${PATH_ARCHIVE} \
+			--exclude=${PATH_DIST} \
 			--exclude=${PATH_DOCS} \
 			--exclude=${PATH_OUTPUT} \
 			--exclude=${PATH_PKG_DEB} \

@@ -4,10 +4,9 @@ import sys
 
 from . import __doc__ as pkg_doc
 from .init_db_and_user import init_db_and_user
+from growbies.cli.common import CMD
 from growbies.db.engine import get_db_engine
 from growbies.constants import APPNAME, USERNAME
-
-CMD = 'cmd'
 
 class Param:
     KEEP_PRIVILEGES = 'keep_privileges'
