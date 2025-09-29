@@ -1,3 +1,5 @@
+default:
+
 clean:
 	platformio run -t clean
 
@@ -18,3 +20,5 @@ uno:
 
 upload-uno:
 	platformio run -t upload -e uno
+
+all: esp32c3 mini uno

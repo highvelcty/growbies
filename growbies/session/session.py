@@ -4,7 +4,11 @@ from typing import Iterable, Optional
 import logging
 
 from . import log
-from growbies.utils.paths import RepoPaths
+from growbies.cfg.cfg import Cfg
+from growbies.db.engine import get_db_engine
+from growbies.db.models.account import Account
+from growbies.db.models.gateway import Gateway
+from growbies.utils.paths import InstallPaths, RepoPaths
 from growbies.utils import timestamp
 
 logger = logging.getLogger(__name__)
@@ -13,7 +17,7 @@ class Session(object):
     TAG_DELIMITER = '-'
     DEFAULT_TAG = 'default'
     DEFAULT_OUTPUT = RepoPaths.OUTPUT.value.absolute()
-    DIRECTORY_TIMESTAMP_FMT = BASE_FMT = '%Y-%m-%dT%H%M%SZ'
+    DIRECTORY_TIMESTAMP_FMT = timestamp.BASE_FMT + 'Z'
 
     class OutputFiles(Enum):
         LOG = RepoPaths.DEFAULT_LOG.value.name
@@ -58,10 +62,42 @@ class Session(object):
             self._session_dir = self._output_dir / session_name
 
         self._session_dir.mkdir(parents=True, exist_ok=True)
-        log.start(RepoPaths.DEFAULT_LOG.value, file_level=logging.DEBUG, stdout_level=logging.INFO)
+        log.start(RepoPaths.DEFAULT_LOG.value, file_level=logging.DEBUG, stdout_level=logging.DEBUG)
         logger.info(f'{session_type_str} session\n'
                     f'  path_to_data: {self.path_to_data}')
 
     @property
     def path_to_data(self) -> Path:
         return self._session_dir / self.OutputFiles.DATA.value
+
+class Session2(object):
+    def __init__(self):
+        # Initialize logging
+        log.start(InstallPaths.VAR_LOG_GROWBIES_LOG.value, file_level=logging.DEBUG,
+                  stdout_level=logging.DEBUG)
+        logger.info(f'Session start')
+
+        # Load configuration from file.
+        self._cfg = Cfg()
+        self._cfg.load()
+
+        # Update the DB with account and gateway information input via configuration.
+        db_engine = get_db_engine()
+        self._account = db_engine.account.upsert(Account(**self._cfg.account.model_dump()))
+        self._gateway = db_engine.gateway.upsert(Gateway(name=self._cfg.gateway.name,
+                                                         account=self._account.id))
+
+    @property
+    def account(self) -> Account:
+        return self._account
+
+    @property
+    def gateway(self) -> Gateway:
+        return self._gateway
+
+session = None
+def get_session() -> Session2:
+    global session
+    if session is None:
+        session = Session2()
+    return session

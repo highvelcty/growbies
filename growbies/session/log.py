@@ -1,13 +1,33 @@
 import atexit
 import logging
 import sys
+import threading
 import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Optional
 
 from growbies.utils import timestamp
 from growbies.utils.paths import RepoPaths
 
+class ThreadLocal(threading.local):
+    def __init__(self, /, **kw):
+        self.__dict__.update(kw)
+
+        self.name = None
+        self.set_name()
+
+    def set_name(self, name: Optional[str] = None):
+        if not name:
+            name = threading.current_thread().name
+        self.name = name
+
+thread_local = ThreadLocal()
+
+class ThreadNameFilter(logging.Filter):
+    def filter(self, record):
+        record.thread_name = thread_local.name
+        return True
 
 class StdoutFilter(logging.Filter):
     def __init__(self, level):
@@ -34,8 +54,8 @@ def start(path: Path, file_level: int = logging.DEBUG, stdout_level: int = loggi
     logger.setLevel(logging.DEBUG)
 
     fmt = logging.Formatter(f'|%(asctime)s{timestamp.UTC_Z} '
-                            f'%(name)s '
-                            f'%(levelname)s|\n'
+                            f'%(thread_name)s '
+                            f'%(levelname)s| '
                             f'%(message)s',
                             timestamp.BASE_FMT)
     fmt.converter = time.gmtime
@@ -54,6 +74,13 @@ def start(path: Path, file_level: int = logging.DEBUG, stdout_level: int = loggi
     stderr_hdlr.setLevel(logging.ERROR)
     stderr_hdlr.setFormatter(fmt)
 
+    # Add the thread name filter to each handler so that each subsequent logger will have the
+    # filter. If the filter is only added to the logger, only this particular instance of the
+    # logger will have the filter
+    file_hdlr.addFilter(ThreadNameFilter())
+    stdout_hdlr.addFilter(ThreadNameFilter())
+    stderr_hdlr.addFilter(ThreadNameFilter())
+
     logger.addHandler(file_hdlr)
     logger.addHandler(stdout_hdlr)
     logger.addHandler(stderr_hdlr)
@@ -61,3 +88,4 @@ def start(path: Path, file_level: int = logging.DEBUG, stdout_level: int = loggi
     atexit.register(logging.shutdown)
 
     return logger
+

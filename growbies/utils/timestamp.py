@@ -8,6 +8,7 @@ BASE_FMT = '%Y-%m-%dT%H:%M:%S'
 
 #: The timestamp string format.
 FMT = f'{BASE_FMT}.%f{UTC_Z}'
+FMT_INT = f'{BASE_FMT}{UTC_Z}'
 
 PRECISION = 6
 
@@ -89,8 +90,7 @@ def get_utc_iso_ts_str(ts: Optional[TS_t] = None,
     :param fmt: The string parsing format.
     :param timespec: The precision to format the string with.
 
-    :return: A UTC timestamp string taking the form :data:`FMT`. The seconds will be given as a
-        float with microsecond precision.
+    :return: A UTC timestamp string.
     """
     return get_utc_dt(ts, fmt).isoformat(timespec=timespec).split('+')[0] + UTC_Z
 

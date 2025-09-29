@@ -1,0 +1,83 @@
+#include <Arduino.h>
+#include <NimBLEDevice.h>
+
+// UUID for a custom BLE service (replace with your own if needed)
+#define SERVICE_UUID        "12345678-1234-1234-1234-1234567890ab"
+#define CHARACTERISTIC_UUID "abcd1234-5678-90ab-cdef-1234567890ab"
+
+// Mock mass/temp values
+float mass = 123.4;
+float temperature = 25.6;
+
+NimBLEServer* pServer = nullptr;
+NimBLEService* pService = nullptr;
+NimBLECharacteristic* pCharacteristic = nullptr;
+
+// Command callback
+class CommandCallbacks : public NimBLECharacteristicCallbacks {
+    void onWrite(NimBLECharacteristic* pChar) {
+        std::string cmd = pChar->getValue();
+        Serial.print("Received command: ");
+        Serial.println(cmd.c_str());
+
+        if (cmd == "RESET") {
+            mass = 0;
+            temperature = 0;
+        }
+    }
+};
+
+void setupBLE() {
+    NimBLEDevice::init("GrowbiesDevice");
+
+    // Create BLE Server
+    pServer = NimBLEDevice::createServer();
+
+    // Create Service
+    pService = pServer->createService(SERVICE_UUID);
+
+    // Create Characteristic
+    pCharacteristic = pService->createCharacteristic(
+        CHARACTERISTIC_UUID,
+        NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE | NIMBLE_PROPERTY::NOTIFY
+    );
+
+    // Attach callback to handle incoming commands
+    pCharacteristic->setCallbacks(new CommandCallbacks());
+
+    // Start service
+    pService->start();
+
+    // Start advertising
+    NimBLEAdvertising* pAdvertising = NimBLEDevice::getAdvertising();
+    pAdvertising->addServiceUUID(SERVICE_UUID);
+    pAdvertising->start();
+    Serial.println("BLE Advertising started...");
+}
+
+void broadcastMetrics() {
+    // Prepare string with mass/temp
+    char buf[32];
+    snprintf(buf, sizeof(buf), "M:%.1f T:%.1f", mass, temperature);
+
+    // Update BLE characteristic
+    pCharacteristic->setValue(buf);
+    pCharacteristic->notify();
+    Serial.println(buf);
+}
+
+void setup() {
+    Serial.begin(57600);
+    setupBLE();
+}
+
+void loop() {
+    // Broadcast metrics
+    broadcastMetrics();
+
+    // Listen for command for 100ms (callback-based, no explicit run needed)
+    delay(100);  // just give a short delay for incoming BLE events
+
+    // Delay remaining 900ms
+    delay(900);
+}

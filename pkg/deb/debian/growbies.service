@@ -1,11 +1,23 @@
 [Unit]
 Description=Growbies Service
-Requires=growbies-config.service
-After=network.target growbies-config.service
+Requires=growbies-init-tables.service
+After=network.target growbies-init-tables.service
 
 [Service]
-ExecStart=/usr/bin/growbies service start
-ExecStop=/usr/bin/growbies service stop
+User=growbies
+Group=growbies
+ExecStart=/usr/lib/growbies/venv/bin/python -m growbies.service
+
+# On stop, send SIGINT
+KillSignal=SIGINT
+KillMode=control-group
+
+# Give the service up to 20s to exit gracefully.
+# After that, systemd sends SIGKILL automatically.
+TimeoutStopSec=20
+
+RuntimeDirectory=growbies
+RuntimeDirectoryMode=2770
 SuccessExitStatus=0
 
 [Install]

@@ -30,7 +30,7 @@ float steinhart_hart(const float vout) {
            + (STEINHART_HART_B*log(thermistor_resistance))
            + (STEINHART_HART_C*pow(log(thermistor_resistance), 3)));
 
-    // Invert for kelvin, subtract for celsius
+    // Invert for kelvin, subtract for Celsius
     return (1/ret) - 273.15;
 }
 

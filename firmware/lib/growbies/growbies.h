@@ -6,6 +6,7 @@
 #include "constants.h"
 #include "flags.h"
 #include "command.h"
+#include "datalink.h"
 #include "network.h"
 
 constexpr int HX711_DAC_BITS = 24;
@@ -25,50 +26,83 @@ typedef enum HX711Gain {
     HX711_GAIN_32 = 32
 } HX711Gain;
 
-
 class Growbies {
     public:
         Growbies();
-        void begin() const;
 
-        void execute(const PacketHdr* packet_hdr);
+        static void begin();
+
+        void execute(const PacketHdr* in_packet_hdr);
+#if BUTTERFLY
+        void exec_read(uint8_t packet_hdr_id = 0, int times = BUTTERFLY_SAMPLES_PER_DATAPOINT,
+                       bool raw = false);
+#endif
 
     private:
         uint8_t tare_idx = 0;
-
-        byte outbuf[MAX_SLIP_UNENCODED_PACKET_BYTES] = {};
+        uint8_t outbuf[SLIP_OUT_BUF_ALLOC_BYTES] = {};
+        PacketHdr* out_packet_hdr = reinterpret_cast<PacketHdr *>(outbuf);
+        uint8_t* packet_buf = outbuf + sizeof(PacketHdr);
 
         static void power_off();
 
         static void power_on();
 
-        static Error median_avg_filter(float **iteration_sensor_sample,
-                                       int rows, int cols, float thresh, float* out);
-        Error sample_mass(float** iteration_mass_samples, int times, HX711Gain gain);
-        Error sample_temperature(float** iteration_temp_samples, int times);
-        void read_units(RespMultiDataPoint* resp, byte times, Unit units,
-                        HX711Gain gain = HX711_GAIN_128);
-        void shift_all_in(float sensor_sample[MASS_SENSOR_COUNT], HX711Gain gain);
-        Error wait_hx711_ready(int retries, unsigned long delay_ms);
+        static void median_avg_filter(float **iteration_sensor_sample,
+                                       int times, EndpointType endpoint_type,
+                                       float thresh, DataPoint* datapoint);
+        static ErrorCode sample_mass(float** iteration_mass_samples, int times, HX711Gain gain);
+        static void sample_temperature(float** iteration_temp_samples, int times);
+
+        static ErrorCode get_datapoint(DataPoint* datapoint,
+                                       int times, bool raw = false,
+                                       HX711Gain gain = HX711_GAIN_128);
+
+        static ErrorCode get_mass_datapoint(DataPoint* datapoint,
+                                            int times,
+                                            HX711Gain gain);
+        static void get_tare_datapoint(DataPoint* datapoint);
+        static void get_temperature_datapoint(DataPoint *datapoint, int times);
+        static void shift_all_in(float* sensor_sample, HX711Gain gain);
+
+        static ErrorCode wait_hx711_ready(int retries, unsigned long delay_ms);
+
+    template <typename RespType>
+    void send_payload(const RespType* resp, const size_t num_bytes) const {
+        out_packet_hdr->resp    = RespType::TYPE;
+        out_packet_hdr->version = RespType::VERSION;
+        send_packet(out_packet_hdr, sizeof(*out_packet_hdr) + num_bytes);
+    }
 };
 
-template <typename PacketType>
-bool check_and_respond_to_deserialization_underflow(const PacketType& packet) {
-    if (slip_buf->buf_len() >= sizeof(packet)) {
-        return true;
-    }
-    else{
-        RespError resp;
-        resp.error = ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
-        send_packet(resp);
-        return false;
-    }
-};
-
-template <typename PacketType>
-bool validate_packet(const PacketType& packet) {
-    return check_and_respond_to_deserialization_underflow(packet);
+// Used to cast a payload structure after a packet header.
+// Non-const base
+template <typename T, typename U>
+constexpr T* after(U* base) {
+    return reinterpret_cast<T*>(
+        reinterpret_cast<uint8_t*>(base) + sizeof(U)
+    );
 }
+// Const base
+template <typename T, typename U>
+constexpr const T* after(const U* base) {
+    return reinterpret_cast<const T*>(
+        reinterpret_cast<const uint8_t*>(base) + sizeof(U)
+    );
+}
+
+template <typename PacketType>
+ErrorCode validate_packet([[maybe_unused]] const PacketHdr& packet_hdr,
+                          [[maybe_unused]] const PacketType& packet) {
+    if (slip_buf->buf_len() >= sizeof(packet_hdr) + sizeof(packet)) {
+        return ERROR_NONE;
+    }
+    return ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
+}
+
+int get_temperature_sensor_idx(int mass_sensor_idx);
+int get_temperature_pin(int mass_sensor_idx);
+
 
 /**
  * Application global

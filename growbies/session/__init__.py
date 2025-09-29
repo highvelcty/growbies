@@ -1,1 +1,1 @@
-from .session import Session
+from .session import get_session

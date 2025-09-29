@@ -1,11 +1,9 @@
-import os
 from enum import Enum
 from pathlib import Path
 
 from growbies import constants
 
 _REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
-os.chdir(_REPO_ROOT)
 
 class RepoPaths(Enum):
     # .
@@ -31,21 +29,8 @@ class RepoPaths(Enum):
     # ./docs
     DOCS = REPO_ROOT / 'docs'
 
-    # ./endpoint
-    ENDPOINT = REPO_ROOT / 'endpoint'
-    ENDPOINT_ARDUINO = ENDPOINT / 'arduino'
-
     # ./growbies
     GROWBIES = REPO_ROOT / 'growbies'
-    GROWBIES_DB = GROWBIES / 'db'
-    GROWBIES_DB_SQL = GROWBIES_DB / 'sql'
-    GROWBIES_DB_SQL_INIT_TABLES = GROWBIES_DB_SQL / 'init_tables.sql'
-    GROWBIES_EXEC = GROWBIES / 'exec'
-    GROWBIES_HUMAN_INPUT = GROWBIES / 'human_input'
-    GROWBIES_MONITOR = GROWBIES / 'monitor'
-    GROWBIES_PLOT = GROWBIES / 'plot'
-    GROWBIES_SAMPLE = GROWBIES / 'sample'
-    GROWBIES_SERVICE = GROWBIES / 'service'
 
     # ./output
     OUTPUT = REPO_ROOT / 'output'
@@ -62,7 +47,6 @@ class RepoPaths(Enum):
     PKG_DEB_DEBIAN = PKG_DEB / 'debian'
     PKG_DEB_DEBIAN_SRC = PKG_DEB_DEBIAN / 'src'
     PKG_DEB_DIST = PKG_DEB / 'dist'
-    PKG_DEB_REPO = PKG_DEB / 'repo'
 
     # ./tests
     TESTS = REPO_ROOT / 'tests'
@@ -72,25 +56,44 @@ class RepoPaths(Enum):
         return _REPO_ROOT / path.value
 
 class InstallPaths(Enum):
-    # /usr/lib
-    USR_LIB = Path('/usr/lib')
-    USR_LIB_GROWBIES = USR_LIB / constants.APPNAME.lower()
-    # /var/opt/db
-    USR_LIB_GROWBIES_DB = USR_LIB_GROWBIES / 'db'
-    USR_LIB_GROWBIES_VENV = USR_LIB_GROWBIES / 'venv'
-    USR_LIB_GROWBIES_VENV_ACTIVATE = USR_LIB_GROWBIES_VENV / 'bin/activate'
+    APPNAME = constants.APPNAME.lower()
 
     # /usr/bin
     USR_BIN = Path(f'/usr/bin')
 
+    # /usr/lib
+    USR_LIB =  Path(f'/usr/lib')
+    USR_LIB_GROWBIES = USR_LIB / APPNAME
+    USR_LIB_GROWBIES_VENV = USR_LIB_GROWBIES / 'venv'
+    USR_LIB_GROWBIES_VENV_ACTIVATE = USR_LIB_GROWBIES_VENV / 'bin/activate'
+
     # /var/lib
     VAR_LIB = Path('/var/lib')
-    VAR_LIB_GROWBIES = VAR_LIB / constants.APPNAME.lower()
+    VAR_LIB_GROWBIES = VAR_LIB / APPNAME
 
-    # /var/opt/lock
+    # /var/lib/lock
     VAR_LIB_GROWBIES_LOCK = VAR_LIB_GROWBIES / 'lock'
-    VAR_LIB_GROWBIES_LOCK_Q = VAR_LIB_GROWBIES_LOCK / 'cmd_queue.pkl'
     VAR_LIB_GROWBIES_LOCK_SERVICE = VAR_LIB_GROWBIES_LOCK / 'service.lock'
+
+    # /var/log
+    VAR_LOG = Path('/var/log')
+    VAR_LOG_GROWBIES = VAR_LOG / APPNAME
+    VAR_LOG_GROWBIES_LOG = VAR_LOG_GROWBIES / 'growbies.log'
+
+    # /run/growbies
+    # Note: created and available when "RuntimeDirectory=" is used in systemd service files
+    RUN = Path('/run')
+    RUN_GROWBIES = RUN / 'growbies'
+    RUN_GROWBIES_CMD_Q = RUN_GROWBIES / 'cmd_queue.pkl'
+
+    # /etc
+    ETC = Path(f'/etc')
+    ETC_GROWBIES = ETC / APPNAME
+    ETC_GROWBIES_YAML = ETC_GROWBIES / 'growbies.yaml'
+
+    SYS_BUS_USB_DEVICES = Path('/sys/bus/usb/devices')
+    DEV = Path('/dev')
+    DEV_TTY_STR = DEV / 'tty*'
 
 
 class DebianPaths(Enum):
@@ -101,6 +104,13 @@ class DebianPaths(Enum):
     DEBIAN_SRC = DEBIAN_ROOT / 'src'
     DEBIAN_SRC_GROWBIES = DEBIAN_SRC / RepoPaths.GROWBIES.value
     DEBIAN_SRC_PKG_BASH_SRC = DEBIAN_SRC / RepoPaths.PKG_BASH_SRC.value
+    DEBIAN_SRC_BUILD_LIB = DEBIAN_SRC / 'build_lib'
+    DEBIAN_SRC_BUILD_LIB_SET_VERSION_PY = DEBIAN_SRC_BUILD_LIB / 'set_version.py'
 
     # command
     DEBIAN_BASE_PYTHON = 'python3.11'
+
+class FirmwarePaths(Enum):
+    FIRMWARE = Path(RepoPaths.REPO_ROOT.value) / 'firmware'
+    FIRMWARE_PIO = FIRMWARE / '.pio'
+    FIRMWARE_PIO_BUILD = FIRMWARE_PIO / 'build'

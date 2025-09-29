@@ -8,8 +8,7 @@ build/paths.env: build_lib/export_paths.py
 
 include build/paths.env
 
-src_watch = $(shell find ${PATH_GROWBIES} -name '*' ! -path '*__pycache__*')
-src_watch += $(shell find ${PATH_PKG_BASH_SRC} -type f -name '*')
+src_watch := $(shell find ${PATH_APPNAME} -type f)
 
 ### Interface ######################################################################################
 clean:
@@ -29,7 +28,7 @@ tests:
 
 ### Utilities ######################################################################################
 $(PATH_DIST): $(src_watch)
-	python -m build
+	GIT_HASH=$(git rev-parse --short HEAD) python -m build
 
 $(PATH_DOT_COVERAGE):
 	( \
@@ -52,6 +51,6 @@ ${PATH_PKG_DEB_DEBIAN_SRC}: $(src_watch)
 			--exclude='.[^/]*' \
 			--exclude='*__pycache__' \
 		-cf - . | tar xf - -C ${PATH_PKG_DEB_DEBIAN_SRC}; \
+		python -m build_lib.build_cfg gateway; \
 		touch ${PATH_PKG_DEB_DEBIAN_SRC}; \
 	)
-

@@ -1,1 +1,0 @@
-"""Execute a remote board command."""

@@ -37,6 +37,9 @@ Other Setup
 To allow non-root access to the serial port, add the user to the `dialout` group. Be sure to 
 logout/login for the changes to take effect.
 
+Installing [platformio udev rules](https://docs.platformio.org/en/latest/core/installation/udev-rules.html) 
+made the /dev/tty* devices accessible from within a rootless podman container.
+
 Arduino Setup
 =============
 - Install [arduino-cli](https://arduino.github.io/arduino-cli/1.1/installation/)

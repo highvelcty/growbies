@@ -1,0 +1,13 @@
+[Unit]
+Description=Configure Growbies database and account.;
+Requires=postgresql.service
+After=postgresql.service
+
+[Service]
+# This must be done as a service because root is required to perform the database administrative
+# tasks.
+Type=oneshot
+ExecStart=/usr/lib/growbies/venv/bin/python -m growbies.db init_db_and_user
+
+[Install]
+WantedBy=multi-user.target
