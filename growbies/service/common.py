@@ -13,6 +13,7 @@ class ServiceOp(StrEnum):
     LS = 'ls'
     PROJECT = 'project'
     READ = 'read'
+    SESSION = 'session'
     TAG = 'tag'
     TARE = 'tare'
     USER = 'user'
@@ -35,6 +36,8 @@ class ServiceOp(StrEnum):
             return f'Project management.'
         elif cmd == cls.READ:
             return f'Read a datapoint from a device.'
+        elif cmd == cls.SESSION:
+            return f'Session management.'
         elif cmd == cls.TAG:
             return f'Interface to session tagging.'
         elif cmd == cls.TARE:
@@ -52,20 +55,26 @@ class ServiceOp(StrEnum):
         elif cmd_ == cls.DEACTIVATE:
             desc = 'Disconnecting as necessary and making it unavailable for connection.'
         elif cmd_ == cls.CAL:
-            desc = 'Read, modify or initialize device calibration.'
+            desc = f'List/modify/initialize device calibration.'
         elif cmd_ == cls.LOOPBACK:
-            desc = 'Used to test basic command/response functionality with a device.'
+            desc = 'Test basic command/response functionality with a device.'
         elif cmd_ == cls.LS:
             desc = 'A merge of discovered devices and devices in the DB'
         elif cmd_ == cls.ID:
-            desc = f'Read, modify or initialize identify information.'
+            desc = f'List/modify/initialize device identify information.'
         elif cmd_ == cls.PROJECT:
             desc = f'Projects contain sessions.'
         elif cmd_ == cls.READ:
             desc = (f'A data point is a collection of measurements associated with a point in '
                     f'time.')
+        elif cmd_ == cls.SESSION:
+            desc = f'List/add/modify/remove sessions.'
+        elif cmd_ == cls.TAG:
+            desc = f'List/add/modify/remove tags.'
         elif cmd_ == cls.TARE:
             desc = f'Read, modify or initialize tare.'
+        elif cmd_ == cls.USER:
+            desc = f'List/add/modify/remove users.'
 
         return (f'{cls.get_help_str(cmd_)}\n'
                 f'\n'

@@ -4,7 +4,7 @@ from .common import ServiceOp, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
 from growbies.device.resp import DeviceError
 from growbies.service.cmd import (activate, calibration, deactivate, identify, loopback, ls,
-                                  project, read, tag, tare, user)
+                                  project, read, session, tag, tare, user)
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
 
@@ -51,6 +51,8 @@ class Service:
                                 resp_q.put(project.execute(cmd))
                             elif cmd.op == ServiceOp.READ:
                                 resp_q.put(read.execute(cmd))
+                            elif cmd.op == ServiceOp.SESSION:
+                                resp_q.put(session.execute(cmd))
                             elif cmd.op == ServiceOp.TAG:
                                 resp_q.put(tag.execute(cmd))
                             elif cmd.op == ServiceOp.TARE:

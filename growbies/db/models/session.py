@@ -1,20 +1,26 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Iterator, Optional, TYPE_CHECKING
+from typing import Iterator, List, Optional, TYPE_CHECKING
 import textwrap
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 from prettytable import PrettyTable
-from sqlalchemy import event
+from sqlalchemy import cast, event, or_
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Column, SQLModel, Field, Relationship
+from sqlalchemy.types import String
+from sqlmodel import Column, select, SQLModel, Field, Relationship
 
 from .common import BaseTableEngine
 from .links import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, SessionTagLink,
                     SessionUserLink)
+from growbies.cli.session import Action, Entity
+from growbies.service.common import ServiceCmdError
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.utils.timestamp import get_utc_dt
-from growbies.utils.types import SessionID_t
+from growbies.utils.types import DeviceID_t, ProjectID_t, SessionID_t, TagID_t, UserID_t
 
 if TYPE_CHECKING:
     from .datapoint import DataPoint
@@ -109,40 +115,69 @@ class Sessions:
 
     def __str__(self):
         table = PrettyTable(title='Sessions')
-        # Use Tag.Key enum values for headers
-        table.field_names = [str(x) for x in Session.Key]
+        table.field_names = (Session.Key.ID, Session.Key.NAME, Session.Key.DESCRIPTION)
 
-        # Wrap text for description and sessions
-        table.align[User.Key.NAME] = 'l'
-        table.align[User.Key.EMAIL] = 'l'
+        for field in table.field_names:
+            table.align[field] = 'l'
 
-        for user in self._sessions:
-            # Prepare session list string
-            session_names = [f'{s.name}' for s in user.sessions]  # Could be id or start_ts
-            session_str = ', '.join(session_names)
-            wrapped_sessions = textwrap.fill(session_str, width=TABLE_COLUMN_WIDTH)
-
+        for sess in self._sessions:
             table.add_row([
-                user.id,
-                user.name,
-                user.email,
-                wrapped_sessions
+                sess.id,
+                sess.name,
+                sess.description,
             ])
 
         return str(table)
 
 class SessionEngine(BaseTableEngine):
-    def get(self, session_id: SessionID_t) -> Session:
+    def add(self, name: str, entity: Entity, *names: str):
         ...
 
-    def list(self) -> Sessions:
+    def get(self, name_or_id: str) -> Session:
+        return self._get_by_name_or_id(name_or_id)[0]
+
+    def rm(self, name: str, action: Action, entity: Entity, *names: str):
         ...
 
-    def remove(self, sess: Session):
-        ...
+    def ls(self) -> Sessions:
+        with self._engine.new_session() as sess:
+            sessions = sess.exec(select(Session)).all()
+        return Sessions(sessions)
+
+    def _get_by_name_or_id(self, name_or_id: str) -> list[Session]:
+        with self._engine.new_session() as sess:  # SQLModel session
+            stmt = select(Session).where(
+                or_(
+                    Session.name == name_or_id,
+                    cast(Session.id, String).like(f"{name_or_id}%")
+                )
+            )
+            results = sess.exec(stmt).all()
+
+        if not results:
+            raise ServiceCmdError('No results')
+        elif len(results) > 1:
+            raise ServiceCmdError(f'Multiple hits for "{name_or_id}".')
+        return results
+
+    def remove(self, name_or_id: str):
+        """Remove a session by name or partial/full UUID."""
+        # Look up session(s) by name or ID prefix
+        sessions = self._get_by_name_or_id(name_or_id)
+
+        # At this point, _get_by_name_or_id guarantees exactly one result
+        session_to_remove = sessions[0]
+
+        with self._engine.new_session() as sess:
+            sess.delete(session_to_remove)
+            sess.commit()
 
     def upsert(self, model: Session, update_fields: Optional[dict] = None) -> Session:
         return super().upsert(
             model,
-            # {User.Key.NAME: model.name, User.Key.EMAIL: model.email}
+            {Session.Key.NAME: model.name, Session.Key.ACTIVE: model.active,
+             Session.Key.DESCRIPTION: model.description, Session.Key.NOTES: model.notes,
+             Session.Key.META: model.meta, Session.Key.DEVICES: model.devices,
+             Session.Key.PROJECTS: model.projects, Session.Key.TAGS: model.tags,
+             Session.Key.USERS: model.users}
         )

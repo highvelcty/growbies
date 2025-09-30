@@ -1,5 +1,6 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from growbies.cli import activate, calibration, identify, loopback, project, read, tag, tare, user
+from growbies.cli import (activate, calibration, identify, loopback, project, read, session,
+                          tag, tare, user)
 from growbies.cli.common import CMD
 from growbies.service.common import ServiceOp
 import argcomplete
@@ -31,6 +32,7 @@ identify.make_cli(parsers[ServiceOp.ID])
 loopback.make_cli(parsers[ServiceOp.LOOPBACK])
 project.make_cli(parsers[ServiceOp.PROJECT])
 read.make_cli(parsers[ServiceOp.READ])
+session.make_cli(parsers[ServiceOp.SESSION])
 tag.make_cli(parsers[ServiceOp.TAG])
 tare.make_cli(parsers[ServiceOp.TARE])
 user.make_cli(parsers[ServiceOp.USER])
