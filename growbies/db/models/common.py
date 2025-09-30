@@ -16,7 +16,7 @@ class BaseTable(SQLModel, table=True):
 
     @property
     def short_uuid(self) -> str:
-        return short_uuid(str(self.id))
+        return short_uuid(self.id)
 
 
 class BaseTableEngine(Generic[TSQLModel], ABC):

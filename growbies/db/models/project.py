@@ -40,7 +40,7 @@ class Project(SQLModel, table=True):
 
     @property
     def short_uuid(self) -> str:
-        return short_uuid(str(self.id))
+        return short_uuid(self.id)
 
 @event.listens_for(Project, "before_update")
 def update_timestamp(_mapper, _connection, target):

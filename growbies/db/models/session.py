@@ -8,8 +8,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 from prettytable import PrettyTable
-from sqlalchemy import cast, event, or_
+from sqlalchemy import cast, event, inspect,  or_
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import selectinload
 from sqlalchemy.types import String
 from sqlmodel import Column, select, SQLModel, Field, Relationship
 
@@ -19,6 +20,7 @@ from .links import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink,
 from growbies.cli.session import Action, Entity
 from growbies.service.common import ServiceCmdError
 from growbies.constants import TABLE_COLUMN_WIDTH
+from growbies.utils.report import decode_escapes, list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import DeviceID_t, ProjectID_t, SessionID_t, TagID_t, UserID_t
 
@@ -85,46 +87,102 @@ class Session(SQLModel, table=True):
         link_model=SessionUserLink
     )
 
+    def __str__(self):
+        def format_multiline(text, indent=4):
+            if not text:
+                return ''
+            lines_ = text.split('\n')
+            if len(lines_) == 1:
+                return text
+            return '\n' + '\n'.join(' ' * indent + line for line in lines_)
+
+        lines = [
+            f'id: {self.id}',
+            f'name: {self.name}',
+            f'active: {self.active}',
+            f'description:{format_multiline(self.description)}',
+            f'created_at: {self.created_at}',
+            f'updated_at: {self.updated_at}',
+            f'start_time: {self.start_time or ""}',
+            f'end_time: {self.end_time or ""}',
+            f'notes: {format_multiline(self.notes)}',
+            f'meta: {self.meta or ""}',
+            f'devices: {list_str_wrap(self.devices)}',
+            f'projects: {list_str_wrap(self.projects)}',
+            f'tags: {list_str_wrap(self.tags)}',
+            f'users: {list_str_wrap(self.users)}'
+        ]
+        return '\n'.join(lines)
+
 @event.listens_for(Session, "before_update")
-def update_timestamp(_mapper, _connection, target):
+def update_timestamp(mapper, connection, target: Session):
+    # always update the "last modified" timestamp
     target.updated_at = get_utc_dt()
 
+    state = inspect(target)
+
+    if Session.Key.ACTIVE in state.attrs:
+        hist = state.attrs.active.history
+
+        # Detect actual changes to `active`
+        if hist.has_changes() and hist.deleted and hist.added:
+            old_val, new_val = hist.deleted[0], hist.added[0]
+
+            # Transition: False -> True
+            if old_val is False and new_val is True:
+                if target.start_time is None:
+                    target.start_time = get_utc_dt()
+                # clear any prior end_time on re-activation
+                target.end_time = None
+
+            # Transition: True -> False
+            if old_val is True and new_val is False:
+                target.end_time = get_utc_dt()
+
 class Sessions:
-    def __init__(self, sessions: list[Session] = None):
-        if sessions is None:
-            self._sessions = list()
+    def __init__(self, rows: list[Session] = None):
+        if rows is None:
+            self._rows = list()
         else:
-            self._sessions = sessions
+            self._rows = rows
         self.sort()
 
+    @classmethod
+    def table_name(cls):
+        return cls.__qualname__
+
     def append(self, session: Session):
-        self._sessions.append(session)
+        self._rows.append(session)
 
     def sort(self, reverse: bool = False):
         """Sort tags in place by name."""
-        self._sessions.sort(key=lambda tag: tag.name.lower(), reverse=reverse)
+        self._rows.sort(key=lambda tag: tag.name.lower(), reverse=reverse)
 
     def __getitem__(self, index):
-        return self._sessions[index]
+        return self._rows[index]
 
     def __len__(self):
-        return len(self._sessions)
+        return len(self._rows)
 
     def __iter__(self) -> Iterator[Session]:
-        return iter(self._sessions)
+        return iter(self._rows)
 
     def __str__(self):
-        table = PrettyTable(title='Sessions')
-        table.field_names = (Session.Key.ID, Session.Key.NAME, Session.Key.DESCRIPTION)
+        table = PrettyTable(title=self.table_name())
+        table.preserve_internal_whitespace = True
+        table.field_names = (Session.Key.ID, Session.Key.NAME, Session.Key.ACTIVE,
+                             Session.Key.DESCRIPTION, Session.Key.NOTES)
 
         for field in table.field_names:
             table.align[field] = 'l'
 
-        for sess in self._sessions:
+        for sess in self._rows:
             table.add_row([
-                sess.id,
+                short_uuid(sess.id),
                 sess.name,
-                sess.description,
+                sess.active,
+                wrap_for_column(sess.description),
+                wrap_for_column(sess.notes)
             ])
 
         return str(table)
@@ -134,7 +192,7 @@ class SessionEngine(BaseTableEngine):
         ...
 
     def get(self, name_or_id: str) -> Session:
-        return self._get_by_name_or_id(name_or_id)[0]
+        return self._get_one_by_name_or_id(name_or_id)
 
     def rm(self, name: str, action: Action, entity: Entity, *names: str):
         ...
@@ -144,40 +202,44 @@ class SessionEngine(BaseTableEngine):
             sessions = sess.exec(select(Session)).all()
         return Sessions(sessions)
 
-    def _get_by_name_or_id(self, name_or_id: str) -> list[Session]:
+    def _get_multi_by_name_or_id(self, name_or_id: str) -> list[Session]:
+        """
+        Case-insensitive, match anywhere in name or ID.
+        """
         with self._engine.new_session() as sess:  # SQLModel session
             stmt = select(Session).where(
                 or_(
-                    Session.name == name_or_id,
-                    cast(Session.id, String).like(f"{name_or_id}%")
+                    cast(Session.name, String).ilike(f"%{name_or_id}%"),  # Partial name match
+                    cast(Session.id, String).ilike(f"{name_or_id}%")  # Partial ID match (prefix)
                 )
+            ).options(
+                selectinload(Session.devices),
+                selectinload(Session.projects),
+                selectinload(Session.tags),
+                selectinload(Session.users)
             )
-            results = sess.exec(stmt).all()
+            return sess.exec(stmt).all()
 
+    def _get_one_by_name_or_id(self, name_or_id: str) -> Session:
+        results = self._get_multi_by_name_or_id(name_or_id)
         if not results:
-            raise ServiceCmdError('No results')
+            raise ServiceCmdError(f'No results for "{name_or_id}".')
         elif len(results) > 1:
-            raise ServiceCmdError(f'Multiple hits for "{name_or_id}".')
-        return results
+            raise ServiceCmdError(f'Multiple results for "{name_or_id}".')
+        return results[0]
 
     def remove(self, name_or_id: str):
         """Remove a session by name or partial/full UUID."""
-        # Look up session(s) by name or ID prefix
-        sessions = self._get_by_name_or_id(name_or_id)
-
-        # At this point, _get_by_name_or_id guarantees exactly one result
-        session_to_remove = sessions[0]
-
+        sess_to_remove = self._get_one_by_name_or_id(name_or_id)
         with self._engine.new_session() as sess:
-            sess.delete(session_to_remove)
+            sess.delete(sess_to_remove)
             sess.commit()
 
     def upsert(self, model: Session, update_fields: Optional[dict] = None) -> Session:
         return super().upsert(
             model,
             {Session.Key.NAME: model.name, Session.Key.ACTIVE: model.active,
-             Session.Key.DESCRIPTION: model.description, Session.Key.NOTES: model.notes,
-             Session.Key.META: model.meta, Session.Key.DEVICES: model.devices,
-             Session.Key.PROJECTS: model.projects, Session.Key.TAGS: model.tags,
-             Session.Key.USERS: model.users}
+             Session.Key.DESCRIPTION: decode_escapes(model.description),
+             Session.Key.NOTES: decode_escapes(model.notes),
+             Session.Key.META: model.meta}
         )
