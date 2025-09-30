@@ -1,14 +1,13 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Iterator, List, Optional, TYPE_CHECKING
-import textwrap
+from typing import Iterator, Optional, TYPE_CHECKING
 import uuid
 import logging
 
 logger = logging.getLogger(__name__)
 
 from prettytable import PrettyTable
-from sqlalchemy import cast, event, inspect,  or_
+from sqlalchemy import cast, event, func, inspect,  or_
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import selectinload
 from sqlalchemy.types import String
@@ -19,7 +18,6 @@ from .links import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink,
                     SessionUserLink)
 from growbies.cli.session import Action, Entity
 from growbies.service.common import ServiceCmdError
-from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.utils.report import decode_escapes, list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import DeviceID_t, ProjectID_t, SessionID_t, TagID_t, UserID_t
@@ -87,6 +85,16 @@ class Session(SQLModel, table=True):
         link_model=SessionUserLink
     )
 
+    @property
+    def datapoint_count(self) -> int:
+        return getattr(self, '_datapoint_count', 0)
+
+    @datapoint_count.setter
+    def datapoint_count(self, value: int):
+        # Initialized at runtime to avoid compile time pydantic/sqlmodel/sqlalchemy interception.
+        # noinspection PyAttributeOutsideInit
+        self._datapoint_count = value
+
     def __str__(self):
         def format_multiline(text, indent=4):
             if not text:
@@ -107,6 +115,7 @@ class Session(SQLModel, table=True):
             f'end_time: {self.end_time or ""}',
             f'notes: {format_multiline(self.notes)}',
             f'meta: {self.meta or ""}',
+            f'len(datapoints): {self.datapoint_count}',
             f'devices: {list_str_wrap(self.devices)}',
             f'projects: {list_str_wrap(self.projects)}',
             f'tags: {list_str_wrap(self.tags)}',
@@ -218,7 +227,12 @@ class SessionEngine(BaseTableEngine):
                 selectinload(Session.tags),
                 selectinload(Session.users)
             )
-            return sess.exec(stmt).all()
+            sessions = sess.exec(stmt).all()
+
+        for sess in sessions:
+            self._populate_datapoint_count(sess)
+
+        return sessions
 
     def _get_one_by_name_or_id(self, name_or_id: str) -> Session:
         results = self._get_multi_by_name_or_id(name_or_id)
@@ -227,6 +241,13 @@ class SessionEngine(BaseTableEngine):
         elif len(results) > 1:
             raise ServiceCmdError(f'Multiple results for "{name_or_id}".')
         return results[0]
+
+    def _populate_datapoint_count(self, session: Session) -> None:
+        with self._engine.new_session() as db:
+            count_stmt = select(func.count()).where(
+                SessionDataPointLink.session_id == session.id
+            )
+            session.datapoint_count = db.exec(count_stmt).first()
 
     def remove(self, name_or_id: str):
         """Remove a session by name or partial/full UUID."""
