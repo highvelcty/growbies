@@ -16,7 +16,7 @@ def make_cli(parser: ArgumentParser):
 def execute(cmd: ServiceCmd):
     devices = serials_to_devices(*cmd.kw[PositionalParam.SERIALS])
     device_ids = [dev.id for dev in devices]
-    engine = get_db_engine().devices
+    engine = get_db_engine().device
     worker_pool = get_pool()
     engine.clear_active(*device_ids)
     worker_pool.disconnect(*device_ids)

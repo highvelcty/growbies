@@ -5,16 +5,18 @@ from typing import List, Optional
 
 from sqlalchemy import Column
 
-from .common import BaseTableEngine
+from .common import BaseTable, BaseNamedTableEngine
 from growbies.utils.types import TareID_t
 
-class Tare(SQLModel, table=True):
+class Tare(BaseTable, table=True):
     __table_args__ = (UniqueConstraint('values'),)
 
     id: Optional[TareID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
     values: List[float] = Field(sa_column=Column(ARRAY(Float), nullable=False))
 
-class TareEngine(BaseTableEngine):
+class TareEngine(BaseNamedTableEngine):
+    model_class = Tare
+
     def insert(self, values: List[float]) -> Tare:
         """
         Insert a new tare row for a given list of floats.

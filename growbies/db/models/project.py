@@ -9,8 +9,8 @@ from sqlalchemy import event
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, SQLModel, Field, Relationship
 
-from .common import BaseTableEngine
-from .links import SessionProjectLink
+from .common import BaseTable, BaseNamedTableEngine
+from .link import SessionProjectLink
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.utils.report import short_uuid
 from growbies.utils.timestamp import get_utc_dt
@@ -19,7 +19,7 @@ from growbies.utils.types import ProjectID_t
 if TYPE_CHECKING:
     from .session import Session
 
-class Project(SQLModel, table=True):
+class Project(BaseTable, table=True):
     class Key(StrEnum):
         ID = 'id'
         NAME = 'name'
@@ -93,32 +93,13 @@ class Projects:
 
         return str(table)
 
-class ProjectEngine(BaseTableEngine):
-    def get(self, name: Optional[str]) -> Optional[Project]:
-        if name is None:
-            return None
-
-        with self._engine.new_session() as sess:
-            statement = select(Project).where(Project.name == name).options(selectinload(
-                Project.sessions))
-            return sess.exec(statement).first()
+class ProjectEngine(BaseNamedTableEngine):
+    model_class = Project
+    def get(self, name_or_id: Optional[str]) -> Optional[Project]:
+        return self._get_one(name_or_id, Project.sessions)
 
     def list(self) -> Projects:
-        with self._engine.new_session() as sess:
-            users = sess.exec(
-                select(Project).options(selectinload(Project.sessions))
-            ).all()
-        return Projects(users)
-
-    def remove(self, name: str) -> bool:
-        with self._engine.new_session() as sess:
-            statement = select(Project).where(Project.name == name)
-            existing_user = sess.exec(statement).first()
-            if existing_user:
-                sess.delete(existing_user)
-                sess.commit()
-                return True
-        return False
+        return Projects(self._get_all(Project.sessions))
 
     def upsert(self, model: Project, update_fields: Optional[dict] = None) -> Project:
         return super().upsert(

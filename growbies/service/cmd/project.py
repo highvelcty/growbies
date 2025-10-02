@@ -18,23 +18,21 @@ def execute(cmd: ServiceCmd) -> Optional[project.Projects]:
     if remove:
         if get_name is None:
             raise ServiceCmdError(f'Must provide {PositionalParam.GET_NAME} to remove a project.')
-        if not engine.project.remove(get_name):
-            raise ServiceCmdError(f'Failed to remove project "{get_name}"')
+        engine.project.remove(get_name)
         return None
 
-    project_ = engine.project.get(get_name)
-
     if description is None and set_name is None:
-        if project_ is None:
+        if get_name is None:
             return engine.project.list()
         else:
-            return project.Projects([project_])
+            return engine.project.get(get_name)
     else:
-        if project_ is None:
+        if get_name is None:
             if set_name is None:
-                raise ServiceCmdError(f'Must provide --{KwParam.SET_NAME} to create a new user.')
+                raise ServiceCmdError(f'Must provide --{KwParam.SET_NAME} to create new.')
             project_ = project.Project(name=set_name, description=description)
         else:
+            project_ = engine.project.get(get_name)
             if set_name:
                 project_.name = set_name
             if description:

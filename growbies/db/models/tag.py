@@ -7,8 +7,8 @@ from prettytable import PrettyTable
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, SQLModel, Field, Relationship
 
-from .common import BaseTableEngine
-from .links import SessionTagLink
+from .common import BaseTable, BaseNamedTableEngine
+from .link import SessionTagLink
 if TYPE_CHECKING:
     from .session import Session
 from growbies.constants import TABLE_COLUMN_WIDTH
@@ -29,7 +29,7 @@ class BuiltinName(StrEnum):
         else:
             return f''
 
-class Tag(SQLModel, table=True):
+class Tag(BaseTable, table=True):
     class Key(StrEnum):
         ID = 'id'
         NAME = 'name'
@@ -98,35 +98,24 @@ class Tags:
 
         return str(table)
 
-class TagEngine(BaseTableEngine):
+class TagEngine(BaseNamedTableEngine):
+    model_class = Tag
+
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self._init_builtin_tags()
 
-    def get(self, name: Optional[str]) -> Optional[Tag]:
-        if name is None:
-            return None
-
-        with self._engine.new_session() as sess:
-            statement = select(Tag).where(Tag.name == name).options(selectinload(Tag.sessions))
-            return sess.exec(statement).first()
+    def get(self, name_or_id: Optional[str]) -> Optional[Tag]:
+        return self._get_one(name_or_id, Tag.sessions)
 
     def list(self) -> Tags:
-        with self._engine.new_session() as sess:
-            tags = sess.exec(
-                select(Tag).options(selectinload(Tag.sessions))
-            ).all()
-        return Tags(tags)
+        return Tags(self._get_all(Tag.sessions))
 
-    def remove(self, name: str):
-        with self._engine.new_session() as sess:
-            statement = select(Tag).where(Tag.name == name)
-            existing_tag = sess.exec(statement).first()
-            if existing_tag:
-                if existing_tag.builtin:
-                    raise ServiceCmdError(f"Cannot remove builtin tag: {name}")
-                sess.delete(existing_tag)
-                sess.commit()
+    def remove(self, name_or_id: str):
+        existing = self.get(name_or_id)
+        if existing.builtin:
+            raise ServiceCmdError(f"Cannot remove builtin tag: {name_or_id}")
+        super().remove(name_or_id)
 
     def upsert(self, model: Tag,
                update_fields: Optional[dict] = None,

@@ -36,8 +36,8 @@ class Worker(Thread):
         self._device_id = device_id
         self._out_queue = Queue()
         self._db_engine = get_db_engine()
-        self._device_engine = self._db_engine.devices.get_engine(device_id)
-        self._device = self._device_engine.get(device_id)
+        self._device_engine = self._db_engine.device.get_engine(device_id)
+        self._device = self._db_engine.device.get(device_id)
         self._intf: Optional[SerialIntf] = None
         self._stop_event = Event()
         self._reconnect_attempt = 0

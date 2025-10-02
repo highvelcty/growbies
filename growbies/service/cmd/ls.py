@@ -20,7 +20,7 @@ class SupportedVidPid:
 def execute() -> Devices:
     discovered_devices = Devices()
     _discover_info(discovered_devices)
-    return get_db_engine().devices.merge_with_discovered(discovered_devices)
+    return get_db_engine().device.merge_with_discovered(discovered_devices)
 
 def _discover_info(devices: Devices):
     vid_re = re.compile(r'.*idVendor.*==\"([0-9a-fA-F]+)\"')

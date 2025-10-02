@@ -7,15 +7,15 @@ from prettytable import PrettyTable
 from sqlalchemy.orm import selectinload
 from sqlmodel import select, SQLModel, Field, Relationship
 
-from .common import BaseTableEngine
-from .links import SessionUserLink
+from .common import BaseTable, BaseNamedTableEngine
+from .link import SessionUserLink
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.utils.types import UserID_t
 
 if TYPE_CHECKING:
     from .session import Session
 
-class User(SQLModel, table=True):
+class User(BaseTable, table=True):
     class Key(StrEnum):
         ID = 'id'
         NAME = 'name'
@@ -77,7 +77,9 @@ class Users:
 
         return str(table)
 
-class UserEngine(BaseTableEngine):
+class UserEngine(BaseNamedTableEngine):
+    model_class = User
+
     def get(self, name: Optional[str]) -> Optional[User]:
         if name is None:
             return None

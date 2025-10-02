@@ -6,7 +6,7 @@ from typing import List, Optional, TYPE_CHECKING
 import uuid
 
 from .common import BaseTableEngine
-from .links import SessionDataPointLink
+from .link import SessionDataPointLink
 if TYPE_CHECKING:
     from .session import Session
 from growbies.device.common.read import DataPoint as DeviceDataPoint

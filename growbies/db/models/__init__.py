@@ -1,11 +1,11 @@
 # These imports help sort out circular dependencies. Clients should import via this file.
 
 from .account import Account
-from .common import BaseTableEngine, BaseTable
+from .common import BaseNamedTableEngine, BaseTable
 from .datapoint import DataPoint
 from .device import Device
 from .gateway import Gateway
-from .links import (
+from .link import (
     SessionDataPointLink,
     SessionDeviceLink,
     SessionTagLink,

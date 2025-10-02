@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 def execute(cmd: ServiceCmd):
     devices = serials_to_devices(*cmd.kw[PositionalParam.SERIALS])
     device_ids = [dev.id for dev in devices]
-    engine = get_db_engine().devices
+    engine = get_db_engine().device
     worker_pool = get_pool()
     engine.set_active(*device_ids)
     worker_pool.connect(*device_ids)

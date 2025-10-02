@@ -5,14 +5,14 @@ from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import Column, Field, Relationship, SQLModel
 
-from .common import BaseTableEngine
+from .common import BaseTable, BaseNamedTableEngine
 from .account import Account
 from growbies.utils.types import AccountID_t, GatewayID_t
 
 if TYPE_CHECKING:
     from .device import Device
 
-class Gateway(SQLModel, table=True):
+class Gateway(BaseTable, table=True):
     class Key:
         ID = 'id'
         NAME = 'name'
@@ -34,4 +34,5 @@ class Gateway(SQLModel, table=True):
     account_relation: Account = Relationship(back_populates='gateways')
     devices: list['Device'] = Relationship(back_populates='gateway_relation', cascade_delete=True)
 
-class GatewayEngine(BaseTableEngine): pass
+class GatewayEngine(BaseNamedTableEngine):
+    model_class = Gateway

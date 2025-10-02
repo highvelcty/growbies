@@ -3,19 +3,17 @@ from typing import Iterator, Optional, TYPE_CHECKING
 import uuid
 
 from prettytable import PrettyTable
-from pydantic import BaseModel
-from sqlalchemy import Column, Integer, ForeignKey, String, select
+from sqlalchemy import cast, Column, Integer, ForeignKey, or_, String, select
 from sqlalchemy.dialects.postgresql import UUID
-from sqlmodel import Field, Relationship, SQLModel
-from sqlmodel import Session as DBSession
+from sqlmodel import Field, Relationship
 
+from .common import BaseTable, BaseNamedTableEngine
 from .gateway import Gateway
-from .links import SessionDeviceLink
+from .link import SessionDeviceLink
 if TYPE_CHECKING:
     from .session import Session
-    from growbies.db.engine import DBEngine
 from growbies.utils.report import format_8bit_binary
-from growbies.utils.types import Serial_t, DeviceID_t, GatewayID_t, SerialOrDeviceID_t
+from growbies.utils.types import Serial_t, DeviceID_t, GatewayID_t
 
 class ConnectionState(IntFlag):
     INITIAL     = 0x00
@@ -24,7 +22,7 @@ class ConnectionState(IntFlag):
     CONNECTED   = 0x04
     ERROR       = 0x08
 
-class Device(SQLModel, table=True):
+class Device(BaseTable, table=True):
     class Key:
         ID = 'id'
         NAME = 'name'
@@ -88,83 +86,106 @@ class Device(SQLModel, table=True):
                 f'{hex(self.vid)}:{hex(self.pid)} {hex(self.state)} {self.path}')
 
 
-class Devices(BaseModel):
-    devices: list[Device] = Field(default_factory=list)
+class Devices:
+    def __init__(self, devices: list[Device] = None):
+        if devices is None:
+            self._devices = list()
+        else:
+            self._devices = devices
+        self.sort()
 
     def get(self, serial) -> Optional[Device]:
-        for dev in self.devices:
+        for dev in self._devices:
             if dev.serial == serial:
                 return dev
         return None
 
     def append(self, device: Device):
-        self.devices.append(device)
+        self._devices.append(device)
 
     def __getitem__(self, index):
-        return self.devices[index]
+        return self._devices[index]
 
     def __len__(self):
-        return len(self.devices)
+        return len(self._devices)
 
     def __iter__(self) -> Iterator[Device]:
-        return iter(self.devices)
+        return iter(self._devices)
 
-    def sort(self) -> 'Devices':
-        return Devices(devices=sorted(self.devices, key=lambda d: d.serial))
+    def sort(self, reverse: bool = False):
+        self._devices.sort(key=lambda tag: tag.name.lower(), reverse=reverse)
 
     def __str__(self):
         table = PrettyTable(('Name', 'Serial', 'VID:PID', 'State', 'Path'))
-        for device in self.sort():
+        for device in self._devices:
             table.add_row([device.name, device.serial,
                            f'{device.vid:04x}:{device.pid:04x}',
                            f'{format_8bit_binary(device.state)}', device.path])
         return str(table)
 
-class DevicesEngine:
-    def __init__(self, engine: 'DBEngine'):
-        self._engine = engine
+class DeviceEngine(BaseNamedTableEngine):
+    model_class = Device
+
+    def get(self, fuzzy_id: str | UUID) -> Device:
+        return self._get_one(fuzzy_id, Device.sessions)
+
+    def init_start_connection(self, id_: UUID):
+        existing = self.get(id_)
+        existing.state &= ~ConnectionState.ERROR
+        existing.state &= ~ConnectionState.CONNECTED
+        self.upsert(existing)
+
+    def list(self) -> Devices:
+        return Devices(self._get_all(Device.sessions))
 
     def merge_with_discovered(self, discovered_devices: Devices) -> Devices:
-        with self._engine.new_session() as db_session, db_session.begin():
-            merged_devices = self._merge_with_discovered(discovered_devices, db_session)
-            for device in merged_devices:
-                self._overwrite(device, db_session)
-            return Devices(devices=[dev.model_copy() for dev in merged_devices])
+        merged_devices = self._merge_with_discovered(discovered_devices)
+        for device in merged_devices:
+            self._overwrite(device)
+        return Devices(devices=[dev.model_copy() for dev in merged_devices])
 
-    def set_active(self, *serials_or_ids: SerialOrDeviceID_t):
-        with self._engine.new_session() as db_session, db_session.begin():
-            self._set_flag(*serials_or_ids, flag=ConnectionState.ACTIVE, value=True,
-                           db_session=db_session)
+    def upsert(self, model: Device, update_fields: Optional[dict] = None) -> Device:
+        return super().upsert(model, {Device.Key.NAME: model.name, Device.Key.STATE: model.state})
 
-    def clear_active(self, *serials_or_ids: Serial_t):
-        with self._engine.new_session() as db_session, db_session.begin():
-            self._set_flag(*serials_or_ids, flag=ConnectionState.ACTIVE, value=False,
-                           db_session=db_session)
+    def clear_active(self, id_: UUID):
+        existing = self.get(id_)
+        existing.state &= ~ConnectionState.ACTIVE
+        self.upsert(existing)
 
-    def get(self, serial_or_id: SerialOrDeviceID_t) -> Device:
-        with self._engine.new_session() as db_session:
-            return self._get(serial_or_id, db_session).model_copy()
+    def set_active(self, id_: UUID):
+        existing = self.get(id_)
+        existing.state |= ConnectionState.ACTIVE
+        self.upsert(existing)
 
-    def get_engine(self, device_id: DeviceID_t) -> 'DeviceEngine':
-        return DeviceEngine(self._engine, device_id)
+    def clear_connect(self, id_: UUID):
+        existing = self.get(id_)
+        existing.state &= ~ConnectionState.CONNECTED
+        self.upsert(existing)
 
-    @staticmethod
-    def _get(serial_or_id: SerialOrDeviceID_t, db_session: DBSession) -> Device:
-        if isinstance(serial_or_id, str):
-            stmt = select(Device).where(Device.serial == serial_or_id)
-        else:
-            stmt = select(Device).where(Device.id == serial_or_id)
-        # noinspection PyTypeChecker
-        return db_session.exec(stmt).scalars().first()
+    def set_connected(self, id_: UUID):
+        existing = self.get(id_)
+        existing.state |= ConnectionState.CONNECTED
+        self.upsert(existing)
 
-    @staticmethod
-    def _get_all(db_session: DBSession) -> Devices:
-        stmt = select(Device)
-        results = db_session.exec(stmt).scalars().all()
-        return Devices(devices=list(results))
+    def clear_error(self, id_: UUID):
+        existing = self.get(id_)
+        existing.state &= ~ConnectionState.ERROR
 
-    def _merge_with_discovered(self, discovered_devices: Devices, db_session: DBSession) -> Devices:
-        merged_devices = self._get_all(db_session)
+    def set_error(self, id_: UUID):
+        existing = self.get(id_)
+        existing.state |= ConnectionState.ERROR
+        self.upsert(existing)
+
+    def _make_get_stmt(self, fuzzy_id: str):
+        return select(self.model_class).where(
+            or_(
+                cast(self.model_class.id, String).ilike(f"{fuzzy_id}%"),
+                cast(self.model_class.serial, String).ilike(f"{fuzzy_id}%"),
+                cast(self.model_class.name, String).ilike(f"%{fuzzy_id}%"),
+            )
+        )
+    def _merge_with_discovered(self, discovered_devices: Devices) -> Devices:
+        merged_devices = self.list()
 
         # Update existing in DB.
         for existing_device in merged_devices:
@@ -187,90 +208,19 @@ class DevicesEngine:
 
         return merged_devices
 
-    @staticmethod
-    def _overwrite(device: Device, db_session: DBSession) -> Device:
+    def _overwrite(self, device: Device) -> Device:
         # Lock the row by unique key
         stmt = (
-            select(type(device))
-            .where(getattr(type(device), Device.Key.NAME) == device.name)
+            select(self.model_class)
+            .where(self.model_class.name == device.name)
             .with_for_update()
         )
-        # Must assign to something to acquire the "with_for_update" lock
-        # noinspection PyTypeChecker
-        _ = db_session.exec(stmt).scalars().first()
-        db_session.add(device)
-        db_session.flush()
-        db_session.refresh(device)
-        return device
 
-    def _set_flag(self, *serials_or_ids: SerialOrDeviceID_t, flag: ConnectionState, value: bool,
-                  db_session: DBSession):
-        for serial_or_id in serials_or_ids:
-            device = self._get(serial_or_id, db_session=db_session)
-            if value:
-                # set the bit
-                device.state |= flag
-            else:
-                # clear the bit
-                device.state &= ~flag
+        with self._engine.new_session() as db_sess:
+            # Must assign to something to acquire the "with_for_update" lock
+            _ = db_sess.exec(stmt).scalars().first()
+            db_sess.add(device)
+            db_sess.flush()
+            db_sess.refresh(device)
+            return device
 
-        db_session.flush()
-
-class DeviceEngine:
-    def __init__(self, engine: 'DBEngine', device_id: DeviceID_t):
-        self._device_id = device_id
-        self._engine = engine
-
-    def get(self, serial_or_id: SerialOrDeviceID_t) -> Device:
-        with self._engine.new_session() as db_session:
-            return self._get(serial_or_id, db_session).model_copy()
-
-    def set_active(self):
-        with self._engine.new_session() as db_session, db_session.begin():
-            self._set_flag(flag=ConnectionState.ACTIVE, value=True, db_session=db_session)
-
-    def clear_active(self):
-        with self._engine.new_session() as db_session, db_session.begin():
-            self._set_flag(flag=ConnectionState.ACTIVE, value=False, db_session=db_session)
-
-    def set_connected(self):
-        with self._engine.new_session() as db_session, db_session.begin():
-            self._set_flag(flag=ConnectionState.CONNECTED, value=True, db_session=db_session)
-
-    def clear_connected(self):
-        with self._engine.new_session() as db_session, db_session.begin():
-            self._set_flag(flag=ConnectionState.CONNECTED, value=False, db_session=db_session)
-
-    def set_error(self):
-        with self._engine.new_session() as db_session, db_session.begin():
-            self._set_flag(flag=ConnectionState.ERROR, value=True, db_session=db_session)
-
-    def clear_error(self):
-        with self._engine.new_session() as db_session, db_session.begin():
-            self._set_flag(flag=ConnectionState.ERROR, value=False, db_session=db_session)
-
-    def init_start_connection(self):
-        with self._engine.new_session() as db_session, db_session.begin():
-            device = self._get(self._device_id, db_session)
-            device.init_start_connection()
-
-    @staticmethod
-    def _get(serial_or_device_id: SerialOrDeviceID_t, db_session: DBSession) -> Device:
-        if isinstance(serial_or_device_id, str):
-            stmt = select(Device).where(Device.serial == serial_or_device_id)
-        else:
-            stmt = select(Device).where(Device.id == serial_or_device_id)
-        # noinspection PyTypeChecker
-        return db_session.exec(stmt).scalars().first()
-
-    def _set_flag(self, flag: ConnectionState, value: bool, db_session: DBSession):
-        # Attached model
-        device = self._get(self._device_id, db_session)
-        if value:
-            # set the bit
-            device.state |= flag
-        else:
-            # clear the bit
-            device.state &= ~flag
-
-        db_session.flush()

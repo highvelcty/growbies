@@ -47,21 +47,17 @@ class Action(StrEnum):
             return ''
 
 class Entity(StrEnum):
+    DATAPOINT = 'datapoint'
     DEVICE = 'device'
     PROJECT = 'project'
     TAG = 'tag'
     USER = 'user'
 
 def make_cli(parser: ArgumentParser):
-    """
-    Configures the session CLI commands.
-    SESSION_NAME is now a positional parameter for each action.
-    """
-
     subparsers = parser.add_subparsers(dest=Param.ACTION, required=False)
 
     # LS
-    ls_parser = subparsers.add_parser(Action.LS, help='Show session details.')
+    ls_parser = subparsers.add_parser(Action.LS, help='List session details.')
     ls_parser.add_argument(Param.SESSION_NAME, nargs='?', default=None,
                            help='Session to operate on.')
 
@@ -69,14 +65,14 @@ def make_cli(parser: ArgumentParser):
     for act in (Action.ACTIVATE, Action.DEACTIVATE):
         act_parser = subparsers.add_parser(act, help=f'{act.capitalize()} session.')
         act_parser.add_argument(Param.SESSION_NAME, nargs='?', default=None,
-                                help='Session to operat e on.')
+                                help='Session to operate on.')
 
     # Add / Remove
     for cmd in (Action.ADD, Action.RM):
         cmd_parser = subparsers.add_parser(cmd, help=cmd.help)
         cmd_parser.add_argument(Param.SESSION_NAME, nargs='?', default=None,
                                 help='Session to operate on.')
-        for entity in Entity:
+        for entity in (Entity.DEVICE, Entity.PROJECT, Entity.TAG, Entity.USER):
             cmd_parser.add_argument(
                 f'--{entity}', nargs='+', default=tuple(),
                 help=f'Name(s) of {entity}(s) to add/remove.'

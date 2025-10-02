@@ -8,6 +8,7 @@ class ServiceOp(StrEnum):
     ACTIVATE = 'activate'
     DEACTIVATE = 'deactivate'
     CAL = 'cal'
+    DEVICE = 'device'
     ID = 'id'
     LOOPBACK = 'loopback'
     LS = 'ls'
@@ -18,65 +19,67 @@ class ServiceOp(StrEnum):
     TARE = 'tare'
     USER = 'user'
 
-    @classmethod
-    def get_help_str(cls, cmd: 'ServiceOp') -> str:
-        if cmd == cls.ACTIVATE:
+    @property
+    def help(self) -> str:
+        if self == self.ACTIVATE:
             return f'Activate a device.'
-        elif cmd == cls.DEACTIVATE:
+        elif self == self.DEACTIVATE:
             return 'Deactivate a device.'
-        elif cmd == cls.CAL:
+        elif self == self.CAL:
             return 'Get/set device calibration.'
-        elif cmd == cls.LOOPBACK:
+        elif self == self.DEVICE:
+            return 'Physical device interface and management.'
+        elif self == self.LOOPBACK:
             return 'A no operation command/response.'
-        elif cmd == cls.LS:
+        elif self == self.LS:
             return f'List devices.'
-        elif cmd == cls.ID:
+        elif self == self.ID:
             return f'Get/set device identify information.'
-        elif cmd == cls.PROJECT:
+        elif self == self.PROJECT:
             return f'Project management.'
-        elif cmd == cls.READ:
+        elif self == self.READ:
             return f'Read a datapoint from a device.'
-        elif cmd == cls.SESSION:
+        elif self == self.SESSION:
             return f'Session management.'
-        elif cmd == cls.TAG:
+        elif self == self.TAG:
             return f'Interface to session tagging.'
-        elif cmd == cls.TARE:
+        elif self == self.TARE:
             return f'Get/set mass tare.'
-        elif cmd == cls.USER:
+        elif self == self.USER:
             return f'Get/set user accounts.'
         else:
-            raise ValueError(f'Sub-command "{cmd}" does not exist')
+            return ''
 
-    @classmethod
-    def get_description_str(cls, cmd_: 'ServiceOp') -> Optional[str]:
+    @property
+    def description(self) -> str:
         desc = ''
-        if cmd_ == cls.ACTIVATE:
+        if self == self.ACTIVATE:
             desc = 'Making it available for connection.'
-        elif cmd_ == cls.DEACTIVATE:
+        elif self == self.DEACTIVATE:
             desc = 'Disconnecting as necessary and making it unavailable for connection.'
-        elif cmd_ == cls.CAL:
+        elif self == self.CAL:
             desc = f'List/modify/initialize device calibration.'
-        elif cmd_ == cls.LOOPBACK:
+        elif self == self.LOOPBACK:
             desc = 'Test basic command/response functionality with a device.'
-        elif cmd_ == cls.LS:
+        elif self == self.LS:
             desc = 'A merge of discovered devices and devices in the DB'
-        elif cmd_ == cls.ID:
+        elif self == self.ID:
             desc = f'List/modify/initialize device identify information.'
-        elif cmd_ == cls.PROJECT:
+        elif self == self.PROJECT:
             desc = f'Projects contain sessions.'
-        elif cmd_ == cls.READ:
+        elif self == self.READ:
             desc = (f'A data point is a collection of measurements associated with a point in '
                     f'time.')
-        elif cmd_ == cls.SESSION:
+        elif self == self.SESSION:
             desc = f'List/add/modify/remove sessions.'
-        elif cmd_ == cls.TAG:
+        elif self == self.TAG:
             desc = f'List/add/modify/remove tags.'
-        elif cmd_ == cls.TARE:
+        elif self == self.TARE:
             desc = f'Read, modify or initialize tare.'
-        elif cmd_ == cls.USER:
+        elif self == self.USER:
             desc = f'List/add/modify/remove users.'
 
-        return (f'{cls.get_help_str(cmd_)}\n'
+        return (f'{self.help}\n'
                 f'\n'
                 f'{desc}')
 

@@ -1,5 +1,5 @@
 from uuid import UUID
-from typing import Any, Annotated
+from typing import Any, Annotated, TypeVar
 
 Pickleable_t = Any
 Serial_t = Annotated[str, 'Serial_t']

@@ -1,5 +1,5 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from growbies.cli import (activate, calibration, identify, loopback, project, read, session,
+from growbies.cli import (activate, calibration, device, identify, loopback, project, read, session,
                           tag, tare, user)
 from growbies.cli.common import CMD
 from growbies.service.common import ServiceOp
@@ -20,14 +20,13 @@ parsers = {CMD: parser}
 parser_adder = parser.add_subparsers(dest=CMD, required=True)
 
 for cmd in ServiceOp:
-    help_str = ServiceOp.get_help_str(cmd)
-    desc_str = ServiceOp.get_description_str(cmd)
-    parsers[cmd] = parser_adder.add_parser(cmd, description=desc_str, help=help_str,
+    parsers[cmd] = parser_adder.add_parser(cmd, description=cmd.description, help=cmd.help,
                                            formatter_class=RawDescriptionHelpFormatter)
 
 activate.make_cli(parsers[ServiceOp.ACTIVATE])
 activate.make_cli(parsers[ServiceOp.DEACTIVATE])
 calibration.make_cli(parsers[ServiceOp.CAL])
+device.make_cli(parsers[ServiceOp.DEVICE])
 identify.make_cli(parsers[ServiceOp.ID])
 loopback.make_cli(parsers[ServiceOp.LOOPBACK])
 project.make_cli(parsers[ServiceOp.PROJECT])

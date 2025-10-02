@@ -3,16 +3,15 @@ import logging
 
 from ..common import ServiceCmd
 from growbies.cli.session import Action, Entity, Param, ModParam, ModNewParam, RmParam
-from growbies.db.models.session import Session, Sessions
 from growbies.db.engine import get_db_engine
+from growbies.db.models.session import Session, Sessions
+from growbies.utils.report import decode_escapes
 
 
 logger = logging.getLogger(__name__)
 
 def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
     engine = get_db_engine()
-
-    logger.error(f'emey incoming to session command:\n    {cmd.kw}')
 
     session_name = cmd.kw.pop(Param.SESSION_NAME, None)
     action = cmd.kw.pop(Param.ACTION)
@@ -29,10 +28,10 @@ def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
         if remove_self:
             engine.session.remove(session_name)
         else:
-            engine.session.add(action, Entity.DEVICE, *cmd.kw.pop(Entity.DEVICE, ()))
-            engine.session.add(action, Entity.PROJECT, *cmd.kw.pop(Entity.PROJECT, ()))
-            engine.session.add(action, Entity.TAG, *cmd.kw.pop(Entity.TAG, ()))
-            engine.session.add(action, Entity.USER, *cmd.kw.pop(Entity.USER, ()))
+            engine.session.add(session_name, Entity.DEVICE, *cmd.kw.pop(Entity.DEVICE, ()))
+            engine.session.add(session_name, Entity.PROJECT, *cmd.kw.pop(Entity.PROJECT, ()))
+            engine.session.add(session_name, Entity.TAG, *cmd.kw.pop(Entity.TAG, ()))
+            engine.session.add(session_name, Entity.USER, *cmd.kw.pop(Entity.USER, ()))
     elif action in (Action.MOD, Action.NEW):
         if action == Action.NEW:
             sess = Session(name=session_name)
@@ -47,11 +46,11 @@ def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
         if new_name is not None:
             sess.name = new_name
         if description is not None:
-            sess.description = description
+            sess.description = decode_escapes(description)
         if meta is not None:
             sess.meta = meta
         if notes is not None:
-            sess.notes = notes
+            sess.notes = decode_escapes(notes)
 
         engine.session.upsert(sess)
         return None

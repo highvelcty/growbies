@@ -22,19 +22,18 @@ def execute(cmd: ServiceCmd) -> Optional[tag.Tags]:
             raise ServiceCmdError(f'Failed to remove tag "{get_name}"')
         return None
 
-    tag_ = engine.tag.get(get_name)
-
     if description is None and set_name is None:
-        if tag_ is None:
+        if get_name is None:
             return engine.tag.list()
         else:
-            return tag.Tags([tag_])
+            return engine.tag.get(get_name)
     else:
-        if tag_ is None:
+        if get_name is None:
             if set_name is None:
-                raise ServiceCmdError(f'Must provide --{KwParam.SET_NAME} to create a new tag.')
+                raise ServiceCmdError(f'Must provide --{KwParam.SET_NAME} to create new.')
             tag_ = tag.Tag(name=set_name, description=description)
         else:
+            tag_ = engine.tag.get(get_name)
             if set_name:
                 tag_.name = set_name
             if description:

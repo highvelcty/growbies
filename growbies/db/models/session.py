@@ -1,24 +1,21 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Iterator, Optional, TYPE_CHECKING
+from typing import Callable, Iterator, Optional, TYPE_CHECKING
 import uuid
 import logging
 
 logger = logging.getLogger(__name__)
 
 from prettytable import PrettyTable
-from sqlalchemy import cast, event, func, inspect,  or_
+from sqlalchemy import event, func, inspect, or_
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import selectinload
-from sqlalchemy.types import String
 from sqlmodel import Column, select, SQLModel, Field, Relationship
 
-from .common import BaseTableEngine
-from .links import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, SessionTagLink,
-                    SessionUserLink)
+from .common import BaseTable, BaseNamedTableEngine
+from .link import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, SessionTagLink,
+                   SessionUserLink)
 from growbies.cli.session import Action, Entity
-from growbies.service.common import ServiceCmdError
-from growbies.utils.report import decode_escapes, list_str_wrap, short_uuid, wrap_for_column
+from growbies.utils.report import list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import DeviceID_t, ProjectID_t, SessionID_t, TagID_t, UserID_t
 
@@ -29,7 +26,7 @@ if TYPE_CHECKING:
     from .tag import Tag
     from .user import User
 
-class Session(SQLModel, table=True):
+class Session(BaseTable, table=True):
     class Key(StrEnum):
         ID = 'id'
         NAME = 'name'
@@ -104,22 +101,39 @@ class Session(SQLModel, table=True):
                 return text
             return '\n' + '\n'.join(' ' * indent + line for line in lines_)
 
+        devices_str = list_str_wrap(
+            [f'{dev.name} ({short_uuid(dev.id)})' for dev in self.devices],
+            indent=len(self.Key.DEVICES) + 3
+        )
+        projects_str = list_str_wrap(
+            [f'{proj.name} ({short_uuid(proj.id)})' for proj in self.projects],
+            indent=len(self.Key.PROJECTS) + 3
+        )
+        tags_str = list_str_wrap(
+            [f'{tag.name} ({short_uuid(tag.id)})' for tag in self.tags],
+            indent=len(self.Key.TAGS) + 3
+        )
+        users_str = list_str_wrap(
+            [f'{user.name} ({short_uuid(user.id)})' for user in self.users],
+            indent=len(self.Key.USERS) + 3
+        )
+
         lines = [
-            f'id: {self.id}',
-            f'name: {self.name}',
-            f'active: {self.active}',
-            f'description:{format_multiline(self.description)}',
-            f'created_at: {self.created_at}',
-            f'updated_at: {self.updated_at}',
-            f'start_time: {self.start_time or ""}',
-            f'end_time: {self.end_time or ""}',
-            f'notes: {format_multiline(self.notes)}',
-            f'meta: {self.meta or ""}',
-            f'len(datapoints): {self.datapoint_count}',
-            f'devices: {list_str_wrap(self.devices)}',
-            f'projects: {list_str_wrap(self.projects)}',
-            f'tags: {list_str_wrap(self.tags)}',
-            f'users: {list_str_wrap(self.users)}'
+            f'{self.Key.ID}: {self.id}',
+            f'{self.Key.NAME}: {self.name}',
+            f'{self.Key.ACTIVE}: {self.active}',
+            f'{self.Key.DESCRIPTION}: {format_multiline(self.description)}',
+            f'{self.Key.CREATED_AT}: {self.created_at}',
+            f'{self.Key.UPDATED_AT}: {self.updated_at}',
+            f'{self.Key.START_TIME}: {self.start_time or ""}',
+            f'{self.Key.END_TIME}: {self.end_time or ""}',
+            f'{self.Key.NOTES}: {format_multiline(self.notes)}',
+            f'{self.Key.META}: {self.meta or ""}',
+            f'datapoint count: {self.datapoint_count}',
+            f'{self.Key.DEVICES}: {devices_str}',
+            f'{self.Key.PROJECTS}: {projects_str}',
+            f'{self.Key.TAGS}: {tags_str}',
+            f'{self.Key.USERS}: {users_str}'
         ]
         return '\n'.join(lines)
 
@@ -196,12 +210,34 @@ class Sessions:
 
         return str(table)
 
-class SessionEngine(BaseTableEngine):
-    def add(self, name: str, entity: Entity, *names: str):
-        ...
+class SessionEngine(BaseNamedTableEngine):
+    model_class = Session
+
+    def add(self, sess_name_or_id: str, entity: Entity, *entity_names_or_ids: str):
+        sess = self.get(sess_name_or_id)
+
+        if entity == Entity.DEVICE:
+            link_engine = self._engine.link.session_device
+            get_entity = self._engine.device.get
+        elif entity == Entity.PROJECT:
+            link_engine = self._engine.link.session_project
+            get_entity = self._engine.project.get
+        elif entity == Entity.TAG:
+            link_engine = self._engine.link.session_tag
+            get_entity = self._engine.tag.get
+        elif entity == Entity.USER:
+            link_engine = self._engine.link.session_user
+            get_entity = self._engine.user.get
+        else:
+            raise ValueError(f"Unsupported entity type: {entity}")
+
+        for entity_name_or_id in entity_names_or_ids:
+            i_entity = get_entity(entity_name_or_id)
+            link_engine.add(sess.id, i_entity.id)
 
     def get(self, name_or_id: str) -> Session:
-        return self._get_one_by_name_or_id(name_or_id)
+        return self._get_one(name_or_id, Session.devices, Session.projects, Session.tags,
+                             Session.users)
 
     def rm(self, name: str, action: Action, entity: Entity, *names: str):
         ...
@@ -211,37 +247,6 @@ class SessionEngine(BaseTableEngine):
             sessions = sess.exec(select(Session)).all()
         return Sessions(sessions)
 
-    def _get_multi_by_name_or_id(self, name_or_id: str) -> list[Session]:
-        """
-        Case-insensitive, match anywhere in name or ID.
-        """
-        with self._engine.new_session() as sess:  # SQLModel session
-            stmt = select(Session).where(
-                or_(
-                    cast(Session.name, String).ilike(f"%{name_or_id}%"),  # Partial name match
-                    cast(Session.id, String).ilike(f"{name_or_id}%")  # Partial ID match (prefix)
-                )
-            ).options(
-                selectinload(Session.devices),
-                selectinload(Session.projects),
-                selectinload(Session.tags),
-                selectinload(Session.users)
-            )
-            sessions = sess.exec(stmt).all()
-
-        for sess in sessions:
-            self._populate_datapoint_count(sess)
-
-        return sessions
-
-    def _get_one_by_name_or_id(self, name_or_id: str) -> Session:
-        results = self._get_multi_by_name_or_id(name_or_id)
-        if not results:
-            raise ServiceCmdError(f'No results for "{name_or_id}".')
-        elif len(results) > 1:
-            raise ServiceCmdError(f'Multiple results for "{name_or_id}".')
-        return results[0]
-
     def _populate_datapoint_count(self, session: Session) -> None:
         with self._engine.new_session() as db:
             count_stmt = select(func.count()).where(
@@ -249,18 +254,11 @@ class SessionEngine(BaseTableEngine):
             )
             session.datapoint_count = db.exec(count_stmt).first()
 
-    def remove(self, name_or_id: str):
-        """Remove a session by name or partial/full UUID."""
-        sess_to_remove = self._get_one_by_name_or_id(name_or_id)
-        with self._engine.new_session() as sess:
-            sess.delete(sess_to_remove)
-            sess.commit()
-
     def upsert(self, model: Session, update_fields: Optional[dict] = None) -> Session:
         return super().upsert(
             model,
             {Session.Key.NAME: model.name, Session.Key.ACTIVE: model.active,
-             Session.Key.DESCRIPTION: decode_escapes(model.description),
-             Session.Key.NOTES: decode_escapes(model.notes),
+             Session.Key.DESCRIPTION: model.description,
+             Session.Key.NOTES: model.notes,
              Session.Key.META: model.meta}
         )
