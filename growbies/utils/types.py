@@ -16,6 +16,8 @@ SessionID_t = Annotated[UUID, 'SessionID_t']
 TagID_t = Annotated[UUID, 'TagID_t']
 TareID_t = Annotated[UUID, 'TareID_t']
 UserID_t = Annotated[UUID, 'UserID_t']
+FuzzyID_t = Annotated[str | UUID, 'FuzzyID_t']
+
 
 # Composites
 SerialOrDeviceID_t = DeviceID_t | Serial_t

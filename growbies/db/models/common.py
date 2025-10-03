@@ -46,6 +46,18 @@ class BaseNamedTableEngine(BaseTableEngine):
                 stmt = stmt.options(selectinload(rel))
             return session.exec(stmt).all()
 
+    def _get_exact(self, name: str, *relationships) -> Optional[TSQLModel]:
+        with self._engine.new_session() as session:
+            stmt = select(self.model_class).where(
+                self.model_class.name == name
+            )
+            for rel in relationships:
+                stmt = stmt.options(selectinload(rel))
+            results = session.exec(stmt.limit(2)).all()
+            if len(results) > 1:
+                raise ServiceCmdError(f'Multiple results for name "{name}"')
+            return results[0] if results else None
+
     def _get_multi(self, fuzzy_id: str | UUID, *relationships) -> list[TSQLModel]:
         """
         Search by partial/full id or partial/full name match. The partial must match the
@@ -150,22 +162,27 @@ class BaseLinkEngine(Generic[TLink], ABC):
 TSortedTable = TypeVar('TSortedTable')
 
 class SortedTable(Generic[TSortedTable]):
-    def __init__(self, items: list[TSortedTable] = None):
-        self._items: list[TSortedTable] = items if items is not None else []
+
+    @classmethod
+    def table_name(cls):
+        return cls.__name__
+
+    def __init__(self, elements: list[TSortedTable] = None):
+        self._rows: list[TSortedTable] = elements if elements is not None else []
         self.sort()
 
     def append(self, item: TSortedTable):
-        self._items.append(item)
+        self._rows.append(item)
 
     def sort(self, reverse: bool = False):
         """Sort items in place by name (case-insensitive)."""
-        self._items.sort(key=lambda x: x.name.lower(), reverse=reverse)
+        self._rows.sort(key=lambda x: x.name, reverse=reverse)
 
     def __getitem__(self, index):
-        return self._items[index]
+        return self._rows[index]
 
     def __len__(self):
-        return len(self._items)
+        return len(self._rows)
 
     def __iter__(self) -> Iterator[TSortedTable]:
-        return iter(self._items)
+        return iter(self._rows)

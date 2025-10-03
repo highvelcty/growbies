@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import NewType
+from typing import Optional, NewType
 import ctypes
 import logging
 
@@ -90,8 +90,8 @@ class ReadDeviceCmd(BaseDeviceCmd):
         return getattr(self, self.Field.RAW)
 
     @raw.setter
-    def raw(self, value: bool):
-        setattr(self, self.Field.RAW, value)
+    def raw(self, value: Optional[bool]):
+        setattr(self, self.Field.RAW, bool(value))
 
     @property
     def times(self) -> int:
@@ -99,6 +99,8 @@ class ReadDeviceCmd(BaseDeviceCmd):
 
     @times.setter
     def times(self, value: int):
+        if value is None:
+            value = self.DEFAULT_TIMES
         setattr(self, self.Field.TIMES, value)
 
 class SetCalibrationDeviceCmd(BaseDeviceCmd):

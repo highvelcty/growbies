@@ -17,5 +17,18 @@ class PositionalParam(StrEnum):
         raise ValueError(f'"{sub_cmd_} does not exist.')
 
 
+class Param(StrEnum):
+    FUZZY_ID = 'fuzzy_id'
+    ACTION = 'action'
+
+    @property
+    def help(self) -> str:
+        if self == self.FUZZY_ID:
+            return 'The session to operate on.'
+        elif self == self.ACTION:
+            return 'The action to take.'
+        else:
+            return ''
+
 def internal_to_external_field(field: str):
     return field.lstrip(_INTERNAL_FIELD_NAME_DELINEATOR)

@@ -1,17 +1,17 @@
 from enum import StrEnum
-from typing import Iterator, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
+from uuid import uuid4
 import textwrap
-import  uuid
 
 from prettytable import PrettyTable
 from sqlmodel import Field, Relationship
 
-from .common import BaseTable, BaseNamedTableEngine
+from .common import BaseTable, BaseNamedTableEngine, SortedTable, TSQLModel
 from .link import SessionTagLink
-if TYPE_CHECKING:
-    from .session import Session
+from .session import Session
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.service.common import ServiceCmdError
+from growbies.utils.report import short_uuid
 from growbies.utils.types import TagID_t
 
 class BuiltinName(StrEnum):
@@ -36,63 +36,29 @@ class Tag(BaseTable, table=True):
         DESCRIPTION = 'description'
         SESSIONS = 'sessions'
 
-    id: Optional[TagID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: Optional[TagID_t] = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(unique=True, index=True)
     builtin: bool = Field(default=False, nullable=False)
     description: Optional[str] = None
-    sessions: list['Session'] = Relationship(back_populates='tags', link_model=SessionTagLink)
+    sessions: list[Session] = Relationship(back_populates=Session.Key.TAGS,
+                                           link_model=SessionTagLink)
 
 for key_ in Tag.Key:
     assert(hasattr(Tag, key_))
 
-class Tags:
-    def __init__(self, tags: list[Tag] = None):
-        if tags is None:
-            self._tags = list()
-        else:
-            self._tags = tags
-        self.sort()
-
-    def append(self, tag: Tag):
-        self._tags.append(tag)
-
-    def sort(self, reverse: bool = False):
-        """Sort tags in place by name."""
-        self._tags.sort(key=lambda tag: tag.name.lower(), reverse=reverse)
-
-    def __getitem__(self, index):
-        return self._tags[index]
-
-    def __len__(self):
-        return len(self._tags)
-
-    def __iter__(self) -> Iterator[Tag]:
-        return iter(self._tags)
-
+class Tags(SortedTable[Tag]):
     def __str__(self):
-        table = PrettyTable(title='Tags')
-        # Use Tag.Key enum values for headers
-        table.field_names = [str(x) for x in Tag.Key]
+        table = PrettyTable(title=self.table_name())
+        table.field_names = (Tag.Key.ID, Tag.Key.NAME, Tag.Key.DESCRIPTION)
+        for field in table.field_names:
+            table.align[field] = 'l'
 
-        # Wrap text for description and sessions
-        table.align[Tag.Key.NAME] = 'l'
-        table.align[Tag.Key.DESCRIPTION] = 'l'
-        table.align[Tag.Key.SESSIONS] = 'l'
-
-        for tag in self._tags:
-            wrapped_desc = textwrap.fill(tag.description or '', width=TABLE_COLUMN_WIDTH)
-
-            # Prepare session list string
-            session_names = [f'{s.name}' for s in tag.sessions]  # Could be id or start_ts
-            session_str = ', '.join(session_names)
-            wrapped_sessions = textwrap.fill(session_str, width=TABLE_COLUMN_WIDTH)
-
+        for element in self._rows:
+            wrapped_desc = textwrap.fill(element.description or '', width=TABLE_COLUMN_WIDTH)
             table.add_row([
-                tag.id,
-                tag.name,
-                tag.builtin,
+                short_uuid(element.id),
+                element.name,
                 wrapped_desc,
-                wrapped_sessions
             ])
 
         return str(table)
@@ -106,6 +72,9 @@ class TagEngine(BaseNamedTableEngine):
 
     def get(self, name_or_id: Optional[str]) -> Optional[Tag]:
         return self._get_one(name_or_id, Tag.sessions)
+
+    def get_exact(self, name: str) -> Optional[TSQLModel]:
+        return super()._get_exact(name, Tag.sessions)
 
     def list(self) -> Tags:
         return Tags(self._get_all(Tag.sessions))
@@ -130,7 +99,7 @@ class TagEngine(BaseNamedTableEngine):
 
     def _init_builtin_tags(self):
         for name in BuiltinName:
-            existing = self.get(name)
+            existing = self.get_exact(name)
             if not existing:
                 tag = Tag(name=name, builtin=True, description=name.description)
                 self.upsert(tag, _override_builtin_check=True)

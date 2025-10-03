@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
     engine = get_db_engine()
 
-    session_name = cmd.kw.pop(Param.SESSION_NAME, None)
+    session_name = cmd.kw.pop(Param.FUZZY_NAME, None)
     action = cmd.kw.pop(Param.ACTION)
 
     if action in (Action.ACTIVATE, Action.DEACTIVATE):

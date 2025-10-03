@@ -18,4 +18,4 @@ def serials_to_devices(*tgt_serials: Serial_t) -> Devices:
         if tgt not in matches:
             raise ServiceCmdError(f'"{tgt}" not found.')
 
-    return Devices(devices=list(matches.values()))
+    return Devices(elements=list(matches.values()))

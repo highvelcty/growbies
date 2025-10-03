@@ -1,43 +1,33 @@
 from typing import Optional
 import logging
 
-from ..common import ServiceCmd, ServiceCmdError
-from growbies.cli.user import KwParam, PositionalParam
+from ..common import ServiceCmd
+from growbies.cli.common import Param
+from growbies.cli.user import Action, ModParam
 from growbies.db.engine import get_db_engine
 from growbies.db.models import user
 
 logger = logging.getLogger(__name__)
 
 def execute(cmd: ServiceCmd) -> Optional[user.Users]:
-    engine = get_db_engine()
-    get_name = cmd.kw.pop(PositionalParam.GET_NAME)
-    email = cmd.kw.pop(KwParam.EMAIL)
-    remove = cmd.kw.pop(KwParam.REMOVE)
-    set_name = cmd.kw.pop(KwParam.SET_NAME)
+    engine = get_db_engine().user
 
-    if remove:
-        if get_name is None:
-            raise ServiceCmdError(f'Must provide {PositionalParam.GET_NAME} to remove a user.')
-        if not engine.user.remove(get_name):
-            raise ServiceCmdError(f'Failed to remove user "{get_name}"')
-        return None
+    fuzzy_id = cmd.kw.pop(Param.FUZZY_ID, None)
+    action = cmd.kw.pop(Param.ACTION)
 
-    user_ = engine.user.get(get_name)
-
-    if email is None and set_name is None:
-        if user_ is None:
-            return engine.user.list()
+    if action in (None, Action.LS):
+        if fuzzy_id is None:
+            return engine.list()
         else:
-            return user.Users([user_])
-    else:
-        if user_ is None:
-            if set_name is None:
-                raise ServiceCmdError(f'Must provide --{KwParam.SET_NAME} to create a new user.')
-            user_ = user.User(name=set_name, email=email)
-        else:
-            if set_name:
-                user_.name = set_name
-            if email:
-                user_.email = email
-        engine.user.upsert(user_)
-        return None
+            return engine.get(fuzzy_id)
+    elif action == Action.MOD:
+        model = engine.get(fuzzy_id)
+        model.name = cmd.kw.pop(ModParam.NAME, model.name)
+        model.email = cmd.kw.pop(ModParam.EMAIL, model.email)
+        engine.upsert(model)
+    elif action == Action.NEW:
+        model = user.User(name=cmd.kw.pop(ModParam.NAME), email=cmd.kw.pop(ModParam.EMAIL, ''))
+        engine.upsert(model)
+    elif action == Action.RM:
+        engine.remove(fuzzy_id)
+    return None

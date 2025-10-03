@@ -23,8 +23,6 @@ for cmd in ServiceOp:
     parsers[cmd] = parser_adder.add_parser(cmd, description=cmd.description, help=cmd.help,
                                            formatter_class=RawDescriptionHelpFormatter)
 
-activate.make_cli(parsers[ServiceOp.ACTIVATE])
-activate.make_cli(parsers[ServiceOp.DEACTIVATE])
 calibration.make_cli(parsers[ServiceOp.CAL])
 device.make_cli(parsers[ServiceOp.DEVICE])
 identify.make_cli(parsers[ServiceOp.ID])

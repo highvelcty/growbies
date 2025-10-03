@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 from enum import StrEnum
 
+from .common import Param
+
 class Action(StrEnum):
     ACTIVATE = 'activate'
     DEACTIVATE = 'deactivate'
@@ -34,19 +36,6 @@ class ModParam(StrEnum):
         else:
             return ''
 
-class Param(StrEnum):
-    DEVICE_NAME = 'device_name'
-    ACTION = 'action'
-
-    @property
-    def help(self) -> str:
-        if self == self.DEVICE_NAME:
-            return 'The session to operate on.'
-        elif self == self.ACTION:
-            return 'The action to take.'
-        else:
-            return ''
-
 class ReadParam(StrEnum):
     TIMES = 'times'
     RAW = 'raw'
@@ -63,8 +52,8 @@ def make_cli(parser: ArgumentParser):
     subparsers = parser.add_subparsers(dest=Param.ACTION, required=False, help=Param.ACTION.help,)
     for act in (Action.ACTIVATE, Action.DEACTIVATE, Action.LS, Action.MOD, Action.READ):
         act_parser = subparsers.add_parser(act, help=act.help)
-        act_parser.add_argument(Param.DEVICE_NAME, nargs='?', default=None,
-                                help=Param.DEVICE_NAME.help)
+        act_parser.add_argument(Param.FUZZY_ID, nargs='?', default=None,
+                                help=Param.FUZZY_ID.help)
         if act == Action.MOD:
             act_parser.add_argument(f'--{ModParam.NEW_NAME}', type=str, help=ModParam.NEW_NAME.help)
         if act == Action.READ:

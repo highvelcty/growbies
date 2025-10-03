@@ -1,5 +1,5 @@
 from enum import IntFlag
-from typing import Iterator, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 import logging
 import uuid
 
@@ -8,12 +8,12 @@ from sqlalchemy import cast, Column, Integer, ForeignKey, or_, String, select
 from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import Field, Relationship
 
-from .common import BaseTable, BaseNamedTableEngine
+from .common import BaseTable, BaseNamedTableEngine, SortedTable
 from .gateway import Gateway
 from .link import SessionDeviceLink
-if TYPE_CHECKING:
-    from .session import Session
-from growbies.utils.report import format_8bit_binary
+# if TYPE_CHECKING: # meyere, not sure if this is needed yet
+from .session import Session
+from growbies.utils.report import format_8bit_binary, short_uuid
 from growbies.utils.types import Serial_t, DeviceID_t, GatewayID_t
 
 logger = logging.getLogger(__name__)
@@ -37,12 +37,12 @@ class Device(BaseTable, table=True):
         STATE = 'state'
 
     id: Optional[DeviceID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = Field(default='Default')
+    name: str = Field(default='')
     gateway: GatewayID_t = Field(
         sa_column=Column(
             UUID(as_uuid=True),
             ForeignKey(
-                f'{Gateway.__tablename__}.id',
+                f'{Gateway.__tablename__}.{Gateway.Key.ID}',
                 ondelete="CASCADE"
             ),
             nullable =False
@@ -55,11 +55,16 @@ class Device(BaseTable, table=True):
     state: ConnectionState = \
         Field(sa_column=Column(Integer, nullable=False, default=ConnectionState.INITIAL))
 
-    gateways: Gateway = Relationship(back_populates='devices')
+    gateways: Gateway = Relationship(back_populates=Gateway.Key.DEVICES)
     sessions: list['Session'] = Relationship(
-        back_populates="devices",
+        back_populates=Session.Key.DEVICES,
         link_model=SessionDeviceLink
     )
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        if not self.name:
+            self.name = str(self.id)
 
     def init_discovery_info(self):
         self.state &= ~ConnectionState.DISCOVERED
@@ -84,41 +89,26 @@ class Device(BaseTable, table=True):
         return (f'{self.name} {self.serial} '
                 f'{hex(self.vid)}:{hex(self.pid)} {hex(self.state)} {self.path}')
 
-class Devices:
-    def __init__(self, devices: list[Device] = None):
-        if devices is None:
-            self._devices = list()
-        else:
-            self._devices = devices
-        self.sort()
-
-    def append(self, device: Device):
-        self._devices.append(device)
-
+class Devices(SortedTable[Device]):
     def get_by_serial(self, serial: Serial_t) -> Optional[Device]:
-        for device in self._devices:
+        for device in self._rows:
             if device.serial == serial:
                 return device
         return None
 
-    def __getitem__(self, index):
-        return self._devices[index]
-
-    def __len__(self):
-        return len(self._devices)
-
-    def __iter__(self) -> Iterator[Device]:
-        return iter(self._devices)
-
-    def sort(self, reverse: bool = False):
-        self._devices.sort(key=lambda tag: tag.name.lower(), reverse=reverse)
-
     def __str__(self):
-        table = PrettyTable(('Name', 'Serial', 'VID:PID', 'State', 'Path'))
-        for device in self._devices:
-            table.add_row([device.name, device.serial,
+        table = PrettyTable((Device.Key.ID, Device.Key.NAME, Device.Key.SERIAL, Device.Key.STATE,
+                             f'{Device.Key.VID}:{Device.Key.PID}', Device.Key.PATH),
+                            title=self.table_name())
+        for device in self._rows:
+            if device.name == str(device.id):
+                device_name = short_uuid(device.name)
+            else:
+                device_name = device.name
+            table.add_row([short_uuid(device.id), device_name, device.serial,
+                           f'{format_8bit_binary(device.state)}',
                            f'{device.vid:04x}:{device.pid:04x}',
-                           f'{format_8bit_binary(device.state)}', device.path])
+                           device.path])
         return str(table)
 
 class DeviceEngine(BaseNamedTableEngine):
@@ -140,7 +130,7 @@ class DeviceEngine(BaseNamedTableEngine):
         merged_devices = self._merge_with_discovered(discovered_devices)
         for device in merged_devices:
             self._overwrite(device)
-        return Devices(devices=[dev.model_copy() for dev in merged_devices])
+        return Devices(elements=[dev.model_copy() for dev in merged_devices])
 
     def upsert(self, model: Device, update_fields: Optional[dict] = None) -> Device:
         return super().upsert(model, {Device.Key.NAME: model.name, Device.Key.STATE: model.state})

@@ -1,9 +1,9 @@
-from typing import Iterator, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 import uuid
 
 from sqlalchemy import ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
-from sqlmodel import Column, Field, Relationship, SQLModel
+from sqlmodel import Column, Field, Relationship
 
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
 from .account import Account
@@ -17,6 +17,7 @@ class Gateway(BaseTable, table=True):
         ID = 'id'
         NAME = 'name'
         ACCOUNT = 'account'
+        DEVICES = 'devices'
 
     id: Optional[GatewayID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(sa_column=Column(String, unique=True, index=True))

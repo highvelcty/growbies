@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def execute(cmd: ServiceCmd) -> Optional[Device | Devices]:
     engine = get_db_engine()
 
-    fuzzy_id = cmd.kw.pop(Param.DEVICE_NAME, None)
+    fuzzy_id = cmd.kw.pop(Param.FUZZY_ID, None)
     action = cmd.kw.pop(Param.ACTION)
 
     if action in (Action.ACTIVATE, Action.DEACTIVATE):
@@ -29,7 +29,6 @@ def execute(cmd: ServiceCmd) -> Optional[Device | Devices]:
             engine.device.clear_active(dev.id)
             worker_pool.disconnect(dev.id)
             worker_pool.join_all(dev.id)
-
     elif action in (None, Action.LS):
         if fuzzy_id:
             return engine.device.get(fuzzy_id)

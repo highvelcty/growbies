@@ -87,7 +87,7 @@ def list_str_wrap(the_list, wrap=4, indent=1) -> str:
     result += "]"
     return result
 
-def short_uuid(uuid: UUID):
+def short_uuid(uuid: str | UUID):
     return str(uuid)[:7]
 
 def wrap_for_column(col_str: Optional[str]) -> str:

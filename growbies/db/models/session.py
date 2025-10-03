@@ -1,23 +1,23 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Callable, Iterator, Optional, TYPE_CHECKING
+from typing import Iterator, Optional, TYPE_CHECKING
 import uuid
 import logging
 
 logger = logging.getLogger(__name__)
 
 from prettytable import PrettyTable
-from sqlalchemy import event, func, inspect, or_
+from sqlalchemy import event, func, inspect
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlmodel import Column, select, SQLModel, Field, Relationship
+from sqlmodel import Column, select, Field, Relationship
 
-from .common import BaseTable, BaseNamedTableEngine
+from .common import BaseTable, BaseNamedTableEngine, SortedTable
 from .link import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, SessionTagLink,
                    SessionUserLink)
 from growbies.cli.session import Action, Entity
 from growbies.utils.report import list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
-from growbies.utils.types import DeviceID_t, ProjectID_t, SessionID_t, TagID_t, UserID_t
+from growbies.utils.types import SessionID_t
 
 if TYPE_CHECKING:
     from .datapoint import DataPoint
@@ -162,34 +162,7 @@ def update_timestamp(mapper, connection, target: Session):
             if old_val is True and new_val is False:
                 target.end_time = get_utc_dt()
 
-class Sessions:
-    def __init__(self, rows: list[Session] = None):
-        if rows is None:
-            self._rows = list()
-        else:
-            self._rows = rows
-        self.sort()
-
-    @classmethod
-    def table_name(cls):
-        return cls.__qualname__
-
-    def append(self, session: Session):
-        self._rows.append(session)
-
-    def sort(self, reverse: bool = False):
-        """Sort tags in place by name."""
-        self._rows.sort(key=lambda tag: tag.name.lower(), reverse=reverse)
-
-    def __getitem__(self, index):
-        return self._rows[index]
-
-    def __len__(self):
-        return len(self._rows)
-
-    def __iter__(self) -> Iterator[Session]:
-        return iter(self._rows)
-
+class Sessions(SortedTable[Session]):
     def __str__(self):
         table = PrettyTable(title=self.table_name())
         table.preserve_internal_whitespace = True

@@ -5,13 +5,10 @@ class ServiceCmdError(Exception):
     pass
 
 class ServiceOp(StrEnum):
-    ACTIVATE = 'activate'
-    DEACTIVATE = 'deactivate'
     CAL = 'cal'
     DEVICE = 'device'
     ID = 'id'
     LOOPBACK = 'loopback'
-    LS = 'ls'
     PROJECT = 'project'
     READ = 'read'
     SESSION = 'session'
@@ -21,18 +18,10 @@ class ServiceOp(StrEnum):
 
     @property
     def help(self) -> str:
-        if self == self.ACTIVATE:
-            return f'Activate a device.'
-        elif self == self.DEACTIVATE:
-            return 'Deactivate a device.'
-        elif self == self.CAL:
-            return 'Get/set device calibration.'
-        elif self == self.DEVICE:
+        if self == self.DEVICE:
             return 'Physical device interface and management.'
         elif self == self.LOOPBACK:
             return 'A no operation command/response.'
-        elif self == self.LS:
-            return f'List devices.'
         elif self == self.ID:
             return f'Get/set device identify information.'
         elif self == self.PROJECT:
@@ -53,16 +42,10 @@ class ServiceOp(StrEnum):
     @property
     def description(self) -> str:
         desc = ''
-        if self == self.ACTIVATE:
-            desc = 'Making it available for connection.'
-        elif self == self.DEACTIVATE:
-            desc = 'Disconnecting as necessary and making it unavailable for connection.'
-        elif self == self.CAL:
+        if self == self.CAL:
             desc = f'List/modify/initialize device calibration.'
         elif self == self.LOOPBACK:
             desc = 'Test basic command/response functionality with a device.'
-        elif self == self.LS:
-            desc = 'A merge of discovered devices and devices in the DB'
         elif self == self.ID:
             desc = f'List/modify/initialize device identify information.'
         elif self == self.PROJECT:

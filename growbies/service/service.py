@@ -35,11 +35,7 @@ class Service:
                     logger.info(f'Servicing {cmd.op} command.')
                     with IDQueue(cmd.qid) as resp_q:
                         try:
-                            if cmd.op == ServiceOp.ACTIVATE:
-                                resp_q.put(activate.execute(cmd))
-                            elif cmd.op == ServiceOp.DEACTIVATE:
-                                resp_q.put(deactivate.execute(cmd))
-                            elif cmd.op == ServiceOp.CAL:
+                            if cmd.op == ServiceOp.CAL:
                                 resp_q.put(calibration.execute(cmd))
                             elif cmd.op == ServiceOp.DEVICE:
                                 resp_q.put(device.execute(cmd))
@@ -47,8 +43,6 @@ class Service:
                                 resp_q.put(identify.execute(cmd))
                             elif cmd.op == ServiceOp.LOOPBACK:
                                 resp_q.put(loopback.execute(cmd))
-                            elif cmd.op == ServiceOp.LS:
-                                resp_q.put(ls.execute())
                             elif cmd.op == ServiceOp.PROJECT:
                                 resp_q.put(project.execute(cmd))
                             elif cmd.op == ServiceOp.READ:
