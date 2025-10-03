@@ -36,7 +36,6 @@ class Worker(Thread):
         self._device_id = device_id
         self._out_queue = Queue()
         self._db_engine = get_db_engine()
-        self._device_engine = self._db_engine.device.get_engine(device_id)
         self._device = self._db_engine.device.get(device_id)
         self._intf: Optional[SerialIntf] = None
         self._stop_event = Event()
@@ -166,10 +165,10 @@ class Worker(Thread):
         # Outer loop
         while not self._stop_event.is_set():
             try:
-                self._device_engine.init_start_connection()
+                self._db_engine.device.init_start_connection(self._device.id)
                 logger.info('Device connecting.')
                 if self._connect():
-                    self._device_engine.set_connected()
+                    self._db_engine.device.set_connected(self._device.id)
                     logger.info('Device connected.')
 
                     # Inner loop
@@ -180,11 +179,11 @@ class Worker(Thread):
             # Cleanup
             self._disconnect()
             logger.info('Device disconnected.')
-            self._device_engine.clear_connected()
+            self._db_engine.device.clear_connected(self._device.id)
 
             # Reconnect
             if not self._stop_event.is_set():
-                self._device_engine.set_error()
+                self._db_engine.device.set_error(self._device.id)
                 if not self._stop_event.wait(self._RECONNECT_RETRY_DELAY_SECONDS):
                     self._reconnect_attempt += 1
                     if self._do_report_reconnect():

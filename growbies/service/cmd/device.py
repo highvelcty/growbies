@@ -21,14 +21,15 @@ def execute(cmd: ServiceCmd) -> Optional[Device | Devices]:
 
     if action in (Action.ACTIVATE, Action.DEACTIVATE):
         dev = engine.device.get(fuzzy_id)
-        if action == Action.ACTIVATE:
-            dev.active = True
-        else:
-            dev.active = False
-        engine.session.upsert(dev)
         worker_pool = get_pool()
-        engine.set_active(dev.id)
-        worker_pool.connect(dev.id)
+        if action == Action.ACTIVATE:
+            engine.device.set_active(dev.id)
+            worker_pool.connect(dev.id)
+        else:
+            engine.device.clear_active(dev.id)
+            worker_pool.disconnect(dev.id)
+            worker_pool.join_all(dev.id)
+
     elif action in (None, Action.LS):
         if fuzzy_id:
             return engine.device.get(fuzzy_id)

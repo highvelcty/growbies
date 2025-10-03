@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Generic, Optional, TYPE_CHECKING, Type, TypeVar
+from typing import Any, Generic, Iterator, Optional, TYPE_CHECKING, Type, TypeVar
 from uuid import UUID
 
 from sqlalchemy import cast, or_
@@ -39,7 +39,6 @@ class BaseNamedTableEngine(BaseTableEngine):
             )
         )
 
-
     def _get_all(self, *relationships) -> list[TSQLModel]:
         with self._engine.new_session() as session:
             stmt = select(self.model_class)
@@ -47,22 +46,23 @@ class BaseNamedTableEngine(BaseTableEngine):
                 stmt = stmt.options(selectinload(rel))
             return session.exec(stmt).all()
 
-    def _get_multi(self, fuzzy_id: str | UUID, *relationships) -> Optional[list[TSQLModel]]:
+    def _get_multi(self, fuzzy_id: str | UUID, *relationships) -> list[TSQLModel]:
         """
         Search by partial/full id or partial/full name match. The partial must match the
         beginning of the comparison string. Case-insensitive.
         """
-        if fuzzy_id is None:
-            return None
-
         with self._engine.new_session() as session:
             stmt = self._make_get_stmt(fuzzy_id)
             for rel in relationships:
                 stmt = stmt.options(selectinload(rel))
 
-            return session.exec(stmt).all()
+            result = session.exec(stmt)
+            if hasattr(result, 'scalars'):
+                return result.scalars().all()
+            else:
+                return result.all()
 
-    def _get_one(self, fuzzy_id: str | UUID, *relationships) -> Optional[TSQLModel]:
+    def _get_one(self, fuzzy_id: str | UUID, *relationships) -> TSQLModel:
         results = self._get_multi(fuzzy_id, *relationships)
         if not results:
             raise ServiceCmdError(f'No results for "{fuzzy_id}".')
@@ -77,23 +77,25 @@ class BaseNamedTableEngine(BaseTableEngine):
             sess.commit()
 
     def upsert(self, model: TSQLModel, update_fields: Optional[dict] = None) -> TSQLModel:
-        with self._engine.new_session() as session:
-            stmt = (
-                select(self.model_class)
-                .where(self.model_class.name == model.name)
-                .with_for_update()
-            )
-            existing = session.exec(stmt).first()
+        try:
+            existing = self._get_one(model.id)
+        except ServiceCmdError:
+            existing = None
 
-            if existing:
-                if update_fields:
-                    for key, value in update_fields.items():
-                        setattr(existing, key, value)
+        if existing:
+            # Update
+            if update_fields:
+                for key, value in update_fields.items():
+                    setattr(existing, key, value)
+
+            with self._engine.new_session() as session:
                 session.add(existing)  # ensures SQLModel tracks it
                 session.commit()
                 session.refresh(existing)
                 return existing
-            else:
+        else:
+            # Insert
+            with self._engine.new_session() as session:
                 session.add(model)
                 session.commit()
                 session.refresh(model)
@@ -144,3 +146,26 @@ class BaseLinkEngine(Generic[TLink], ABC):
         with self._engine.new_session() as session:
             session.delete(link)
             session.commit()
+
+TSortedTable = TypeVar('TSortedTable')
+
+class SortedTable(Generic[TSortedTable]):
+    def __init__(self, items: list[TSortedTable] = None):
+        self._items: list[TSortedTable] = items if items is not None else []
+        self.sort()
+
+    def append(self, item: TSortedTable):
+        self._items.append(item)
+
+    def sort(self, reverse: bool = False):
+        """Sort items in place by name (case-insensitive)."""
+        self._items.sort(key=lambda x: x.name.lower(), reverse=reverse)
+
+    def __getitem__(self, index):
+        return self._items[index]
+
+    def __len__(self):
+        return len(self._items)
+
+    def __iter__(self) -> Iterator[TSortedTable]:
+        return iter(self._items)

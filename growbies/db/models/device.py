@@ -1,5 +1,6 @@
 from enum import IntFlag
 from typing import Iterator, Optional, TYPE_CHECKING
+import logging
 import uuid
 
 from prettytable import PrettyTable
@@ -14,6 +15,8 @@ if TYPE_CHECKING:
     from .session import Session
 from growbies.utils.report import format_8bit_binary
 from growbies.utils.types import Serial_t, DeviceID_t, GatewayID_t
+
+logger = logging.getLogger(__name__)
 
 class ConnectionState(IntFlag):
     INITIAL     = 0x00
@@ -52,7 +55,7 @@ class Device(BaseTable, table=True):
     state: ConnectionState = \
         Field(sa_column=Column(Integer, nullable=False, default=ConnectionState.INITIAL))
 
-    gateway_relation: Gateway = Relationship(back_populates='devices')
+    gateways: Gateway = Relationship(back_populates='devices')
     sessions: list['Session'] = Relationship(
         back_populates="devices",
         link_model=SessionDeviceLink
@@ -61,10 +64,6 @@ class Device(BaseTable, table=True):
     def init_discovery_info(self):
         self.state &= ~ConnectionState.DISCOVERED
         self.path = None
-
-    def init_start_connection(self):
-        self.state &= ~ConnectionState.ERROR
-        self.state &= ~ConnectionState.CONNECTED
 
     def is_initial(self) -> bool:
         return bool(not self.state)
@@ -85,7 +84,6 @@ class Device(BaseTable, table=True):
         return (f'{self.name} {self.serial} '
                 f'{hex(self.vid)}:{hex(self.pid)} {hex(self.state)} {self.path}')
 
-
 class Devices:
     def __init__(self, devices: list[Device] = None):
         if devices is None:
@@ -94,14 +92,14 @@ class Devices:
             self._devices = devices
         self.sort()
 
-    def get(self, serial) -> Optional[Device]:
-        for dev in self._devices:
-            if dev.serial == serial:
-                return dev
-        return None
-
     def append(self, device: Device):
         self._devices.append(device)
+
+    def get_by_serial(self, serial: Serial_t) -> Optional[Device]:
+        for device in self._devices:
+            if device.serial == serial:
+                return device
+        return None
 
     def __getitem__(self, index):
         return self._devices[index]
@@ -157,7 +155,7 @@ class DeviceEngine(BaseNamedTableEngine):
         existing.state |= ConnectionState.ACTIVE
         self.upsert(existing)
 
-    def clear_connect(self, id_: UUID):
+    def clear_connected(self, id_: UUID):
         existing = self.get(id_)
         existing.state &= ~ConnectionState.CONNECTED
         self.upsert(existing)
@@ -170,13 +168,15 @@ class DeviceEngine(BaseNamedTableEngine):
     def clear_error(self, id_: UUID):
         existing = self.get(id_)
         existing.state &= ~ConnectionState.ERROR
+        self.upsert(existing)
 
     def set_error(self, id_: UUID):
         existing = self.get(id_)
         existing.state |= ConnectionState.ERROR
         self.upsert(existing)
 
-    def _make_get_stmt(self, fuzzy_id: str):
+    def _make_get_stmt(self, fuzzy_id: str | UUID):
+        fuzzy_id  = str(fuzzy_id)
         return select(self.model_class).where(
             or_(
                 cast(self.model_class.id, String).ilike(f"{fuzzy_id}%"),
@@ -190,7 +190,7 @@ class DeviceEngine(BaseNamedTableEngine):
         # Update existing in DB.
         for existing_device in merged_devices:
             existing_device.init_discovery_info()
-            discovered_device = discovered_devices.get(existing_device.serial)
+            discovered_device = discovered_devices.get_by_serial(existing_device.serial)
             if discovered_device is not None:
                 existing_device.gateway = discovered_device.gateway
                 existing_device.serial = discovered_device.serial
@@ -204,23 +204,13 @@ class DeviceEngine(BaseNamedTableEngine):
         new_serials = set((dev.serial for dev in discovered_devices))
         existing_serials = set((dev.serial for dev in merged_devices))
         for serial in (new_serials - existing_serials):
-            merged_devices.append(discovered_devices.get(serial))
+            merged_devices.append(discovered_devices.get_by_serial(serial))
 
         return merged_devices
 
     def _overwrite(self, device: Device) -> Device:
-        # Lock the row by unique key
-        stmt = (
-            select(self.model_class)
-            .where(self.model_class.name == device.name)
-            .with_for_update()
-        )
-
         with self._engine.new_session() as db_sess:
-            # Must assign to something to acquire the "with_for_update" lock
-            _ = db_sess.exec(stmt).scalars().first()
-            db_sess.add(device)
-            db_sess.flush()
-            db_sess.refresh(device)
-            return device
-
+            merged = db_sess.merge(device)  # either updates existing or inserts
+            db_sess.commit()  # ensure it persists
+            db_sess.refresh(merged)
+            return merged

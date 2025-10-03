@@ -4,8 +4,7 @@ import textwrap
 import  uuid
 
 from prettytable import PrettyTable
-from sqlalchemy.orm import selectinload
-from sqlmodel import select, SQLModel, Field, Relationship
+from sqlmodel import Field, Relationship
 
 from .common import BaseTable, BaseNamedTableEngine
 from .link import SessionTagLink
@@ -131,5 +130,7 @@ class TagEngine(BaseNamedTableEngine):
 
     def _init_builtin_tags(self):
         for name in BuiltinName:
-            tag = Tag(name=name, builtin=True, description=name.description)
-            self.upsert(tag, _override_builtin_check=True)
+            existing = self.get(name)
+            if not existing:
+                tag = Tag(name=name, builtin=True, description=name.description)
+                self.upsert(tag, _override_builtin_check=True)

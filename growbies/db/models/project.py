@@ -95,7 +95,8 @@ class Projects:
 
 class ProjectEngine(BaseNamedTableEngine):
     model_class = Project
-    def get(self, name_or_id: Optional[str]) -> Optional[Project]:
+
+    def get(self, name_or_id: Optional[str]) -> Project:
         return self._get_one(name_or_id, Project.sessions)
 
     def list(self) -> Projects:

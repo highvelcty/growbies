@@ -1,5 +1,8 @@
 from .worker import Worker
 from growbies.utils.types import DeviceID_t, WorkerID_t
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Pool:
     def __init__(self):
