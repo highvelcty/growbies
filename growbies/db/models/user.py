@@ -10,8 +10,8 @@ from .link import SessionUserLink
 from growbies.utils.report import short_uuid
 from growbies.utils.types import FuzzyID_t, UserID_t
 
-# if TYPE_CHECKING: # meyere, not sure if this is needed
-from .session import Session
+if TYPE_CHECKING:
+    from .session import Session
 
 class User(BaseTable, table=True):
     class Key(StrEnum):
@@ -23,10 +23,7 @@ class User(BaseTable, table=True):
     name: str = ''
     email: Optional[str] = None
 
-    sessions: list[Session] = Relationship(
-        back_populates=Session.Key.USERS,
-        link_model=SessionUserLink
-    )
+    sessions: list['Session'] = Relationship(back_populates='users',link_model=SessionUserLink)
 
 class Users(SortedTable[User]):
     def __str__(self):

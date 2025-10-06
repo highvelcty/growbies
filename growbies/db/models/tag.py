@@ -40,8 +40,7 @@ class Tag(BaseTable, table=True):
     name: str = Field(unique=True, index=True)
     builtin: bool = Field(default=False, nullable=False)
     description: Optional[str] = None
-    sessions: list[Session] = Relationship(back_populates=Session.Key.TAGS,
-                                           link_model=SessionTagLink)
+    sessions: list['Session'] = Relationship(back_populates='tags', link_model=SessionTagLink)
 
 for key_ in Tag.Key:
     assert(hasattr(Tag, key_))

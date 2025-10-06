@@ -11,8 +11,8 @@ from sqlmodel import Field, Relationship
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
 from .gateway import Gateway
 from .link import SessionDeviceLink
-# if TYPE_CHECKING: # meyere, not sure if this is needed yet
-from .session import Session
+if TYPE_CHECKING:
+    from .session import Session
 from growbies.utils.report import format_8bit_binary, short_uuid
 from growbies.utils.types import Serial_t, DeviceID_t, GatewayID_t
 
@@ -55,9 +55,9 @@ class Device(BaseTable, table=True):
     state: ConnectionState = \
         Field(sa_column=Column(Integer, nullable=False, default=ConnectionState.INITIAL))
 
-    gateways: Gateway = Relationship(back_populates=Gateway.Key.DEVICES)
+    gateways: Gateway = Relationship(back_populates='devices')
     sessions: list['Session'] = Relationship(
-        back_populates=Session.Key.DEVICES,
+        back_populates='devices',
         link_model=SessionDeviceLink
     )
 

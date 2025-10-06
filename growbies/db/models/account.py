@@ -1,9 +1,9 @@
 from uuid import UUID
-from typing import Iterator, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 import uuid
 
 from sqlalchemy import Column, String
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship
 
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
 if TYPE_CHECKING:

@@ -7,7 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 from prettytable import PrettyTable
-from sqlalchemy import event, func, inspect
+from sqlalchemy import Boolean, cast, event, func, inspect, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, select, Field, Relationship
 
@@ -17,7 +17,7 @@ from .link import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, 
 from growbies.cli.session import Action, Entity
 from growbies.utils.report import list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
-from growbies.utils.types import SessionID_t
+from growbies.utils.types import DeviceID_t, SessionID_t
 
 if TYPE_CHECKING:
     from .datapoint import DataPoint
@@ -205,6 +205,7 @@ class SessionEngine(BaseNamedTableEngine):
             raise ValueError(f"Unsupported entity type: {entity}")
 
         for entity_name_or_id in entity_names_or_ids:
+            logger.error(f'emey entity name or id: {entity_name_or_id}')
             i_entity = get_entity(entity_name_or_id)
             link_engine.add(sess.id, i_entity.id)
 
@@ -226,6 +227,22 @@ class SessionEngine(BaseNamedTableEngine):
                 SessionDataPointLink.session_id == session.id
             )
             session.datapoint_count = db.exec(count_stmt).first()
+
+
+    def get_active_by_device_id(self, device_id: DeviceID_t) -> Sessions:
+        with self._engine.new_session() as db_sess:
+            # Python syntax, building SQL expressions
+            # noinspection PyTypeChecker
+            stmt = (
+                select(self.model_class)
+                .join(SessionDeviceLink)
+                .where(
+                    SessionDeviceLink.right_id == device_id,
+                    self.model_class.active == True
+                )
+            )
+            return Sessions(db_sess.exec(stmt).all())
+
 
     def upsert(self, model: Session, update_fields: Optional[dict] = None) -> Session:
         return super().upsert(

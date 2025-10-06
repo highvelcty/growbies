@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 import textwrap
 import uuid
 
@@ -15,8 +15,8 @@ from growbies.utils.report import short_uuid
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import ProjectID_t
 
-# if TYPE_CHECKING: # meyere, needed?
-from .session import Session
+if TYPE_CHECKING:
+    from .session import Session
 
 class Project(BaseTable, table=True):
     class Key(StrEnum):
@@ -34,7 +34,7 @@ class Project(BaseTable, table=True):
     updated_at: datetime = Field(default_factory=get_utc_dt, nullable=False)
 
     sessions: list['Session'] = Relationship(
-        back_populates=Session.Key.PROJECTS,
+        back_populates='projects',
         link_model=SessionProjectLink
     )
 

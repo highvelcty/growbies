@@ -77,9 +77,11 @@ class BaseNamedTableEngine(BaseTableEngine):
     def _get_one(self, fuzzy_id: str | UUID, *relationships) -> TSQLModel:
         results = self._get_multi(fuzzy_id, *relationships)
         if not results:
-            raise ServiceCmdError(f'No results for "{fuzzy_id}".')
+            raise ServiceCmdError(f'No results for "{fuzzy_id}" in the '
+                                  f'"{self.model_class.__tablename__}" table.')
         elif len(results) > 1:
-            raise ServiceCmdError(f'Multiple results for "{fuzzy_id}".')
+            raise ServiceCmdError(f'Multiple results for "{fuzzy_id}" in the'
+                                  f'"{self.model_class.__tablename__} table.')
         return results[0]
 
     def remove(self, fuzzy_id: str | UUID):

@@ -6,17 +6,17 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import Column, Field, Relationship
 
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
-from .account import Account
 from growbies.utils.types import AccountID_t, GatewayID_t
 
 if TYPE_CHECKING:
+    from .account import Account
     from .device import Device
 
 class Gateway(BaseTable, table=True):
     class Key:
         ID = 'id'
         NAME = 'name'
-        ACCOUNT = 'account'
+        ACCOUNTS = 'accounts'
         DEVICES = 'devices'
 
     id: Optional[GatewayID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -25,14 +25,14 @@ class Gateway(BaseTable, table=True):
         sa_column=Column(
             UUID(as_uuid=True),
             ForeignKey(
-                f'{Account.__tablename__}.id',
+                f'account.id',
                 ondelete="CASCADE"
             ),
             nullable=False
         )
     )
 
-    accounts: Account = Relationship(back_populates='gateways')
+    accounts: 'Account' = Relationship(back_populates='gateways')
     devices: list['Device'] = Relationship(back_populates='gateways', cascade_delete=True)
 
 class Gateways(SortedTable[Gateway]):
