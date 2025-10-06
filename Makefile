@@ -12,12 +12,7 @@ src_watch := $(shell find ${PATH_APPNAME} -type f)
 
 ### Interface ######################################################################################
 clean:
-	@read -p "Are you sure you want to do this? [y/N] " ans && \
-	if [ "$$ans" = "y" ] || [ "$$ans" = "Y" ]; then \
-		git clean -xfd --exclude=${PATH_OUTPUT} --exclude=${PATH_DOT_IDEA}; \
-	else \
-		echo "Aborted."; \
-	fi
+	git clean -xfid --exclude=${PATH_OUTPUT} --exclude=${PATH_DOT_IDEA}; \
 
 coverage: $(PATH_DOT_COVERAGE)
 
