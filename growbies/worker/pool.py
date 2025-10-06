@@ -9,24 +9,23 @@ class Pool:
         self._workers: dict[WorkerID_t, Worker] = dict()
 
     @property
-    def workers(self) -> dict[DeviceID_t | WorkerID_t, Worker]:
+    def workers(self) -> dict[WorkerID_t, Worker]:
         return self._workers
 
     def connect(self, *device_ids: DeviceID_t):
         for device_id in device_ids:
-            worker = self._workers.get(WorkerID_t(device_id))
-            if worker is None:
+            worker = self._workers.get(device_id)
+            if worker is None or not worker.is_alive():
                 worker = Worker(device_id)
                 worker.start()
-                self._workers[WorkerID_t(device_id)] = worker
-            elif not worker.is_alive():
-                worker = Worker(device_id)
-                worker.start()
-                self._workers[WorkerID_t(device_id)] = worker
+                logger.error(f'adding worker: {device_id}')
+                self._workers[device_id] = worker
 
     def disconnect(self, *worker_ids:  WorkerID_t):
         for worker_id in worker_ids:
+            logger.error(f'emey worker_id: {worker_id}')
             worker = self._workers.get(worker_id)
+            logger.error(f'emey worker: "{worker}"')
             if worker:
                 worker.stop()
 
