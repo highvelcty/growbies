@@ -1,18 +1,18 @@
 from datetime import datetime
 from sqlalchemy import ARRAY, Float, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
-from sqlmodel import Column, SQLModel, Field, Relationship
+from sqlmodel import Column, Field, Relationship
 from typing import List, Optional, TYPE_CHECKING
 import uuid
 
-from .common import BaseTableEngine
+from .common import BaseTable, BaseTableEngine
 from .link import SessionDataPointLink
 if TYPE_CHECKING:
     from .session import Session
 from growbies.device.common.read import DataPoint as DeviceDataPoint
 from growbies.utils.types import DataPointID_t, DeviceID_t, TareID_t
 
-class DataPoint(SQLModel, table=True):
+class DataPoint(BaseTable, table=True):
     id: Optional[DataPointID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
 
     # Timestamp for the measurement

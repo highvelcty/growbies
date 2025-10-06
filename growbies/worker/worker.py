@@ -131,7 +131,7 @@ class Worker(Thread):
             except Empty:
                 continue
             except Exception as err:
-                # meyere, need to handle exceptions from async/sync
+                # meyere, need to handle errors from async/sync
                 self._put_no_wait(err)
                 continue
 

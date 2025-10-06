@@ -1,7 +1,6 @@
 from unittest import TestCase
 
 from growbies.device.common.calibration import Calibration
-from growbies.device.cmd import SetCalibrationDeviceCmd
 
 class Test(TestCase):
     def test(self):

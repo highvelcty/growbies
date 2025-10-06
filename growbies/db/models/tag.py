@@ -1,12 +1,12 @@
 from enum import StrEnum
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 from uuid import uuid4
 import textwrap
 
 from prettytable import PrettyTable
 from sqlmodel import Field, Relationship
 
-from .common import BaseTable, BaseNamedTableEngine, SortedTable, TSQLModel
+from .common import BaseTable, BaseNamedTableEngine, SortedTable
 from .link import SessionTagLink
 from .session import Session
 from growbies.constants import TABLE_COLUMN_WIDTH
@@ -72,7 +72,7 @@ class TagEngine(BaseNamedTableEngine):
     def get(self, name_or_id: Optional[str]) -> Optional[Tag]:
         return self._get_one(name_or_id, Tag.sessions)
 
-    def get_exact(self, name: str) -> Optional[TSQLModel]:
+    def get_exact(self, name: str) -> Optional[Tag]:
         return super()._get_exact(name, Tag.sessions)
 
     def list(self) -> Tags:

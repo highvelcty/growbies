@@ -3,8 +3,8 @@ import logging
 from .common import ServiceOp, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
 from growbies.device.resp import DeviceError
-from growbies.service.cmd import (activate, calibration, deactivate, device, identify, loopback, ls,
-                                  project, read, session, tag, tare, user)
+from growbies.service.cmd import (calibration, device, identify, loopback, ls, project, read,
+                                  session, tag, tare, user)
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
 

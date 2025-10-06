@@ -5,6 +5,8 @@ from growbies import constants
 
 _REPO_ROOT = Path(__file__).parent.parent.parent.resolve()
 
+# Putting paths into enums is a bit gnarly for static analysis
+# noinspection PyUnresolvedReferences
 class RepoPaths(Enum):
     # .
     REPO_ROOT = Path('.')
@@ -55,6 +57,7 @@ class RepoPaths(Enum):
     def abs(cls, path: 'RepoPaths'):
         return _REPO_ROOT / path.value
 
+# noinspection PyUnresolvedReferences
 class InstallPaths(Enum):
     APPNAME = constants.APPNAME.lower()
 
@@ -96,6 +99,7 @@ class InstallPaths(Enum):
     DEV_TTY_STR = DEV / 'tty*'
 
 
+# noinspection PyUnresolvedReferences,PyTypeChecker
 class DebianPaths(Enum):
     # .
     DEBIAN_ROOT = Path(RepoPaths.PKG_DEB_DEBIAN.value.name)
@@ -110,6 +114,7 @@ class DebianPaths(Enum):
     # command
     DEBIAN_BASE_PYTHON = 'python3.11'
 
+# noinspection PyUnresolvedReferences
 class FirmwarePaths(Enum):
     FIRMWARE = Path(RepoPaths.REPO_ROOT.value) / 'firmware'
     FIRMWARE_PIO = FIRMWARE / '.pio'

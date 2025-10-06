@@ -14,15 +14,15 @@ class Pool:
 
     def connect(self, *device_ids: DeviceID_t):
         for device_id in device_ids:
-            worker = self._workers.get(device_id)
+            worker = self._workers.get(WorkerID_t(device_id))
             if worker is None:
                 worker = Worker(device_id)
                 worker.start()
-                self._workers[device_id] = worker
+                self._workers[WorkerID_t(device_id)] = worker
             elif not worker.is_alive():
                 worker = Worker(device_id)
                 worker.start()
-                self._workers[device_id] = worker
+                self._workers[WorkerID_t(device_id)] = worker
 
     def disconnect(self, *worker_ids:  WorkerID_t):
         for worker_id in worker_ids:

@@ -1,6 +1,6 @@
 import uuid
 
-from sqlmodel import ARRAY, SQLModel, select, Field, Float, UniqueConstraint
+from sqlmodel import ARRAY, select, Field, Float, UniqueConstraint
 from typing import List, Optional
 
 from sqlalchemy import Column

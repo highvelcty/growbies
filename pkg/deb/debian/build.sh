@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Supress cannot follow non-constant source.
+# shellcheck disable=SC1090
 source "${PATHS_ENV}"
 set -ex
 cd "${PATH_DEBIAN}"

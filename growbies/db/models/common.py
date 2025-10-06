@@ -13,7 +13,7 @@ from growbies.service.common import ServiceCmdError
 from growbies.utils.report import short_uuid
 
 
-TSQLModel = TypeVar('TSQLModel', bound='SQLModel')
+TSQLModel = TypeVar('TSQLModel', bound='BaseTable')
 
 class BaseTable(SQLModel):
     id: Any

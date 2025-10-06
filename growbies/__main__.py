@@ -1,6 +1,6 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from growbies.cli import (activate, calibration, device, identify, loopback, project, read, session,
-                          tag, tare, user)
+from growbies.cli import (calibration, device, identify, loopback, project, read, session, tag,
+                          tare, user)
 from growbies.cli.common import CMD
 from growbies.service.common import ServiceOp
 import argcomplete

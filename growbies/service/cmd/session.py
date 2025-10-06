@@ -12,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
     engine = get_db_engine()
-    logger.error(f'emey: {cmd.kw}')
 
     session_name = cmd.kw.pop(Param.FUZZY_NAME, None)
     action = cmd.kw.pop(Param.ACTION)

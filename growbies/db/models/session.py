@@ -1,13 +1,13 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Iterator, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 import uuid
 import logging
 
 logger = logging.getLogger(__name__)
 
 from prettytable import PrettyTable
-from sqlalchemy import Boolean, cast, event, func, inspect, String
+from sqlalchemy import event, func, inspect
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, select, Field, Relationship
 
@@ -138,7 +138,7 @@ class Session(BaseTable, table=True):
         return '\n'.join(lines)
 
 @event.listens_for(Session, "before_update")
-def update_timestamp(mapper, connection, target: Session):
+def update_timestamp(_mapper, _connection, target: Session):
     # always update the "last modified" timestamp
     target.updated_at = get_utc_dt()
 
@@ -205,13 +205,14 @@ class SessionEngine(BaseNamedTableEngine):
             raise ValueError(f"Unsupported entity type: {entity}")
 
         for entity_name_or_id in entity_names_or_ids:
-            logger.error(f'emey entity name or id: {entity_name_or_id}')
             i_entity = get_entity(entity_name_or_id)
             link_engine.add(sess.id, i_entity.id)
 
     def get(self, name_or_id: str) -> Session:
-        return self._get_one(name_or_id, Session.devices, Session.projects, Session.tags,
+        sess = self._get_one(name_or_id, Session.devices, Session.projects, Session.tags,
                              Session.users)
+        self._populate_datapoint_count(sess)
+        return sess
 
     def rm(self, name: str, action: Action, entity: Entity, *names: str):
         ...
@@ -224,7 +225,7 @@ class SessionEngine(BaseNamedTableEngine):
     def _populate_datapoint_count(self, session: Session) -> None:
         with self._engine.new_session() as db:
             count_stmt = select(func.count()).where(
-                SessionDataPointLink.session_id == session.id
+                SessionDataPointLink.left_id == session.id
             )
             session.datapoint_count = db.exec(count_stmt).first()
 
