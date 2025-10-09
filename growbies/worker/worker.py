@@ -14,7 +14,7 @@ from growbies.device.resp import (DeviceRespOp, DeviceError, DataPoint, ErrorDev
                                   RespPacketHdr, TDeviceResp)
 from growbies.service.common import ServiceCmdError
 from growbies.session import log
-from growbies.utils.types import DeviceID_t, WorkerID_t
+from growbies.utils.types import DeviceID, WorkerID
 from growbies.worker.slip import SerialIntf
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class Worker(Thread):
     _RESP_Q_TIMEOUT_SECONDS = 0.1
     _JOIN_TIMEOUT_SECONDS = 3
 
-    def __init__(self, device_id: DeviceID_t):
+    def __init__(self, device_id: DeviceID):
         super().__init__()
         self._device_id = device_id
         self._out_queue = Queue()
@@ -42,7 +42,7 @@ class Worker(Thread):
         self._reconnect_attempt = 0
 
     @property
-    def id(self) -> WorkerID_t:
+    def id(self) -> WorkerID:
         return self._device.id
 
     def cmd(self, cmd: TDeviceCmd, timeout: Optional[float] = _DEFAULT_CMD_TIMEOUT_SECONDS) \

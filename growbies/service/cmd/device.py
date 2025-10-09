@@ -35,7 +35,7 @@ def execute(cmd: ServiceCmd) -> Optional[Device | Devices]:
         else:
             return ls.execute()
     elif action == Action.MOD:
-        new_name = cmd.kw.pop(ModParam.NEW_NAME)
+        new_name = cmd.kw.pop(ModParam.NAME)
         dev = engine.device.get(fuzzy_id)
         dev.name = new_name
         engine.device.upsert(dev)

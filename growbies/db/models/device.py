@@ -14,7 +14,7 @@ from .link import SessionDeviceLink
 if TYPE_CHECKING:
     from .session import Session
 from growbies.utils.report import format_8bit_binary, short_uuid
-from growbies.utils.types import Serial_t, DeviceID_t, GatewayID_t
+from growbies.utils.types import Serial_t, DeviceID, GatewayID
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +36,9 @@ class Device(BaseTable, table=True):
         PATH = 'path'
         STATE = 'state'
 
-    id: Optional[DeviceID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: Optional[DeviceID] = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(default='')
-    gateway: GatewayID_t = Field(
+    gateway: GatewayID = Field(
         sa_column=Column(
             UUID(as_uuid=True),
             ForeignKey(

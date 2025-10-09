@@ -17,7 +17,7 @@ from .link import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, 
 from growbies.cli.session import Action, Entity
 from growbies.utils.report import list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
-from growbies.utils.types import DeviceID_t, SessionID_t
+from growbies.utils.types import DeviceID, SessionID
 
 if TYPE_CHECKING:
     from .datapoint import DataPoint
@@ -46,7 +46,7 @@ class Session(BaseTable, table=True):
         USERS = 'users'
 
 
-    id: Optional[SessionID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: Optional[SessionID] = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
     active: bool = Field(default=False)
     description: Optional[str] = None
@@ -230,7 +230,7 @@ class SessionEngine(BaseNamedTableEngine):
             session.datapoint_count = db.exec(count_stmt).first()
 
 
-    def get_active_by_device_id(self, device_id: DeviceID_t) -> Sessions:
+    def get_active_by_device_id(self, device_id: DeviceID) -> Sessions:
         with self._engine.new_session() as db_sess:
             # Python syntax, building SQL expressions
             # noinspection PyTypeChecker

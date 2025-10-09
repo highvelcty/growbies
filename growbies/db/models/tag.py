@@ -12,7 +12,7 @@ from .session import Session
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.service.common import ServiceCmdError
 from growbies.utils.report import short_uuid
-from growbies.utils.types import TagID_t
+from growbies.utils.types import TagID
 
 class BuiltinName(StrEnum):
     READ_ONLY = 'read-only'
@@ -36,7 +36,7 @@ class Tag(BaseTable, table=True):
         DESCRIPTION = 'description'
         SESSIONS = 'sessions'
 
-    id: Optional[TagID_t] = Field(default_factory=uuid4, primary_key=True)
+    id: Optional[TagID] = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(unique=True, index=True)
     builtin: bool = Field(default=False, nullable=False)
     description: Optional[str] = None

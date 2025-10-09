@@ -15,7 +15,11 @@ from growbies.utils.report import short_uuid
 
 TSQLModel = TypeVar('TSQLModel', bound='BaseTable')
 
-class BaseTable(SQLModel):
+class BaseModel(SQLModel, table=False):
+    model_config = dict(arbitrary_types_allowed=True)
+
+
+class BaseTable(BaseModel, table=False):
     id: Any
 
     @property
@@ -118,7 +122,7 @@ class BaseNamedTableEngine(BaseTableEngine):
 TLink = TypeVar('TLink', bound='BaseLink')
 TLinkEngine = TypeVar('TLinkEngine', bound='BaseLinkEngine')
 
-class BaseLink(SQLModel):
+class BaseLink(BaseModel, table=False):
     """
     Base class for link tables between two entities.
     Concrete subclasses set left_id and right_id fields as UUIDs.

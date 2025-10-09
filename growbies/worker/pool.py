@@ -1,18 +1,18 @@
 from .worker import Worker
-from growbies.utils.types import DeviceID_t, WorkerID_t
+from growbies.utils.types import DeviceID, WorkerID
 import logging
 
 logger = logging.getLogger(__name__)
 
 class Pool:
     def __init__(self):
-        self._workers: dict[WorkerID_t, Worker] = dict()
+        self._workers: dict[WorkerID, Worker] = dict()
 
     @property
-    def workers(self) -> dict[WorkerID_t, Worker]:
+    def workers(self) -> dict[WorkerID, Worker]:
         return self._workers
 
-    def connect(self, *device_ids: DeviceID_t):
+    def connect(self, *device_ids: DeviceID):
         for device_id in device_ids:
             worker = self._workers.get(device_id)
             if worker is None or not worker.is_alive():
@@ -21,7 +21,7 @@ class Pool:
                 logger.error(f'adding worker: {device_id}')
                 self._workers[device_id] = worker
 
-    def disconnect(self, *worker_ids:  WorkerID_t):
+    def disconnect(self, *worker_ids:  WorkerID):
         for worker_id in worker_ids:
             logger.error(f'emey worker_id: {worker_id}')
             worker = self._workers.get(worker_id)
@@ -33,7 +33,7 @@ class Pool:
         for worker in self._workers.values():
             worker.stop()
 
-    def join_all(self, *worker_ids: WorkerID_t, timeout=None):
+    def join_all(self, *worker_ids: WorkerID, timeout=None):
         for worker_id in worker_ids:
             worker = self._workers.get(worker_id)
             if worker:

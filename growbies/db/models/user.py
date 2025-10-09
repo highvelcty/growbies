@@ -8,7 +8,7 @@ from sqlmodel import Field, Relationship
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
 from .link import SessionUserLink
 from growbies.utils.report import short_uuid
-from growbies.utils.types import FuzzyID_t, UserID_t
+from growbies.utils.types import FuzzyID, UserID
 
 if TYPE_CHECKING:
     from .session import Session
@@ -19,7 +19,7 @@ class User(BaseTable, table=True):
         NAME = 'name'
         EMAIL = 'email'
         SESSIONS = 'sessions'
-    id: Optional[UserID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: Optional[UserID] = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = ''
     email: Optional[str] = None
 
@@ -44,7 +44,7 @@ class Users(SortedTable[User]):
 class UserEngine(BaseNamedTableEngine):
     model_class = User
 
-    def get(self, fuzzy_id: FuzzyID_t) -> User:
+    def get(self, fuzzy_id: FuzzyID) -> User:
         return self._get_one(fuzzy_id, self.model_class.sessions)
 
     def list(self) -> Users:

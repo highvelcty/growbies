@@ -7,7 +7,6 @@ from growbies.db.engine import get_db_engine
 from growbies.db.models.session import Session, Sessions
 from growbies.utils.report import decode_escapes
 
-
 logger = logging.getLogger(__name__)
 
 def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:

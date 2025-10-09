@@ -6,12 +6,12 @@ from typing import List, Optional
 from sqlalchemy import Column
 
 from .common import BaseTable, BaseNamedTableEngine
-from growbies.utils.types import TareID_t
+from growbies.utils.types import TareID
 
 class Tare(BaseTable, table=True):
     __table_args__ = (UniqueConstraint('values'),)
 
-    id: Optional[TareID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: Optional[TareID] = Field(default_factory=uuid.uuid4, primary_key=True)
     values: List[float] = Field(sa_column=Column(ARRAY(Float), nullable=False))
 
 class TareEngine(BaseNamedTableEngine):

@@ -6,17 +6,17 @@ Serial_t = Annotated[str, 'Serial_t']
 ModelNumber_t = Annotated[str, 'ModelNumber_t']
 
 # Table IDs
-AccountID_t = Annotated[UUID, 'AccountID_t']
-DataPointID_t = Annotated[UUID, 'DataPointID_t']
-DeviceID_t = Annotated[UUID, 'DeviceID_t']
-FuzzyID_t = Annotated[str | UUID, 'FuzzyID_t']
-GatewayID_t = Annotated[UUID, 'GatewayID_t']
-ProjectID_t = Annotated[UUID, 'ProjectID_t']
-SessionID_t = Annotated[UUID, 'SessionID_t']
-TagID_t = Annotated[UUID, 'TagID_t']
-TareID_t = Annotated[UUID, 'TareID_t']
-UserID_t = Annotated[UUID, 'UserID_t']
-WorkerID_t = Annotated[UUID, 'WorkerID_t']
+class AccountID(UUID): pass
+class DataPointID(UUID): pass
+class DeviceID(UUID): pass
+class FuzzyID(UUID): pass
+class GatewayID(UUID): pass
+class ProjectID(UUID): pass
+class SessionID(UUID): pass
+class TagID(UUID): pass
+class TareID(UUID): pass
+class UserID(UUID): pass
+class WorkerID(UUID): pass
 
 # Composites
-SerialOrDeviceID_t = DeviceID_t | Serial_t
+SerialOrDeviceID_t = DeviceID | Serial_t

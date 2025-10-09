@@ -10,16 +10,16 @@ from .link import SessionDataPointLink
 if TYPE_CHECKING:
     from .session import Session
 from growbies.device.common.read import DataPoint as DeviceDataPoint
-from growbies.utils.types import DataPointID_t, DeviceID_t, TareID_t
+from growbies.utils.types import DataPointID, DeviceID, TareID
 
 class DataPoint(BaseTable, table=True):
-    id: Optional[DataPointID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: Optional[DataPointID] = Field(default_factory=uuid.uuid4, primary_key=True)
 
     # Timestamp for the measurement
     timestamp: datetime = Field(nullable=False, index=True)
 
     # Associated device
-    device_id: DeviceID_t = Field(
+    device_id: DeviceID = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey("device.id", ondelete="CASCADE"),
                          nullable=False)
     )
@@ -30,8 +30,8 @@ class DataPoint(BaseTable, table=True):
     mass_errors: List[int] = Field(sa_column=Column(ARRAY(Integer), nullable=False))
 
     # Tare foreign key
-    tare_id: TareID_t = Field(
-        sa_column=Column(UUID(as_uuid=True), ForeignKey("tare.id", ondelete="CASCADE"),
+    tare_id: TareID = Field(
+        sa_column=Column(UUID(as_uuid=True), ForeignKey('tare.id', ondelete='CASCADE'),
                          nullable=False)
     )
 
@@ -44,12 +44,12 @@ class DataPoint(BaseTable, table=True):
 
     # Relationship, not a field/column.
     sessions: List['Session'] = Relationship(
-        back_populates="datapoints",
+        back_populates='datapoints',
         link_model=SessionDataPointLink
     )
 
 class DataPointEngine(BaseTableEngine):
-    def insert(self, device_id: DeviceID_t, tare_id: TareID_t, device_dp: DeviceDataPoint) \
+    def insert(self, device_id: DeviceID, tare_id: TareID, device_dp: DeviceDataPoint) \
             -> DataPoint:
         with self._engine.new_session() as session:
             tare_row = DataPoint(timestamp = device_dp.timestamp,

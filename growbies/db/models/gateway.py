@@ -1,12 +1,12 @@
 from typing import Optional, TYPE_CHECKING
-import uuid
+from uuid import UUID, uuid4
 
 from sqlalchemy import ForeignKey, String
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlmodel import Column, Field, Relationship
 
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
-from growbies.utils.types import AccountID_t, GatewayID_t
+from growbies.utils.types import AccountID, GatewayID
 
 if TYPE_CHECKING:
     from .account import Account
@@ -19,11 +19,11 @@ class Gateway(BaseTable, table=True):
         ACCOUNTS = 'accounts'
         DEVICES = 'devices'
 
-    id: Optional[GatewayID_t] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: GatewayID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(sa_column=Column(String, unique=True, index=True))
-    account: AccountID_t = Field(
+    account: AccountID = Field(
         sa_column=Column(
-            UUID(as_uuid=True),
+            PG_UUID(as_uuid=True),
             ForeignKey(
                 f'account.id',
                 ondelete="CASCADE"

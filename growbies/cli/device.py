@@ -27,11 +27,11 @@ class Action(StrEnum):
             return ''
 
 class ModParam(StrEnum):
-    NEW_NAME = 'new_name'
+    NAME = 'name'
 
     @property
     def help(self) -> str:
-        if self == self.NEW_NAME:
+        if self == self.NAME:
             return 'The new name to set for the device.'
         else:
             return ''
@@ -55,7 +55,7 @@ def make_cli(parser: ArgumentParser):
         act_parser.add_argument(Param.FUZZY_ID, nargs='?', default=None,
                                 help=Param.FUZZY_ID.help)
         if act == Action.MOD:
-            act_parser.add_argument(f'--{ModParam.NEW_NAME}', type=str, help=ModParam.NEW_NAME.help)
+            act_parser.add_argument(f'--{ModParam.NAME}', type=str, help=ModParam.NAME.help)
         if act == Action.READ:
             for param in ReadParam:
                 act_parser.add_argument(f'--{param}', nargs='?', default=None, help=param.help)
