@@ -2,6 +2,7 @@
 #include "flags.h"
 #include <network.h>
 #include <growbies.h>
+#include <usb.h>
 
 #if FEATURE_DISPLAY
 #include <display.h>
@@ -29,6 +30,7 @@ void setup() {
     growbies.begin();
 #if FEATURE_DISPLAY
     display->begin();
+    display->print_mass(3.14);
 #endif
 
 #if LED_INSTALLED
@@ -66,7 +68,20 @@ void loop() {
         }
     } while (millis() - startt < WAIT_FOR_CMD_MILLIS);
 
-    delay(DEEP_SLEEP_MILLIS);
+    if (is_usb_plugged_in()) {
+#if ARDUINO_ARCH_AVR
+        delay(DEEP_SLEEP_MILLIS);
+#elif ARDUINO_ARCH_ESP32
+        esp_sleep_enable_timer_wakeup(DEEP_SLEEP_USECS);
+        Serial.flush();
+        esp_light_sleep_start();
+#endif
+
+    }
+    else {
+        delay(DEEP_SLEEP_MILLIS);
+    }
+
 
 
 

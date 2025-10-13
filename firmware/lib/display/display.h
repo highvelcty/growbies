@@ -4,7 +4,6 @@
 #include <U8x8lib.h>
 #include "constants.h"
 
-
 class Display {
 
     public:
@@ -14,10 +13,9 @@ class Display {
         void print_mass(float mass);
 
     private:
-        const static int default_contrast = 16;
+        static constexpr int default_contrast = 16;
 
         U8X8_SSD1306_128X32_UNIVISION_HW_I2C u8x8;
-
 };
 
 extern Display* display;

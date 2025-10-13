@@ -7,7 +7,7 @@ void Display::begin() {
     this->u8x8.setContrast(this->default_contrast);
 }
 
-void Display::print_mass(float mass) {
+void Display::print_mass(const float mass) {
     char buf[8];
     dtostrf(mass, 6, 1, buf);
     this->u8x8.setFont(u8x8_font_px437wyse700a_2x2_r);
