@@ -11,6 +11,7 @@ class Display {
         void begin();
 
         void print_mass(float mass);
+		void set_power_save(bool state);
 
     private:
         static constexpr int default_contrast = 16;

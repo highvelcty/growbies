@@ -6,6 +6,7 @@
 
 #if FEATURE_DISPLAY
 #include <display.h>
+#include <buttons.h>
 #endif
 
 #if BUTTERFLY
@@ -30,7 +31,8 @@ void setup() {
     growbies.begin();
 #if FEATURE_DISPLAY
     display->begin();
-    display->print_mass(3.14);
+    display->print_mass(8.8);
+    display->set_power_save(true);
 #endif
 
 #if LED_INSTALLED
@@ -41,6 +43,8 @@ void setup() {
     digitalWrite(LED_PIN, LOW);
 #endif
 #endif
+
+	enable_delay_wake();
 
 }
 
@@ -68,31 +72,7 @@ void loop() {
         }
     } while (millis() - startt < WAIT_FOR_CMD_MILLIS);
 
-    if (is_usb_plugged_in()) {
-#if ARDUINO_ARCH_AVR
-        delay(DEEP_SLEEP_MILLIS);
-#elif ARDUINO_ARCH_ESP32
-        esp_sleep_enable_timer_wakeup(DEEP_SLEEP_USECS);
-        Serial.flush();
-        esp_light_sleep_start();
-#endif
-
-    }
-    else {
-        delay(DEEP_SLEEP_MILLIS);
-    }
-
-
-
-
-// #if ARDUINO_ARCH_ESP32
-// meyere, this causes ruckus on the usb bus
-//     esp_sleep_enable_timer_wakeup(DEEP_SLEEP_USECS);
-//     esp_deep_sleep_start();
-// #elif ARDUINO_ARCH_AVR
-//     delay(DEEP_SLEEP_MILLIS);
-// #endif
-
+    delay(DEEP_SLEEP_MILLIS);
 }
 #else
 void loop() {

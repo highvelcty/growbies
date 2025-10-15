@@ -15,3 +15,7 @@ void Display::print_mass(const float mass) {
     this->u8x8.setFont(u8x8_font_chroma48medium8_r);
     this->u8x8.draw1x2String(15, 2, "g");
 }
+
+void Display::set_power_save(bool state) {
+	this->u8x8.setPowerSave(state);
+}
