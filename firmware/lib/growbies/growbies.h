@@ -33,10 +33,8 @@ class Growbies {
         static void begin();
 
         void execute(const PacketHdr* in_packet_hdr);
-#if BUTTERFLY
         void exec_read(uint8_t packet_hdr_id = 0, int times = BUTTERFLY_SAMPLES_PER_DATAPOINT,
                        bool raw = false);
-#endif
 
     private:
         uint8_t tare_idx = 0;

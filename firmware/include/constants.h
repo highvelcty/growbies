@@ -67,7 +67,7 @@ enum Pins : int {
     HW_I2C_SDA_PIN = D4,
     HW_I2C_SCL_PIN = D5,
     WAKE_PIN = D3,
-    WAKE_GPIO = 5,
+    BUTTON_PIN = D5,
 #endif
 };
 
@@ -78,12 +78,11 @@ typedef enum Unit : uint16_t {
     UNIT_CELSIUS        = 0x0008,
 } Units;
 
-#if BUTTERFLY
 constexpr auto BUTTERFLY_SAMPLES_PER_DATAPOINT = 7;
 constexpr auto WAIT_FOR_CMD_MILLIS = 100;
 constexpr uint32_t DEEP_SLEEP_MILLIS = 1000; // 1 second
+constexpr auto DELAY_INTERVAL_MS = 10;
 constexpr auto DEEP_SLEEP_USECS = DEEP_SLEEP_MILLIS * 1000;
-#endif
 
 inline int get_HX711_dout_pin(SensorIdx_t sensor){
 #if HX711_PIN_CFG_0

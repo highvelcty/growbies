@@ -156,7 +156,6 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
     }
 }
 
-#if BUTTERFLY
 void Growbies::exec_read(const uint8_t packet_hdr_id, const int times, const bool raw) {
     ErrorCode error = ERROR_NONE;
     auto resp = DataPoint(this->packet_buf, MAX_RESP_BYTES);
@@ -177,7 +176,6 @@ void Growbies::exec_read(const uint8_t packet_hdr_id, const int times, const boo
         send_payload(&resp, resp.get_size());
     }
 }
-#endif
 
 void Growbies::power_off() {
     digitalWrite(HX711_SCK_PIN, HIGH);
@@ -208,7 +206,7 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
         assert(0 && "Invalid endpoint type");
     }
 
-    int error_counts[sensor_count] = {};
+    int error_counts[sensor_count];
 
     // Filter and average
     for (SensorIdx_t sensor_idx = 0; sensor_idx < sensor_count; ++sensor_idx) {

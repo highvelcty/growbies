@@ -12,10 +12,6 @@ void enable_deep_sleep_wake() {
     esp_deep_sleep_enable_gpio_wakeup(1ull << WAKE_GPIO, ESP_GPIO_WAKEUP_GPIO_HIGH);
 }
 
-void enable_delay_wake() {
-    pinMode(D3, INPUT_PULLDOWN);  // Use external pull-down if needed
-    attachInterrupt(digitalPinToInterrupt(WAKE_PIN), on_wake_line, RISING);
-}
 
 void enable_light_sleep_wake() {
     detachInterrupt(digitalPinToInterrupt(WAKE_PIN)); // ensure clean state

@@ -6,17 +6,16 @@
 
 #if FEATURE_DISPLAY
 #include <display.h>
-#include <buttons.h>
+#include <remote.h>
 #endif
 
-#if BUTTERFLY
 #if ARDUINO_ARCH_ESP32
 #include "esp_sleep.h"
 #endif
 #include <command.h>
-#endif
 
-
+// Forward declare Remote singleton to avoid include path dependency
+// class Remote { public: static Remote& get(); void service(); };
 
 #if FEATURE_LED
 #include "lib/led.h"
@@ -30,9 +29,10 @@ void setup() {
     Serial.begin(57600);
     growbies.begin();
 #if FEATURE_DISPLAY
-    display->begin();
-    display->print_mass(8.8);
-    display->set_power_save(true);
+    Remote::get().begin();
+    // display->begin();
+    // display->print_mass(8.8);
+    // display->set_power_save(false);
 #endif
 
 #if LED_INSTALLED
@@ -44,12 +44,11 @@ void setup() {
 #endif
 #endif
 
-	enable_delay_wake();
-
 }
 
-#if BUTTERFLY
 void loop() {
+    Remote& remote = Remote::get();
+
     growbies.exec_read();
 
     unsigned long startt = millis();
@@ -72,20 +71,10 @@ void loop() {
         }
     } while (millis() - startt < WAIT_FOR_CMD_MILLIS);
 
-    delay(DEEP_SLEEP_MILLIS);
-}
-#else
-void loop() {
-    while (!Serial.available()){
-        delay(MAIN_POLLING_LOOP_INTERVAL_MS);
-    }
 
-    if (recv_slip(Serial.read())) {
-        const PacketHdr *packet_hdr = recv_packet();
-        if (packet_hdr != nullptr) {
-            growbies.execute(packet_hdr);
-        }
-        slip_buf->reset();
+    for (int ii = 0; ii < DEEP_SLEEP_MILLIS; ii += DELAY_INTERVAL_MS) {
+        // Service the remote singleton while idling
+        remote.service();
+        delay(DELAY_INTERVAL_MS);
     }
 }
-#endif
