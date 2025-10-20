@@ -67,7 +67,7 @@ enum Pins : int {
     HW_I2C_SDA_PIN = D4,
     HW_I2C_SCL_PIN = D5,
     WAKE_PIN = D3,
-    BUTTON_PIN = D5,
+    BUTTON_PIN = D6,
 #endif
 };
 

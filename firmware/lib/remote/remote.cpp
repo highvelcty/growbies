@@ -19,8 +19,10 @@ Remote::Remote()
 
 void Remote::begin() {
     // Configure wake pin and attach ISR
-    pinMode(WAKE_PIN, INPUT_PULLDOWN);
+    pinMode(WAKE_PIN, INPUT);
     attachInterrupt(digitalPinToInterrupt(WAKE_PIN), Remote::wakeISR, RISING);
+    pinMode(BUTTON_PIN, INPUT);
+
 
     // Initialize display
     display.begin();
