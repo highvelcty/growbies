@@ -80,9 +80,10 @@ typedef enum Unit : uint16_t {
 
 constexpr auto BUTTERFLY_SAMPLES_PER_DATAPOINT = 7;
 constexpr auto WAIT_FOR_CMD_MILLIS = 100;
-constexpr uint32_t DEEP_SLEEP_MILLIS = 1000; // 1 second
+constexpr uint32_t SLEEP_MS = 1000; // 1 second
 constexpr auto DELAY_INTERVAL_MS = 10;
-constexpr auto DEEP_SLEEP_USECS = DEEP_SLEEP_MILLIS * 1000;
+constexpr auto DEEP_SLEEP_USECS = SLEEP_MS * 1000;
+constexpr auto SMALL_DELAY_MS = 1;
 
 inline int get_HX711_dout_pin(SensorIdx_t sensor){
 #if HX711_PIN_CFG_0

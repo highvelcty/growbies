@@ -66,10 +66,13 @@ void Remote::print_mass(const float mass) {
     this->display.draw1x2String(15, 2, "g");
 }
 
-void Remote::service() {
+bool Remote::service() {
+    return false;
     if (handleButtons()) {
         update_display();
+        return true;
     }
+    return false;
 }
 
 void Remote::update_display() {

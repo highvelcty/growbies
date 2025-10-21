@@ -119,7 +119,7 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
         auto* cmd = after<CmdRead>(in_packet_hdr);
         error = validate_packet(*in_packet_hdr, *cmd);
         if (!error) {
-            exec_read(in_packet_hdr->id, cmd->times, cmd->raw);
+            measure(in_packet_hdr->id, cmd->times, cmd->raw);
         }
     }
     else if (in_packet_hdr->cmd == Cmd::GET_TARE) {
@@ -156,7 +156,7 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
     }
 }
 
-void Growbies::exec_read(const uint8_t packet_hdr_id, const int times, const bool raw) {
+void Growbies::measure(const uint8_t packet_hdr_id, const int times, const bool raw) {
     ErrorCode error = ERROR_NONE;
     auto resp = DataPoint(this->packet_buf, MAX_RESP_BYTES);
     this->out_packet_hdr->id = packet_hdr_id;
@@ -165,7 +165,7 @@ void Growbies::exec_read(const uint8_t packet_hdr_id, const int times, const boo
         error = ERROR_INVALID_PARAMETER;
     }
     if (!error) {
-        error = this->get_datapoint(&resp, times, raw);
+        error = Growbies::get_datapoint(&resp, times, raw);
     }
     if (error) {
         auto* resp_error = new (this->packet_buf) RespError;
@@ -207,6 +207,7 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
     }
 
     int error_counts[sensor_count];
+    memset(error_counts, 0, sizeof(error_counts));
 
     // Filter and average
     for (SensorIdx_t sensor_idx = 0; sensor_idx < sensor_count; ++sensor_idx) {
@@ -325,7 +326,7 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
      auto* temp_ptr = datapoint->find_value<float>(EP_TEMPERATURE_SENSORS);
 
     for (sensor_idx = 0; sensor_idx < ident->mass_sensor_count; ++sensor_idx) {
-        if (!raw) {
+        if (!raw and temp_ptr != nullptr) {
             // mass/temperature compensation per sensor
             mass_ptr[sensor_idx] -= (
                 (cal->mass_temperature_coeff[sensor_idx][0]
@@ -338,8 +339,7 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
     }
     if (!raw) {
         // Mass calibration and tare
-        mass = ((mass * cal->mass_coeff[0])
-                + cal->mass_coeff[1]);
+        mass = ((mass * cal->mass_coeff[0]) + cal->mass_coeff[1]);
     }
 
     datapoint->add<float>(EP_MASS, mass);
@@ -444,7 +444,8 @@ void Growbies::shift_all_in(float* sensor_sample, const HX711Gain gain) {
     uint32_t gpio_in_reg = 0;
 #endif
 
-    long long_data_points[identify_store->payload()->mass_sensor_count] = {0};
+    long long_data_points[identify_store->payload()->mass_sensor_count];
+    memset(long_data_points, 0, sizeof(long_data_points));
 
 #if ARDUINO_ARCH_AVR
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {

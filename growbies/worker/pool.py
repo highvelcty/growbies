@@ -6,10 +6,10 @@ logger = logging.getLogger(__name__)
 
 class Pool:
     def __init__(self):
-        self._workers: dict[WorkerID, Worker] = dict()
+        self._workers: dict[DeviceID | WorkerID, Worker] = dict()
 
     @property
-    def workers(self) -> dict[WorkerID, Worker]:
+    def workers(self) -> dict[DeviceID | WorkerID, Worker]:
         return self._workers
 
     def connect(self, *device_ids: DeviceID):
@@ -18,14 +18,11 @@ class Pool:
             if worker is None or not worker.is_alive():
                 worker = Worker(device_id)
                 worker.start()
-                logger.error(f'adding worker: {device_id}')
                 self._workers[device_id] = worker
 
     def disconnect(self, *worker_ids:  WorkerID):
         for worker_id in worker_ids:
-            logger.error(f'emey worker_id: {worker_id}')
             worker = self._workers.get(worker_id)
-            logger.error(f'emey worker: "{worker}"')
             if worker:
                 worker.stop()
 

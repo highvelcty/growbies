@@ -2,10 +2,8 @@
 #include "flags.h"
 #include <network.h>
 #include <growbies.h>
-#include <usb.h>
 
 #if FEATURE_DISPLAY
-#include <display.h>
 #include <remote.h>
 #endif
 
@@ -14,12 +12,74 @@
 #endif
 #include <command.h>
 
-// Forward declare Remote singleton to avoid include path dependency
-// class Remote { public: static Remote& get(); void service(); };
-
 #if FEATURE_LED
 #include "lib/led.h"
 #endif
+
+// ---------------------------------------------------------------------------
+// Global inactivity tracker
+// ---------------------------------------------------------------------------
+unsigned long last_activity_ms = 0;
+
+// Simple cooperative task structure
+struct Task {
+    void (*fn)();
+    unsigned long interval_ms;
+    unsigned long last_run;
+};
+
+void mark_activity() {
+    last_activity_ms = millis();
+}
+
+void task_serial() {
+    if (Serial.available()) {
+        mark_activity();
+        if (recv_slip(Serial.read())) {
+            const PacketHdr *packet_hdr = recv_packet();
+            if (packet_hdr) {
+                growbies.execute(packet_hdr);
+            }
+            slip_buf->reset();
+        }
+    }
+}
+
+void task_measure() {
+    growbies.measure();
+}
+
+void task_remote() {
+#if FEATURE_DISPLAY
+    Remote& remote = Remote::get();
+    if (remote.service()) {
+        mark_activity();
+    }
+#endif
+}
+
+void task_sleep() {
+    const unsigned long now = millis();
+    if (now - last_activity_ms > WAIT_FOR_CMD_MILLIS) {
+#if LIGHT_SLEEP
+        esp_light_sleep_start();
+#else
+        while (millis() - now < SLEEP_MS) {
+            Remote& remote = Remote::get();
+            if (Serial.available()) {
+                mark_activity();
+                break;
+            }
+            if (remote.service()) {
+                mark_activity();
+                break;
+            }
+            delay(SMALL_DELAY_MS);  // small wait to save power but remain responsive
+#endif
+            mark_activity(); // prevent immediate re-sleep after wake
+        }
+    }
+}
 
 void setup() {
     slip_buf->reset();
@@ -27,12 +87,10 @@ void setup() {
     //   to the 8MHz clock providing nearest baudrates of 115942 or 114285, whereas the closest
     //   baudrates for 8MHz for 57600 baud is 57554 or 57971.
     Serial.begin(57600);
-    growbies.begin();
+    Growbies::begin();
+    last_activity_ms = millis();
 #if FEATURE_DISPLAY
     Remote::get().begin();
-    // display->begin();
-    // display->print_mass(8.8);
-    // display->set_power_save(false);
 #endif
 
 #if LED_INSTALLED
@@ -43,38 +101,24 @@ void setup() {
     digitalWrite(LED_PIN, LOW);
 #endif
 #endif
-
 }
 
 void loop() {
-    Remote& remote = Remote::get();
+    static Task tasks[] = {
+        {task_serial,       10, 0},
+        {task_remote,       50, 0},
+        {task_sleep,        500, 0},
+        {task_measure,      1000, 0},
+    };
 
-    growbies.exec_read();
+    const unsigned long now = millis();
 
-    unsigned long startt = millis();
-    do {
-        if (!Serial.available()) {
-            delay(MAIN_POLLING_LOOP_INTERVAL_MS);
+    for (auto & task : tasks) {
+        if (now - task.last_run >= task.interval_ms) {
+            task.fn();
+            task.last_run = now;
         }
-        else {
-            // Receiving serial data resets the sleep timeout
-            startt = millis();
-            if (recv_slip(Serial.read())) {
-                const PacketHdr *packet_hdr = recv_packet();
-                if (packet_hdr != nullptr) {
-                    growbies.execute(packet_hdr);
-                    // Restart stay awake timer.
-                    startt = millis();
-                }
-                slip_buf->reset();
-            }
-        }
-    } while (millis() - startt < WAIT_FOR_CMD_MILLIS);
-
-
-    for (int ii = 0; ii < DEEP_SLEEP_MILLIS; ii += DELAY_INTERVAL_MS) {
-        // Service the remote singleton while idling
-        remote.service();
-        delay(DELAY_INTERVAL_MS);
     }
+
+    delay(SMALL_DELAY_MS);
 }
