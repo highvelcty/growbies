@@ -1,7 +1,8 @@
 #include "constants.h"
 #include "flags.h"
-#include <network.h>
 #include <growbies.h>
+#include <network.h>
+#include <nvm.h>
 
 #if FEATURE_DISPLAY
 #include <remote.h>
@@ -82,6 +83,10 @@ void task_sleep() {
 }
 
 void setup() {
+    calibration_store->begin();
+    identify_store->begin();
+    tare_store->begin();
+
     slip_buf->reset();
     // 2025_04_01: Observed skipped characters at 115200 with mini pro 3v3. Suspect this is due
     //   to the 8MHz clock providing nearest baudrates of 115942 or 114285, whereas the closest
@@ -91,15 +96,6 @@ void setup() {
     last_activity_ms = millis();
 #if FEATURE_DISPLAY
     Remote::get().begin();
-#endif
-
-#if LED_INSTALLED
-    pinMode(LED_PIN, OUTPUT);
-#if FEATURE_LED
-    led_sign_on_msg();
-#else
-    digitalWrite(LED_PIN, LOW);
-#endif
 #endif
 }
 

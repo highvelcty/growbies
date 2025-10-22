@@ -5,8 +5,13 @@
 
 constexpr int BUTTON_DEBOUNCE_MS  = 50;
 constexpr int DEFAULT_CONTRAST = 16;
-constexpr int BUTTON_1_THRESHOLD = 400;
-constexpr int BUTTON_2_THRESHOLD = 800;
+
+enum class EVENT: int8_t {
+    NONE = -1,
+    SELECT = 0,
+    DIRECTION_0 = 1,
+    DIRECTION_1 = 2,
+};
 
 class Remote {
 public:
@@ -24,6 +29,7 @@ public:
     void begin();
     void print_mass(float mass);
     bool service();
+    void set_flip(bool flip);
 
 
 private:
@@ -32,15 +38,11 @@ private:
 
     U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
 
-    bool button1_pressed = false;
-    bool button2_pressed = false;
-    bool button3_pressed = false;
-    unsigned long last_button_time = 0;
+    unsigned long debounce_time = 0;
 
     // volatile make this ISR-safe
-    volatile bool wake_flag = false;
+    volatile EVENT last_button_pressed = EVENT::NONE;
 
-    bool handleButtons();
-    void update_display();
-    static void wakeISR();
+    static void wakeISR0();
+    static void wakeISR1();
 };

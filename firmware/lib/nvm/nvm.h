@@ -90,6 +90,9 @@ struct Identify1 : Identify0 {
     uint8_t led{};
     uint8_t frame{};
     uint8_t foot{};
+
+    // User configuration
+    bool flip{};
 };
 
 struct NvmIdentify1 : NvmStructBase {

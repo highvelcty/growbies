@@ -65,6 +65,7 @@ class Identify(BaseStructure):
         LED = '_led'
         FRAME = '_frame'
         FOOT = '_foot'
+        FLIP = '_flip'
 
     _fields_ = [
         (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
@@ -206,6 +207,7 @@ class Identify1(Identify):
         (Identify.Field.LED, ctypes.c_uint8),
         (Identify.Field.FRAME, ctypes.c_uint8),
         (Identify.Field.FOOT, ctypes.c_uint8),
+        (Identify.Field.FLIP, ctypes.c_bool),
     ]
 
     @property
@@ -355,6 +357,14 @@ class Identify1(Identify):
     @foot.setter
     def foot(self, value: FootType):
         setattr(self, self.Field.FOOT, value)
+
+    @property
+    def flip(self) -> bool:
+        return getattr(self, self.Field.FLIP)
+
+    @flip.setter
+    def flip(self, value: bool):
+        setattr(self, self.Field.FLIP, value)
 
 class NvmIdentify(nvm.BaseNvm):
     VERSION = 1

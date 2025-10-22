@@ -12,8 +12,6 @@
 #endif
 
 #define POWER_CONTROL 1
-#define LED_INSTALLED 0
-#define FEATURE_LED (1 && LED_INSTALLED)
 #define FEATURE_DISPLAY 1
 #define LIGHT_SLEEP 0
 

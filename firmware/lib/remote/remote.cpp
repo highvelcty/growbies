@@ -1,4 +1,5 @@
 #include "constants.h"
+#include <nvm.h>
 #include "remote.h"
 
 // Define static instance pointer
@@ -19,42 +20,17 @@ Remote::Remote()
 
 void Remote::begin() {
     // Configure wake pin and attach ISR
-    pinMode(WAKE_PIN, INPUT);
-    attachInterrupt(digitalPinToInterrupt(WAKE_PIN), Remote::wakeISR, RISING);
-    pinMode(BUTTON_PIN, INPUT);
+    pinMode(BUTTON_0_PIN, INPUT);
+    pinMode(BUTTON_1_PIN, INPUT);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), Remote::wakeISR0, RISING);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), Remote::wakeISR1, RISING);
 
 
     // Initialize display
     display.begin();
-    print_mass(8.8);
-    // display.setFont(u8x8_font_chroma48medium8_r);
-    // display.clearDisplay();
-    // display.draw1x2String(0, 0, "Growbies");
-}
-
-bool Remote::handleButtons() {
-    bool button_pressed = false;
-    if (wake_flag) {
-        button1_pressed = false;
-        button2_pressed = false;
-        button3_pressed = false;
-        const unsigned long now = millis();
-        if (now - last_button_time >= BUTTON_DEBOUNCE_MS) {
-            button_pressed = true;
-            last_button_time = now;
-            const int adc_val = analogRead(BUTTON_PIN);
-            if (adc_val < BUTTON_1_THRESHOLD) {
-                button1_pressed = true;
-            } else if (adc_val < BUTTON_2_THRESHOLD) {
-                button2_pressed = true;
-            } else {
-                button3_pressed = true;
-            }
-        }
-        // Clear the wake flag regardless, so we only process once per edge
-        wake_flag = false;
-    }
-    return button_pressed;
+    display.setFont(u8x8_font_chroma48medium8_r);
+    display.setFlipMode(identify_store->payload()->flip);
+    display.draw1x2String(0, 0, "Growbies");
 }
 
 void Remote::print_mass(const float mass) {
@@ -67,31 +43,50 @@ void Remote::print_mass(const float mass) {
 }
 
 bool Remote::service() {
-    return false;
-    if (handleButtons()) {
-        update_display();
-        return true;
+    bool button_pressed = false;
+    if (last_button_pressed != EVENT::NONE) {
+        const unsigned long now = millis();
+
+        if (now - debounce_time >= BUTTON_DEBOUNCE_MS) {
+            button_pressed = true;
+            display.clearDisplay();
+            if (last_button_pressed == EVENT::SELECT) {
+                display.draw1x2String(0, 0, "Select");
+            }
+            else if (last_button_pressed == EVENT::DIRECTION_0) {
+                display.draw1x2String(0, 0, "Direction 0");
+            }
+            else if (last_button_pressed == EVENT::DIRECTION_1) {
+                display.draw1x2String(0, 0, "Direction 1");
+            }
+        }
+        last_button_pressed = EVENT::NONE;
     }
-    return false;
+    return button_pressed;
 }
 
-void Remote::update_display() {
-    print_mass(3.3);
-
-    // if (button1_pressed) {
-    //     display.draw1x2String(0, 0, "Button 1");
-    // }
-    // else if (button2_pressed) {
-    //     display.draw1x2String(0, 0, "Button 2");
-    // }
-    // else if (button3_pressed) {
-    //     display.draw1x2String(0, 0, "Button 3");
-    // }
+void Remote::set_flip(const bool flip) {
+    display.setFlipMode(flip);
 }
 
-// Lightweight ISR: set a flag and handle the rest in the main loop
-void IRAM_ATTR Remote::wakeISR() {
-    if (instance) {
-        instance->wake_flag = true;
+void IRAM_ATTR Remote::wakeISR0() {
+    instance->last_button_pressed = EVENT::SELECT;
+    for (auto ii = 0; ii < BUTTON_READ_COUNT; ++ii) {
+        if (digitalRead(BUTTON_1_PIN)) {
+            instance->last_button_pressed = EVENT::DIRECTION_1;
+            break;
+        }
+        delayMicroseconds(SMALL_DELAY_MS);
+    }
+}
+
+void IRAM_ATTR Remote::wakeISR1() {
+    instance->last_button_pressed = EVENT::DIRECTION_0;
+    for (auto ii = 0; ii < BUTTON_READ_COUNT; ++ii) {
+        if (digitalRead(BUTTON_0_PIN)) {
+            instance->last_button_pressed = EVENT::DIRECTION_1;
+            break;
+        }
+        delayMicroseconds(SMALL_DELAY_MS);
     }
 }

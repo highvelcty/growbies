@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "flags.h"
 #include <growbies.h>
+#include <remote.h>
 #include <math.h>
 #include <nvm.h>
 #include <sort.h>
@@ -35,10 +36,6 @@ void Growbies::begin() {
 #if POWER_CONTROL
     power_off();
 #endif
-
-    calibration_store->begin();
-    identify_store->begin();
-    tare_store->begin();
 }
 
 void Growbies::execute(const PacketHdr* in_packet_hdr) {
@@ -91,6 +88,11 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
                 identify_store->init();
             }
             else {
+                bool do_flip = false;
+                if (identify_store->payload()->flip != cmd->identify.payload.flip) {
+                    Remote& remote = Remote::get();
+                    remote.set_flip(cmd->identify.payload.flip);
+                }
                 identify_store->put(cmd->identify);
             }
             send_payload(resp, sizeof(*resp));
