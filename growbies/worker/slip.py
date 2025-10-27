@@ -28,6 +28,7 @@ SLIP_ESC_END = 0xDC
 SLIP_ESC_ESC = 0xDD
 
 class BaseDataLink(threading.Thread, ABC):
+    DEBUG = False
     # In normal operation, it is expected that no more than 1-2 frames are typically outstanding.
     # This will buffer some history if the consumer becomes outpaced, but this is only expected
     # in an exception case.
@@ -35,6 +36,7 @@ class BaseDataLink(threading.Thread, ABC):
     _MAX_FRAME_BYTES = 4096
     _SERIAL_POLLING_INTERVAL_SECONDS = 0.1
     _JOIN_TIMEOUT_SECONDS = 3
+
 
     @abstractmethod
     def __init__(self, thread_name: Optional[str] = None):
@@ -109,8 +111,10 @@ class BaseDataLink(threading.Thread, ABC):
 
                 for byte_ in mv_chunk:
                     if len(buf) >= self._MAX_FRAME_BYTES:
-                        logger.warning(f'Slip buffer overflow. Dropping data: '
-                                       f'{format_dropped_bytes(buf)}')
+                        logger.error(f'Slip buffer overflow. Dropping data: '
+                                     f'{format_dropped_bytes(buf)}')
+                        # if self.DEBUG:
+                        logger.debug(BufStr(buf))
                         buf.clear()
                     if byte_ == SLIP_END:
                         self._put_not_wait(buf)
@@ -125,10 +129,10 @@ class BaseDataLink(threading.Thread, ABC):
                             elif byte_ == SLIP_ESC_ESC:
                                 buf.append(SLIP_ESC)
                             else:
-                                logger.warning(f'SLIP escaping protocol violation. Expected '
-                                               f'0x{SLIP_ESC_END:X} or 0x{SLIP_ESC_ESC:X},  '
-                                               f'observed 0x{byte_:X}. Dropping data: '
-                                               f'{format_dropped_bytes(buf)}')
+                                logger.error(f'SLIP escaping protocol violation. Expected '
+                                             f'0x{SLIP_ESC_END:X} or 0x{SLIP_ESC_ESC:X},  '
+                                             f'observed 0x{byte_:X}. Dropping data: '
+                                             f'{format_dropped_bytes(buf)}')
                                 buf.clear()
                             escaping = False
                         else:

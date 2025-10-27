@@ -5,14 +5,14 @@ from ..common import ServiceCmd, ServiceCmdError
 from ..utils import serials_to_devices
 from growbies.cli.common import PositionalParam
 from growbies.cli.identify import Param
-from growbies.device.cmd import GetIdentifyDeviceCmd, SetIdentifyDeviceCmd
+from growbies.device.cmd import GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1, SetIdentifyDeviceCmd2
 from growbies.device.common import identify as id_mod
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
 
 def _init(worker):
-    cmd = SetIdentifyDeviceCmd(init=True)
+    cmd = SetIdentifyDeviceCmd1(init=True)
     cmd.init = True
     _ = worker.cmd(cmd)
 
@@ -30,19 +30,24 @@ def execute(cmd: ServiceCmd) -> Optional[id_mod.Identify1]:
         _init(worker)
         return None
 
-    ident: id_mod.NvmIdentify = worker.cmd(GetIdentifyDeviceCmd())
+    ident = worker.cmd(GetIdentifyDeviceCmd())
 
     if all(value is None for value in cmd.kw.values()):
         return ident.payload
 
     for key, val in cmd.kw.items():
-        if getattr(ident.payload, key, None) is None:
-            raise ServiceCmdError(f'Identify version {ident.VERSION} does not support the '
-                                  f'"{key}" field.')
         if val is not None:
+            try:
+                getattr(ident.payload, key)
+            except AttributeError:
+                raise ServiceCmdError(f'Identify version {ident.VERSION} does not support the '
+                                      f'"{key}" field.')
             setattr(ident.payload, key, val)
 
-    cmd = SetIdentifyDeviceCmd()
+    if ident.hdr.version == SetIdentifyDeviceCmd1.VERSION:
+        cmd = SetIdentifyDeviceCmd1()
+    elif ident.hdr.version == SetIdentifyDeviceCmd2.VERSION:
+        cmd = SetIdentifyDeviceCmd2()
     cmd.identify = ident
     _ = worker.cmd(cmd)
     return None

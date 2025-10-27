@@ -106,7 +106,7 @@ struct CmdSetCalibration : BaseCmd {
 struct CmdGetIdentify: BaseCmd {};
 struct CmdSetIdentify : BaseCmd {
     bool init = false;
-    NvmIdentify1 identify{};
+    NvmIdentify identify{};
 };
 struct CmdGetTare: BaseCmd {};
 struct CmdSetTare : BaseCmd {
@@ -153,15 +153,15 @@ struct RespGetCalibration : BaseResp {
 static_assert(sizeof(RespGetCalibration) < MAX_SLIP_UNENCODED_PACKET_BYTES);
 
 struct RespGetIdentify : BaseResp {
-    static constexpr auto VERSION = 1;
+    static constexpr auto VERSION = NvmIdentify::VERSION;
     static constexpr auto TYPE = Resp::IDENTIFY;
 
-    NvmIdentify1 identify{};
+    NvmIdentify identify{};
 
-    explicit RespGetIdentify(const NvmIdentify1& ident = NvmIdentify1{})
+    explicit RespGetIdentify(const NvmIdentify& ident = NvmIdentify{})
         : identify(ident) {}
 };
-static_assert(sizeof(RespGetIdentify) < MAX_SLIP_UNENCODED_PACKET_BYTES);
+static_assert(sizeof(RespGetIdentify) < MAX_SLIP_UNENCODED_PACKET_BYTES, "buffer overflow");
 
 struct RespGetTare : BaseResp {
     static constexpr auto VERSION = 1;

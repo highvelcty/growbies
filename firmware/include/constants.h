@@ -84,7 +84,8 @@ constexpr uint32_t SLEEP_MS = 1000; // 1 second
 constexpr auto DELAY_INTERVAL_MS = 10;
 constexpr auto DEEP_SLEEP_USECS = SLEEP_MS * 1000;
 constexpr auto SMALL_DELAY_MS = 1;
-constexpr auto BUTTON_READ_COUNT = 10;
+constexpr int BUTTON_DEBOUNCE_MS  = 50;
+constexpr int BUTTON_REREAD_COUNT =  7;
 
 inline int get_HX711_dout_pin(SensorIdx_t sensor){
 #if HX711_PIN_CFG_0

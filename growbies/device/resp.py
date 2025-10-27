@@ -5,7 +5,7 @@ import logging
 
 from .common import  BaseStructure, BaseUnion, PacketHdr, TBaseStructure
 from .common.calibration import NvmCalibration
-from .common.identify import NvmIdentify
+from .common.identify import NvmIdentify1, NvmIdentify2
 from .common.read import DataPoint
 from .common.tare import NvmTare
 from growbies.service.common import ServiceCmdError
@@ -51,8 +51,10 @@ class DeviceRespOp(IntEnum):
                 else:
                     _raise_version_error(hdr)
             elif hdr.type == cls.IDENTIFY:
-                if hdr.version >= 1:
-                    resp = NvmIdentify.from_buffer(resp)
+                if hdr.version == 1:
+                    resp = NvmIdentify1.from_buffer(resp)
+                elif hdr.version >= 2:
+                    resp = NvmIdentify2.from_buffer(resp)
                 else:
                     _raise_version_error(hdr)
             elif hdr.type == cls.TARE:

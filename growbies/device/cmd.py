@@ -5,7 +5,7 @@ import logging
 
 from .common import BaseStructure, PacketHdr
 from .common.calibration import NvmCalibration
-from .common.identify import NvmIdentify
+from .common.identify import NvmIdentify1, NvmIdentify2
 from .common.tare import NvmTare
 
 logger = logging.getLogger(__name__)
@@ -137,9 +137,9 @@ class GetIdentifyDeviceCmd(BaseDeviceCmd):
     OP = DeviceCmdOp.GET_IDENTIFY
     VERSION = 1
 
-class SetIdentifyDeviceCmd(BaseDeviceCmd):
+class SetIdentifyDeviceCmd1(BaseDeviceCmd):
     OP = DeviceCmdOp.SET_IDENTIFY
-    VERSION = 1
+    VERSION = NvmIdentify1.VERSION
 
     class Field(BaseDeviceCmd.Field):
         INIT = '_init'
@@ -147,7 +147,7 @@ class SetIdentifyDeviceCmd(BaseDeviceCmd):
 
     _fields_ = [
         (Field.INIT, ctypes.c_bool),
-        (Field.IDENTIFY, NvmIdentify),
+        (Field.IDENTIFY, NvmIdentify1),
     ]
 
     @property
@@ -159,11 +159,32 @@ class SetIdentifyDeviceCmd(BaseDeviceCmd):
         setattr(self, self.Field.INIT, value)
 
     @property
-    def identify(self) -> NvmIdentify:
+    def identify(self) -> NvmIdentify1:
         return getattr(self, self.Field.IDENTIFY)
 
     @identify.setter
-    def identify(self, val: NvmIdentify):
+    def identify(self, val: NvmIdentify1):
+        setattr(self, self.Field.IDENTIFY, val)
+
+class SetIdentifyDeviceCmd2(BaseDeviceCmd):
+    OP = DeviceCmdOp.SET_IDENTIFY
+    VERSION = NvmIdentify2.VERSION
+
+    class Field(BaseDeviceCmd.Field):
+        INIT = '_init'
+        IDENTIFY = '_identify'
+
+    _fields_ = [
+        (Field.INIT, ctypes.c_bool),
+        (Field.IDENTIFY, NvmIdentify2),
+    ]
+
+    @property
+    def identify(self) -> NvmIdentify2:
+        return getattr(self, self.Field.IDENTIFY)
+
+    @identify.setter
+    def identify(self, val: NvmIdentify2):
         setattr(self, self.Field.IDENTIFY, val)
 
 class GetTareDeviceCmd(BaseDeviceCmd):

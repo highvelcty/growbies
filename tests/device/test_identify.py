@@ -3,16 +3,16 @@ from unittest import TestCase
 
 from packaging.version import Version
 
-from growbies.device.common.identify import Identify1, NvmIdentify
-from growbies.device.cmd import SetIdentifyDeviceCmd
+from growbies.device.common.identify import Identify1, NvmIdentify1
+from growbies.device.cmd import SetIdentifyDeviceCmd1
 
 class TestSetIdentifyDeviceCmd(TestCase):
     def test(self):
         test_model_name = 'test_model_name'
-        identify = NvmIdentify()
+        identify = NvmIdentify1()
         identify.payload.model_number = test_model_name
 
-        cmd = SetIdentifyDeviceCmd(identify=identify)
+        cmd = SetIdentifyDeviceCmd1(identify=identify)
 
         self.assertEqual(test_model_name, cmd.identify.payload.model_number)
         self.assertFalse(cmd.init)
@@ -23,11 +23,11 @@ class TestSetIdentifyDeviceCmd(TestCase):
             b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
             b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
             b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-            b'\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+            b'\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
         )
 
         identify = Identify1.from_buffer(buf)
-        cmd = SetIdentifyDeviceCmd()
+        cmd = SetIdentifyDeviceCmd1()
         cmd.payload = identify
         self.assertEqual(bytes(identify), bytes(cmd.payload))
         self.assertFalse(cmd.init)
@@ -39,14 +39,14 @@ class TestNvmIdentify(TestCase):
                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
                         b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
-                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
+                        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00')
 
-        resp = NvmIdentify.from_buffer(buf)
+        resp = NvmIdentify1.from_buffer(buf)
         self.assertEqual(Version('0.0.1-dev0+6266bd2'), resp.payload.firmware_version)
         self.assertEqual(57449, resp.hdr.crc)
         self.assertEqual(1, resp.hdr.version)
 
     def test_construction(self):
-        ident = NvmIdentify()
+        ident = NvmIdentify1()
         self.assertEqual(ident.VERSION, ident.hdr.version)
         self.assertEqual(sizeof(ident.payload), ident.hdr.length)

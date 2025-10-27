@@ -19,6 +19,29 @@ typedef float MassTemperatureCoeff[MAX_MASS_SENSOR_COUNT][COEFF_COUNT];
 typedef float MassCoeff[COEFF_COUNT];
 typedef float TareValue[TARE_COUNT];
 
+enum class TareIdx: uint8_t {
+    USER_0 = 0,
+    USER_1 = 1,
+    USER_2 = 2,
+    AUTO_0 = 3,
+    AUTO_1 = 4,
+    AUTO_2 = 5,
+};
+
+const char* get_tare_name(TareIdx idx);
+
+enum class MassUnits: uint8_t {
+    GRAMS = 0,
+    KILOGRAMS = 1,
+    OUNCES = 2,
+    POUNDS = 3,
+};
+
+enum class TemperatureUnits: uint8_t {
+    FAHRENHEIT = 0,
+    CELSIUS = 1,
+};
+
 #pragma pack(1)
 
 struct NvmHdr {
@@ -62,16 +85,8 @@ struct NvmCalibration : NvmStructBase {
     static constexpr Version_t VERSION = 1;
 };
 
-struct Identify0 {
+struct Identify {
     char firmware_version[32]{};    // <major>.<minor>.<micro>+<short git hash>
-
-    // Constructor with version parameter
-    explicit Identify0() {
-        snprintf(this->firmware_version, sizeof(this->firmware_version), "%s", FIRMWARE_VERSION);
-    }
-};
-
-struct Identify1 : Identify0 {
     char serial_number[32]{};
     char model_number[32]{};
     float manufacture_date{};       // seconds since epoch
@@ -93,13 +108,22 @@ struct Identify1 : Identify0 {
 
     // User configuration
     bool flip{};
-};
+    MassUnits mass_units{};
+    TemperatureUnits temperature_units{};
 
-struct NvmIdentify1 : NvmStructBase {
-    Identify1 payload{};
-
-    static constexpr Version_t VERSION = 1;
+    // Constructor with version parameter
+    explicit Identify() {
+        snprintf(this->firmware_version, sizeof(this->firmware_version), "%s", FIRMWARE_VERSION);
+    }
 };
+static_assert(sizeof(Identify) == 114, "unexpected structure size");
+
+struct NvmIdentify : NvmStructBase {
+    Identify payload{};
+
+    static constexpr Version_t VERSION = 2;
+};
+static_assert(sizeof(NvmIdentify) == 122, "unexpected structure size");
 
 #if ARDUINO_ARCH_AVR
 constexpr int PARTITION_A_OFFSET = 0;
@@ -250,7 +274,7 @@ private:
 
 // Type specializations
 template <>
-inline void NvmStoreBase<NvmIdentify1>::migrate() {
+inline void NvmStoreBase<NvmIdentify>::migrate() {
     if (strncmp(value_storage.payload.firmware_version, FIRMWARE_VERSION,
                 sizeof(value_storage.payload.firmware_version)) != 0) {
         snprintf(value_storage.payload.firmware_version,
@@ -258,16 +282,22 @@ inline void NvmStoreBase<NvmIdentify1>::migrate() {
                  "%s",
                  FIRMWARE_VERSION);
     }
+
+    if (value_storage.hdr.version < NvmIdentify::VERSION) {
+        value_storage.payload.mass_units = MassUnits::GRAMS;
+        value_storage.payload.temperature_units = TemperatureUnits::FAHRENHEIT;
+    }
+
     _migrate();
 }
 
 #if ARDUINO_ARCH_AVR
 using CalibrationStore = AvrNvmStore<NvmCalibration>;
-using IdentifyStore    = AvrNvmStore<NvmIdentify1>;
+using IdentifyStore    = AvrNvmStore<NvmIdentify>;
 using TareStore        = AvrNvmStore<NvmTare>;
 #elif ARDUINO_ARCH_ESP32
 using CalibrationStore = Esp32NvmStore<NvmCalibration>;
-using IdentifyStore = Esp32NvmStore<NvmIdentify1>;
+using IdentifyStore = Esp32NvmStore<NvmIdentify>;
 using TareStore = Esp32NvmStore<NvmTare>;
 #endif
 

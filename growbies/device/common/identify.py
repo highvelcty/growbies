@@ -31,12 +31,22 @@ class FootType(IntEnum):
 class MassSensorType(IntEnum):
     GENERIC = 0
 
+class MassUnitsType(IntEnum):
+    GRAMS = 0
+    KILOGRAMS = 1
+    OUNCES = 2
+    POUNDS = 3
+
 class PcbaType(IntEnum):
     ARDUINO = 0
     ESP32C3 = 1
 
 class TemperatureSensorType(IntEnum):
     GENERIC = 0
+
+class TemperatureUnitsType(IntEnum):
+    FAHRENHEIT = 0
+    CELSIUS = 1
 
 class WirelessType(IntEnum):
     NONE = 0
@@ -66,6 +76,8 @@ class Identify(BaseStructure):
         FRAME = '_frame'
         FOOT = '_foot'
         FLIP = '_flip'
+        MASS_UNITS = '_mass_units'
+        TEMPERATURE_UNITS = '_temperature_units'
 
     _fields_ = [
         (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
@@ -78,137 +90,6 @@ class Identify(BaseStructure):
             return Version(val)
         except InvalidVersion:
             return val
-
-    @property
-    def serial_number(self) -> Optional[Serial_t]:
-        return None
-
-    @serial_number.setter
-    def serial_number(self, value: Serial_t):
-        pass
-
-    @property
-    def model_number(self) -> Optional[ModelNumber_t]:
-        return None
-
-    @model_number.setter
-    def model_number(self, value: ModelNumber_t):
-        pass
-
-    @property
-    def manufacture_date(self) -> Optional[datetime]:
-        return None
-
-    @manufacture_date.setter
-    def manufacture_date(self, value: datetime):
-        pass
-
-    @property
-    def mass_sensor_count(self) -> Optional[int]:
-        return None
-
-    @mass_sensor_count.setter
-    def mass_sensor_count(self, value: int):
-        pass
-
-    @property
-    def mass_sensor_type(self) -> Optional[MassSensorType]:
-        return None
-
-    @mass_sensor_type.setter
-    def mass_sensor_type(self, value: MassSensorType):
-        pass
-
-    @property
-    def temperature_sensor_count(self) -> Optional[int]:
-        return None
-
-    @temperature_sensor_count.setter
-    def temperature_sensor_count(self, value: int):
-        pass
-
-    @property
-    def temperature_sensor_type(self) -> Optional[TemperatureSensorType]:
-        return None
-
-    @temperature_sensor_type.setter
-    def temperature_sensor_type(self, value: TemperatureSensorType):
-        pass
-
-    @property
-    def pcba(self) -> Optional[PcbaType]:
-        return None
-
-    @pcba.setter
-    def pcba(self, value: PcbaType):
-        pass
-
-    @property
-    def wireless(self) -> Optional[WirelessType]:
-        return None
-
-    @wireless.setter
-    def wireless(self, value: WirelessType):
-        pass
-
-    @property
-    def battery(self) -> Optional[BatteryType]:
-        return None
-
-    @battery.setter
-    def battery(self, value: BatteryType):
-        pass
-
-    @property
-    def display(self) -> Optional[DisplayType]:
-        return None
-
-    @display.setter
-    def display(self, value: DisplayType):
-        pass
-
-    @property
-    def led(self) -> Optional[LedType]:
-        return None
-
-    @led.setter
-    def led(self, value: LedType):
-        pass
-
-    @property
-    def frame(self) -> Optional[FrameType]:
-        return None
-
-    @frame.setter
-    def frame(self, value: FrameType):
-        pass
-
-    @property
-    def foot(self) -> Optional[FootType]:
-        return None
-
-    @foot.setter
-    def foot(self, value: FootType):
-        pass
-
-class Identify1(Identify):
-    _fields_ = [
-        (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 32),
-        (Identify.Field.MODEL_NUMBER, ctypes.c_char * 32),
-        (Identify.Field.MANUFACTURE_DATE, ctypes.c_float),
-        (Identify.Field.MASS_SENSOR_TYPE, ctypes.c_uint8),
-        (Identify.Field.MASS_SENSOR_COUNT, ctypes.c_uint8),
-        (Identify.Field.TEMPERATURE_SENSOR_TYPE, ctypes.c_uint8),
-        (Identify.Field.TEMPERATURE_SENSOR_COUNT, ctypes.c_uint8),
-        (Identify.Field.PCBA, ctypes.c_uint8),
-        (Identify.Field.WIRELESS, ctypes.c_uint8),
-        (Identify.Field.BATTERY, ctypes.c_uint8),
-        (Identify.Field.DISPLAY, ctypes.c_uint8),
-        (Identify.Field.LED, ctypes.c_uint8),
-        (Identify.Field.FRAME, ctypes.c_uint8),
-        (Identify.Field.FOOT, ctypes.c_uint8),
-        (Identify.Field.FLIP, ctypes.c_bool),
-    ]
 
     @property
     def serial_number(self) -> Serial_t:
@@ -366,7 +247,56 @@ class Identify1(Identify):
     def flip(self, value: bool):
         setattr(self, self.Field.FLIP, value)
 
-class NvmIdentify(nvm.BaseNvm):
+    @property
+    def mass_units(self) -> MassUnitsType:
+        val = getattr(self, self.Field.MASS_UNITS)
+        try:
+            return MassUnitsType(val)
+        except ValueError:
+            return val
+
+    @mass_units.setter
+    def mass_units(self, value: MassUnitsType):
+        setattr(self, self.Field.MASS_UNITS, value)
+
+    @property
+    def temperature_units(self) -> TemperatureUnitsType:
+        val = getattr(self, self.Field.TEMPERATURE_UNITS)
+        try:
+            return TemperatureUnitsType(val)
+        except ValueError:
+            return val
+
+    @temperature_units.setter
+    def temperature_units(self, value: TemperatureUnitsType):
+        setattr(self, self.Field.TEMPERATURE_UNITS, value)
+
+class Identify1(Identify):
+    _fields_ = [
+        (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 32),
+        (Identify.Field.MODEL_NUMBER, ctypes.c_char * 32),
+        (Identify.Field.MANUFACTURE_DATE, ctypes.c_float),
+        (Identify.Field.MASS_SENSOR_TYPE, ctypes.c_uint8),
+        (Identify.Field.MASS_SENSOR_COUNT, ctypes.c_uint8),
+        (Identify.Field.TEMPERATURE_SENSOR_TYPE, ctypes.c_uint8),
+        (Identify.Field.TEMPERATURE_SENSOR_COUNT, ctypes.c_uint8),
+        (Identify.Field.PCBA, ctypes.c_uint8),
+        (Identify.Field.WIRELESS, ctypes.c_uint8),
+        (Identify.Field.BATTERY, ctypes.c_uint8),
+        (Identify.Field.DISPLAY, ctypes.c_uint8),
+        (Identify.Field.LED, ctypes.c_uint8),
+        (Identify.Field.FRAME, ctypes.c_uint8),
+        (Identify.Field.FOOT, ctypes.c_uint8),
+        (Identify.Field.FLIP, ctypes.c_bool),
+    ]
+
+class Identify2(Identify1):
+    _fields_ = [
+        (Identify.Field.MASS_UNITS, ctypes.c_uint8),
+        (Identify.Field.TEMPERATURE_UNITS, ctypes.c_uint8),
+    ]
+
+class NvmIdentify1(nvm.BaseNvm):
     VERSION = 1
 
     _fields_ = [
@@ -386,4 +316,20 @@ class NvmIdentify(nvm.BaseNvm):
 
     @payload.setter
     def payload(self, value: Identify1):
+        super().payload = value
+
+class NvmIdentify2(nvm.BaseNvm):
+    VERSION = 2
+
+    _fields_ = [
+        (nvm.BaseNvm.Field.HDR, nvm.NvmHdr),
+        (nvm.BaseNvm.Field.PAYLOAD, Identify2)
+    ]
+
+    @property
+    def payload(self) -> Identify2:
+        return super().payload
+
+    @payload.setter
+    def payload(self, value: Identify2):
         super().payload = value

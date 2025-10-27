@@ -19,30 +19,57 @@ def make_cli(parser: ArgumentParser):
                         default=None,
                         type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.MASS_SENSOR_TYPE)}',
-                        choices=[None] + list(id_mod.MassSensorType), default=None, type=int)
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.MassSensorType]) + '}',
+                        choices=tuple(id_mod.MassSensorType), default=None, type=int)
     parser.add_argument(
         f'--{internal_to_external_field(id_mod.Identify.Field.TEMPERATURE_SENSOR_COUNT)}',
         default=None, type=int)
     parser.add_argument(
         f'--{internal_to_external_field(id_mod.Identify.Field.TEMPERATURE_SENSOR_TYPE)}',
-        choices=[None] + list(id_mod.MassSensorType), default=None, type=int)
+        metavar='{' + ','.join(
+            [f'{x.value}={x.name}' for x in id_mod.TemperatureSensorType]) + '}',
+        choices=tuple(id_mod.MassSensorType), default=None, type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.PCBA)}',
-                        choices=[None] + list(id_mod.PcbaType), default=None, type=int)
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.PcbaType]) + '}',
+                        choices=tuple(id_mod.PcbaType), default=None, type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.WIRELESS)}',
-                        choices=[None] + list(id_mod.WirelessType), default=None, type=int)
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.WirelessType]) + '}',
+                        choices=tuple(id_mod.WirelessType), default=None, type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.BATTERY)}',
-                        choices=[None] + list(id_mod.BatteryType), default=None, type=int)
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.BatteryType]) + '}',
+                        choices=tuple(id_mod.BatteryType), default=None, type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.DISPLAY)}',
-                        choices=[None] + list(id_mod.DisplayType), default=None, type=int)
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.DisplayType]) + '}',
+                        choices=tuple(id_mod.DisplayType), default=None, type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.LED)}',
-                        choices=[None] + list(id_mod.LedType), default=None, type=int)
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.LedType]) + '}',
+                        choices=tuple(id_mod.LedType), default=None, type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.FRAME)}',
-                        choices=[None] + list(id_mod.FrameType), default=None, type=int)
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.FrameType]) + '}',
+                        choices=tuple(id_mod.FrameType), default=None, type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.FOOT)}',
-                        choices=[None] + list(id_mod.FootType), default=None, type=int)
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.FootType]) + '}',
+                        choices=tuple(id_mod.FootType), default=None, type=int)
     name = internal_to_external_field(id_mod.Identify.Field.FLIP)
     parser.add_argument(f'--{name}', dest=name, action='store_true',
-                        help=f'Turn on display flip. See also, --no-{name}')
+                        help=f'Turn on remote flip. See also, --no-{name}')
     parser.add_argument(f'--no-{name}', dest=name, action='store_false',
-                        help=f'Turn off display flip. See also, --{name}')
+                        help=f'Turn off remote flip. See also, --{name}')
     parser.set_defaults(flip=None)
+    parser.set_defaults(no_flip=None)
+    parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.MASS_UNITS)}',
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.MassUnitsType]) + '}',
+                        choices=tuple(id_mod.MassUnitsType), default=None, type=int)
+    parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.TEMPERATURE_UNITS)}',
+                        metavar='{' + ','.join(
+                            [f'{x.value}={x.name}' for x in id_mod.TemperatureUnitsType]) + '}',
+                        choices=tuple(id_mod.TemperatureUnitsType), default=None, type=int)

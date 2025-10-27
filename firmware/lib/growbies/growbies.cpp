@@ -88,7 +88,6 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
                 identify_store->init();
             }
             else {
-                bool do_flip = false;
                 if (identify_store->payload()->flip != cmd->identify.payload.flip) {
                     Remote& remote = Remote::get();
                     remote.set_flip(cmd->identify.payload.flip);
@@ -196,7 +195,7 @@ void Growbies::median_avg_filter(float **iteration_sensor_sample,
     float median;
     float samples[times];
     SensorIdx_t sensor_count;
-    const Identify1* ident = identify_store->payload();
+    const Identify* ident = identify_store->payload();
 
     if (endpoint_type == EP_MASS_SENSOR) {
         sensor_count = ident->mass_sensor_count;
@@ -305,7 +304,7 @@ ErrorCode Growbies::get_datapoint(DataPoint* datapoint,
     SensorIdx_t sensor_idx;
     ErrorCode error = ERROR_NONE;
     const Calibration* cal = calibration_store->payload();
-    const Identify1* ident = identify_store->payload();
+    const Identify* ident = identify_store->payload();
 
     get_tare_datapoint(datapoint);
 
