@@ -29,9 +29,6 @@ public:
 
     // Initialize wake-on-interrupt configuration previously done by enable_delay_wake
     void begin();
-    void draw(const Drawing& drawing);
-    void print_mass(float mass);
-    void draw_mass(float grams, TareIdx tare_idx);
     bool service();
     void set_flip(bool flip);
 
