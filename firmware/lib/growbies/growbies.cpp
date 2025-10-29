@@ -89,8 +89,14 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
             }
             else {
                 if (identify_store->payload()->flip != cmd->identify.payload.flip) {
-                    Remote& remote = Remote::get();
-                    remote.set_flip(cmd->identify.payload.flip);
+                    const Remote& remote = Remote::get();
+                    remote.menu.flip(cmd->identify.payload.flip);
+                    remote.menu.render();
+                }
+                if (identify_store->payload()->contrast != cmd->identify.payload.contrast) {
+                    const Remote& remote = Remote::get();
+                    remote.menu.contrast(cmd->identify.payload.contrast);
+                    remote.menu.render();
                 }
                 identify_store->put(cmd->identify);
             }

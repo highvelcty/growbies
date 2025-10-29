@@ -7,10 +7,6 @@
 
 #include "drawing.h"
 
-
-constexpr int DEFAULT_CONTRAST = 16;
-
-
 enum class EVENT: int8_t {
     NONE = -1,
     SELECT = 0,
@@ -32,28 +28,6 @@ struct MenuItem {
         : drawing(std::move(d)), children(std::move(c)), action(std::move(a)) {}
 };
 
-// -----------------------------------------------------------------------------
-// Menu Tree
-// -----------------------------------------------------------------------------
-static const std::vector<std::shared_ptr<MenuItem>> menu_root {
-    std::make_shared<MenuItem>(std::make_shared<MassDrawing>(get_tare_name(TareIdx::TARE_0))),
-    std::make_shared<MenuItem>(std::make_shared<MassDrawing>(get_tare_name(TareIdx::TARE_1))),
-    std::make_shared<MenuItem>(std::make_shared<MassDrawing>(get_tare_name(TareIdx::AUTO_0))),
-    std::make_shared<MenuItem>(std::make_shared<MassDrawing>(get_tare_name(TareIdx::AUTO_1))),
-    std::make_shared<MenuItem>(
-        std::make_shared<ConfigurationDrawing>(),
-        std::vector<std::shared_ptr<MenuItem>>{
-            std::make_shared<MenuItem>(
-                std::make_shared<TemperatureUnitsDrawing>(),
-                std::vector<std::shared_ptr<MenuItem>>{
-                    std::make_shared<MenuItem>(std::make_shared<TemperatureUnitsCDrawing>()),
-                    std::make_shared<MenuItem>(std::make_shared<TemperatureUnitsFDrawing>())
-                }
-            )
-        }
-    )
-};
-
 class Remote {
 public:
     // Enforce singleton
@@ -69,27 +43,12 @@ public:
     void begin();
     bool service();
 
-    void set_flip(bool flip);
-
-    void draw(const Drawing& d) {
-        // Clone the drawing for safe storage
-        cached_drawing = d.clone();
-
-        // Render immediately
-        cached_drawing->draw(display);
-    }
-
-    // Redraw last cached Drawing (useful after display flip)
-    void redraw() {
-        if (cached_drawing) {
-            cached_drawing->draw(display);
-        }
-    }
-
     class Menu {
     public:
         explicit Menu(Remote& r) : remote(r) {}
 
+        void contrast(uint8_t contrast) const;
+        void flip(bool flip) const;
         void up();
         void down();
         void select();
@@ -99,9 +58,22 @@ public:
         const std::vector<std::shared_ptr<MenuItem>>* level_from_path() const;
 
         std::vector<size_t> menu_path{0};  // Index path down the tree
-        Remote& remote;                    // Reference to enclosing Remote
+        Remote& remote;
     };
     Menu menu{*this};
+
+    class Action {
+    public:
+        explicit Action(Remote& r): remote(r) {}
+
+        void contrast(uint8_t contrast) const;
+        void flip(bool flip) const;
+
+    private:
+        Remote& remote;
+    };
+
+    Action action{*this};
 
 private:
     // Pointer used by ISR to touch the singleton
@@ -111,8 +83,6 @@ private:
 
     unsigned long debounce_time = 0;
 
-    std::unique_ptr<Drawing> cached_drawing;
-
     // volatile make this ISR-safe
     volatile EVENT last_button_pressed = EVENT::NONE;
     volatile bool arm_isr = true;
@@ -121,3 +91,46 @@ private:
     static void wakeISR1();
 };
 
+// -----------------------------------------------------------------------------
+// Menu Tree
+// -----------------------------------------------------------------------------
+static const std::vector<std::shared_ptr<MenuItem>> menu_root {
+    std::make_shared<MenuItem>(std::make_shared<MassDrawing>(get_tare_name(TareIdx::TARE_0))),
+    std::make_shared<MenuItem>(std::make_shared<MassDrawing>(get_tare_name(TareIdx::TARE_1))),
+    std::make_shared<MenuItem>(std::make_shared<MassDrawing>(get_tare_name(TareIdx::AUTO_0))),
+    std::make_shared<MenuItem>(std::make_shared<MassDrawing>(get_tare_name(TareIdx::AUTO_1))),
+    std::make_shared<MenuItem>(
+        std::make_shared<ConfigurationDrawing>(),
+        std::vector<std::shared_ptr<MenuItem>>{
+            std::make_shared<MenuItem>(
+                std::make_shared<MassUnitsDrawing>(),
+                std::vector<std::shared_ptr<MenuItem>>{
+                    std::make_shared<MenuItem>(std::make_shared<MassUnitsGramsDrawing>()),
+                    std::make_shared<MenuItem>(std::make_shared<MassUnitsKilogramsDrawing>()),
+                    std::make_shared<MenuItem>(std::make_shared<MassUnitsOuncesDrawing>()),
+                    std::make_shared<MenuItem>(std::make_shared<MassUnitsPoundsDrawing>()),
+                }
+            ),
+            std::make_shared<MenuItem>(
+                std::make_shared<TemperatureUnitsDrawing>(),
+                std::vector<std::shared_ptr<MenuItem>>{
+                    std::make_shared<MenuItem>(std::make_shared<TemperatureUnitsCDrawing>()),
+                    std::make_shared<MenuItem>(std::make_shared<TemperatureUnitsFDrawing>())
+                }
+            ),
+            std::make_shared<MenuItem>(
+                std::make_shared<FlipDrawing>(),
+                std::vector<std::shared_ptr<MenuItem>>{
+                    std::make_shared<MenuItem>(std::make_shared<FlipTrueDrawing>(),
+                        std::vector<std::shared_ptr<MenuItem>>{},
+                        []() { Remote::get().action.flip(true); }
+                    ),
+                    std::make_shared<MenuItem>(std::make_shared<FlipFalseDrawing>(),
+                        std::vector<std::shared_ptr<MenuItem>>{},
+                        []() { Remote::get().action.flip(false); }
+                    )
+                }
+            ),
+        }
+    )
+};

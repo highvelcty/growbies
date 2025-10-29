@@ -21,16 +21,10 @@ Remote::Remote()
 void Remote::begin() {
     // Order is important, the display must be initialized before attaching interrupts.
     display.begin();
-    // display.clear();
-    display.setFlipMode(identify_store->payload()->flip);
-    display.setFont(u8x8_font_chroma48medium8_r);
-    display.drawString(0,0, "emey");
-    display.drawString(1, 1, "emey");
-    // MassDrawing(get_tare_name(TareIdx::TARE_0), 1234.567, MassUnits::KILOGRAMS).draw(display);
-    // TemperatureDrawing("Temperature 0", 50, TemperatureUnits::CELSIUS).draw(display);
-    // ConfigurationDrawing().draw(display);
-    // draw(TemperatureUnitsDrawing());
+    menu.flip(identify_store->payload()->flip);
+    menu.contrast(identify_store->payload()->contrast);
     menu.render();
+
     // Configure wake pin and attach ISR
     pinMode(BUTTON_0_PIN, INPUT);
     pinMode(BUTTON_1_PIN, INPUT);
@@ -80,11 +74,6 @@ bool Remote::service() {
     return button_pressed;
 }
 
-void Remote::set_flip(const bool flip) {
-    display.setFlipMode(flip);
-    display.refreshDisplay();
-}
-
 void IRAM_ATTR Remote::wakeISR0() {
     if (instance->arm_isr) {
         if (digitalRead(BUTTON_1_PIN)) {
@@ -132,6 +121,14 @@ const std::vector<std::shared_ptr<MenuItem>>* Remote::Menu::level_from_path() co
     }
 
     return level;
+}
+
+void Remote::Menu::contrast(const uint8_t contrast) const {
+    remote.display.setContrast(contrast);
+}
+
+void Remote::Menu::flip(const bool flip) const {
+    remote.display.setFlipMode(flip);
 }
 
 void Remote::Menu::up() {
@@ -196,21 +193,27 @@ void Remote::Menu::select() {
 
 void Remote::Menu::render() const {
     const std::vector<std::shared_ptr<MenuItem>>* level = &menu_root;
-    
+    remote.display.clear();
+
     for (auto it = menu_path.begin(); it != menu_path.end(); ++it) {
         const size_t idx = *it;
         if (idx >= level->size()) return; // safety check
 
         const auto& item = (*level)[idx];
 
-        // Only mark as selected if not the last element
-        item->drawing->selected = (std::next(it) != menu_path.end());
-
-        remote.draw(*item->drawing); // draw the current level's drawing
+        item->drawing->draw(remote.display, (std::next(it) != menu_path.end()));
         level = &item->children;     // descend into children
     }
 }
 
+void Remote::Action::contrast(const uint8_t contrast) const {
+    identify_store->edit().payload.contrast = contrast;
+    identify_store->commit();
+    remote.menu.contrast(contrast);
+}
 
-
-
+void Remote::Action::flip(const bool flip) const {
+    identify_store->edit().payload.flip = flip;
+    identify_store->commit();
+    remote.menu.flip(flip);
+}

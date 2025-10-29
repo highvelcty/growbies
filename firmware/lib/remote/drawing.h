@@ -33,7 +33,7 @@ struct Drawing {
     explicit Drawing(const bool _selected = false) : selected(_selected) {}
 
     virtual ~Drawing() = default;
-    virtual void draw(U8X8& display) const = 0;
+    virtual void draw(U8X8& display, bool selected) const = 0;
     // Allow polymorphic deep copy
     virtual std::unique_ptr<Drawing> clone() const = 0;
 };
@@ -46,11 +46,11 @@ struct MenuDrawing : Drawing {
     const int level{0};
 
 
-    static constexpr char SELECTED_CHAR = '>';
+    static constexpr char SELECTED_CHAR = '-';
+    static constexpr char UNSELECTED_CHAR = '+';
 
     explicit MenuDrawing(const char* _msg, const int _level = 0, const bool _selected = false)
-        : msg(_msg), level(_level)
-    {
+        : msg(_msg), level(_level) {
         selected = _selected;
     }
 
@@ -58,19 +58,22 @@ struct MenuDrawing : Drawing {
         return std::make_unique<MenuDrawing>(*this);
     }
 
-    void draw(U8X8& display) const override {
+    void draw(U8X8& display, const bool selected) const override {
         if (level == 0) {
             display.setFont(ONE_BY_FONT);
         }
 
         if (!msg) return;
         char line_buf[MAX_DISPLAY_COLUMNS + 1];
-        if (selected) {
-            snprintf(line_buf, sizeof(line_buf), "%c %s", SELECTED_CHAR, msg);
-        } else {
-            snprintf(line_buf, sizeof(line_buf), "%s", msg);
-        }
+        snprintf(line_buf, sizeof(line_buf), "%c %s", get_selected_char(selected), msg);
         display.drawString(level, level, line_buf);
+    }
+
+    virtual char get_selected_char(const bool selected) const {
+        if (selected) {
+            return SELECTED_CHAR;
+        }
+        return UNSELECTED_CHAR;
     }
 };
 
@@ -81,13 +84,9 @@ struct SubMenuDrawing : MenuDrawing {
 };
 
 struct ItemDrawing : MenuDrawing {
-    bool selected{false};
-
-    static constexpr char SELECTED_CHAR = '-';
-
-    explicit ItemDrawing(const char* _msg)
-        : MenuDrawing(_msg, 2, true)
-    {}
+    static constexpr char SELECTED_CHAR = '>';
+    explicit ItemDrawing(const char* _msg) : MenuDrawing(_msg, 2, true) {}
+    char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
 };
 
 // -----------------------------------------------------------------------------
@@ -102,35 +101,35 @@ struct MassUnitsDrawing final : SubMenuDrawing {
     DEFINE_CLONE(MassUnitsDrawing)
 };
 struct MassUnitsGramsDrawing final : ItemDrawing {
-    MassUnitsGramsDrawing(): ItemDrawing("Grams (g)") {}
+    MassUnitsGramsDrawing(): ItemDrawing("g: Grams") {}
     DEFINE_CLONE(MassUnitsGramsDrawing)
 };
 struct MassUnitsKilogramsDrawing final : ItemDrawing {
-    MassUnitsKilogramsDrawing(): ItemDrawing("Kilograms (kg)") {}
+    MassUnitsKilogramsDrawing(): ItemDrawing("kg: Kilogram") {}
     DEFINE_CLONE(MassUnitsKilogramsDrawing)
 };
-struct MassUnitsPoundsDrawing final : ItemDrawing {
-    MassUnitsPoundsDrawing(): ItemDrawing("Pounds (lb)") {}
-    DEFINE_CLONE(MassUnitsPoundsDrawing)
-};
 struct MassUnitsOuncesDrawing final : ItemDrawing {
-    MassUnitsOuncesDrawing(): ItemDrawing("Ounces (oz)") {}
+    MassUnitsOuncesDrawing(): ItemDrawing("oz: Ounces") {}
     DEFINE_CLONE(MassUnitsOuncesDrawing)
+};
+struct MassUnitsPoundsDrawing final : ItemDrawing {
+    MassUnitsPoundsDrawing(): ItemDrawing("lb: Pounds") {}
+    DEFINE_CLONE(MassUnitsPoundsDrawing)
 };
 struct TemperatureUnitsDrawing final : SubMenuDrawing {
     TemperatureUnitsDrawing(): SubMenuDrawing("Temp. Units") {}
     DEFINE_CLONE(TemperatureUnitsDrawing)
 };
 struct TemperatureUnitsFDrawing final : ItemDrawing {
-    TemperatureUnitsFDrawing(): ItemDrawing("Fahren. (F)") {}
+    TemperatureUnitsFDrawing(): ItemDrawing("F: Fahren.") {}
     DEFINE_CLONE(TemperatureUnitsFDrawing)
 };
 struct TemperatureUnitsCDrawing final : ItemDrawing {
-    TemperatureUnitsCDrawing(): ItemDrawing("Celsius (C)") {}
+    TemperatureUnitsCDrawing(): ItemDrawing("C: Celsius") {}
     DEFINE_CLONE(TemperatureUnitsCDrawing)
 };
 struct FlipDrawing final : SubMenuDrawing {
-    FlipDrawing() : SubMenuDrawing("Flip:") {}
+    FlipDrawing() : SubMenuDrawing("Flip") {}
     DEFINE_CLONE(FlipDrawing)
 };
 struct FlipTrueDrawing final : ItemDrawing {
@@ -153,7 +152,7 @@ struct TelemetryDrawing : Drawing {
     char value[VALUE_CHARS + 1]{};
     char units[UNITS_CHARS + 1]{};
 
-    void draw(U8X8& display) const override {
+    void draw(U8X8& display, const bool selected) const override {
         display.clear();
 
         display.setFont(ONE_BY_FONT);

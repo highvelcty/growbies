@@ -15,6 +15,8 @@
 #include <Preferences.h>
 #endif
 
+constexpr int DEFAULT_CONTRAST = 16;
+
 typedef float MassTemperatureCoeff[MAX_MASS_SENSOR_COUNT][COEFF_COUNT];
 typedef float MassCoeff[COEFF_COUNT];
 typedef float TareValue[TARE_COUNT];
@@ -110,20 +112,21 @@ struct Identify {
     bool flip{};
     MassUnits mass_units{};
     TemperatureUnits temperature_units{};
+    uint8_t contrast{DEFAULT_CONTRAST};
 
     // Constructor with version parameter
     explicit Identify() {
         snprintf(this->firmware_version, sizeof(this->firmware_version), "%s", FIRMWARE_VERSION);
     }
 };
-static_assert(sizeof(Identify) == 114, "unexpected structure size");
+static_assert(sizeof(Identify) == 115, "unexpected structure size");
 
 struct NvmIdentify : NvmStructBase {
     Identify payload{};
 
-    static constexpr Version_t VERSION = 2;
+    static constexpr Version_t VERSION = 3;
 };
-static_assert(sizeof(NvmIdentify) == 122, "unexpected structure size");
+static_assert(sizeof(NvmIdentify) == 123, "unexpected structure size");
 
 #if ARDUINO_ARCH_AVR
 constexpr int PARTITION_A_OFFSET = 0;
@@ -142,30 +145,27 @@ class NvmStoreBase {
 public:
     virtual void begin() {
         _get();
-
-        Crc_t crc = this->calc_crc();
-        if (crc != this->value_storage.hdr.crc) {
-            init();
-        }
-        update();
+        migrate();
     }
+
+    void commit() {
+        // For committing RAM structure changes to persistent store.
+        migrate();
+    }
+
     virtual void init() {
         put(T{});
-    }
-
-    virtual void migrate() {
-        _migrate();
     }
 
     virtual void put(const T& value) {
         this->value_storage = value;
         migrate();
-        _put(this->value_storage);
     }
 
     // Accessors
     const decltype(T::hdr)* hdr() const { return &value_storage.hdr; }
     const decltype(T::payload)* payload() const { return &value_storage.payload; }
+    T& edit() { return value_storage; } // Mutable reference that can then be committed to store.
     const T* view() const { return &value_storage; }
 
     virtual ~NvmStoreBase() = default;
@@ -173,10 +173,15 @@ public:
 protected:
     T value_storage{};
 
+    virtual void migrate() {
+        _migrate();
+    }
+
     void _migrate() {
         this->value_storage.hdr.version = this->value_storage.VERSION;
         this->value_storage.hdr.crc = calc_crc();
         this->value_storage.hdr.length = sizeof(this->value_storage.payload);
+        _put(value_storage);
     }
 
     Crc_t calc_crc() {
@@ -283,9 +288,13 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
                  FIRMWARE_VERSION);
     }
 
-    if (value_storage.hdr.version < NvmIdentify::VERSION) {
+    if (value_storage.hdr.version < 2) {
         value_storage.payload.mass_units = MassUnits::GRAMS;
         value_storage.payload.temperature_units = TemperatureUnits::FAHRENHEIT;
+    }
+
+    if (value_storage.hdr.version < 3) {
+        value_storage.payload.contrast = DEFAULT_CONTRAST;
     }
 
     _migrate();

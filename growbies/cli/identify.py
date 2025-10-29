@@ -73,3 +73,6 @@ def make_cli(parser: ArgumentParser):
                         metavar='{' + ','.join(
                             [f'{x.value}={x.name}' for x in id_mod.TemperatureUnitsType]) + '}',
                         choices=tuple(id_mod.TemperatureUnitsType), default=None, type=int)
+    parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.CONTRAST)}',
+                        default=None, type=int,
+                        help='Set the display contrast (0-255).')

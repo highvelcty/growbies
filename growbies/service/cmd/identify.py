@@ -5,7 +5,8 @@ from ..common import ServiceCmd, ServiceCmdError
 from ..utils import serials_to_devices
 from growbies.cli.common import PositionalParam
 from growbies.cli.identify import Param
-from growbies.device.cmd import GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1, SetIdentifyDeviceCmd2
+from growbies.device.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,
+                                 SetIdentifyDeviceCmd2, SetIdentifyDeviceCmd3)
 from growbies.device.common import identify as id_mod
 from growbies.worker.pool import get_pool
 
@@ -33,7 +34,7 @@ def execute(cmd: ServiceCmd) -> Optional[id_mod.Identify1]:
     ident = worker.cmd(GetIdentifyDeviceCmd())
 
     if all(value is None for value in cmd.kw.values()):
-        return ident.payload
+        return ident
 
     for key, val in cmd.kw.items():
         if val is not None:
@@ -48,6 +49,8 @@ def execute(cmd: ServiceCmd) -> Optional[id_mod.Identify1]:
         cmd = SetIdentifyDeviceCmd1()
     elif ident.hdr.version == SetIdentifyDeviceCmd2.VERSION:
         cmd = SetIdentifyDeviceCmd2()
+    elif ident.hdr.version >= SetIdentifyDeviceCmd3.VERSION:
+        cmd = SetIdentifyDeviceCmd3()
     cmd.identify = ident
     _ = worker.cmd(cmd)
     return None

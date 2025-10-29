@@ -78,6 +78,7 @@ class Identify(BaseStructure):
         FLIP = '_flip'
         MASS_UNITS = '_mass_units'
         TEMPERATURE_UNITS = '_temperature_units'
+        CONTRAST = '_contrast'
 
     _fields_ = [
         (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
@@ -271,6 +272,14 @@ class Identify(BaseStructure):
     def temperature_units(self, value: TemperatureUnitsType):
         setattr(self, self.Field.TEMPERATURE_UNITS, value)
 
+    @property
+    def contrast(self) -> int:
+        return getattr(self, self.Field.CONTRAST)
+
+    @contrast.setter
+    def contrast(self, value: int):
+        setattr(self, self.Field.CONTRAST, value)
+
 class Identify1(Identify):
     _fields_ = [
         (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 32),
@@ -294,6 +303,11 @@ class Identify2(Identify1):
     _fields_ = [
         (Identify.Field.MASS_UNITS, ctypes.c_uint8),
         (Identify.Field.TEMPERATURE_UNITS, ctypes.c_uint8),
+    ]
+
+class Identify3(Identify2):
+    _fields_ = [
+        (Identify.Field.CONTRAST, ctypes.c_uint8)
     ]
 
 class NvmIdentify1(nvm.BaseNvm):
@@ -332,4 +346,20 @@ class NvmIdentify2(nvm.BaseNvm):
 
     @payload.setter
     def payload(self, value: Identify2):
+        super().payload = value
+
+class NvmIdentify3(nvm.BaseNvm):
+    VERSION = 3
+
+    _fields_ = [
+        (nvm.BaseNvm.Field.HDR, nvm.NvmHdr),
+        (nvm.BaseNvm.Field.PAYLOAD, Identify3)
+    ]
+
+    @property
+    def payload(self) -> Identify3:
+        return super().payload
+
+    @payload.setter
+    def payload(self, value: Identify3):
         super().payload = value
