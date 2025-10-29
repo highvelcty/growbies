@@ -1,5 +1,4 @@
-#ifndef command_h
-#define command_h
+#pragma once
 
 #include "constants.h"
 #include "nvm.h"
@@ -150,7 +149,7 @@ struct RespGetCalibration : BaseResp {
     explicit RespGetCalibration(const NvmCalibration& cal = NvmCalibration{})
         : calibration(cal) {}
 };
-static_assert(sizeof(RespGetCalibration) < MAX_SLIP_UNENCODED_PACKET_BYTES);
+static_assert(sizeof(RespGetCalibration) < MAX_SLIP_UNENCODED_PACKET_BYTES, "buffer overlfow");
 
 struct RespGetIdentify : BaseResp {
     static constexpr auto VERSION = NvmIdentify::VERSION;
@@ -240,5 +239,3 @@ private:
     size_t offset;
     TLVHdr* last_tlv;
 };
-
-#endif /* command_h */

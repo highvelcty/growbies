@@ -15,6 +15,8 @@
 #include <Preferences.h>
 #endif
 
+#pragma pack(1)
+
 constexpr int DEFAULT_CONTRAST = 16;
 
 typedef float MassTemperatureCoeff[MAX_MASS_SENSOR_COUNT][COEFF_COUNT];
@@ -43,8 +45,6 @@ enum class TemperatureUnits: uint8_t {
     FAHRENHEIT = 0,
     CELSIUS = 1,
 };
-
-#pragma pack(1)
 
 struct NvmHdr {
     Version_t version;
@@ -313,3 +313,5 @@ using TareStore = Esp32NvmStore<NvmTare>;
 extern CalibrationStore* calibration_store;
 extern IdentifyStore* identify_store;
 extern TareStore* tare_store;
+
+

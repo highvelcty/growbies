@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "flags.h"
 #include <growbies.h>
+#include <menu.h>
 #include <remote.h>
 #include <math.h>
 #include <nvm.h>
@@ -89,14 +90,14 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
             }
             else {
                 if (identify_store->payload()->flip != cmd->identify.payload.flip) {
-                    const Remote& remote = Remote::get();
-                    remote.menu.flip(cmd->identify.payload.flip);
-                    remote.menu.render();
+                    Remote& remote = Remote::get();
+                    remote.flip(cmd->identify.payload.flip);
+                    remote.menu->render();
                 }
                 if (identify_store->payload()->contrast != cmd->identify.payload.contrast) {
-                    const Remote& remote = Remote::get();
-                    remote.menu.contrast(cmd->identify.payload.contrast);
-                    remote.menu.render();
+                    Remote& remote = Remote::get();
+                    remote.contrast(cmd->identify.payload.contrast);
+                    remote.menu->render();
                 }
                 identify_store->put(cmd->identify);
             }

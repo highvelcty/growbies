@@ -1,6 +1,7 @@
-#include "constants.h"
+#include "menu.h"
 #include <nvm.h>
 #include "remote.h"
+
 
 // Define static instance pointer
 Remote* Remote::instance = nullptr;
@@ -16,14 +17,16 @@ Remote::Remote()
 {
     // Makes member data accessible via ISR
     instance = this;
+
+    menu = std::make_unique<Menu>(*this);
 }
 
 void Remote::begin() {
     // Order is important, the display must be initialized before attaching interrupts.
     display.begin();
-    menu.flip(identify_store->payload()->flip);
-    menu.contrast(identify_store->payload()->contrast);
-    menu.render();
+    flip(identify_store->payload()->flip);
+    contrast(identify_store->payload()->contrast);
+    menu->render();
 
     // Configure wake pin and attach ISR
     pinMode(BUTTON_0_PIN, INPUT);
@@ -40,22 +43,22 @@ bool Remote::service() {
         if (static_cast<long>(now - debounce_time) >= BUTTON_DEBOUNCE_MS) {
             display.clearDisplay();
             if (last_button_pressed == EVENT::SELECT) {
-                menu.select();
+                menu->select();
             }
             else if (last_button_pressed == EVENT::DIRECTION_0) {
                 if (identify_store->payload()->flip) {
-                    menu.down();
+                    menu->down();
                 }
                 else {
-                    menu.up();
+                    menu->up();
                 }
             }
             else if (last_button_pressed == EVENT::DIRECTION_1) {
                 if (identify_store->payload()->flip) {
-                    menu.up();
+                    menu->up();
                 }
                 else {
-                    menu.down();
+                    menu->down();
                 }
             }
             button_pressed = true;
@@ -108,112 +111,14 @@ void IRAM_ATTR Remote::wakeISR1() {
     }
 }
 
-// -----------------------------------------------------------------------------
-// Menu selection
-// -----------------------------------------------------------------------------
-const std::vector<std::shared_ptr<MenuItem>>* Remote::Menu::level_from_path() const {
-    const std::vector<std::shared_ptr<MenuItem>>* level = &menu_root;
-
-    for (size_t i = 0; i + 1 < menu_path.size(); ++i) {
-        const size_t idx = menu_path[i];
-        if (idx >= level->size()) return nullptr;
-        level = &(*level)[idx]->children;
-    }
-
-    return level;
-}
-
-void Remote::Menu::contrast(const uint8_t contrast) const {
-    remote.display.setContrast(contrast);
-}
-
-void Remote::Menu::flip(const bool flip) const {
-    remote.display.setFlipMode(flip);
-}
-
-void Remote::Menu::up() {
-    if (menu_path.empty()) return;
-    auto* level = level_from_path();
-    if (!level) return;
-
-    size_t& idx = menu_path.back();
-    if (idx == 0) {
-        idx = level->size() - 1;  // wrap around
-    } else {
-        --idx;
-    }
-    render();
-}
-
-// -----------------------------------------------------------------------------
-// Move selection down
-// -----------------------------------------------------------------------------
-void Remote::Menu::down() {
-    if (menu_path.empty()) return;
-    auto* level = level_from_path();
-    if (!level || level->empty()) return;
-
-    size_t& idx = menu_path.back();
-
-    // Wrap around to first element if we're past the last
-    idx = (idx + 1) % level->size();
-
-    render();
-}
-
-
-// -----------------------------------------------------------------------------
-// Select / descend or execute action
-// -----------------------------------------------------------------------------
-void Remote::Menu::select() {
-    if (menu_path.empty()) return;
-
-    auto* level = level_from_path();
-    if (!level) return;
-
-    const size_t idx = menu_path.back();
-    if (idx >= level->size()) return;
-
-    const auto& item = (*level)[idx];
-    if (!item->children.empty()) {
-        menu_path.push_back(0); // descend into first child
-    }else {
-        if (item->action) {
-            item->action(); // execute leaf
-        }
-
-        // Truncate path to the top-level menu that led to this leaf
-        if (!menu_path.empty()) {
-            menu_path.resize(1); // keep only first index
-        }
-    }
-
-    render();
-}
-
-void Remote::Menu::render() const {
-    const std::vector<std::shared_ptr<MenuItem>>* level = &menu_root;
-    remote.display.clear();
-
-    for (auto it = menu_path.begin(); it != menu_path.end(); ++it) {
-        const size_t idx = *it;
-        if (idx >= level->size()) return; // safety check
-
-        const auto& item = (*level)[idx];
-
-        item->drawing->draw(remote.display, (std::next(it) != menu_path.end()));
-        level = &item->children;     // descend into children
-    }
-}
-
-void Remote::Action::contrast(const uint8_t contrast) const {
+void Remote::contrast(const uint8_t contrast) {
     identify_store->edit().payload.contrast = contrast;
     identify_store->commit();
-    remote.menu.contrast(contrast);
+    display.setContrast(contrast);
 }
 
-void Remote::Action::flip(const bool flip) const {
+void Remote::flip(const bool flip) {
     identify_store->edit().payload.flip = flip;
     identify_store->commit();
-    remote.menu.flip(flip);
+    display.setFlipMode(flip);
 }
