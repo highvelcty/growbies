@@ -21,12 +21,16 @@ Remote::Remote()
 void Remote::begin() {
     // Order is important, the display must be initialized before attaching interrupts.
     display.begin();
-    display.clear();
+    // display.clear();
     display.setFlipMode(identify_store->payload()->flip);
     display.setFont(u8x8_font_chroma48medium8_r);
-    // MassDrawing(get_tare_name(TareIdx::USER_0), 1234.567, MassUnits::KILOGRAMS).draw(display);
-    TemperatureDrawing("Temperature 0", 50, TemperatureUnits::FAHRENHEIT).draw(display);
-
+    display.drawString(0,0, "emey");
+    display.drawString(1, 1, "emey");
+    // MassDrawing(get_tare_name(TareIdx::TARE_0), 1234.567, MassUnits::KILOGRAMS).draw(display);
+    // TemperatureDrawing("Temperature 0", 50, TemperatureUnits::CELSIUS).draw(display);
+    // ConfigurationDrawing().draw(display);
+    // draw(TemperatureUnitsDrawing());
+    menu.render();
     // Configure wake pin and attach ISR
     pinMode(BUTTON_0_PIN, INPUT);
     pinMode(BUTTON_1_PIN, INPUT);
@@ -42,13 +46,23 @@ bool Remote::service() {
         if (static_cast<long>(now - debounce_time) >= BUTTON_DEBOUNCE_MS) {
             display.clearDisplay();
             if (last_button_pressed == EVENT::SELECT) {
-                display.draw1x2String(0, 0, "Select");
+                menu.select();
             }
             else if (last_button_pressed == EVENT::DIRECTION_0) {
-                display.draw1x2String(0, 0, "Direction 0");
+                if (identify_store->payload()->flip) {
+                    menu.down();
+                }
+                else {
+                    menu.up();
+                }
             }
             else if (last_button_pressed == EVENT::DIRECTION_1) {
-                display.draw1x2String(0, 0, "Direction 1");
+                if (identify_store->payload()->flip) {
+                    menu.up();
+                }
+                else {
+                    menu.down();
+                }
             }
             button_pressed = true;
             debounce_time = now;
@@ -104,3 +118,99 @@ void IRAM_ATTR Remote::wakeISR1() {
         instance->last_button_pressed = EVENT::DIRECTION_0;
     }
 }
+
+// -----------------------------------------------------------------------------
+// Menu selection
+// -----------------------------------------------------------------------------
+const std::vector<std::shared_ptr<MenuItem>>* Remote::Menu::level_from_path() const {
+    const std::vector<std::shared_ptr<MenuItem>>* level = &menu_root;
+
+    for (size_t i = 0; i + 1 < menu_path.size(); ++i) {
+        const size_t idx = menu_path[i];
+        if (idx >= level->size()) return nullptr;
+        level = &(*level)[idx]->children;
+    }
+
+    return level;
+}
+
+void Remote::Menu::up() {
+    if (menu_path.empty()) return;
+    auto* level = level_from_path();
+    if (!level) return;
+
+    size_t& idx = menu_path.back();
+    if (idx == 0) {
+        idx = level->size() - 1;  // wrap around
+    } else {
+        --idx;
+    }
+    render();
+}
+
+// -----------------------------------------------------------------------------
+// Move selection down
+// -----------------------------------------------------------------------------
+void Remote::Menu::down() {
+    if (menu_path.empty()) return;
+    auto* level = level_from_path();
+    if (!level || level->empty()) return;
+
+    size_t& idx = menu_path.back();
+
+    // Wrap around to first element if we're past the last
+    idx = (idx + 1) % level->size();
+
+    render();
+}
+
+
+// -----------------------------------------------------------------------------
+// Select / descend or execute action
+// -----------------------------------------------------------------------------
+void Remote::Menu::select() {
+    if (menu_path.empty()) return;
+
+    auto* level = level_from_path();
+    if (!level) return;
+
+    const size_t idx = menu_path.back();
+    if (idx >= level->size()) return;
+
+    const auto& item = (*level)[idx];
+    if (!item->children.empty()) {
+        menu_path.push_back(0); // descend into first child
+    }else {
+        if (item->action) {
+            item->action(); // execute leaf
+        }
+
+        // Truncate path to the top-level menu that led to this leaf
+        if (!menu_path.empty()) {
+            menu_path.resize(1); // keep only first index
+        }
+    }
+
+    render();
+}
+
+void Remote::Menu::render() const {
+    const std::vector<std::shared_ptr<MenuItem>>* level = &menu_root;
+    
+    for (auto it = menu_path.begin(); it != menu_path.end(); ++it) {
+        const size_t idx = *it;
+        if (idx >= level->size()) return; // safety check
+
+        const auto& item = (*level)[idx];
+
+        // Only mark as selected if not the last element
+        item->drawing->selected = (std::next(it) != menu_path.end());
+
+        remote.draw(*item->drawing); // draw the current level's drawing
+        level = &item->children;     // descend into children
+    }
+}
+
+
+
+

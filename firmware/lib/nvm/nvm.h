@@ -20,9 +20,9 @@ typedef float MassCoeff[COEFF_COUNT];
 typedef float TareValue[TARE_COUNT];
 
 enum class TareIdx: uint8_t {
-    USER_0 = 0,
-    USER_1 = 1,
-    USER_2 = 2,
+    TARE_0 = 0,
+    TARE_1 = 1,
+    TARE_2 = 2,
     AUTO_0 = 3,
     AUTO_1 = 4,
     AUTO_2 = 5,
