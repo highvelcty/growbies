@@ -32,6 +32,7 @@ public:
 
     void contrast(uint8_t contrast);
     void flip(bool flip);
+    void set_temperature_units(TemperatureUnits units);
 
     U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
     std::unique_ptr<Menu> menu;

@@ -3,16 +3,10 @@
 #include <U8x8lib.h>
 #include <cstdio>
 #include <cstring>
-#include <memory>
 #include <Arduino.h>
 
 #include "nvm.h"
-#include "utils.h"
 
-
-#define DEFINE_CLONE(ClassName) \
-    std::unique_ptr<Drawing> clone() const override { \
-    return std::unique_ptr<Drawing>(new ClassName(*this)); }
 
 // -----------------------------------------------------------------------------
 // Display constants
@@ -34,8 +28,6 @@ struct Drawing {
 
     virtual ~Drawing() = default;
     virtual void draw(U8X8& display, bool selected) const = 0;
-    // Allow polymorphic deep copy
-    virtual std::unique_ptr<Drawing> clone() const = 0;
 };
 
 // -----------------------------------------------------------------------------
@@ -52,10 +44,6 @@ struct MenuDrawing : Drawing {
     explicit MenuDrawing(const char* _msg, const int _level = 0, const bool _selected = false)
         : msg(_msg), level(_level) {
         selected = _selected;
-    }
-
-    std::unique_ptr<Drawing> clone() const override {
-        return std::make_unique<MenuDrawing>(*this);
     }
 
     void draw(U8X8& display, const bool selected) const override {
@@ -94,51 +82,36 @@ struct ItemDrawing : MenuDrawing {
 // -----------------------------------------------------------------------------
 struct ConfigurationDrawing final : MenuDrawing {
     ConfigurationDrawing() : MenuDrawing("Configuration") {}
-    DEFINE_CLONE(ConfigurationDrawing)
 };
-struct MassUnitsDrawing final : SubMenuDrawing {
-    MassUnitsDrawing() : SubMenuDrawing("Mass Units") {}
-    DEFINE_CLONE(MassUnitsDrawing)
+
+struct MassUnitsMenuDrawing final : SubMenuDrawing {
+    MassUnitsMenuDrawing() : SubMenuDrawing("Mass Units") {}
 };
-struct MassUnitsGramsDrawing final : ItemDrawing {
-    MassUnitsGramsDrawing(): ItemDrawing("g: Grams") {}
-    DEFINE_CLONE(MassUnitsGramsDrawing)
+struct MassUnitsDrawing final : ItemDrawing {
+    explicit MassUnitsDrawing(const MassUnits _units)
+        : ItemDrawing(
+              _units == MassUnits::GRAMS     ? "g: Grams" :
+              _units == MassUnits::KILOGRAMS ? "kg: Kilog." :
+              _units == MassUnits::OUNCES    ? "oz: Ounces" :
+              "lb: Pounds"  // fallback for MassUnits::POUNDS
+          ) {}
 };
-struct MassUnitsKilogramsDrawing final : ItemDrawing {
-    MassUnitsKilogramsDrawing(): ItemDrawing("kg: Kilogram") {}
-    DEFINE_CLONE(MassUnitsKilogramsDrawing)
+
+struct TemperatureUnitsMenuDrawing final : SubMenuDrawing {
+    TemperatureUnitsMenuDrawing(): SubMenuDrawing("Temp. Units") {}
 };
-struct MassUnitsOuncesDrawing final : ItemDrawing {
-    MassUnitsOuncesDrawing(): ItemDrawing("oz: Ounces") {}
-    DEFINE_CLONE(MassUnitsOuncesDrawing)
+struct TemperatureUnitsDrawing final : ItemDrawing {
+    explicit TemperatureUnitsDrawing(const TemperatureUnits _units)
+        : ItemDrawing(_units == TemperatureUnits::CELSIUS ? "C: Celsius" : "F: Fahren.") {}
 };
-struct MassUnitsPoundsDrawing final : ItemDrawing {
-    MassUnitsPoundsDrawing(): ItemDrawing("lb: Pounds") {}
-    DEFINE_CLONE(MassUnitsPoundsDrawing)
+
+struct FlipMenuDrawing final : SubMenuDrawing {
+    FlipMenuDrawing() : SubMenuDrawing("Flip") {}
 };
-struct TemperatureUnitsDrawing final : SubMenuDrawing {
-    TemperatureUnitsDrawing(): SubMenuDrawing("Temp. Units") {}
-    DEFINE_CLONE(TemperatureUnitsDrawing)
-};
-struct TemperatureUnitsFDrawing final : ItemDrawing {
-    TemperatureUnitsFDrawing(): ItemDrawing("F: Fahren.") {}
-    DEFINE_CLONE(TemperatureUnitsFDrawing)
-};
-struct TemperatureUnitsCDrawing final : ItemDrawing {
-    TemperatureUnitsCDrawing(): ItemDrawing("C: Celsius") {}
-    DEFINE_CLONE(TemperatureUnitsCDrawing)
-};
-struct FlipDrawing final : SubMenuDrawing {
-    FlipDrawing() : SubMenuDrawing("Flip") {}
-    DEFINE_CLONE(FlipDrawing)
-};
-struct FlipTrueDrawing final : ItemDrawing {
-    FlipTrueDrawing() : ItemDrawing("True") {}
-    DEFINE_CLONE(FlipTrueDrawing)
-};
-struct FlipFalseDrawing final : ItemDrawing {
-    FlipFalseDrawing() : ItemDrawing("False") {}
-    DEFINE_CLONE(FlipFalseDrawing)
+// Only one class needed
+struct FlipDrawing final : ItemDrawing {
+    explicit FlipDrawing(const bool flip)
+        : ItemDrawing(flip ? "True" : "False") {}
 };
 
 // -----------------------------------------------------------------------------
@@ -224,7 +197,6 @@ struct MassDrawing final : TelemetryDrawing {
         }
         units[UNITS_CHARS] = '\0';
     }
-    DEFINE_CLONE(MassDrawing)
 };
 
 // -----------------------------------------------------------------------------
@@ -252,5 +224,4 @@ struct TemperatureDrawing final : TelemetryDrawing {
         }
         units[UNITS_CHARS] = '\0';
     }
-    DEFINE_CLONE(TemperatureDrawing)
 };

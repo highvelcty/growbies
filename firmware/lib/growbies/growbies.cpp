@@ -89,14 +89,17 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
                 identify_store->init();
             }
             else {
+                Remote& remote = Remote::get();
                 if (identify_store->payload()->flip != cmd->identify.payload.flip) {
-                    Remote& remote = Remote::get();
                     remote.flip(cmd->identify.payload.flip);
-                    remote.menu->render();
                 }
                 if (identify_store->payload()->contrast != cmd->identify.payload.contrast) {
-                    Remote& remote = Remote::get();
                     remote.contrast(cmd->identify.payload.contrast);
+                }
+                if (identify_store->payload()->temperature_units !=
+                    cmd->identify.payload.temperature_units or
+                    identify_store->payload()->mass_units !=
+                    cmd->identify.payload.mass_units) {
                     remote.menu->render();
                 }
                 identify_store->put(cmd->identify);

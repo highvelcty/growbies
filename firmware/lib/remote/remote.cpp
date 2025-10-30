@@ -1,6 +1,7 @@
 #include "menu.h"
 #include <nvm.h>
 #include "remote.h"
+#include "utils.h"
 
 
 // Define static instance pointer
@@ -118,7 +119,10 @@ void Remote::contrast(const uint8_t contrast) {
 }
 
 void Remote::flip(const bool flip) {
-    identify_store->edit().payload.flip = flip;
-    identify_store->commit();
     display.setFlipMode(flip);
+    menu->render();
+}
+
+void Remote::set_temperature_units(TemperatureUnits units) {
+    menu->render();
 }
