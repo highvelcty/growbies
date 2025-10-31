@@ -27,8 +27,7 @@ Menu::Menu() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {
 void Menu::begin() {
     // Order is important, the display must be initialized before attaching interrupts.
     display.begin();
-    display.setFlipMode(identify_store->payload()->flip);
-    display.setContrast(identify_store->payload()->contrast);
+    update();
     render();
 
     Remote::begin();
@@ -117,18 +116,17 @@ void Menu::select() {
     if (idx >= level->size()) return;
 
     const auto& item = (*level)[idx];
-    if (!item->children.empty()) {
-        menu_path.push_back(item->on_descent()); // descend into first child
-        render();
-    }
-    else {
+    if (item->children.empty()) {
         // Truncate path to the top-level menu that led to this leaf
         if (!menu_path.empty()) {
             menu_path.resize(1); // keep only first index
         }
         item->on_select();
-        render();
     }
+    else {
+        menu_path.push_back(0);
+    }
+    render();
 }
 
 void Menu::render() {

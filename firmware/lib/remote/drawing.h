@@ -54,7 +54,6 @@ struct MenuDrawing {
     virtual void on_down() {}
     virtual void on_up() {}
     virtual void on_select() {}
-    virtual size_t on_descent() { return 0; }
     virtual void update() {}
 
     virtual ~MenuDrawing() = default;
@@ -90,6 +89,13 @@ struct ItemDrawing : CfgMenuDrawing {
     char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
 };
 
+struct ItemsDrawing : CfgMenuDrawing {
+    static constexpr char SELECTED_CHAR = '>';
+    explicit ItemsDrawing(U8X8& display_, const int level_) :
+        CfgMenuDrawing(display_, nullptr, level_) {}
+    char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
+};
+
 struct ValueDrawing : ItemDrawing {
     static constexpr char SELECTED_CHAR = '>';
 
@@ -109,31 +115,28 @@ struct ValueDrawing : ItemDrawing {
 // Concrete menu/item drawings
 // -----------------------------------------------------------------------------
 struct ContrastDrawing final : ValueDrawing {
+    static constexpr uint8_t INC = 15;
     explicit ContrastDrawing(U8X8& display_) : ValueDrawing(display_, 3) {}
 
     void on_up() override {
         if (value == UINT8_MAX) {
             value = 0;
         }
-        else if (value == 0) {
-            value = 7;
-        }
         else {
-            value = min(value + 8, UINT8_MAX);
+            value = min(value + INC, UINT8_MAX);
         }
         display.setContrast(value);
     }
 
     void on_down() override {
+
         if (value == 0) {
             value = UINT8_MAX;
         }
-        else if (value == UINT8_MAX) {
-            value = 248;
-        }
         else {
-            value = max(value - 8, 0);
+            value = max(value - INC, 0);
         }
+
         display.setContrast(value);
     }
 
@@ -158,16 +161,45 @@ struct ContrastMenuDrawing final : CfgMenuDrawing {
                   std::make_shared<ContrastDrawing>(display_),
               }) {}
 };
-struct FlipDrawing final : ItemDrawing {
+
+struct FlipDrawing final : ItemsDrawing {
     bool flip{false};
 
-    explicit FlipDrawing(U8X8& display_, const bool flip_)
-        : ItemDrawing(display_, flip_ ? "True" : "False", 3), flip(flip_) {}
+    explicit FlipDrawing(U8X8& display_) : ItemsDrawing(display_, 3) {
+        _set_msg();
+    }
+
+    void draw(const bool selected) override {
+        _set_msg();
+        ItemsDrawing::draw(selected);
+    }
+
+    void on_up() override {
+        flip = !flip;
+    }
+
+    void on_down() override {
+        on_up();
+    }
 
     void on_select() override {
         display.setFlipMode(flip);
         identify_store->edit().payload.flip = flip;
         identify_store->commit();
+    }
+
+    void update() override {
+        flip = identify_store->view()->payload.flip;
+        display.setFlipMode(flip);
+    }
+
+    void _set_msg() {
+        if (flip) {
+            msg = "True";
+        }
+        else {
+            msg = "False";
+        }
     }
 };
 
@@ -178,16 +210,8 @@ struct FlipMenuDrawing final : CfgMenuDrawing {
               "Flip",
               2,
               std::vector<std::shared_ptr<MenuDrawing>>{
-                  std::make_shared<FlipDrawing>(display_, false),
-                  std::make_shared<FlipDrawing>(display_, true)
+                  std::make_shared<FlipDrawing>(display_)
               }) {}
-
-    size_t on_descent() override {
-        if (identify_store->view()->payload.flip) {
-            return 1;
-        }
-        return 0;
-    }
 };
 
 struct DisplayMenuDrawing final : CfgMenuDrawing {
@@ -202,22 +226,62 @@ struct DisplayMenuDrawing final : CfgMenuDrawing {
             }) {}
 };
 
-struct MassUnitsDrawing final : ItemDrawing {
-    MassUnits units;
+struct MassUnitsDrawing final : ItemsDrawing {
+    MassUnits units{MassUnits::GRAMS};
 
-    explicit MassUnitsDrawing(U8X8& display_, const MassUnits _units)
-        : ItemDrawing(
-              display_,
-              _units == MassUnits::GRAMS     ? "g: Grams" :
-              _units == MassUnits::KILOGRAMS ? "kg: Kilog." :
-              _units == MassUnits::OUNCES    ? "oz: Ounces" :
-              "lb: Pounds",  // fallback for MassUnits::POUNDS
-              3), units(_units) {}
+    explicit  MassUnitsDrawing(U8X8& display_) : ItemsDrawing(display_, 3) {
+        _set_msg();
+    }
 
-    void on_select() override {
-        identify_store->edit().payload.mass_units = units;
-        identify_store->commit();
-    };
+    void on_down() override {
+        // Convert to integer for cycling
+        uint8_t next = static_cast<uint8_t>(units) + 1;
+
+        // Wrap around if we exceed the last element
+        if (next > static_cast<uint8_t>(MassUnits::POUNDS)) {
+            next = static_cast<uint8_t>(MassUnits::GRAMS);
+        }
+
+        // Update the current unit
+        units = static_cast<MassUnits>(next);
+    }
+
+    void on_up() override {
+        // Convert to integer for cycling
+        uint8_t next = static_cast<uint8_t>(units) - 1;
+
+        // Wrap around if we exceed the first element - note the uint8 wraps to 255.
+        if (next > static_cast<uint8_t>(MassUnits::POUNDS)) {
+            next = static_cast<uint8_t>(MassUnits::POUNDS);
+        }
+
+        // Update the current unit
+        units = static_cast<MassUnits>(next);
+    }
+
+    void update() override {
+        units = identify_store->view()->payload.mass_units;
+    }
+
+    void draw(const bool selected) override {
+        _set_msg();
+        ItemsDrawing::draw(selected);
+    }
+
+    void _set_msg() {
+        if (units == MassUnits::GRAMS) {
+            msg = "g: grams";
+        }
+        else if (units == MassUnits::KILOGRAMS) {
+            msg = "kg: kilog.";
+        }
+        else if (units == MassUnits::OUNCES) {
+            msg = "oz: ounces";
+        }
+        else {
+            msg = "lb: pounds";
+        }
+    }
 };
 
 struct MassUnitsMenuDrawing final : CfgMenuDrawing {
@@ -227,40 +291,51 @@ struct MassUnitsMenuDrawing final : CfgMenuDrawing {
               "Mass",
               2,
               std::vector<std::shared_ptr<MenuDrawing>>{
-                  std::make_shared<MassUnitsDrawing>(display_, MassUnits::GRAMS),
-                  std::make_shared<MassUnitsDrawing>(display_, MassUnits::KILOGRAMS),
-                  std::make_shared<MassUnitsDrawing>(display_, MassUnits::OUNCES),
-                  std::make_shared<MassUnitsDrawing>(display_, MassUnits::POUNDS)
+                  std::make_shared<MassUnitsDrawing>(display_)
               }) {}
-
-    size_t on_descent() override {
-        // Return an index based on the current MassUnits in the configuration.
-        switch (identify_store->view()->payload.mass_units) {
-            case MassUnits::GRAMS:      return 0;
-            case MassUnits::KILOGRAMS:  return 1;
-            case MassUnits::OUNCES:     return 2;
-            case MassUnits::POUNDS:     return 3;
-        }
-        return 0; // fallback
-    }
-
 };
 
+struct TemperatureUnitsDrawing final : ItemsDrawing {
+    TemperatureUnits units{TemperatureUnits::CELSIUS};
 
-struct TemperatureUnitsDrawing final : ItemDrawing {
-    TemperatureUnits units;
+    explicit TemperatureUnitsDrawing(U8X8& display_) : ItemsDrawing(display_, 3) {
+        _set_msg();
+    }
 
-    explicit TemperatureUnitsDrawing(U8X8& display_, const TemperatureUnits _units)
-        : ItemDrawing(
-              display_,
-              _units == TemperatureUnits::CELSIUS
-                  ? "C: Celsius"
-                  : "F: Fahren.",
-              3), units(_units) {}
+    void on_up() override {
+        if (units == TemperatureUnits::CELSIUS) {
+            units = TemperatureUnits::FAHRENHEIT;
+        }
+        else {
+            units = TemperatureUnits::CELSIUS;
+        }
+    }
+
+    void on_down() override {
+        on_up();
+    }
 
     void on_select() override {
         identify_store->edit().payload.temperature_units = units;
         identify_store->commit();
+    }
+
+    void update() override {
+        units = identify_store->view()->payload.temperature_units;
+    }
+
+    void draw(const bool selected) override {
+        _set_msg();
+        ItemsDrawing::draw(selected);
+    }
+
+    void _set_msg() {
+        if (units == TemperatureUnits::FAHRENHEIT) {
+            msg = "F: Fahren.";
+        }
+        else {
+            msg = "C: Celsius";
+        }
     }
 };
 
@@ -271,17 +346,8 @@ struct TemperatureUnitsMenuDrawing final : CfgMenuDrawing {
               "Temperature",
               2,
               std::vector<std::shared_ptr<MenuDrawing>>{
-                  std::make_shared<TemperatureUnitsDrawing>(display_, TemperatureUnits::CELSIUS),
-                  std::make_shared<TemperatureUnitsDrawing>(display_, TemperatureUnits::FAHRENHEIT)
+                  std::make_shared<TemperatureUnitsDrawing>(display_),
               }) {}
-
-    size_t on_descent() override {
-        if (identify_store->view()->payload.temperature_units == TemperatureUnits::CELSIUS) {
-            return 0;
-        }
-        return 1;
-    }
-
 };
 
 struct UnitsMenuDrawing final : CfgMenuDrawing {
