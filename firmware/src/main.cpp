@@ -59,29 +59,6 @@ void task_remote() {
 #endif
 }
 
-void task_sleep() {
-    const unsigned long now = millis();
-    if (now - last_activity_ms > WAIT_FOR_CMD_MILLIS) {
-#if LIGHT_SLEEP
-        esp_light_sleep_start();
-#else
-        while (millis() - now < SLEEP_MS) {
-            Menu& menu = Menu::get();
-            if (Serial.available()) {
-                mark_activity();
-                break;
-            }
-            if (menu.service()) {
-                mark_activity();
-                break;
-            }
-            delay(SMALL_DELAY_MS);  // small wait to save power but remain responsive
-#endif
-            mark_activity(); // prevent immediate re-sleep after wake
-        }
-    }
-}
-
 void setup() {
     calibration_store->begin();
     identify_store->begin();
@@ -103,7 +80,6 @@ void loop() {
     static Task tasks[] = {
         {task_serial,       10, 0},
         {task_remote,       50, 0},
-        {task_sleep,        500, 0},
         {task_measure,      1000, 0},
     };
 
