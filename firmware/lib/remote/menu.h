@@ -20,14 +20,14 @@ public:
     Menu();
     void begin();
 
-    U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
-
     bool service();
     void up();
     void down();
     void select();
     void render();
-    void update();
+    void update() const;
+
+    U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
 
 private:
     Remote remote;

@@ -146,17 +146,25 @@ void Menu::render() {
     }
 }
 
-void Menu::update() {
-    const std::vector<std::shared_ptr<MenuDrawing>>* level = &menu_root;
-    display.clear();
+void Menu::update() const {
+    if (menu_root.empty()) return;
 
-    for (auto it = menu_path.begin(); it != menu_path.end(); ++it) {
-        const size_t idx = *it;
-        if (idx >= level->size()) return; // safety check
+    std::vector<std::shared_ptr<MenuDrawing>> stack;
 
-        const auto& item = (*level)[idx];
+    // Start with the root nodes
+    for (const auto& node : menu_root) {
+        if (node) stack.push_back(node);
+    }
 
-        item->update();
-        level = &item->children;     // descend into children
+    while (!stack.empty()) {
+        const auto node = stack.back();
+        stack.pop_back();
+
+        node->update();
+
+        for (const auto& child : node->children) {
+            if (child) stack.push_back(child);
+        }
     }
 }
+

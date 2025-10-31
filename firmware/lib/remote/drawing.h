@@ -29,7 +29,6 @@ struct MenuDrawing {
     const char* msg{nullptr};
     int level{0};
     std::vector<std::shared_ptr<MenuDrawing>> children;
-    bool cached_selected{false};
 
     explicit MenuDrawing(
         U8X8& display_,                   // non-const reference
@@ -43,9 +42,7 @@ struct MenuDrawing {
           children(std::move(_children))
     {}
 
-    virtual void draw(const bool selected) {
-        cached_selected = selected;
-    }
+    virtual void draw(const bool selected) {}
 
 
     virtual char get_selected_char(const bool _selected) const {
@@ -58,9 +55,7 @@ struct MenuDrawing {
     virtual void on_up() {}
     virtual void on_select() {}
     virtual size_t on_descent() { return 0; }
-    virtual void update() {
-        draw(cached_selected);
-    }
+    virtual void update() {}
 
     virtual ~MenuDrawing() = default;
 
@@ -105,7 +100,7 @@ struct ValueDrawing : ItemDrawing {
 
     void draw(const bool selected) override {
         char line_buf[MAX_DISPLAY_COLUMNS + 1];
-        snprintf(line_buf, sizeof(line_buf), "%c %s", get_selected_char(selected), msg);
+        snprintf(line_buf, sizeof(line_buf), "%c %d", get_selected_char(selected), value);
         display.drawString(level, level, line_buf);
     }
 };
@@ -115,12 +110,6 @@ struct ValueDrawing : ItemDrawing {
 // -----------------------------------------------------------------------------
 struct ContrastDrawing final : ValueDrawing {
     explicit ContrastDrawing(U8X8& display_) : ValueDrawing(display_, 3) {}
-
-    void draw(const bool selected) override {
-        char line_buf[MAX_DISPLAY_COLUMNS + 1];
-        snprintf(line_buf, sizeof(line_buf), "%c %d", get_selected_char(selected), value);
-        display.drawString(level, level, line_buf);
-    }
 
     void on_up() override {
         if (value == UINT8_MAX) {
@@ -156,7 +145,6 @@ struct ContrastDrawing final : ValueDrawing {
     void update() override {
         value = identify_store->view()->payload.contrast;
         display.setContrast(value);
-        ValueDrawing::update();
     }
 };
 
@@ -255,6 +243,7 @@ struct MassUnitsMenuDrawing final : CfgMenuDrawing {
         }
         return 0; // fallback
     }
+
 };
 
 

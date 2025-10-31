@@ -91,6 +91,7 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
                 Menu& menu = Menu::get();
                 identify_store->put(cmd->identify);
                 menu.update();
+                menu.render();
             }
             send_payload(resp, sizeof(*resp));
         }
