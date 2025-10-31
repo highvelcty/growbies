@@ -4,23 +4,38 @@
 #include <memory>
 
 #include "drawing.h"
+#include "remote.h"
 
-// Forward Declarations
-class Remote;
-struct MenuItem;
 
 class Menu {
 public:
-    explicit Menu(Remote& r) : remote(r) {}
+    // Delete copy/move constructors to enforce singleton
+    Menu(const Menu&) = delete;
+    Menu& operator=(const Menu&) = delete;
+    Menu(Menu&&) = delete;
+    Menu& operator=(Menu&&) = delete;
+    // Access the application-wide singleton instance
+    static Menu& get();
 
+    Menu();
+    void begin();
+
+    U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
+
+    bool service();
     void up();
     void down();
     void select();
-    void render() const;
+    void render();
+    void update();
 
 private:
-    const std::vector<std::shared_ptr<MenuItem>>* level_from_path() const;
+    Remote remote;
 
     std::vector<size_t> menu_path{0};  // Index path down the tree
-    Remote& remote;
+    std::vector<std::shared_ptr<MenuDrawing>> menu_root;
+    const std::vector<std::shared_ptr<MenuDrawing>>* level_from_path() const;
+
+    // internal singleton pointer
+    static Menu* instance;
 };

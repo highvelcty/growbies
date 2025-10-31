@@ -5,7 +5,7 @@
 #include <nvm.h>
 
 #if FEATURE_DISPLAY
-#include <remote.h>
+#include <menu.h>
 #endif
 
 #if ARDUINO_ARCH_ESP32
@@ -52,8 +52,8 @@ void task_measure() {
 
 void task_remote() {
 #if FEATURE_DISPLAY
-    Remote& remote = Remote::get();
-    if (remote.service()) {
+    Menu& menu = Menu::get();
+    if (menu.service()) {
         mark_activity();
     }
 #endif
@@ -66,12 +66,12 @@ void task_sleep() {
         esp_light_sleep_start();
 #else
         while (millis() - now < SLEEP_MS) {
-            Remote& remote = Remote::get();
+            Menu& menu = Menu::get();
             if (Serial.available()) {
                 mark_activity();
                 break;
             }
-            if (remote.service()) {
+            if (menu.service()) {
                 mark_activity();
                 break;
             }
@@ -95,7 +95,7 @@ void setup() {
     Growbies::begin();
     last_activity_ms = millis();
 #if FEATURE_DISPLAY
-    Remote::get().begin();
+    Menu::get().begin();
 #endif
 }
 

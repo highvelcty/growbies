@@ -4,7 +4,6 @@
 #include "flags.h"
 #include <growbies.h>
 #include <menu.h>
-#include <remote.h>
 #include <math.h>
 #include <nvm.h>
 #include <sort.h>
@@ -89,20 +88,9 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
                 identify_store->init();
             }
             else {
-                Remote& remote = Remote::get();
-                if (identify_store->payload()->flip != cmd->identify.payload.flip) {
-                    remote.flip(cmd->identify.payload.flip);
-                }
-                if (identify_store->payload()->contrast != cmd->identify.payload.contrast) {
-                    remote.contrast(cmd->identify.payload.contrast);
-                }
-                if (identify_store->payload()->temperature_units !=
-                    cmd->identify.payload.temperature_units or
-                    identify_store->payload()->mass_units !=
-                    cmd->identify.payload.mass_units) {
-                    remote.menu->render();
-                }
+                Menu& menu = Menu::get();
                 identify_store->put(cmd->identify);
+                menu.update();
             }
             send_payload(resp, sizeof(*resp));
         }

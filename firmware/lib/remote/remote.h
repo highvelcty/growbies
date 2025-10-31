@@ -1,11 +1,6 @@
 #pragma once
 
-#include <memory>
-
 #include <U8x8lib.h>
-
-// Forward Declarations
-class Menu;
 
 enum class EVENT: int8_t {
     NONE = -1,
@@ -14,37 +9,33 @@ enum class EVENT: int8_t {
     DIRECTION_1 = 2,
 };
 
+enum class BUTTON : uint8_t {
+    NONE = 0,
+    UP = 1,
+    DOWN = 2,
+    SELECT = 3
+};
+
 class Remote {
 public:
-    // Enforce singleton
     Remote();
-    Remote(const Remote&) = delete;
-    Remote& operator=(const Remote&) = delete;
-    Remote(Remote&&) = delete;
-    Remote& operator=(Remote&&) = delete;
 
-    // Access the application-wide singleton instance
-    static Remote& get();
-    // Initialize wake-on-interrupt configuration previously done by enable_delay_wake
-    void begin();
-    bool service();
+    static void begin();
 
+    BUTTON service();
 
-    void contrast(uint8_t contrast);
-    void flip(bool flip);
-    void set_temperature_units(TemperatureUnits units);
-
-    U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
-    std::unique_ptr<Menu> menu;
 
 private:
     // Pointer used by ISR to touch the singleton
     static Remote* instance;
 
     unsigned long debounce_time = 0;
+    unsigned long hold_start_time = 0;
+    unsigned long hold_delay = BUTTON_DEBOUNCE_MS * 10;
 
     // volatile make this ISR-safe
     volatile EVENT last_button_pressed = EVENT::NONE;
+    volatile EVENT hold_button = EVENT::NONE;
     volatile bool arm_isr = true;
 
     static void wakeISR0();
