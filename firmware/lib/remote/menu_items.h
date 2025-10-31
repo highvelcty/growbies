@@ -21,20 +21,20 @@ constexpr auto TWO_BY_THREE_FONT   = u8x8_font_courR18_2x3_r;
 // Simple text-based drawing (most menu pages, labels, etc.)
 // -----------------------------------------------------------------------------
 
-struct MenuDrawing {
+struct BaseMenu {
     static constexpr char SELECTED_CHAR = '-';
     static constexpr char UNSELECTED_CHAR = '+';
 
     U8X8& display;
     const char* msg{nullptr};
     int level{0};
-    std::vector<std::shared_ptr<MenuDrawing>> children;
+    std::vector<std::shared_ptr<BaseMenu>> children;
 
-    explicit MenuDrawing(
+    explicit BaseMenu(
         U8X8& display_,                   // non-const reference
         const char* msg_ = nullptr,
         const int level_ = 0,
-        std::vector<std::shared_ptr<MenuDrawing>> _children = {}
+        std::vector<std::shared_ptr<BaseMenu>> _children = {}
     )
         : display(display_),
           msg(msg_),
@@ -56,18 +56,18 @@ struct MenuDrawing {
     virtual void on_select() {}
     virtual void update() {}
 
-    virtual ~MenuDrawing() = default;
+    virtual ~BaseMenu() = default;
 
 };
 
-struct CfgMenuDrawing : MenuDrawing {
-    explicit CfgMenuDrawing(
+struct BaseCfgMenu : BaseMenu {
+    explicit BaseCfgMenu(
         U8X8& display_,                   // non-const reference
         const char* msg_ = nullptr,
         const int level_ = 0,
-        std::vector<std::shared_ptr<MenuDrawing>> _children = {}
+        std::vector<std::shared_ptr<BaseMenu>> _children = {}
     )
-        : MenuDrawing(display_, msg_, level_, std::move(_children))
+        : BaseMenu(display_, msg_, level_, std::move(_children))
     {}
 
     void draw(const bool selected) override {
@@ -82,27 +82,22 @@ struct CfgMenuDrawing : MenuDrawing {
     }
 };
 
-struct ItemDrawing : CfgMenuDrawing {
+struct BaseStrMenuLeaf : BaseCfgMenu {
     static constexpr char SELECTED_CHAR = '>';
-    explicit ItemDrawing(U8X8& display_, const char* msg_, const int level_) :
-        CfgMenuDrawing(display_, msg_, level_) {}
+    explicit BaseStrMenuLeaf(U8X8& display_, const int level_) :
+        BaseCfgMenu(display_, nullptr, level_) {}
     char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
 };
 
-struct ItemsDrawing : CfgMenuDrawing {
-    static constexpr char SELECTED_CHAR = '>';
-    explicit ItemsDrawing(U8X8& display_, const int level_) :
-        CfgMenuDrawing(display_, nullptr, level_) {}
-    char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
-};
-
-struct ValueDrawing : ItemDrawing {
+struct BaseIntMenuLeaf : BaseCfgMenu {
     static constexpr char SELECTED_CHAR = '>';
 
     int value{0};
 
-    explicit ValueDrawing(U8X8& display_ ,const int level_) :
-        ItemDrawing(display_, nullptr, level_) {}
+    explicit BaseIntMenuLeaf(U8X8& display_ ,const int level_) :
+        BaseCfgMenu(display_, nullptr, level_) {}
+
+    char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
 
     void draw(const bool selected) override {
         char line_buf[MAX_DISPLAY_COLUMNS + 1];
@@ -114,9 +109,9 @@ struct ValueDrawing : ItemDrawing {
 // -----------------------------------------------------------------------------
 // Concrete menu/item drawings
 // -----------------------------------------------------------------------------
-struct ContrastDrawing final : ValueDrawing {
+struct ContrastMenuLeaf final : BaseIntMenuLeaf {
     static constexpr uint8_t INC = 15;
-    explicit ContrastDrawing(U8X8& display_) : ValueDrawing(display_, 3) {}
+    explicit ContrastMenuLeaf(U8X8& display_) : BaseIntMenuLeaf(display_, 3) {}
 
     void on_up() override {
         if (value == UINT8_MAX) {
@@ -151,27 +146,27 @@ struct ContrastDrawing final : ValueDrawing {
     }
 };
 
-struct ContrastMenuDrawing final : CfgMenuDrawing {
-    explicit ContrastMenuDrawing(U8X8& display_)
-        : CfgMenuDrawing(
+struct ContrastMenu final : BaseCfgMenu {
+    explicit ContrastMenu(U8X8& display_)
+        : BaseCfgMenu(
               display_,
               "Contrast",
               2,
-              std::vector<std::shared_ptr<MenuDrawing>>{
-                  std::make_shared<ContrastDrawing>(display_),
+              std::vector<std::shared_ptr<BaseMenu>>{
+                  std::make_shared<ContrastMenuLeaf>(display_),
               }) {}
 };
 
-struct FlipDrawing final : ItemsDrawing {
+struct FlipMenuLeaf final : BaseStrMenuLeaf {
     bool flip{false};
 
-    explicit FlipDrawing(U8X8& display_) : ItemsDrawing(display_, 3) {
+    explicit FlipMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
         _set_msg();
     }
 
     void draw(const bool selected) override {
         _set_msg();
-        ItemsDrawing::draw(selected);
+        BaseStrMenuLeaf::draw(selected);
     }
 
     void on_up() override {
@@ -203,33 +198,33 @@ struct FlipDrawing final : ItemsDrawing {
     }
 };
 
-struct FlipMenuDrawing final : CfgMenuDrawing {
-    explicit FlipMenuDrawing(U8X8& display_)
-        : CfgMenuDrawing(
+struct FlipMenu final : BaseCfgMenu {
+    explicit FlipMenu(U8X8& display_)
+        : BaseCfgMenu(
               display_,
               "Flip",
               2,
-              std::vector<std::shared_ptr<MenuDrawing>>{
-                  std::make_shared<FlipDrawing>(display_)
+              std::vector<std::shared_ptr<BaseMenu>>{
+                  std::make_shared<FlipMenuLeaf>(display_)
               }) {}
 };
 
-struct DisplayMenuDrawing final : CfgMenuDrawing {
-    explicit DisplayMenuDrawing(U8X8& display_)
-        : CfgMenuDrawing(
+struct DisplayMenu final : BaseCfgMenu {
+    explicit DisplayMenu(U8X8& display_)
+        : BaseCfgMenu(
             display_,
             "Display",
             1,
-            std::vector<std::shared_ptr<MenuDrawing>>{
-                std::make_shared<FlipMenuDrawing>(display_),
-                std::make_shared<ContrastMenuDrawing>(display_),
+            std::vector<std::shared_ptr<BaseMenu>>{
+                std::make_shared<FlipMenu>(display_),
+                std::make_shared<ContrastMenu>(display_),
             }) {}
 };
 
-struct MassUnitsDrawing final : ItemsDrawing {
+struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
     MassUnits units{MassUnits::GRAMS};
 
-    explicit  MassUnitsDrawing(U8X8& display_) : ItemsDrawing(display_, 3) {
+    explicit  MassUnitsMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
         _set_msg();
     }
 
@@ -265,7 +260,7 @@ struct MassUnitsDrawing final : ItemsDrawing {
 
     void draw(const bool selected) override {
         _set_msg();
-        ItemsDrawing::draw(selected);
+        BaseStrMenuLeaf::draw(selected);
     }
 
     void _set_msg() {
@@ -284,21 +279,21 @@ struct MassUnitsDrawing final : ItemsDrawing {
     }
 };
 
-struct MassUnitsMenuDrawing final : CfgMenuDrawing {
-    explicit MassUnitsMenuDrawing(U8X8& display_)
-        : CfgMenuDrawing(
+struct MassUnitsMenu final : BaseCfgMenu {
+    explicit MassUnitsMenu(U8X8& display_)
+        : BaseCfgMenu(
               display_,
               "Mass",
               2,
-              std::vector<std::shared_ptr<MenuDrawing>>{
-                  std::make_shared<MassUnitsDrawing>(display_)
+              std::vector<std::shared_ptr<BaseMenu>>{
+                  std::make_shared<MassUnitsMenuLeaf>(display_)
               }) {}
 };
 
-struct TemperatureUnitsDrawing final : ItemsDrawing {
+struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
     TemperatureUnits units{TemperatureUnits::CELSIUS};
 
-    explicit TemperatureUnitsDrawing(U8X8& display_) : ItemsDrawing(display_, 3) {
+    explicit TemperatureUnitsMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
         _set_msg();
     }
 
@@ -326,7 +321,7 @@ struct TemperatureUnitsDrawing final : ItemsDrawing {
 
     void draw(const bool selected) override {
         _set_msg();
-        ItemsDrawing::draw(selected);
+        BaseStrMenuLeaf::draw(selected);
     }
 
     void _set_msg() {
@@ -339,38 +334,38 @@ struct TemperatureUnitsDrawing final : ItemsDrawing {
     }
 };
 
-struct TemperatureUnitsMenuDrawing final : CfgMenuDrawing {
-    explicit TemperatureUnitsMenuDrawing(U8X8& display_)
-        : CfgMenuDrawing(
+struct TemperatureUnitsMenu final : BaseCfgMenu {
+    explicit TemperatureUnitsMenu(U8X8& display_)
+        : BaseCfgMenu(
               display_,
               "Temperature",
               2,
-              std::vector<std::shared_ptr<MenuDrawing>>{
-                  std::make_shared<TemperatureUnitsDrawing>(display_),
+              std::vector<std::shared_ptr<BaseMenu>>{
+                  std::make_shared<TemperatureUnitsMenuLeaf>(display_),
               }) {}
 };
 
-struct UnitsMenuDrawing final : CfgMenuDrawing {
-    explicit UnitsMenuDrawing(U8X8& display_)
-        : CfgMenuDrawing(
+struct UnitsMenu final : BaseCfgMenu {
+    explicit UnitsMenu(U8X8& display_)
+        : BaseCfgMenu(
               display_,
               "Units",
               1,
-              std::vector<std::shared_ptr<MenuDrawing>>{
-                  std::make_shared<MassUnitsMenuDrawing>(display_),
-                  std::make_shared<TemperatureUnitsMenuDrawing>(display_),
+              std::vector<std::shared_ptr<BaseMenu>>{
+                  std::make_shared<MassUnitsMenu>(display_),
+                  std::make_shared<TemperatureUnitsMenu>(display_),
               }) {}
 };
 
-struct ConfigurationDrawing final : CfgMenuDrawing {
-    explicit ConfigurationDrawing(U8X8& display_)
-        : CfgMenuDrawing(
+struct ConfigurationMenu final : BaseCfgMenu {
+    explicit ConfigurationMenu(U8X8& display_)
+        : BaseCfgMenu(
               display_,
               "Configuration",
               0,
-              std::vector<std::shared_ptr<MenuDrawing>>{
-                  std::make_shared<UnitsMenuDrawing>(display_),
-                  std::make_shared<DisplayMenuDrawing>(display_),
+              std::vector<std::shared_ptr<BaseMenu>>{
+                  std::make_shared<UnitsMenu>(display_),
+                  std::make_shared<DisplayMenu>(display_),
               }) {}
 };
 
@@ -378,7 +373,7 @@ struct ConfigurationDrawing final : CfgMenuDrawing {
 // -----------------------------------------------------------------------------
 // TelemetryDrawing (base for mass, temperature, etc.)
 // -----------------------------------------------------------------------------
-struct TelemetryDrawing : MenuDrawing {
+struct TelemetryDrawing : BaseMenu {
     static constexpr auto VALUE_CHARS = 7;
     static constexpr auto UNITS_CHARS = 2;
 
@@ -390,9 +385,9 @@ struct TelemetryDrawing : MenuDrawing {
         U8X8& display_,
         const char* msg_ = "",
         const int level_ = 0,
-        std::vector<std::shared_ptr<MenuDrawing>> _children = {}
+        std::vector<std::shared_ptr<BaseMenu>> _children = {}
     )
-        : MenuDrawing(display_, msg_, level_, std::move(_children)) {}
+        : BaseMenu(display_, msg_, level_, std::move(_children)) {}
 
     void draw(const bool selected) override {
         display.clear();

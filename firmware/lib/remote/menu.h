@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 
-#include "drawing.h"
+#include "menu_items.h"
 #include "remote.h"
 
 
@@ -33,8 +33,8 @@ private:
     Remote remote;
 
     std::vector<size_t> menu_path{0};  // Index path down the tree
-    std::vector<std::shared_ptr<MenuDrawing>> menu_root;
-    const std::vector<std::shared_ptr<MenuDrawing>>* level_from_path() const;
+    std::vector<std::shared_ptr<BaseMenu>> menu_root;
+    const std::vector<std::shared_ptr<BaseMenu>>* level_from_path() const;
 
     // internal singleton pointer
     static Menu* instance;

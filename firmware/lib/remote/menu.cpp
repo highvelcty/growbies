@@ -1,6 +1,6 @@
 #include "menu.h"
 #include "remote.h"
-#include "drawing.h"
+#include "menu_items.h"
 
 // initialize static singleton pointer
 Menu* Menu::instance = nullptr;
@@ -21,7 +21,7 @@ Menu::Menu() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {
         display, get_tare_name(TareIdx::AUTO_0)));
     menu_root.push_back(std::make_shared<MassDrawing>(
         display, get_tare_name(TareIdx::AUTO_1)));
-    menu_root.push_back(std::make_shared<ConfigurationDrawing>(display));
+    menu_root.push_back(std::make_shared<ConfigurationMenu>(display));
 }
 
 void Menu::begin() {
@@ -53,9 +53,9 @@ bool Menu::service() {
 // -----------------------------------------------------------------------------
 // Menu selection
 // -----------------------------------------------------------------------------
-// const std::vector<std::shared_ptr<MenuDrawing>>* Menu::level_from_path() const {
-const std::vector<std::shared_ptr<MenuDrawing>>* Menu::level_from_path() const {
-    const std::vector<std::shared_ptr<MenuDrawing>>* level = &menu_root;
+// const std::vector<std::shared_ptr<BaseMenu>>* Menu::level_from_path() const {
+const std::vector<std::shared_ptr<BaseMenu>>* Menu::level_from_path() const {
+    const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
 
 
     for (size_t i = 0; i + 1 < menu_path.size(); ++i) {
@@ -130,7 +130,7 @@ void Menu::select() {
 }
 
 void Menu::render() {
-    const std::vector<std::shared_ptr<MenuDrawing>>* level = &menu_root;
+    const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
     display.clear();
 
     for (auto it = menu_path.begin(); it != menu_path.end(); ++it) {
@@ -147,7 +147,7 @@ void Menu::render() {
 void Menu::update() const {
     if (menu_root.empty()) return;
 
-    std::vector<std::shared_ptr<MenuDrawing>> stack;
+    std::vector<std::shared_ptr<BaseMenu>> stack;
 
     // Start with the root nodes
     for (const auto& node : menu_root) {
