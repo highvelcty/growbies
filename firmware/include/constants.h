@@ -87,7 +87,7 @@ constexpr auto SMALL_DELAY_MS = 1;
 constexpr int BUTTON_DEBOUNCE_MS  = 50;
 constexpr int BUTTON_REREAD_COUNT =  7;
 
-inline int get_HX711_dout_pin(SensorIdx_t sensor){
+inline int get_HX711_dout_pin(const SensorIdx_t sensor){
 #if HX711_PIN_CFG_0
     return DOUT_0_PIN + sensor;
 #elif HX711_PIN_CFG_1
@@ -100,11 +100,11 @@ inline int get_HX711_dout_pin(SensorIdx_t sensor){
     }
     return ret;
 #else
-    assert(false && "Invalid pin configuration.")
+    assert(false && "Invalid pin configuration.");
 #endif
 }
 
-inline int get_HX711_dout_port_bit(SensorIdx_t sensor) {
+inline int get_HX711_dout_port_bit(const SensorIdx_t sensor) {
 #if HX711_PIN_CFG_0
     return (1 << (get_HX711_dout_pin(sensor) - DOUT_0_PIN));
 #elif HX711_PIN_CFG_1

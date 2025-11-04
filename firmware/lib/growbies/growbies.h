@@ -1,10 +1,7 @@
 #ifndef growbies_h
 #define growbies_h
 
-#include <Arduino.h>
-
 #include "constants.h"
-#include "flags.h"
 #include "command.h"
 #include "datalink.h"
 #include "network.h"

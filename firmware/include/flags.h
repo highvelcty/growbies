@@ -18,6 +18,6 @@
 // Maps to Eaton NRNE105H4100B1H
 #define THERMISTOR_HW_0 true
 #define THERMISTOR_HW_1 false
-static_assert(!THERMISTOR_HW_0 != !THERMISTOR_HW_1);
+static_assert(!THERMISTOR_HW_0 != !THERMISTOR_HW_1, "");
 
 #endif /* flags_h */

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <U8x8lib.h>
+#include "constants.h"
 
 enum class EVENT: int8_t {
     NONE = -1,

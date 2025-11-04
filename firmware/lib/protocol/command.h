@@ -239,3 +239,5 @@ private:
     size_t offset;
     TLVHdr* last_tlv;
 };
+
+#pragma pack()

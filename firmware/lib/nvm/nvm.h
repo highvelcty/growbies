@@ -314,4 +314,4 @@ extern CalibrationStore* calibration_store;
 extern IdentifyStore* identify_store;
 extern TareStore* tare_store;
 
-
+#pragma pack()
