@@ -13,7 +13,7 @@ namespace growbies_hf {
         UNKNOWN,
     };
 
-    /// Flags for describing sample validity or acquisition errors
+    // Flags for describing sample validity or acquisition errors
     struct SampleFlags {
         bool valid           : 1;  // sample is valid
         bool out_of_range    : 1;  // sensor exceeded measurable limits
@@ -24,7 +24,7 @@ namespace growbies_hf {
                                   timeout(false), reserved(false) {}
     };
 
-    /// Represents one raw measurement sample before filtering.
+    // Represents one raw measurement sample before filtering.
     struct Sample {
         float value;                 // raw or calibrated value (grams, °C, etc.)
         SensorType type;             // which sensor produced it

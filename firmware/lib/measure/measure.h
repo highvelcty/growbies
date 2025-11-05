@@ -68,9 +68,9 @@ namespace growbies_hf {
     // -------------------------------
     // Multiple measurement channels
     // -------------------------------
-    class MeasurementSystem {
+    class MeasurementChannels {
     public:
-        MeasurementSystem() = default;
+        MeasurementChannels() = default;
 
         void add_channel(SensorType type,
                          float min = -1e6f,
@@ -79,10 +79,22 @@ namespace growbies_hf {
             channels_.emplace_back(type, min, max, alpha);
         }
 
-        MeasurementChannel* get_channel_by_index(size_t index) {
+        MeasurementChannel* get_channel_by_index(const size_t index) {
             if (index < channels_.size()) return &channels_[index];
             return nullptr;
         }
+
+        // Return a vector of pointers to channels of a specific type
+        std::vector<MeasurementChannel*> get_channels_by_type(const SensorType type) {
+            std::vector<MeasurementChannel*> result;
+            for (auto& ch : channels_) {
+                if (ch.type() == type) {
+                    result.push_back(&ch);
+                }
+            }
+            return result;
+        }
+
 
         void update_all(const std::vector<float>& values) {
             for (size_t i = 0; i < channels_.size() && i < values.size(); ++i) {
