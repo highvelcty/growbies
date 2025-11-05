@@ -13,7 +13,6 @@
 
 #define POWER_CONTROL 1
 #define FEATURE_DISPLAY 1
-#define LIGHT_SLEEP 0
 
 // Maps to Eaton NRNE105H4100B1H
 #define THERMISTOR_HW_0 true

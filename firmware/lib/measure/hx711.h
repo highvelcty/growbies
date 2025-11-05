@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <vector>
 
+#include "constants.h"
+
 namespace growbies_hf {
 
     constexpr int HX711_DAC_BITS = 24;
@@ -38,8 +40,6 @@ namespace growbies_hf {
     // Multiple HX711s
     class MultiHX711 {
     public:
-        explicit MultiHX711(const uint8_t pd_sck_pin) : sck_pin_(pd_sck_pin) {}
-
         // Initialize the devices
         void begin() const;
 
@@ -59,7 +59,7 @@ namespace growbies_hf {
         // Internal method to wait until DOUT goes low
         bool wait_ready() const;
 
-        uint8_t sck_pin_;
+        int sck_pin_ = HX711_SCK_PIN;
     };
 
 }  // namespace growbies_hf
