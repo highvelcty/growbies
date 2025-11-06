@@ -1,41 +1,26 @@
-default: esp32c3 mini uno
-
 clean:
 	platformio run -t clean
 
-# Base boards
-esp32c3:
-	platformio run -e esp32c3
+# Generic build rule for all environments
+_build-%:
+	# Extract the last token after the last hyphen
+	MODEL_NUMBER=$* platformio run -e $(lastword $(subst -, ,$*))
 
-mini:
-	platformio run -e mini
+# Generic upload rule
+_upload-%:
+	MODEL_NUMBER=$* platformio run -t upload -e $(lastword $(subst -, ,$*))
 
-uno:
-	platformio run -e uno
+esp32c3: _build-esp32c3
+upload-esp32c32: _upload-esp32c3
 
-# Base board uploads
-upload-esp32c3:
-	platformio run -t upload -e esp32c3
+mini: _build-mini
+upload-mini: _upload-mini
 
-upload-mini:
-	platformio run -t upload -e mini
+uno: _build-uno
+upload-uno: _upload-uno
 
-upload-uno:
-	platformio run -t upload -e uno
+circle-esp32c3: _build-circle-esp32c3
+upload-circle-esp32c3: _upload-circle-esp32c3
 
-# esp32 variants
-circle-esp32c3: BUILD_FLAGS=BUILD_TARGET_CIRCLE
-circle-esp32c3: esp32c3
-
-square-esp32c3: BUILD_FLAGS=BUILD_TARGET_SQUARE
-square-esp32c3: esp32c3
-
-# esp32 variant uploads
-upload-circle-esp32c3: BUILD_FLAGS=BUILD_TARGET_CIRCLE
-upload-circle-esp32c3: upload-esp32c3
-
-upload-square-esp32c3: BUILD_FLAGS=BUILD_TARGET_SQUARE
-upload-square-esp32c3: upload-esp32c3
-
-
-all: esp32c3 mini uno circle-esp32c3 square-esp32c3
+square-esp32c3: _build-square-esp32c3
+upload-square: _upload-square-esp32c3

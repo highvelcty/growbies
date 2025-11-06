@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from enum import StrEnum
 from typing import Any, TypeVar, NewType
@@ -8,6 +9,13 @@ from growbies.utils.types import ModelNumber_t
 
 BASE_FILENAME = 'build_cfg'
 CMD = 'cmd'
+
+class EnvironVars(StrEnum):
+    MODEL_NUMBER = 'MODEL_NUMBER'
+
+    @property
+    def value(self) -> str:
+        return os.environ.get(self, Base.MODEL_NUMBER)
 
 class Cmd(StrEnum):
     FIRMWARE = 'firmware'
@@ -22,16 +30,6 @@ class Cmd(StrEnum):
         else:
             raise ValueError(f'Sub-command "{sub_cmd_}" does not exist')
 
-class Param(StrEnum):
-    MODEL_NUMBER = 'model_number'
-
-    @classmethod
-    def get_help_str(cls, param_: 'Param'):
-        if param_ == cls.MODEL_NUMBER:
-            return f'The model number for which to generate the build configuration.'
-        else:
-            raise ValueError(f'Invalid parameter: "{param_}"')
-
 class Base(ABC):
     MODEL_NUMBER = 'Default'
 
@@ -40,15 +38,17 @@ class Base(ABC):
         type_ = NewType('Key', str)
         all = tuple()
 
-    def _constants(self) -> dict[Key.type_, Any]:
-        ...
+        @classmethod
+        def value(cls, key: 'Base.Key.type_'):
+            assert ValueError(key)
+
+        @classmethod
+        def validate(cls):
+            for key in cls.all:
+                _ = cls.value(key)
 
     def validate(self):
-        constants = self._constants()
-        missing_keys = set(self.Key.all) - set(constants.keys())
-        extra_keys = set(constants.keys()) - set(self.Key.all)
-        assert not missing_keys, f"Missing keys: {missing_keys}"
-        assert not extra_keys, f"Unexpected keys: {extra_keys}"
+        self.Key.validate()
 
     @abstractmethod
     def save(self):
@@ -57,7 +57,8 @@ class Base(ABC):
 TBase = TypeVar('TBase', bound=Base)
 
 
-def dispatch(cmd: Cmd, model_number: ModelNumber_t):
+def dispatch(cmd: Cmd):
+    model_number = EnvironVars.MODEL_NUMBER.value
     if cmd == Cmd.GATEWAY:
         from . import gateway
         if model_number == gateway.Default.MODEL_NUMBER:
@@ -68,6 +69,16 @@ def dispatch(cmd: Cmd, model_number: ModelNumber_t):
         from . import firmware
         if model_number == firmware.Default.MODEL_NUMBER:
             firmware.Default().save()
+        elif model_number == firmware.Esp32c3.MODEL_NUMBER:
+            firmware.Esp32c3().save()
+        elif model_number == firmware.Mini.MODEL_NUMBER:
+            firmware.Mini().save()
+        elif model_number == firmware.Uno.MODEL_NUMBER:
+            firmware.Uno().save()
+        elif model_number == firmware.CircleEsp32c3.MODEL_NUMBER:
+            firmware.CircleEsp32c3().save()
+        elif model_number == firmware.SquareEsp32c3.MODEL_NUMBER:
+            firmware.SquareEsp32c3().save()
         else:
             raise ValueError(f'Invalid model number: {model_number}.')
     else:

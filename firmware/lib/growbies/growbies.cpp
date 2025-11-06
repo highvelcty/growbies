@@ -3,7 +3,7 @@
 #include "constants.h"
 #include "flags.h"
 #include <growbies.h>
-#include <menu.h>
+#include <remote_high.h>
 #include <math.h>
 #include <nvm.h>
 #include <sort.h>
@@ -88,9 +88,9 @@ void Growbies::execute(const PacketHdr* in_packet_hdr) {
                 identify_store->init();
             }
             else {
-                Menu& menu = Menu::get();
+                RemoteHigh& menu = RemoteHigh::get();
                 identify_store->put(cmd->identify);
-                menu.update();
+                menu.synchronize();
                 menu.render();
             }
             send_payload(resp, sizeof(*resp));
@@ -556,24 +556,4 @@ int get_temperature_sensor_idx(const int mass_sensor_idx) {
         return mass_sensor_idx;
     }
     return 0;
-}
-
-int get_temperature_pin(const int mass_sensor_idx) {
-    if (identify_store->payload()->mass_sensor_count == 1) {
-        return TEMPERATURE_PIN_0;
-    }
-#if HX711_PIN_CFG_0
-    assert(false && "Unimplemented temperature pin mapping.");
-#elif HX711_PIN_CFG_1
-    switch (mass_sensor_idx) {
-        case 0:
-            return TEMPERATURE_PIN_0;
-        case 1:
-            return TEMPERATURE_PIN_1;
-        case 2:
-            return TEMPERATURE_PIN_2;
-        default:
-            assert(false && "Temperature pin out of range.");
-    }
-#endif
 }

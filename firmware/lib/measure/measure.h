@@ -5,6 +5,7 @@
 
 #include "sample.h"
 #include "filter.h"
+#include "hx711.h"
 
 namespace growbies_hf {
 
@@ -41,6 +42,20 @@ namespace growbies_hf {
 
             return Sample(smooth_value, type_, flags_);
         }
+
+        // New overload for integer input
+        Sample update(const int32_t raw_value) {
+            float float_value;
+            // Convert to float for MASS channels
+            if (raw_value & (1UL << (HX711_DAC_BITS - 1))) {
+                float_value = static_cast<float>(raw_value | (0xFFUL << HX711_DAC_BITS));
+            }
+            else {
+                float_value = static_cast<float>(raw_value);
+            }
+            return update(float_value);
+        }
+
 
         float value() const noexcept { return last_smoothed_; }
         float last_valid() const noexcept { return gross_filter_.last_valid(); }
@@ -79,13 +94,13 @@ namespace growbies_hf {
             channels_.emplace_back(type, min, max, alpha);
         }
 
-        MeasurementChannel* get_channel_by_index(const size_t index) {
+        MeasurementChannel* get_by_idx(const size_t index) {
             if (index < channels_.size()) return &channels_[index];
             return nullptr;
         }
 
         // Return a vector of pointers to channels of a specific type
-        std::vector<MeasurementChannel*> get_channels_by_type(const SensorType type) {
+        std::vector<MeasurementChannel*> get_by_type(const SensorType type) {
             std::vector<MeasurementChannel*> result;
             for (auto& ch : channels_) {
                 if (ch.type() == type) {
@@ -181,10 +196,12 @@ namespace growbies_hf {
 
             // Calculate mass rate
             if (rate_count_ > 1) {
-                const size_t oldest_index = (rate_index_ + RATE_WINDOW_SIZE - rate_count_) % RATE_WINDOW_SIZE;
+                const size_t oldest_index =
+                    (rate_index_ + RATE_WINDOW_SIZE - rate_count_) % RATE_WINDOW_SIZE;
                 const float delta_mass = total - mass_buffer_[oldest_index];
                 const uint32_t delta_time_ms = now - timestamp_buffer_[oldest_index];
-                last_rate_ = (delta_time_ms > 0) ? (delta_mass / (delta_time_ms / 1000.0f)) : 0.0f;
+                last_rate_ = (delta_time_ms > 0) ?
+                    (delta_mass / (static_cast<float>(delta_time_ms) / 1000.0f)) : 0.0f;
             } else {
                 last_rate_ = 0.0f;
             }
@@ -207,10 +224,10 @@ namespace growbies_hf {
 
         std::vector<MeasurementChannel*> channels_;      // MASS channels
         std::vector<MeasurementChannel*> temps_;         // TEMPERATURE channels
-        std::vector<TempComp> comp_params_;        // Temperature compensation parameters per channel
+        std::vector<TempComp> comp_params_;        // Temperature compensation params per channel
 
-        std::array<float, RATE_WINDOW_SIZE> mass_buffer_;
-        std::array<uint32_t, RATE_WINDOW_SIZE> timestamp_buffer_;
+        std::array<float, RATE_WINDOW_SIZE> mass_buffer_{};
+        std::array<uint32_t, RATE_WINDOW_SIZE> timestamp_buffer_{};
         size_t rate_index_;
         size_t rate_count_;
         float last_mass_;
@@ -235,7 +252,7 @@ namespace growbies_hf {
                     ++count;
                 }
             }
-            return (count > 0) ? (sum / count) : 0.0f;
+            return (count > 0) ? (sum / static_cast<float>(count)) : 0.0f;
         }
 
     private:

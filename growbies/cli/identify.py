@@ -15,16 +15,10 @@ def make_cli(parser: ArgumentParser):
                         default=None, type=str)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.MODEL_NUMBER)}',
                         default=None, type=str)
-    parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.MASS_SENSOR_COUNT)}',
-                        default=None,
-                        type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.MASS_SENSOR_TYPE)}',
                         metavar='{' + ','.join(
                             [f'{x.value}={x.name}' for x in id_mod.MassSensorType]) + '}',
                         choices=tuple(id_mod.MassSensorType), default=None, type=int)
-    parser.add_argument(
-        f'--{internal_to_external_field(id_mod.Identify.Field.TEMPERATURE_SENSOR_COUNT)}',
-        default=None, type=int)
     parser.add_argument(
         f'--{internal_to_external_field(id_mod.Identify.Field.TEMPERATURE_SENSOR_TYPE)}',
         metavar='{' + ','.join(

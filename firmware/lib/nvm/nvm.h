@@ -19,7 +19,7 @@
 
 constexpr int DEFAULT_CONTRAST = 16;
 
-typedef float MassTemperatureCoeff[MAX_MASS_SENSOR_COUNT][COEFF_COUNT];
+typedef float MassTemperatureCoeff[MASS_SENSOR_COUNT][COEFF_COUNT];
 typedef float MassCoeff[COEFF_COUNT];
 typedef float TareValue[TARE_COUNT];
 
@@ -117,6 +117,8 @@ struct Identify {
     // Constructor with version parameter
     explicit Identify() {
         snprintf(this->firmware_version, sizeof(this->firmware_version), "%s", FIRMWARE_VERSION);
+        this->mass_sensor_count = MASS_SENSOR_COUNT;
+        this->temperature_sensor_count = TEMPERATURE_SENSOR_COUNT;
     }
 };
 static_assert(sizeof(Identify) == 115, "unexpected structure size");
@@ -124,7 +126,7 @@ static_assert(sizeof(Identify) == 115, "unexpected structure size");
 struct NvmIdentify : NvmStructBase {
     Identify payload{};
 
-    static constexpr Version_t VERSION = 3;
+    static constexpr Version_t VERSION = 4;
 };
 static_assert(sizeof(NvmIdentify) == 123, "unexpected structure size");
 
@@ -295,6 +297,12 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
 
     if (value_storage.hdr.version < 3) {
         value_storage.payload.contrast = DEFAULT_CONTRAST;
+    }
+
+    if (value_storage.hdr.version < 4) {
+        // These values come from the build now and are no longer configurable at run time.
+        value_storage.payload.mass_sensor_count = MASS_SENSOR_COUNT;
+        value_storage.payload.temperature_sensor_count = TEMPERATURE_SENSOR_COUNT;
     }
 
     _migrate();

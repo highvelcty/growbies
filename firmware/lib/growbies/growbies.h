@@ -96,7 +96,6 @@ ErrorCode validate_packet([[maybe_unused]] const PacketHdr& packet_hdr,
 }
 
 int get_temperature_sensor_idx(int mass_sensor_idx);
-int get_temperature_pin(int mass_sensor_idx);
 
 
 /**

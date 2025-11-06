@@ -1,18 +1,18 @@
-#include "menu.h"
-#include "remote.h"
+#include "remote_high.h"
+#include "remote_low.h"
 #include "menu_items.h"
 
 // initialize static singleton pointer
-Menu* Menu::instance = nullptr;
+RemoteHigh* RemoteHigh::instance = nullptr;
 
-Menu& Menu::get() {
+RemoteHigh& RemoteHigh::get() {
     if (!instance) {
-        instance = new Menu();
+        instance = new RemoteHigh();
     }
     return *instance;
 }
 
-Menu::Menu() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {
+RemoteHigh::RemoteHigh() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {
     menu_root.push_back(std::make_shared<MassDrawing>(
         display, get_tare_name(TareIdx::TARE_0)));
     menu_root.push_back(std::make_shared<MassDrawing>(
@@ -24,16 +24,16 @@ Menu::Menu() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {
     menu_root.push_back(std::make_shared<ConfigurationMenu>(display));
 }
 
-void Menu::begin() {
+void RemoteHigh::begin() {
     // Order is important, the display must be initialized before attaching interrupts.
     display.begin();
-    update();
+    synchronize();
     render();
 
-    Remote::begin();
+    RemoteLow::begin();
 }
 
-bool Menu::service() {
+bool RemoteHigh::service() {
     const BUTTON button_pressed = remote.service();
     if (button_pressed == BUTTON::DOWN) {
         down();
@@ -54,7 +54,7 @@ bool Menu::service() {
 // Menu selection
 // -----------------------------------------------------------------------------
 // const std::vector<std::shared_ptr<BaseMenu>>* Menu::level_from_path() const {
-const std::vector<std::shared_ptr<BaseMenu>>* Menu::level_from_path() const {
+const std::vector<std::shared_ptr<BaseMenu>>* RemoteHigh::level_from_path() const {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
 
 
@@ -67,7 +67,7 @@ const std::vector<std::shared_ptr<BaseMenu>>* Menu::level_from_path() const {
     return level;
 }
 
-void Menu::up() {
+void RemoteHigh::up() {
     if (menu_path.empty()) return;
     auto* level = level_from_path();
     if (!level) return;
@@ -88,7 +88,7 @@ void Menu::up() {
 // -----------------------------------------------------------------------------
 // Move selection down
 // -----------------------------------------------------------------------------
-void Menu::down() {
+void RemoteHigh::down() {
     if (menu_path.empty()) return;
     auto* level = level_from_path();
     if (!level || level->empty()) return;
@@ -106,7 +106,7 @@ void Menu::down() {
 // -----------------------------------------------------------------------------
 // Select / descend or execute action
 // -----------------------------------------------------------------------------
-void Menu::select() {
+void RemoteHigh::select() {
     if (menu_path.empty()) return;
 
     auto* level = level_from_path();
@@ -129,7 +129,7 @@ void Menu::select() {
     render();
 }
 
-void Menu::render() {
+void RemoteHigh::render() {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
     display.clear();
 
@@ -144,9 +144,7 @@ void Menu::render() {
     }
 }
 
-void Menu::update() const {
-    if (menu_root.empty()) return;
-
+void RemoteHigh::synchronize() const {
     std::vector<std::shared_ptr<BaseMenu>> stack;
 
     // Start with the root nodes
@@ -158,7 +156,7 @@ void Menu::update() const {
         const auto node = stack.back();
         stack.pop_back();
 
-        node->update();
+        node->synchronize();
 
         for (const auto& child : node->children) {
             if (child) stack.push_back(child);
@@ -166,3 +164,15 @@ void Menu::update() const {
     }
 }
 
+void RemoteHigh::update() const {
+    const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
+
+    for (const unsigned int idx : menu_path) {
+        if (idx >= level->size()) return; // safety check
+
+        const auto& item = (*level)[idx];
+
+        item->update();
+        level = &item->children;     // descend into children
+    }
+}

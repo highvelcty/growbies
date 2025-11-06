@@ -1,26 +1,31 @@
 #include "hx711.h"
 #include <Arduino.h>
 
+#include "build_cfg.h"
 #include "constants.h"
 #include "flags.h"
 
 namespace growbies_hf {
 
 // ---------------- HX711 ----------------
-void HX711::power_off() const {
-    digitalWrite(sck_pin_, HIGH);
-    delayMicroseconds(HX711_POWER_DELAY);
+void HX711::power_off() {
+    digitalWrite(HX711_SCK_PIN, HIGH);
 }
 
-void HX711::power_on() const {
-    digitalWrite(sck_pin_, LOW);
-    delayMicroseconds(HX711_POWER_DELAY);
+void HX711::power_on() {
+    digitalWrite(HX711_SCK_PIN, LOW);
 }
 
 // ---------------- MultiHX711 ----------------
 
-void MultiHX711::begin() const {
-    pinMode(sck_pin_, OUTPUT);
+void MultiHX711::begin() {
+    pinMode(HX711_SCK_PIN, OUTPUT);
+
+
+    for (size_t ii = 0; ii < MASS_SENSOR_COUNT; ++ii) {
+        add_device(new HX711(get_HX711_dout_pin(ii)));
+    }
+
     for (const auto device : devices) {
 #if ARDUINO_ARCH_AVR
         pinMode(device->dout_pin, INPUT_PULLUP);
@@ -40,20 +45,22 @@ void MultiHX711::begin() const {
 #endif
 }
 
-void MultiHX711::add_hx711(HX711* hx) {
+void MultiHX711::add_device(HX711* hx) {
     if (hx) devices.push_back(hx);
 }
 
 void MultiHX711::power_off() const {
     for (const auto* hx : devices) {
-        if (hx) hx->power_off();
+        if (hx) HX711::power_off();
     }
+    delayMicroseconds(HX711_POWER_DELAY);
 }
 
 void MultiHX711::power_on() const {
     for (const auto* hx : devices) {
-        if (hx) hx->power_on();
+        if (hx) HX711::power_on();
     }
+    delayMicroseconds(HX711_POWER_DELAY);
 }
 
 std::vector<int32_t> MultiHX711::sample() const{
@@ -69,7 +76,7 @@ std::vector<int32_t> MultiHX711::sample() const{
     // Read bit by bit in parallel. Most significant bit first.
     for (uint8_t ii = 0; ii < HX711_DAC_BITS; ++ii) {
         delayMicroseconds(HX711_BIT_BANG_DELAY);
-        digitalWrite(sck_pin_, HIGH);
+        digitalWrite(HX711_SCK_PIN, HIGH);
 
         {
             // This is a time critical block
@@ -80,7 +87,7 @@ std::vector<int32_t> MultiHX711::sample() const{
 #elif ARDUINO_ARCH_ESP32
             gpio_in_reg = REG_READ(GPIO_IN_REG);
 #endif
-            digitalWrite(sck_pin_, LOW);
+            digitalWrite(HX711_SCK_PIN, LOW);
         }
 
         // Shift bits into each HX711 reading
@@ -96,9 +103,9 @@ std::vector<int32_t> MultiHX711::sample() const{
     // Set gain for next reading (channel A, 128x gain)
     for (uint8_t gg = 0; gg < 3; ++gg) {
         delayMicroseconds(HX711_BIT_BANG_DELAY);
-        digitalWrite(sck_pin_, HIGH);
+        digitalWrite(HX711_SCK_PIN, HIGH);
         delayMicroseconds(HX711_BIT_BANG_DELAY);
-        digitalWrite(sck_pin_, LOW);
+        digitalWrite(HX711_SCK_PIN, LOW);
     }
 
     return readings;

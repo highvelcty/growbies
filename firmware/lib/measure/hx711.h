@@ -21,19 +21,15 @@ namespace growbies_hf {
     /// HX711 driver for a single load cell
     class HX711 {
     public:
-        explicit HX711(const uint8_t pd_sck_pin, const uint8_t dout_pin)
-            : dout_pin(dout_pin), sck_pin_(pd_sck_pin) {}
+        explicit HX711(const int dout_pin) : dout_pin(dout_pin) {}
 
         // Power down the HX711
-        void power_off() const;
+        static void power_off();
 
         // Power up the HX711
-        void power_on() const;
+        static void power_on();
 
-        uint8_t dout_pin;
-
-    private:
-        uint8_t sck_pin_;
+        int dout_pin;
     };
 
 
@@ -41,9 +37,9 @@ namespace growbies_hf {
     class MultiHX711 {
     public:
         // Initialize the devices
-        void begin() const;
+        void begin();
 
-        void add_hx711(HX711* hx);
+        void add_device(HX711* hx);
 
         // Power off all devices
         void power_off() const;
@@ -55,11 +51,9 @@ namespace growbies_hf {
         std::vector<int32_t> sample() const;
 
         std::vector<HX711*> devices;
-    private:
+
         // Internal method to wait until DOUT goes low
         bool wait_ready() const;
-
-        int sck_pin_ = HX711_SCK_PIN;
     };
 
 }  // namespace growbies_hf

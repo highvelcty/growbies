@@ -1,5 +1,4 @@
 import os
-from typing import Any
 
 from .common import Base, BASE_FILENAME, get_git_hash
 
@@ -13,7 +12,20 @@ class Default(Base):
 
     class Key(Base.Key):
         FIRMWARE_VERSION: Base.Key.type_ = 'FIRMWARE_VERSION'
-        all = (FIRMWARE_VERSION, )
+        MASS_SENSOR_COUNT: Base.Key.type_ = 'MASS_SENSOR_COUNT'
+        TEMPERATURE_SENSOR_COUNT: Base.Key.type_ = 'TEMPERATURE_SENSOR_COUNT'
+        all = (FIRMWARE_VERSION, MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT)
+
+        @classmethod
+        def value(cls, key: 'Default.Key.type_'):
+            if key == cls.FIRMWARE_VERSION:
+                return f'{Default._FIRMWARE_VERSION}+{get_git_hash()}'
+            elif key == cls.MASS_SENSOR_COUNT:
+                return 1
+            elif key == cls.TEMPERATURE_SENSOR_COUNT:
+                return 1
+            else:
+                raise ValueError(key)
 
     def save(self):
         self.validate()
@@ -29,7 +41,9 @@ class Default(Base):
             ''
         ]
 
-        for key, value in self._constants().items():
+
+        for key in self.Key.all:
+            value = self.Key.value(key)
             if isinstance(value, str):
                 str_list.append(f'#define {key} "{value}"')
             else:
@@ -40,7 +54,37 @@ class Default(Base):
 
         return '\n'.join(str_list)
 
-    def _constants(self) -> dict[Base.Key.type_, Any]:
-        return {
-            self.Key.FIRMWARE_VERSION: f'{self._FIRMWARE_VERSION}+{get_git_hash()}'
-        }
+class Esp32c3(Default):
+    MODEL_NUMBER = 'esp32c3'
+
+class Mini(Default):
+    MODEL_NUMBER = 'mini'
+
+class Uno(Default):
+    MODEL_NUMBER = 'uno'
+
+class CircleEsp32c3(Default):
+    MODEL_NUMBER = 'circle-esp32c3'
+
+    class Key(Default.Key):
+        @classmethod
+        def value(cls, key: 'Default.Key.type_'):
+            if key == cls.MASS_SENSOR_COUNT:
+                return 3
+            elif key == cls.TEMPERATURE_SENSOR_COUNT:
+                return 3
+            else:
+                return super().value(key)
+
+class SquareEsp32c3(Default):
+    MODEL_NUMBER = 'square-esp32c3'
+
+    class Key(Default.Key):
+        @classmethod
+        def value(cls, key: 'Default.Key.type_'):
+            if key == cls.MASS_SENSOR_COUNT:
+                return 4
+            elif key == cls.TEMPERATURE_SENSOR_COUNT:
+                return 1
+            else:
+                return super().value(key)

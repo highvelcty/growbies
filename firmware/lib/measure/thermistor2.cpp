@@ -1,6 +1,10 @@
 #include <math.h>
 
+#include "build_cfg.h"
 #include "thermistor2.h"
+
+#include "constants.h"
+#include "hx711.h"
 
 namespace growbies_hf {
 
@@ -46,7 +50,11 @@ float Thermistor::sample_beta() const {
 }
 
 // --- MultiThermistor -------------------
-    void MultiThermistor::begin() const {
+    void MultiThermistor::begin() {
+    for (size_t ii = 0; ii < TEMPERATURE_SENSOR_COUNT; ++ii) {
+        add_device(new Thermistor(get_temperature_pin(ii)));
+    }
+
     for (const auto* device : devices_) {
         if (device) device->begin();
     }

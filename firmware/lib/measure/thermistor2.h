@@ -48,10 +48,10 @@ namespace growbies_hf {
         explicit MultiThermistor() = default;
 
         // Initialize all thermistors
-        void begin() const;
+        void begin();
 
         // Add a thermistor to the collection
-        void add_thermistor(Thermistor* therm) {
+        void add_device(Thermistor* therm) {
             if (therm) devices_.push_back(therm);
         }
 

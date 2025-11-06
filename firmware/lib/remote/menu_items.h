@@ -5,6 +5,7 @@
 #include <cstring>
 #include <Arduino.h>
 
+#include "measure_intf.h"
 #include "nvm.h"
 
 // -----------------------------------------------------------------------------
@@ -30,6 +31,8 @@ struct BaseMenu {
     int level{0};
     std::vector<std::shared_ptr<BaseMenu>> children;
 
+    bool cached_selected{false};
+
     explicit BaseMenu(
         U8X8& display_,                   // non-const reference
         const char* msg_ = nullptr,
@@ -42,7 +45,13 @@ struct BaseMenu {
           children(std::move(_children))
     {}
 
-    virtual void draw(const bool selected) {}
+    virtual void draw(const bool selected) {
+        cached_selected = selected;
+    }
+
+    void draw() {
+        draw(cached_selected);
+    }
 
 
     virtual char get_selected_char(const bool _selected) const {
@@ -54,6 +63,7 @@ struct BaseMenu {
     virtual void on_down() {}
     virtual void on_up() {}
     virtual void on_select() {}
+    virtual void synchronize() {}
     virtual void update() {}
 
     virtual ~BaseMenu() = default;
@@ -71,6 +81,8 @@ struct BaseCfgMenu : BaseMenu {
     {}
 
     void draw(const bool selected) override {
+        BaseMenu::draw(selected);
+
         if (level == 0) {
             display.setFont(ONE_BY_FONT);
         }
@@ -100,6 +112,8 @@ struct BaseIntMenuLeaf : BaseCfgMenu {
     char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
 
     void draw(const bool selected) override {
+        BaseCfgMenu::draw(selected);
+
         char line_buf[MAX_DISPLAY_COLUMNS + 1];
         snprintf(line_buf, sizeof(line_buf), "%c %d", get_selected_char(selected), value);
         display.drawString(level, level, line_buf);
@@ -140,7 +154,7 @@ struct ContrastMenuLeaf final : BaseIntMenuLeaf {
         identify_store->commit();
     }
 
-    void update() override {
+    void synchronize() override {
         value = identify_store->view()->payload.contrast;
         display.setContrast(value);
     }
@@ -165,6 +179,8 @@ struct FlipMenuLeaf final : BaseStrMenuLeaf {
     }
 
     void draw(const bool selected) override {
+        BaseStrMenuLeaf::draw(selected);
+
         _set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
@@ -183,7 +199,7 @@ struct FlipMenuLeaf final : BaseStrMenuLeaf {
         identify_store->commit();
     }
 
-    void update() override {
+    void synchronize() override {
         flip = identify_store->view()->payload.flip;
         display.setFlipMode(flip);
     }
@@ -254,11 +270,17 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
         units = static_cast<MassUnits>(next);
     }
 
-    void update() override {
+    void on_select() override {
+        identify_store->edit().payload.mass_units = units;
+        identify_store->commit();
+    }
+
+    void synchronize() override {
         units = identify_store->view()->payload.mass_units;
     }
 
     void draw(const bool selected) override {
+        BaseStrMenuLeaf::draw(selected);
         _set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
@@ -315,11 +337,12 @@ struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
         identify_store->commit();
     }
 
-    void update() override {
+    void synchronize() override {
         units = identify_store->view()->payload.temperature_units;
     }
 
     void draw(const bool selected) override {
+        BaseStrMenuLeaf::draw(selected);
         _set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
@@ -374,12 +397,16 @@ struct ConfigurationMenu final : BaseCfgMenu {
 // TelemetryDrawing (base for mass, temperature, etc.)
 // -----------------------------------------------------------------------------
 struct TelemetryDrawing : BaseMenu {
+    using BaseMenu::draw;
+
     static constexpr auto VALUE_CHARS = 7;
     static constexpr auto UNITS_CHARS = 2;
 
     char title[MAX_DISPLAY_COLUMNS + 1]{};
-    char value[VALUE_CHARS + 1]{};
-    char units[UNITS_CHARS + 1]{};
+    float value{};
+    char value_str[VALUE_CHARS + 1]{};
+    MassUnits units{};
+    char units_str[UNITS_CHARS + 1]{};
 
     explicit TelemetryDrawing(
         U8X8& display_,
@@ -390,16 +417,20 @@ struct TelemetryDrawing : BaseMenu {
         : BaseMenu(display_, msg_, level_, std::move(_children)) {}
 
     void draw(const bool selected) override {
-        display.clear();
+        BaseMenu::draw(selected);
 
         display.setFont(ONE_BY_FONT);
         display.drawString(2, 0, title);
 
-        display.setFont(TWO_BY_THREE_FONT);
-        display.drawString(0, 1, value);
-
         display.setFont(ONE_BY_FONT);
-        display.drawString(14, 3, units);
+        display.drawString(14, 3, units_str);
+
+        display.setFont(TWO_BY_THREE_FONT);
+        draw_value();
+    }
+
+    void draw_value() const {
+        display.drawString(0, 1, value_str);
     }
 };
 
@@ -408,60 +439,124 @@ struct TelemetryDrawing : BaseMenu {
 // MassDrawing
 // -----------------------------------------------------------------------------
 struct MassDrawing final : TelemetryDrawing {
-    explicit MassDrawing(U8X8& display_, const char* t, const float grams = 0.0f,
-        const MassUnits requested_units = MassUnits::GRAMS) : TelemetryDrawing(display_) {
+    explicit MassDrawing(U8X8& display_, const char* title_, const float grams_ = 0.0f,
+        const MassUnits requested_units_ = MassUnits::GRAMS) : TelemetryDrawing(display_) {
 
-        strncpy(title, t, sizeof(title) - 1);
+        strncpy(title, title_, sizeof(title) - 1);
         title[sizeof(title) - 1] = '\0';
+
+        _convert_units(grams_, requested_units_);
+    }
+
+    bool _convert_units(const float grams, const MassUnits new_units) {
+        value = grams;
+
+        float converted_mass = grams;
+        MassUnits converted_units = new_units;
 
         constexpr float GRAMS_PER_KG = 1000.0f;
         constexpr float GRAMS_PER_OZ = 28.3495f;
         constexpr float OUNCES_PER_LB = 16.0f;
 
-        float converted = grams;
-        MassUnits units_to_use = requested_units;
+        // ReSharper disable CppTooWideScope
+        constexpr float MAX_ZERO_PRECISION   = 9999999;
+        constexpr float MIN_ZERO_PRECISION   = -999999;
+        constexpr float MAX_SINGLE_PRECISION = 99999.9;
+        constexpr float MIN_SINGLE_PRECISION = -9999.9;
+        constexpr float MAX_DOUBLE_PRECISION = 9999.99;
+        constexpr float MIN_DOUBLE_PRECISION = -999.99;
+        constexpr float MAX_TRIPLE_PRECISION = 99999.9;
+        constexpr float MIN_TRIPLE_PRECISION = -9999.9;
+        // ReSharper restore CppTooWideScope
 
         // Unit conversion
-        switch (requested_units) {
+        switch (converted_units) {
             case MassUnits::GRAMS: break;
-            case MassUnits::KILOGRAMS: converted /= GRAMS_PER_KG; break;
-            case MassUnits::OUNCES: converted /= GRAMS_PER_OZ; break;
-            case MassUnits::POUNDS: converted /= (GRAMS_PER_OZ * OUNCES_PER_LB); break;
+            case MassUnits::KILOGRAMS: converted_mass /= GRAMS_PER_KG; break;
+            case MassUnits::OUNCES: converted_mass /= GRAMS_PER_OZ; break;
+            case MassUnits::POUNDS: converted_mass /= (GRAMS_PER_OZ * OUNCES_PER_LB); break;
         }
-
-        // Adjust units if out of range
-        if (units_to_use == MassUnits::GRAMS && (converted > 99999.9f || converted < -9999.9f)) {
-            units_to_use = MassUnits::KILOGRAMS;
-            converted /= GRAMS_PER_KG;
-        }
-        if (units_to_use == MassUnits::OUNCES && (converted > 9999.99f || converted < -999.99f)) {
-            units_to_use = MassUnits::POUNDS;
-            converted /= OUNCES_PER_LB;
-        }
-
-        // Clamp extreme
-        if (converted > 999.999f) converted = 999.999f;
-        if (converted < -99.999f) converted = -99.999f;
 
         // Precision by units
         int precision = 0;
-        switch (units_to_use) {
-            case MassUnits::GRAMS: precision = 1; break;
-            case MassUnits::KILOGRAMS: precision = 3; break;
-            case MassUnits::OUNCES: precision = 2; break;
-            case MassUnits::POUNDS: precision = 3; break;
+        switch (converted_units) {
+            case MassUnits::GRAMS: {
+                precision = 1;
+                if (converted_mass > MAX_SINGLE_PRECISION ||
+                    converted_mass < MIN_SINGLE_PRECISION) {
+                    converted_units = MassUnits::KILOGRAMS;
+                    converted_mass /= GRAMS_PER_KG;
+                }
+                else {
+                    break;
+                }
+            }
+            case MassUnits::OUNCES: {
+                precision = 2;
+                if (converted_mass > MAX_DOUBLE_PRECISION ||
+                    converted_mass < MIN_DOUBLE_PRECISION) {
+                    converted_units = MassUnits::POUNDS;
+                    converted_mass /= OUNCES_PER_LB;
+                }
+                else {
+                    break;
+                }
+            }
+            case MassUnits::POUNDS:
+            case MassUnits::KILOGRAMS: {
+                precision = 3;
+                if (converted_mass > MAX_TRIPLE_PRECISION ||
+                    converted_mass < MIN_TRIPLE_PRECISION) {
+                    precision = 2;
+                }
+                else if (converted_mass > MAX_DOUBLE_PRECISION ||
+                         converted_mass < MIN_DOUBLE_PRECISION) {
+                    precision = 1;
+                }
+                else if (converted_mass > MAX_SINGLE_PRECISION ||
+                         converted_mass < MIN_SINGLE_PRECISION) {
+                    precision = 0;
+                    if (converted_mass > MAX_ZERO_PRECISION) {
+                        converted_mass = MAX_ZERO_PRECISION;
+                    }
+                    else if (converted_mass < MIN_ZERO_PRECISION) {
+                        converted_mass = MIN_ZERO_PRECISION;
+                    }
+                }
+                break;
+            }
         }
 
-        dtostrf(converted, VALUE_CHARS, precision, value);
-        value[VALUE_CHARS] = '\0';
+        dtostrf(converted_mass, VALUE_CHARS, precision, value_str);
+        value_str[VALUE_CHARS] = '\0';
 
-        switch (units_to_use) {
-            case MassUnits::GRAMS: strncpy(units, "g", UNITS_CHARS); break;
-            case MassUnits::KILOGRAMS: strncpy(units, "kg", UNITS_CHARS); break;
-            case MassUnits::OUNCES: strncpy(units, "oz", UNITS_CHARS); break;
-            case MassUnits::POUNDS: strncpy(units, "lb", UNITS_CHARS); break;
+        switch (converted_units) {
+            case MassUnits::GRAMS: strncpy(units_str, "g", UNITS_CHARS); break;
+            case MassUnits::KILOGRAMS: strncpy(units_str, "kg", UNITS_CHARS); break;
+            case MassUnits::OUNCES: strncpy(units_str, "oz", UNITS_CHARS); break;
+            case MassUnits::POUNDS: strncpy(units_str, "lb", UNITS_CHARS); break;
         }
-        units[UNITS_CHARS] = '\0';
+        units_str[UNITS_CHARS] = '\0';
+
+        bool redraw = false;
+        if (units != converted_units) {
+            redraw = true;
+            units = converted_units;
+        }
+
+        return redraw;
+    }
+
+    void update() override {
+        const auto& stack = growbies_hf::MeasurementStack::get();
+        const auto& new_value = stack.aggregate_mass().total_mass();
+        const auto new_units = identify_store->view()->payload.mass_units;
+        if (_convert_units(new_value, new_units)) {
+            draw();
+        }
+        else {
+            draw_value();
+        }
     }
 };
 
@@ -482,14 +577,14 @@ struct TemperatureDrawing final : TelemetryDrawing {
         if (temp > 999.9f) temp = 999.9f;
         if (temp < -99.9f) temp = -99.9f;
 
-        dtostrf(temp, VALUE_CHARS, 1, value);
-        value[VALUE_CHARS] = '\0';
+        dtostrf(temp, VALUE_CHARS, 1, value_str);
+        value_str[VALUE_CHARS] = '\0';
 
         switch (requested_units) {
-            case TemperatureUnits::CELSIUS: strncpy(units, "C", UNITS_CHARS); break;
-            case TemperatureUnits::FAHRENHEIT: strncpy(units, "F", UNITS_CHARS); break;
+            case TemperatureUnits::CELSIUS: strncpy(units_str, "C", UNITS_CHARS); break;
+            case TemperatureUnits::FAHRENHEIT: strncpy(units_str, "F", UNITS_CHARS); break;
         }
-        units[UNITS_CHARS] = '\0';
+        units_str[UNITS_CHARS] = '\0';
     }
 };
 

@@ -1,6 +1,8 @@
 #pragma once
 
 #include <pins_arduino.h>
+
+#include "build_cfg.h"
 #include "flags.h"
 #include "types.h"
 
@@ -17,8 +19,16 @@ constexpr int MAX_SLIP_UNENCODED_PACKET_BYTES = (SLIP_OUT_BUF_ALLOC_BYTES / 2) -
 constexpr float INVALID_TEMPERATURE = 1234.5;
 constexpr float INVALID_MASS_SAMPLE_THRESHOLD_DAC = 10000;
 constexpr float INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC = 50;
+// constexpr int MAX_MASS_SENSOR_COUNT = 5;
+// constexpr int MAX_TEMPERATURE_SENSOR_COUNT = MAX_MASS_SENSOR_COUNT;
+
+#ifdef BUILD_TARGET_CIRCLE
 constexpr int MAX_MASS_SENSOR_COUNT = 5;
 constexpr int MAX_TEMPERATURE_SENSOR_COUNT = MAX_MASS_SENSOR_COUNT;
+#else
+constexpr int MAX_MASS_SENSOR_COUNT = 5;
+constexpr int MAX_TEMPERATURE_SENSOR_COUNT = MAX_MASS_SENSOR_COUNT;
+#endif
 
 constexpr uint8_t COEFF_COUNT = 3;
 constexpr uint8_t TARE_COUNT = 8;
@@ -111,3 +121,22 @@ inline int get_HX711_dout_port_bit(const SensorIdx_t sensor) {
 #endif
 }
 
+inline int get_temperature_pin(const int mass_sensor_idx) {
+    if (MASS_SENSOR_COUNT == 1) {
+        return TEMPERATURE_PIN_0;
+    }
+#if HX711_PIN_CFG_0
+    assert(false && "Unimplemented temperature pin mapping.");
+#elif HX711_PIN_CFG_1
+    switch (mass_sensor_idx) {
+        case 0:
+            return TEMPERATURE_PIN_0;
+        case 1:
+            return TEMPERATURE_PIN_1;
+        case 2:
+            return TEMPERATURE_PIN_2;
+        default:
+            assert(false && "Temperature pin out of range.");
+    }
+#endif
+}

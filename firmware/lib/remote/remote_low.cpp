@@ -1,24 +1,24 @@
 #include <nvm.h>
-#include "remote.h"
+#include "remote_low.h"
 
 // Define the static member
-Remote* Remote::instance = nullptr;
+RemoteLow* RemoteLow::instance = nullptr;
 
-Remote::Remote()
+RemoteLow::RemoteLow()
 {
     // Makes member data accessible via ISR
     instance = this;
 }
 
-void Remote::begin() {
+void RemoteLow::begin() {
     // Configure wake pin and attach ISR
     pinMode(BUTTON_0_PIN, INPUT);
     pinMode(BUTTON_1_PIN, INPUT);
-    attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), Remote::wakeISR0, RISING);
-    attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), Remote::wakeISR1, RISING);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), RemoteLow::wakeISR0, RISING);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), RemoteLow::wakeISR1, RISING);
 }
 
-BUTTON Remote::service() {
+BUTTON RemoteLow::service() {
     auto button_pressed = BUTTON::NONE;
     const unsigned long now = millis();
 
@@ -65,7 +65,7 @@ BUTTON Remote::service() {
     return button_pressed;
 }
 
-void IRAM_ATTR Remote::wakeISR0() {
+void IRAM_ATTR RemoteLow::wakeISR0() {
     if (instance->arm_isr) {
         if (digitalRead(BUTTON_1_PIN)) {
             instance->last_button_pressed = EVENT::DIRECTION_1;
@@ -82,7 +82,7 @@ void IRAM_ATTR Remote::wakeISR0() {
     }
 }
 
-void IRAM_ATTR Remote::wakeISR1() {
+void IRAM_ATTR RemoteLow::wakeISR1() {
     if (instance->arm_isr) {
         if (digitalRead(BUTTON_0_PIN)) {
             instance->last_button_pressed = EVENT::DIRECTION_1;
