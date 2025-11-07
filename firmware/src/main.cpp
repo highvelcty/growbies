@@ -1,15 +1,18 @@
+#include "cmd_exec.h"
+#include "command.h"
 #include "constants.h"
 #include "flags.h"
-#include <growbies.h>
-#include <measure_intf.h>
-#include <network.h>
-#include <nvm.h>
+#include "growbies.h"
+#include "measure_intf.h"
+#include "network.h"
+#include "nvm.h"
+
 
 #if FEATURE_DISPLAY
 #include <remote_high.h>
 #endif
 
-#include <command.h>
+
 
 // Simple cooperative task structure
 struct Task {
@@ -28,6 +31,10 @@ void task_serial() {
             slip_buf->reset();
         }
     }
+}
+
+void task_exec_cmd() {
+    CmdExec::get().exec();
 }
 
 void task_measure() {
@@ -71,7 +78,7 @@ void setup() {
 
 void loop() {
     static Task tasks[] = {
-        {task_serial,               10, 0},
+        {task_exec_cmd,             10, 0},
         {task_measure,              25, 0},
         {task_remote_service,       50, 0},
         {task_remote_update,        100, 0}

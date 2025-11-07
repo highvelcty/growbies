@@ -86,14 +86,14 @@ constexpr const T* after(const U* base) {
     );
 }
 
-template <typename PacketType>
-ErrorCode validate_packet([[maybe_unused]] const PacketHdr& packet_hdr,
-                          [[maybe_unused]] const PacketType& packet) {
-    if (slip_buf->buf_len() >= sizeof(packet_hdr) + sizeof(packet)) {
-        return ERROR_NONE;
-    }
-    return ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
-}
+// template <typename PacketType>
+// ErrorCode validate_packet([[maybe_unused]] const PacketHdr& packet_hdr,
+//                           [[maybe_unused]] const PacketType& packet) {
+//     if (slip_buf->buf_len() >= sizeof(packet_hdr) + sizeof(packet)) {
+//         return ERROR_NONE;
+//     }
+//     return ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
+// }
 
 int get_temperature_sensor_idx(int mass_sensor_idx);
 

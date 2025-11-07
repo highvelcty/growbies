@@ -1,5 +1,3 @@
-#include <math.h>
-
 #include "build_cfg.h"
 #include "thermistor2.h"
 
@@ -17,7 +15,7 @@ void Thermistor::begin() const {
 float Thermistor::read_voltage() const {
 #if defined(ARDUINO_ARCH_ESP32)
     constexpr float adc_max = 4095.0f;
-    const int adc_raw = analogReadMilliVolts(analog_pin_) / 1000.0;
+    const auto adc_raw = static_cast<float>(analogReadMilliVolts(analog_pin_) / 1000.0);
 #else
     const float adc_max = 1023.0f;
     const int adc_raw = analogRead(analog_pin_);
@@ -51,7 +49,7 @@ float Thermistor::sample_beta() const {
 
 // --- MultiThermistor -------------------
     void MultiThermistor::begin() {
-    for (size_t ii = 0; ii < TEMPERATURE_SENSOR_COUNT; ++ii) {
+    for (auto ii = 0; ii < TEMPERATURE_SENSOR_COUNT; ++ii) {
         add_device(new Thermistor(get_temperature_pin(ii)));
     }
 

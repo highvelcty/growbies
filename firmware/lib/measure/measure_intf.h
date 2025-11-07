@@ -1,9 +1,8 @@
 #pragma once
 
-#include "constants.h"
-#include "measure.h"       // MeasurementChannels, MeasurementChannel
-#include "hx711.h"         // HX711, MultiHX711
-#include "thermistor2.h"   // Thermistor, MultiThermistor
+#include "measure.h"
+#include "hx711.h"
+#include "thermistor2.h"
 
 namespace growbies_hf {
 
@@ -16,7 +15,7 @@ namespace growbies_hf {
             return instance;
         }
 
-        // Delete copy/move constructors and assignment fpr singleton
+        // Delete copy/move constructors and assignment for singleton
         MeasurementStack(const MeasurementStack&) = delete;
         MeasurementStack& operator=(const MeasurementStack&) = delete;
         MeasurementStack(MeasurementStack&&) = delete;
@@ -24,6 +23,11 @@ namespace growbies_hf {
 
         // Initialize all channels and low-level drivers
         void begin();
+
+        void power_off() const { multi_hx711_.power_off(); }
+
+        // Power on all devices
+        void power_on() const { multi_hx711_.power_on(); }
 
         // Sample all low-level sensors and update MeasurementChannels
         void update();
