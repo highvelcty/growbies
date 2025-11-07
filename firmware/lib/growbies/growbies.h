@@ -63,7 +63,7 @@ class Growbies {
         static ErrorCode wait_hx711_ready(int retries, unsigned long delay_ms);
 
     template <typename RespType>
-    void send_payload(const RespType* resp, const size_t num_bytes) const {
+    void send_payload(const RespType* _, const size_t num_bytes) const {
         out_packet_hdr->resp    = RespType::TYPE;
         out_packet_hdr->version = RespType::VERSION;
         send_packet(out_packet_hdr, sizeof(*out_packet_hdr) + num_bytes);

@@ -28,7 +28,7 @@ SLIP_ESC_END = 0xDC
 SLIP_ESC_ESC = 0xDD
 
 class BaseDataLink(threading.Thread, ABC):
-    DEBUG = False
+    DEBUG_DATALINK = False
     # In normal operation, it is expected that no more than 1-2 frames are typically outstanding.
     # This will buffer some history if the consumer becomes outpaced, but this is only expected
     # in an exception case.
@@ -81,6 +81,8 @@ class BaseDataLink(threading.Thread, ABC):
             else:
                 encoded.append(byte_)
         encoded.append(SLIP_END)
+        if self.DEBUG_DATALINK:
+            logger.debug(f'\n{BufStr(encoded, title="Datalink send:")}')
         self.write(encoded)
 
     def stop(self):
@@ -109,11 +111,13 @@ class BaseDataLink(threading.Thread, ABC):
 
                 mv_chunk = memoryview(chunk)
 
+                if self.DEBUG_DATALINK:
+                    logger.debug(f'\n{BufStr(mv_chunk, title="Datalink receive:")}')
+
                 for byte_ in mv_chunk:
                     if len(buf) >= self._MAX_FRAME_BYTES:
                         logger.error(f'Slip buffer overflow. Dropping data: '
                                      f'{format_dropped_bytes(buf)}')
-                        # if self.DEBUG:
                         logger.debug(BufStr(buf))
                         buf.clear()
                     if byte_ == SLIP_END:
@@ -184,8 +188,8 @@ class SerialDatalink(BaseDataLink):
     def write(self, data: bytes) -> int:
         return self._serial.write(data)
 
-class Network(BaseDataLink, ABC):
-    DEBUG = False
+class Network(SerialDatalink, ABC):
+    DEBUG_NETWORK = False
     _CRC_BYTES = 2
     def recv_packet(self, block=True, timeout: Optional[float] = None) -> Optional[memoryview]:
         frame = super().recv_frame(block=block, timeout=timeout)
@@ -193,7 +197,7 @@ class Network(BaseDataLink, ABC):
             return frame[:-self._CRC_BYTES]
         else:
             logger.error(f'Invalid CRC. Dropping frame: {format_dropped_bytes(frame)}')
-            if self.DEBUG:
+            if self.DEBUG_NETWORK:
                 logger.debug(BufStr(frame))
             return None
 
@@ -209,7 +213,7 @@ class Network(BaseDataLink, ABC):
         return chk == calc_bytes
 
 class Transport(Network, ABC):
-    DEBUG = False
+    DEBUG_TRANSPORT = False
     def recv_resp(self, block=True, timeout: Optional[float] = None) \
             -> tuple[Optional[RespPacketHdr], Optional[TDeviceResp]]:
         frame = super().recv_packet(block=block, timeout=timeout)
@@ -224,20 +228,20 @@ class Transport(Network, ABC):
             logger.error(f'Response packet header deserialization exception: {err}')
             return None, None
 
-        if self.DEBUG:
+        if self.DEBUG_TRANSPORT:
             logger.debug(BufStr(bytes(hdr), title='Transport Recv Header'))
             logger.debug(BufStr(resp, title='Transport Recv Payload'))
         return hdr, DeviceRespOp.from_frame(hdr, resp)
 
-    def send_cmd(self, cmd: TDeviceCmd):
+    def send_cmd(self, cmd: TDeviceCmd, cmd_id: int):
         """
         raises:
             :class:`ServiceCmdError`
         """
-        hdr = CmdPacketHdr(type=cmd.OP, version=cmd.VERSION, id=1)
-        if self.DEBUG:
+        hdr = CmdPacketHdr(type=cmd.OP, version=cmd.VERSION, id=cmd_id)
+        if self.DEBUG_TRANSPORT:
             logger.debug(BufStr(bytes(hdr), title='Transport Send Header'))
             logger.debug(BufStr(bytes(cmd), title='Transport Send Payload'))
         self.send_packet(bytes(hdr) + bytes(cmd))
 
-class SerialIntf(Transport, SerialDatalink): pass
+class SerialIntf(Transport): pass

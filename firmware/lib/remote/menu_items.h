@@ -280,7 +280,6 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
     }
 
     void draw(const bool selected) override {
-        BaseStrMenuLeaf::draw(selected);
         _set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
@@ -433,7 +432,6 @@ struct TelemetryDrawing : BaseMenu {
         display.drawString(0, 1, value_str);
     }
 };
-
 
 // -----------------------------------------------------------------------------
 // MassDrawing

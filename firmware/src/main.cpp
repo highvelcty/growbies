@@ -19,7 +19,7 @@ struct Task {
 };
 
 void task_serial() {
-    if (Serial.available()) {
+    while (Serial.available()) {
         if (recv_slip(Serial.read())) {
             const PacketHdr *packet_hdr = recv_packet();
             if (packet_hdr) {
