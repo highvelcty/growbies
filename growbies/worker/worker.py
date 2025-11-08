@@ -161,14 +161,15 @@ class Worker(Thread):
 
             if resp is None:
                 continue
-            if hdr.id == self._cmd_id:
+            if hdr.id == 0:
+                self._process_async(hdr, resp)
+            elif hdr.id == self._cmd_id:
                 logger.info(f'Received synchronous {hdr.type} response.')
                 self._put_no_wait((hdr, resp))
-            elif hdr.id != self._cmd_id:
+            else:
                 logger.warning(f'Received out of sequence response. Expected response ID '
                                f'{self._cmd_id}, observed {hdr.id}.')
-            else:
-                self._process_async(hdr, resp)
+
 
         if self._intf and not self._intf.is_alive():
             logger.error(f'SLIP thread died.')

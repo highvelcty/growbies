@@ -1,6 +1,6 @@
 #pragma once
 
-#include "usb.h"
+#include "transport/usb.h"
 
 class CmdExec {
 public:

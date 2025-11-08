@@ -5,8 +5,8 @@
 #include <cstring>
 #include <Arduino.h>
 
-#include "measure_intf.h"
-#include "nvm.h"
+#include "measure/measure_intf.h"
+#include "nvm/nvm.h"
 
 // -----------------------------------------------------------------------------
 // Display constants

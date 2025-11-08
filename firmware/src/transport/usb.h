@@ -1,6 +1,6 @@
 #pragma once
 
-#include "command.h"
+#include "protocol/command.h"
 
 namespace transport {
 

@@ -1,4 +1,4 @@
-#include <nvm.h>
+#include "nvm/nvm.h"
 #include "remote_low.h"
 
 // Define the static member
@@ -14,6 +14,8 @@ void RemoteLow::begin() {
     // Configure wake pin and attach ISR
     pinMode(BUTTON_0_PIN, INPUT);
     pinMode(BUTTON_1_PIN, INPUT);
+    instance->debounce_time = millis() + BUTTON_DEBOUNCE_MS;
+    // To filter spurious noise during boot.
     attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), RemoteLow::wakeISR0, RISING);
     attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), RemoteLow::wakeISR1, RISING);
 }
@@ -46,8 +48,9 @@ BUTTON RemoteLow::service() {
             debounce_time = now;
             hold_start_time = now;
             hold_button = last_button_pressed;
-            last_button_pressed = EVENT::NONE;
+            // last_button_pressed = EVENT::NONE;
         }
+        last_button_pressed = EVENT::NONE;
     }
 
     if (!digitalRead(BUTTON_0_PIN) and !digitalRead(BUTTON_1_PIN)) {

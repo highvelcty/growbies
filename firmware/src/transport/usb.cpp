@@ -1,7 +1,7 @@
 #include <Arduino.h>
-
-#include "crc.h"
+#include <cstring>
 #include "usb.h"
+#include "utils/crc.h"
 
 namespace transport {
 
@@ -65,31 +65,32 @@ void UsbDatalink::send_slip_end(){
 }
 
 
-ErrorCode UsbNetwork::recv_packet() {
+    ErrorCode UsbNetwork::recv_packet() {
     auto error = datalink.recv_slip();
 
     if (!error) {
-        auto in_buf = datalink.get_in_buf();
-        const auto buf_len = in_buf.len();
+        auto& in_buf = datalink.get_in_buf();
+        const uint16_t buf_len = in_buf.len();
 
         if (buf_len >= PACKET_MIN_BYTES) {
-            const auto crc = \
-                *reinterpret_cast<uint16_t *>(&in_buf.buf[buf_len - PACKET_CRC_BYTES]);
-            const auto calc_crc = crc_ccitt16(in_buf.buf, buf_len - PACKET_CRC_BYTES);
+            uint16_t crc = 0;
+            std::memcpy(&crc, &in_buf.buf[buf_len - PACKET_CRC_BYTES], sizeof(crc));
+
+            const uint16_t calc_crc = crc_ccitt16(in_buf.buf, buf_len - PACKET_CRC_BYTES);
+
             if (calc_crc == crc) {
                 error = ERROR_NONE;
-            }
-            else {
+            } else {
                 error = ERROR_INVALID_SLIP_CRC;
             }
-        }
-        else {
-            error = ERROR_CMD_HDR_DESERIALIZAATION_UNDERFLOW;
+        } else {
+            error = ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW;
         }
     }
 
     return error;
 }
+
 
 void UsbNetwork::send_packet(const void* ptr, const size_t packet_size) {
     const auto byte_ptr = static_cast<const uint8_t*>(ptr);
@@ -119,7 +120,7 @@ ErrorCode UsbTransport::recv_cmd() {
 }
 
 ErrorCode UsbTransport::validate_cmd(const int exp_num_bytes) {
-    if (exp_num_bytes > network.get_in_buf().len()) {
+    if (exp_num_bytes > network.get_in_buf().len() - sizeof(PacketHdr)) {
         return ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
     }
     return ERROR_NONE;

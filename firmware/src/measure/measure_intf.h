@@ -2,7 +2,7 @@
 
 #include "measure.h"
 #include "hx711.h"
-#include "thermistor2.h"
+#include "thermistor.h"
 
 namespace growbies_hf {
 

@@ -1,18 +1,12 @@
-#include "cmd_exec.h"
-#include "command.h"
 #include "constants.h"
 #include "flags.h"
-#include "growbies.h"
-#include "measure_intf.h"
-#include "network.h"
-#include "nvm.h"
-
+#include "measure/measure_intf.h"
+#include "nvm/nvm.h"
+#include "protocol/cmd_exec.h"
 
 #if FEATURE_DISPLAY
-#include <remote_high.h>
+#include "remote/remote_high.h"
 #endif
-
-
 
 // Simple cooperative task structure
 struct Task {
@@ -21,24 +15,11 @@ struct Task {
     unsigned long last_run;
 };
 
-void task_serial() {
-    while (Serial.available()) {
-        if (recv_slip(Serial.read())) {
-            const PacketHdr *packet_hdr = recv_packet();
-            if (packet_hdr) {
-                growbies.execute(packet_hdr);
-            }
-            slip_buf->reset();
-        }
-    }
-}
-
 void task_exec_cmd() {
     CmdExec::get().exec();
 }
 
 void task_measure() {
-    // growbies.measure();
     auto& measurement_stack = growbies_hf::MeasurementStack::get();
     measurement_stack.update();
 }
@@ -62,18 +43,15 @@ void setup() {
     identify_store->begin();
     tare_store->begin();
 
-    slip_buf->reset();
     // 2025_04_01: Observed skipped characters at 115200 with mini pro 3v3. Suspect this is due
     //   to the 8MHz clock providing nearest baudrates of 115942 or 114285, whereas the closest
     //   baudrates for 8MHz for 57600 baud is 57554 or 57971.
     Serial.begin(57600);
-    Growbies::begin();
 #if FEATURE_DISPLAY
     RemoteHigh::get().begin();
 #endif
 
-    auto& measurement_stack = growbies_hf::MeasurementStack::get();
-    measurement_stack.begin();
+    growbies_hf::MeasurementStack::get().begin();
 }
 
 void loop() {

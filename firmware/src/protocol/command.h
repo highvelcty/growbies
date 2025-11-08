@@ -39,7 +39,7 @@ typedef enum ErrorCode: uint32_t {
     ERROR_INVALID_PARAMETER                     = 0x00000020,
     ERROR_INCOMPLETE_SLIP_FRAME                 = 0x00000040,
     ERROR_INVALID_SLIP_CRC                      = 0x00000080,
-    ERROR_CMD_HDR_DESERIALIZAATION_UNDERFLOW    = 0x00000100,
+    ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW     = 0x00000100,
 } ErrorCode;
 
 typedef enum EndpointType: uint8_t {

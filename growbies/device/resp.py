@@ -79,6 +79,11 @@ class DeviceErrorCode(IntEnum):
     UNRECOGNIZED_COMMAND                  = 0x00000002
     OUT_OF_THRESHOLD_SAMPLE               = 0x00000004
     HX711_NOT_READY                       = 0x00000008
+    INTERNAL                              = 0x00000010
+    INVALID_PARAMETER                     = 0x00000020
+    INCOMPLETE_SLIP_FRAME                 = 0x00000040
+    INVALID_SLIP_CRC                      = 0x00000080
+    CMD_HDR_DESERIALIZATION_UNDERFLOW     = 0x00000100
 
     def __str__(self):
         return self.name

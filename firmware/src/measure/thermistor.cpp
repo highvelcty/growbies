@@ -1,5 +1,5 @@
 #include "build_cfg.h"
-#include "thermistor2.h"
+#include "thermistor.h"
 
 #include "constants.h"
 #include "hx711.h"

@@ -5,8 +5,7 @@
 #include "build_cfg.h"
 #include "constants.h"
 #include "types.h"
-#include <crc.h>
-#include <traits.h>
+#include "utils/crc.h"
 
 #if ARDUINO_ARCH_AVR
 #include <stdio.h>
@@ -142,8 +141,6 @@ constexpr int PARTITION_E_OFFSET = 896;
 // Templated Base classes
 template <typename T>
 class NvmStoreBase {
-    static_assert(is_base_of<NvmStructBase, T>::value,
-                  "NvmStoreBase can only be instantiated with types derived from NvmStructBase");
 public:
     virtual void begin() {
         _get();

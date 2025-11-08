@@ -28,7 +28,7 @@ SLIP_ESC_END = 0xDC
 SLIP_ESC_ESC = 0xDD
 
 class BaseDataLink(threading.Thread, ABC):
-    DEBUG_DATALINK = False
+    DEBUG_DATALINK = True
     # In normal operation, it is expected that no more than 1-2 frames are typically outstanding.
     # This will buffer some history if the consumer becomes outpaced, but this is only expected
     # in an exception case.
@@ -202,6 +202,7 @@ class Network(SerialDatalink, ABC):
             return None
 
     def send_packet(self, buf: bytes):
+        logger.error(f'emey to send buf:\n{BufStr(buf)}')
         crc = crc_ccitt16(buf).to_bytes(self._CRC_BYTES, 'little')
         super().send_frame(buf + crc)
 
