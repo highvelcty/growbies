@@ -144,7 +144,7 @@ struct RespError : BaseResp {
 };
 
 struct RespGetCalibration : BaseResp {
-    static constexpr auto VERSION = 1;
+    static constexpr auto VERSION = NvmCalibration::VERSION;
     static constexpr auto TYPE = Resp::CALIBRATION;
 
     NvmCalibration calibration{};

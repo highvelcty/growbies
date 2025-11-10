@@ -12,21 +12,22 @@ def make_cli(parser: ArgumentParser):
                             help=PositionalParam.get_help_str(PositionalParam.SERIAL))
     parser.add_argument(f'--{Param.INIT}', action='store_true',
                         help='Set to initialize to default values.')
+    klass = cal_mod.Calibration2
     parser.add_argument(
-        f'--{internal_to_external_field(cal_mod.Calibration.Field.MASS_TEMP_COEFF)}',
+        f'--{internal_to_external_field(klass.Field.MASS_TEMP_COEFF)}',
         action='append',
         default=argparse.SUPPRESS,
-        metavar=('SENSOR_ROW', ) + (('VALUE',) * cal_mod.Calibration.COEFF_COUNT),
-        nargs=cal_mod.Calibration.COEFF_COUNT + 1,
+        metavar=('SENSOR_ROW', ) + (('VALUE',) * klass.MAX_COEFF_COUNT),
+        nargs=klass.MAX_COEFF_COUNT + 1,
         type=float,
         help = f'Set mass/temperature correction coefficients for a sensor. Each row '
                f'represents a sensor and each column a coefficient. The matrix '
                f'dimensions are '
-               f'[{cal_mod.Calibration.MASS_SENSOR_COUNT}][{cal_mod.Calibration.COEFF_COUNT}].')
+               f'[{klass.MASS_SENSOR_COUNT}][{klass.MAX_COEFF_COUNT}].')
     parser.add_argument(
-        f'--{internal_to_external_field(cal_mod.Calibration.Field.MASS_COEFF)}',
+        f'--{internal_to_external_field(klass.Field.MASS_COEFF)}',
         default=argparse.SUPPRESS,
-        nargs = cal_mod.Calibration.COEFF_COUNT,
+        nargs = klass.MAX_COEFF_COUNT,
         type=float,
         help = f'Set mass calibration coefficients. There are '
-               f'{cal_mod.Calibration.COEFF_COUNT} coefficients.')
+               f'{klass.MAX_COEFF_COUNT} coefficients.')

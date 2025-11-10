@@ -202,7 +202,6 @@ class Network(SerialDatalink, ABC):
             return None
 
     def send_packet(self, buf: bytes):
-        logger.error(f'emey to send buf:\n{BufStr(buf)}')
         crc = crc_ccitt16(buf).to_bytes(self._CRC_BYTES, 'little')
         super().send_frame(buf + crc)
 

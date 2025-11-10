@@ -18,8 +18,12 @@
 
 constexpr int DEFAULT_CONTRAST = 16;
 
-typedef float MassTemperatureCoeff[MASS_SENSOR_COUNT][COEFF_COUNT];
-typedef float MassCoeff[COEFF_COUNT];
+constexpr int MAX_MASS_SENSOR_COUNT = 5;
+constexpr uint8_t MAX_COEFF_COUNT = 4;
+constexpr uint8_t TARE_COUNT = 8;
+
+typedef float MassTemperatureCoeff[MAX_MASS_SENSOR_COUNT][MAX_COEFF_COUNT];
+typedef float MassCoeff[MAX_COEFF_COUNT];
 typedef float TareValue[TARE_COUNT];
 
 enum class TareIdx: uint8_t {
@@ -75,7 +79,14 @@ struct NvmTare : NvmStructBase {
     static constexpr Version_t VERSION = 1;
 };
 
+struct CalibrationHdr {
+    uint8_t mass_sensor_count{MASS_SENSOR_COUNT};
+    uint8_t coeff_count{MAX_COEFF_COUNT};
+    uint16_t reserved{};
+};
+
 struct Calibration {
+    CalibrationHdr hdr{};
     MassTemperatureCoeff mass_temperature_coeff{};
     MassCoeff mass_coeff{};
 };
@@ -83,8 +94,9 @@ struct Calibration {
 struct NvmCalibration : NvmStructBase {
     Calibration payload{};
 
-    static constexpr Version_t VERSION = 1;
+    static constexpr Version_t VERSION = 2;
 };
+
 
 struct Identify {
     char firmware_version[32]{};    // <major>.<minor>.<micro>+<short git hash>
@@ -304,6 +316,19 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
 
     _migrate();
 }
+
+template <>
+inline void NvmStoreBase<NvmCalibration>::migrate() {
+    if (value_storage.hdr.version < 2) {
+        // Initialize the new header in payload
+        value_storage.hdr.version = NvmCalibration::VERSION;
+        value_storage.payload.hdr.mass_sensor_count = MASS_SENSOR_COUNT;
+        value_storage.payload.hdr.coeff_count = MAX_COEFF_COUNT;
+        value_storage.payload.hdr.reserved = 0;
+    }
+    _migrate();
+}
+
 
 #if ARDUINO_ARCH_AVR
 using CalibrationStore = AvrNvmStore<NvmCalibration>;
