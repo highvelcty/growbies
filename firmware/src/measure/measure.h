@@ -169,6 +169,7 @@ public:
             total += mass;
         }
 
+        // Mass calibration - meyere, this needs to be per sensor
         total = ((total * cal->mass_coeff_set.slope) + cal->mass_coeff_set.offset);
 
         // --- Rate calculation section ---

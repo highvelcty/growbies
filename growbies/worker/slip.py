@@ -28,7 +28,7 @@ SLIP_ESC_END = 0xDC
 SLIP_ESC_ESC = 0xDD
 
 class BaseDataLink(threading.Thread, ABC):
-    DEBUG_DATALINK = True
+    DEBUG_DATALINK = False
     # In normal operation, it is expected that no more than 1-2 frames are typically outstanding.
     # This will buffer some history if the consumer becomes outpaced, but this is only expected
     # in an exception case.
@@ -36,7 +36,7 @@ class BaseDataLink(threading.Thread, ABC):
     _MAX_FRAME_BYTES = 4096
     _SERIAL_POLLING_INTERVAL_SECONDS = 0.1
     _JOIN_TIMEOUT_SECONDS = 3
-
+    _FRAME_RECEIVE_TIMEOUT_SECONDS = 0.5
 
     @abstractmethod
     def __init__(self, thread_name: Optional[str] = None):
@@ -101,11 +101,23 @@ class BaseDataLink(threading.Thread, ABC):
 
         logger.info(f'Thread start.')
 
+        last_chunk_time = 0
         while self._do_continue:
             try:
                 if self.in_waiting:
                     chunk = self.read(self.in_waiting)
+                    last_chunk_time = time.time()
+
                 else:
+                    if time.time() - last_chunk_time > self._FRAME_RECEIVE_TIMEOUT_SECONDS:
+                        # This was originally implemented to discard the sign on message from the
+                        # controller following firmware upload.
+                        if buf:
+                            logger.debug(
+                                BufStr(buf,
+                                       title=f'\nSlip frame receive timeout ('
+                                             f'{self._FRAME_RECEIVE_TIMEOUT_SECONDS}s):'))
+                            buf.clear()
                     time.sleep(self._SERIAL_POLLING_INTERVAL_SECONDS)
                     continue
 
@@ -159,9 +171,6 @@ class BaseDataLink(threading.Thread, ABC):
             pass
 
 class SerialDatalink(BaseDataLink):
-    _RESET_COMMUNICATION_LOOPS = 3
-    _RESET_COMMUNICATION_LOOP_DELAY = 3
-
     def __init__(self, *args, port='/dev/ttyACM0', baudrate=57600, timeout=0.5, **kw):
         """
         The following settings seem to work with arduino uno, but it also seems that they don't

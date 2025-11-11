@@ -47,6 +47,7 @@ void setup() {
     //   to the 8MHz clock providing nearest baudrates of 115942 or 114285, whereas the closest
     //   baudrates for 8MHz for 57600 baud is 57554 or 57971.
     Serial.begin(57600);
+
 #if FEATURE_DISPLAY
     RemoteHigh::get().begin();
 #endif

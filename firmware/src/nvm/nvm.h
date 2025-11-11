@@ -45,8 +45,8 @@ enum class MassUnits: uint8_t {
 };
 
 enum class TemperatureUnits: uint8_t {
-    FAHRENHEIT = 0,
-    CELSIUS = 1,
+    CELSIUS = 0,
+    FAHRENHEIT = 1,
 };
 
 struct NvmHdr {
@@ -223,16 +223,6 @@ protected:
 
     virtual void _get() = 0;
     virtual void _put(const T& value) = 0;
-
-    virtual void update() {
-        _get();
-
-        const Crc_t crc = this->value_storage.hdr.crc;
-        migrate();
-        if (this->value_storage.hdr.crc != crc) {
-            put(this->value_storage);
-        }
-    }
 };
 
 // Templated concrete classes

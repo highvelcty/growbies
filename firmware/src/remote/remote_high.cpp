@@ -1,6 +1,4 @@
 #include "remote_high.h"
-#include "remote_low.h"
-#include "menu_items.h"
 
 // initialize static singleton pointer
 RemoteHigh* RemoteHigh::instance = nullptr;
@@ -18,9 +16,13 @@ RemoteHigh::RemoteHigh() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN
     menu_root.push_back(std::make_shared<MassDrawing>(
         display, get_tare_name(TareIdx::TARE_1)));
     menu_root.push_back(std::make_shared<MassDrawing>(
+        display, get_tare_name(TareIdx::TARE_2)));
+    menu_root.push_back(std::make_shared<MassDrawing>(
         display, get_tare_name(TareIdx::AUTO_0)));
     menu_root.push_back(std::make_shared<MassDrawing>(
         display, get_tare_name(TareIdx::AUTO_1)));
+    menu_root.push_back(std::make_shared<TemperatureDrawing>(
+        display, "Temperature"));
     menu_root.push_back(std::make_shared<ConfigurationMenu>(display));
 
     menu_path = {0};  // Select first top-level item

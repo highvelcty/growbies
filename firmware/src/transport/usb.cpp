@@ -14,7 +14,6 @@ void SlipBuf::reset() {
     this->within_escape = false;
 }
 
-
 ErrorCode UsbDatalink::recv_slip() {
     while (Serial.available()) {
         const uint8_t a_byte = Serial.read();
