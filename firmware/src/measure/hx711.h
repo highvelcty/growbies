@@ -48,7 +48,7 @@ namespace growbies_hf {
         void power_on() const;
 
         // Read all HX711s and return vector of raw values
-        std::vector<int32_t> sample() const;
+        std::vector<float> sample() const;
 
         std::vector<HX711*> devices;
 

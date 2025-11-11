@@ -28,7 +28,7 @@ class Test(TestCase):
 
         matrix = list()
         counter = 0
-        for row in range(Calibration2.MASS_SENSOR_COUNT):
+        for row in range(Calibration2._MAX_SENSOR_COUNT):
             matrix.append(list())
             for col in range(Calibration2.MAX_COEFF_COUNT):
                 matrix[row].append(counter)
@@ -41,4 +41,4 @@ class Test(TestCase):
         self.assertAlmostEqual(cal.mass_temp_coeff[1][0], Calibration2.MAX_COEFF_COUNT)
         self.assertAlmostEqual(cal.mass_temp_coeff[0][-1], Calibration2.MAX_COEFF_COUNT - 1)
         self.assertAlmostEqual(cal.mass_temp_coeff[-1][-1],
-                               (Calibration2.MASS_SENSOR_COUNT * Calibration2.MAX_COEFF_COUNT) - 1)
+                               (Calibration2._MAX_SENSOR_COUNT * Calibration2.MAX_COEFF_COUNT) - 1)

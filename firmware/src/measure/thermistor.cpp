@@ -14,13 +14,13 @@ void Thermistor::begin() const {
 
 float Thermistor::read_voltage() const {
 #if defined(ARDUINO_ARCH_ESP32)
-    constexpr float adc_max = 4095.0f;
-    const auto adc_raw = static_cast<float>(analogReadMilliVolts(analog_pin_) / 1000.0);
+    return static_cast<float>(analogReadMilliVolts(analog_pin_) / 1000.0);
 #else
     const float adc_max = 1023.0f;
     const int adc_raw = analogRead(analog_pin_);
-#endif
     return (adc_raw / adc_max) * THERMISTOR_SUPPLY_VOLTAGE;
+#endif
+
 }
 
 float Thermistor::sample() const {
@@ -34,6 +34,7 @@ float Thermistor::sample() const {
 
     return (1.0f / inv_T) - 273.15f;  // Celsius
 }
+
 
 float Thermistor::sample_beta() const {
     const float vout = read_voltage();

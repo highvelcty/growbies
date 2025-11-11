@@ -5,13 +5,13 @@
 
 namespace growbies_hf {
 
-    // Select thermistor hardware version
+// Select thermistor hardware version
 #define THERMISTOR_HW_0 true
 #define THERMISTOR_HW_1 false
     static_assert(!THERMISTOR_HW_0 != !THERMISTOR_HW_1, "Select exactly one thermistor hardware version.");
 
-    // Eaton NRNE105H4100B1H configuration (THERMISTOR_HW_0)
 #if THERMISTOR_HW_0
+    // Eaton NRNE105H4100B1H configuration (THERMISTOR_HW_0)
     constexpr float THERMISTOR_SERIES_RESISTOR = 100000.0f;
     constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0f;
     constexpr float THERMISTOR_NOMINAL_TEMPERATURE = 298.15f;  // Kelvin (25°C)

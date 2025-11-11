@@ -17,17 +17,18 @@ def make_cli(parser: ArgumentParser):
         f'--{internal_to_external_field(klass.Field.MASS_TEMP_COEFF)}',
         action='append',
         default=argparse.SUPPRESS,
-        metavar=('SENSOR_ROW', ) + (('VALUE',) * klass.MAX_COEFF_COUNT),
-        nargs=klass.MAX_COEFF_COUNT + 1,
+        metavar='SENSOR_ROW [VALUE ...]',
+
+        nargs='+',
         type=float,
         help = f'Set mass/temperature correction coefficients for a sensor. Each row '
-               f'represents a sensor and each column a coefficient. The matrix '
-               f'dimensions are '
-               f'[{klass.MASS_SENSOR_COUNT}][{klass.MAX_COEFF_COUNT}].')
+               f'represents a sensor and each column a coefficient. Missing coefficients will '
+               f'remain unchanged.')
+
     parser.add_argument(
         f'--{internal_to_external_field(klass.Field.MASS_COEFF)}',
         default=argparse.SUPPRESS,
-        nargs = klass.MAX_COEFF_COUNT,
+        metavar='VALUE [VALUE ...]',
+        nargs = '+',
         type=float,
-        help = f'Set mass calibration coefficients. There are '
-               f'{klass.MAX_COEFF_COUNT} coefficients.')
+        help = f'Set mass calibration coefficients. Missing coefficients will remain unchanged.')

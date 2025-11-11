@@ -63,9 +63,9 @@ void MultiHX711::power_on() const {
     delayMicroseconds(HX711_POWER_DELAY);
 }
 
-std::vector<int32_t> MultiHX711::sample() const{
+std::vector<float> MultiHX711::sample() const{
     std::vector<int32_t> readings(devices.size(), 0);
-    readings.reserve(devices.size());
+    std::vector<float> float_readings(devices.size(), 0);
 
 #if ARDUINO_ARCH_AVR
     uint8_t gpio_in_reg = 0;
@@ -108,7 +108,16 @@ std::vector<int32_t> MultiHX711::sample() const{
         digitalWrite(HX711_SCK_PIN, LOW);
     }
 
-    return readings;
+    for (size_t kk = 0; kk < readings.size(); ++kk) {
+        const auto reading = readings[kk];
+        if (reading & (1UL << (HX711_DAC_BITS - 1))) {
+            float_readings[kk] = static_cast<float>(reading | (0xFFUL << HX711_DAC_BITS));
+        } else {
+            float_readings[kk] = static_cast<float>(reading);
+        }
+    }
+
+    return float_readings;
 }
 
 bool MultiHX711::wait_ready() const {

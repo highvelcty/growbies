@@ -26,7 +26,7 @@ void MeasurementStack::begin() {
 }
 
 void MeasurementStack::update() {
-    std::vector<int32_t> mass_values;
+    std::vector<float> mass_values;
     std::vector<float> temp_values;
 
     multi_hx711_.power_on();

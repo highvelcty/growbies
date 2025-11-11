@@ -3,9 +3,11 @@
 #include <vector>
 #include <array>
 
-#include "sample.h"
 #include "filter.h"
 #include "hx711.h"
+#include "nvm/nvm.h"
+#include "sample.h"
+
 
 namespace growbies_hf {
 
@@ -42,20 +44,6 @@ namespace growbies_hf {
 
             return Sample(smooth_value, type_, flags_);
         }
-
-        // New overload for integer input
-        Sample update(const int32_t raw_value) {
-            float float_value;
-            // Convert to float for MASS channels
-            if (raw_value & (1UL << (HX711_DAC_BITS - 1))) {
-                float_value = static_cast<float>(raw_value | (0xFFUL << HX711_DAC_BITS));
-            }
-            else {
-                float_value = static_cast<float>(raw_value);
-            }
-            return update(float_value);
-        }
-
 
         float value() const noexcept { return last_smoothed_; }
         float last_valid() const noexcept { return gross_filter_.last_valid(); }
@@ -126,88 +114,85 @@ namespace growbies_hf {
     };
 
 
-    // -------------------------------
-    // Aggregates mass channels
-    // -------------------------------
-    struct TempComp {
-        float slope{0.0f};         // Linear coefficient a
-        float offset{0.0f};        // Linear coefficient b
-        float reference_temp{25.0f}; // Reference temperature at calibration
-    };
+class AggregateMass {
+public:
+    explicit AggregateMass(const std::vector<MeasurementChannel*>& mass_channels,
+                           const std::vector<MeasurementChannel*>& temp_channels = {})
+        : channels_(mass_channels),
+          temps_(temp_channels),
+          rate_index_(0),
+          rate_count_(0),
+          last_mass_(0.0f),
+          last_rate_(0.0f)
+    {
+        mass_buffer_.fill(0.0f);
+        timestamp_buffer_.fill(0);
+    }
 
-    class AggregateMass {
-    public:
-        explicit AggregateMass(const std::vector<MeasurementChannel*>& mass_channels,
-                               const std::vector<MeasurementChannel*>& temp_channels = {},
-                               const std::vector<TempComp>& temp_comp = {})
-            : channels_(mass_channels), temps_(temp_channels), comp_params_(temp_comp),
-              rate_index_(0), rate_count_(0), last_mass_(0.0f), last_rate_(0.0f)
-        {
-            mass_buffer_.fill(0.0f);
-            timestamp_buffer_.fill(0);
-        }
+    void update() {
+        float total = 0.0f;
 
-        void update() {
-            float total = 0.0f;
+        const auto* cal = calibration_store->payload();
+        const auto& cal_hdr = cal->hdr;
 
-            // Apply temperature compensation per load cell
-            for (size_t i = 0; i < channels_.size(); ++i) {
-                const auto* ch = channels_[i];
-                if (!ch || ch->type() != SensorType::MASS) continue;
+        const auto& coeffs_sets = calibration_store->payload()->mass_temp_coeff_sets;
+        for (size_t ii = 0; ii < channels_.size(); ++ii) {
+            const auto* ch = channels_[ii];
+            if (!ch || ch->type() != SensorType::MASS) continue;
 
-                float mass = ch->value();
+            float mass = ch->value();
 
-                // Apply temp compensation if parameters exist
-                if (i < comp_params_.size()) {
-                    float Tcell = 0.0f;
-                    bool apply_temp_comp = false;
+            // Only apply compensation if we have valid calibration data for this sensor
+            if (ii < cal_hdr.mass_sensor_count) {
+                float Tcell = 0.0f;
+                bool apply_temp_comp = false;
 
-                    // If there is a temperature channel for this cell, use it
-                    if (i < temps_.size() && temps_[i] && temps_[i]->type()
-                        == SensorType::TEMPERATURE) {
-                        Tcell = temps_[i]->value();
-                        apply_temp_comp = true;
-                    }
-                    // Else if there is at least one shared temperature sensor, use the first
-                    else if (!temps_.empty() && temps_[0] && temps_[0]->type()
-                        == SensorType::TEMPERATURE) {
-                        Tcell = temps_[0]->value();
-                        apply_temp_comp = true;
-                    }
-
-
-                    // Apply compensation only if temperature reading is valid
-                    if (apply_temp_comp) {
-                        const auto& params = comp_params_[i];
-                        mass += params.slope * (Tcell - params.reference_temp) + params.offset;
-                    }
+                // Prefer one-to-one temperature channel mapping
+                if (ii < temps_.size() && temps_[ii] && temps_[ii]->type() ==
+                    SensorType::TEMPERATURE) {
+                    Tcell = temps_[ii]->value();
+                    apply_temp_comp = true;
+                }
+                // Otherwise, use the first shared temperature sensor
+                else if (!temps_.empty() && temps_[0] && temps_[0]->type() ==
+                    SensorType::TEMPERATURE) {
+                    Tcell = temps_[0]->value();
+                    apply_temp_comp = true;
                 }
 
-                total += mass;
+                if (apply_temp_comp) {
+                    const auto& coeff_set = coeffs_sets[ii];
+                    mass += coeff_set.slope * (Tcell - coeff_set.ref_temp) + coeff_set.offset;
+                }
             }
 
-            // Update circular buffer for rate calculation
-            const uint32_t now = millis();
-            mass_buffer_[rate_index_] = total;
-            timestamp_buffer_[rate_index_] = now;
-
-            rate_index_ = (rate_index_ + 1) % RATE_WINDOW_SIZE;
-            if (rate_count_ < RATE_WINDOW_SIZE) ++rate_count_;
-
-            // Calculate mass rate
-            if (rate_count_ > 1) {
-                const size_t oldest_index =
-                    (rate_index_ + RATE_WINDOW_SIZE - rate_count_) % RATE_WINDOW_SIZE;
-                const float delta_mass = total - mass_buffer_[oldest_index];
-                const uint32_t delta_time_ms = now - timestamp_buffer_[oldest_index];
-                last_rate_ = (delta_time_ms > 0) ?
-                    (delta_mass / (static_cast<float>(delta_time_ms) / 1000.0f)) : 0.0f;
-            } else {
-                last_rate_ = 0.0f;
-            }
-
-            last_mass_ = total;
+            total += mass;
         }
+
+        total = ((total * cal->mass_coeff_set.slope) + cal->mass_coeff_set.offset);
+
+        // --- Rate calculation section ---
+        const uint32_t now = millis();
+        mass_buffer_[rate_index_] = total;
+        timestamp_buffer_[rate_index_] = now;
+
+        rate_index_ = (rate_index_ + 1) % RATE_WINDOW_SIZE;
+        if (rate_count_ < RATE_WINDOW_SIZE) ++rate_count_;
+
+        if (rate_count_ > 1) {
+            const size_t oldest_index =
+                (rate_index_ + RATE_WINDOW_SIZE - rate_count_) % RATE_WINDOW_SIZE;
+            const float delta_mass = total - mass_buffer_[oldest_index];
+            const uint32_t delta_time_ms = now - timestamp_buffer_[oldest_index];
+            last_rate_ = (delta_time_ms > 0)
+                ? (delta_mass / (static_cast<float>(delta_time_ms) / 1000.0f))
+                : 0.0f;
+        } else {
+            last_rate_ = 0.0f;
+        }
+
+        last_mass_ = total;
+    }
 
         float total_mass() const { return last_mass_; }
         float mass_rate() const { return last_rate_; }
@@ -224,7 +209,6 @@ namespace growbies_hf {
 
         std::vector<MeasurementChannel*> channels_;      // MASS channels
         std::vector<MeasurementChannel*> temps_;         // TEMPERATURE channels
-        std::vector<TempComp> comp_params_;        // Temperature compensation params per channel
 
         std::array<float, RATE_WINDOW_SIZE> mass_buffer_{};
         std::array<uint32_t, RATE_WINDOW_SIZE> timestamp_buffer_{};

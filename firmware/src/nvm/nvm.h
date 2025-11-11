@@ -22,8 +22,8 @@ constexpr int MAX_MASS_SENSOR_COUNT = 5;
 constexpr uint8_t MAX_COEFF_COUNT = 4;
 constexpr uint8_t TARE_COUNT = 8;
 
-typedef float MassTemperatureCoeff[MAX_MASS_SENSOR_COUNT][MAX_COEFF_COUNT];
-typedef float MassCoeff[MAX_COEFF_COUNT];
+typedef float MassTemperatureCoeffRaw[MAX_MASS_SENSOR_COUNT][MAX_COEFF_COUNT];
+typedef float MassCoeffRaw[MAX_COEFF_COUNT];
 typedef float TareValue[TARE_COUNT];
 
 enum class TareIdx: uint8_t {
@@ -85,10 +85,29 @@ struct CalibrationHdr {
     uint16_t reserved{};
 };
 
+struct MassTempCoeff {
+    float slope;
+    float offset;
+    float ref_temp;
+};
+
+struct MassCoeff {
+    float slope;
+    float offset;
+};
+
 struct Calibration {
     CalibrationHdr hdr{};
-    MassTemperatureCoeff mass_temperature_coeff{};
-    MassCoeff mass_coeff{};
+    // MassTemperatureCoeff mass_temperature_coeff{};
+    union {
+        MassTemperatureCoeffRaw mass_temp_raw{};  // legacy raw array access
+        MassTempCoeff mass_temp_coeff_sets[MASS_SENSOR_COUNT]; // structured access
+    };
+    union {
+        MassCoeffRaw mass_raw{};
+        MassCoeff mass_coeff_set;
+    };
+
 };
 
 struct NvmCalibration : NvmStructBase {

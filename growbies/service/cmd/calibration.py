@@ -33,36 +33,45 @@ def execute(cmd: ServiceCmd) -> Optional[cal_mod.Calibration | cal_mod.Calibrati
         _init(worker)
         return None
 
-    cal: cal_mod.NvmCalibration | cal_mod.NvmCalibration2 = worker.cmd(GetCalibrationDeviceCmd())
+    nvm_cal: cal_mod.Calibration | cal_mod.Calibration2 = worker.cmd(GetCalibrationDeviceCmd())
+    version = nvm_cal.hdr.version
+    cal = nvm_cal.payload
+
 
     if all(value is None for value in cmd.kw.values()):
-        return cal.payload
+        return cal
+
+    _exc_coeff_out_of_range = ServiceCmdError(f'Coefficient count out of range. Max is '
+                                              f'{cal.get_max_coeff_count()} ')
 
     mass_temp_coeffs_list = cmd.kw.pop(
-        internal_to_external_field(cal_mod.Calibration2.Field.MASS_TEMP_COEFF), list())
-    matrix = cal.payload.mass_temp_coeff
+        internal_to_external_field(cal_mod.Calibration.Field.MASS_TEMP_COEFF), list())
+    matrix = cal.mass_temp_coeff
     for mass_temp_coeffs in mass_temp_coeffs_list:
         sensor = int(mass_temp_coeffs[0])
         coeffs = mass_temp_coeffs[1:]
         try:
             matrix[sensor] = coeffs
         except IndexError:
-            raise ServiceCmdError(
-                f'Index out of range for sensor {sensor} and coeff count {len(coeffs)}. '
-                f'Matrix dimensions '
-                f'[{cal_mod.Calibration2.MASS_SENSOR_COUNT}]'
-                f'[{cal_mod.Calibration2.MAX_COEFF_COUNT}].')
-    cal.payload.mass_temp_coeff = matrix
+            raise ServiceCmdError(f'Sensor index out of range. '
+                                  f'Max is {cal.get_max_sensor_count()}')
+    try:
+        cal.mass_temp_coeff = matrix
+    except IndexError:
+        raise _exc_coeff_out_of_range
 
-    mass_coeff_list = cmd.kw.pop(internal_to_external_field(cal_mod.Calibration2.Field.MASS_COEFF),
+    mass_coeff_list = cmd.kw.pop(internal_to_external_field(cal_mod.Calibration.Field.MASS_COEFF),
                                  list())
     if mass_coeff_list:
-        cal.payload.mass_coeff = mass_coeff_list
+        try:
+            cal.mass_coeff = mass_coeff_list
+        except IndexError:
+            raise _exc_coeff_out_of_range
 
-    if cal.hdr.version == 1:
-        cmd = SetCalibrationDeviceCmd(calibration=cal)
+    if version == 1:
+        cmd = SetCalibrationDeviceCmd(calibration=nvm_cal)
     else:
-        cmd = SetCalibrationDeviceCmd2(calibration=cal)
+        cmd = SetCalibrationDeviceCmd2(calibration=nvm_cal)
 
     _ = worker.cmd(cmd)
     return None
