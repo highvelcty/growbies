@@ -126,7 +126,6 @@ struct BaseTelemetryDrawing : BaseCfgMenu {
     static constexpr auto UNITS_CHARS = 2;
 
     char title[MAX_DISPLAY_COLUMNS + 1]{};
-    float value{};
     char value_str[VALUE_CHARS + 1]{};
     char units_str[UNITS_CHARS + 1]{};
 

@@ -26,7 +26,7 @@ typedef float MassTemperatureCoeffRaw[MAX_MASS_SENSOR_COUNT][MAX_COEFF_COUNT];
 typedef float MassCoeffRaw[MAX_COEFF_COUNT];
 typedef float TareValue[TARE_COUNT];
 
-enum class TareIdx: uint8_t {
+enum TareIdx : int {
     TARE_0 = 0,
     TARE_1 = 1,
     TARE_2 = 2,

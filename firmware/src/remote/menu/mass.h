@@ -90,19 +90,20 @@ struct MassUnitsMenu final : BaseCfgMenu {
 
 struct MassDrawing final : BaseTelemetryDrawing {
     MassUnits units{};
+    TareIdx tare_idx{};
 
     MassDrawing(
         U8X8& display_,
-        const char* msg_,
+        const TareIdx tare_idx_,
         const float grams_ = 0.0f,
         const MassUnits requested_units_ = MassUnits::GRAMS
     )
         : BaseTelemetryDrawing(
               display_,
-              msg_,
+              get_tare_name(tare_idx_),
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<MassUnitsMenu>(display_),
-              })
+              }), tare_idx(tare_idx_)
     {
         _convert_units(grams_, requested_units_);
     }
@@ -130,9 +131,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
     }
 
     bool _convert_units(const float grams, const MassUnits new_units) {
-        value = grams;
-
-        float converted_mass = grams;
+        float converted_mass = grams - tare_store->payload()->values[tare_idx];
         MassUnits converted_units = new_units;
 
         constexpr float GRAMS_PER_KG = 1000.0f;

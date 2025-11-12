@@ -11,18 +11,12 @@ RemoteHigh& RemoteHigh::get() {
 }
 
 RemoteHigh::RemoteHigh() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {
-    menu_root.push_back(std::make_shared<MassDrawing>(
-        display, get_tare_name(TareIdx::TARE_0)));
-    menu_root.push_back(std::make_shared<MassDrawing>(
-        display, get_tare_name(TareIdx::TARE_1)));
-    menu_root.push_back(std::make_shared<MassDrawing>(
-        display, get_tare_name(TareIdx::TARE_2)));
-    menu_root.push_back(std::make_shared<MassDrawing>(
-        display, get_tare_name(TareIdx::AUTO_0)));
-    menu_root.push_back(std::make_shared<MassDrawing>(
-        display, get_tare_name(TareIdx::AUTO_1)));
-    menu_root.push_back(std::make_shared<TemperatureDrawing>(
-        display, "Temperature"));
+    menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::TARE_0));
+    menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::TARE_1));
+    menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::TARE_2));
+    menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::AUTO_0));
+    menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::AUTO_1));
+    menu_root.push_back(std::make_shared<TemperatureDrawing>(display, "Temperature"));
     menu_root.push_back(std::make_shared<ConfigurationMenu>(display));
 
     menu_path = {0};  // Select first top-level item
