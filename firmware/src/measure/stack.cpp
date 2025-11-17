@@ -3,55 +3,35 @@
 
 namespace growbies_hf {
 
-void MeasurementStack::begin() {
-    multi_hx711_.begin();
-    multi_thermistor_.begin();
+    void MeasurementStack::begin() {
+        multi_hx711_.begin();
+        multi_thermistor_.begin();
 
-    // Register channels to match hardware configuration
-    // (replace the counts/types with actual numbers)
-    for (size_t ii = 0; ii < MASS_SENSOR_COUNT; ++ii) {
-        channels_.add_channel(SensorType::MASS);
+        aggregate_temp_ = new AggregateTemperature(TEMPERATURE_SENSOR_COUNT);
+        aggregate_mass_ = new AggregateMass(MASS_SENSOR_COUNT, aggregate_temp_);
     }
 
-    for (size_t ii = 0; ii < TEMPERATURE_SENSOR_COUNT; ++ii) {
-        channels_.add_channel(SensorType::TEMPERATURE);
-    }
+    void MeasurementStack::update() const {
+        multi_hx711_.power_on();
+        const bool ready = multi_hx711_.wait_ready();
 
-    // Build aggregation references
-    const auto mass_channels = channels_.get_by_type(SensorType::MASS);
-    const auto temp_channels = channels_.get_by_type(SensorType::TEMPERATURE);
-
-    aggregate_temp_ = AggregateTemperature(temp_channels);
-    aggregate_mass_ = AggregateMass(mass_channels, &aggregate_temp_);
-
-}
-
-void MeasurementStack::update() {
-    std::vector<float> mass_values;
-    std::vector<float> temp_values;
-
-    multi_hx711_.power_on();
-    const bool ready = multi_hx711_.wait_ready();
-    if (ready) {
-        mass_values = multi_hx711_.sample();
-        temp_values  = multi_thermistor_.sample();
-    }
-    multi_hx711_.power_off();
-
-    if (ready) {
-        // Update TEMPERATURE channels
-        const auto temp_channels = channels_.get_by_type(SensorType::TEMPERATURE);
-        for (size_t ii = 0; ii < temp_channels.size() && ii < temp_values.size(); ++ii) {
-            temp_channels[ii]->update(temp_values[ii]);
+        std::vector<float> mass_vals, temp_vals;
+        if (ready) {
+            // Sample mass before temperatuure to give thermistors settling time
+            mass_vals = multi_hx711_.sample();
+            temp_vals = multi_thermistor_.sample();
         }
+        multi_hx711_.power_off();
 
-        // Update MASS channels
-        const auto mass_channels = channels_.get_by_type(SensorType::MASS);
-        for (size_t ii = 0; ii < mass_channels.size() && ii < mass_values.size(); ++ii) {
-            mass_channels[ii]->update(mass_values[ii]);
-        }
-        aggregate_mass_.update();
+        if (!ready) return;
+
+        // Update temperature before mass as mass is a function of temperature.
+        for (size_t i = 0; i < temp_vals.size() && i < aggregate_temp_->size(); ++i)
+            aggregate_temp_->channel(i).update(temp_vals[i]);
+
+        for (size_t i = 0; i < mass_vals.size() && i < aggregate_mass_->size(); ++i)
+            aggregate_mass_->channel(i).update(mass_vals[i]);
+        aggregate_mass_->update();
     }
-}
 
 }  // namespace growbies_hf

@@ -98,7 +98,7 @@ struct TemperatureDrawing final : BaseTelemetryDrawing {
 
     void update() override {
         const auto& stack = growbies_hf::MeasurementStack::get();
-        const auto& new_value = stack.aggregate_temp().average_temperature();
+        const auto& new_value = stack.aggregate_temp().average();
         const auto new_units = identify_store->view()->payload.temperature_units;
 
         if (_convert_units(new_value, new_units)) {
