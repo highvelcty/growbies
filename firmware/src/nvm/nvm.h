@@ -19,8 +19,10 @@
 constexpr int DEFAULT_CONTRAST = 16;
 
 constexpr int MAX_MASS_SENSOR_COUNT = 5;
-constexpr uint8_t MAX_COEFF_COUNT = 4;
+constexpr uint8_t MAX_COEFF_COUNT = 6;
+constexpr uint8_t COEFF_COUNT = 4;
 constexpr uint8_t TARE_COUNT = 8;
+constexpr float REF_TEMPERATURE = 25.0;
 
 typedef float MassTemperatureCoeffRaw[MAX_MASS_SENSOR_COUNT][MAX_COEFF_COUNT];
 typedef float MassCoeffRaw[MAX_COEFF_COUNT];
@@ -81,40 +83,42 @@ struct NvmTare : NvmStructBase {
 
 struct CalibrationHdr {
     uint8_t mass_sensor_count{MASS_SENSOR_COUNT};
-    uint8_t coeff_count{MAX_COEFF_COUNT};
+    uint8_t coeff_count{COEFF_COUNT};
+    float ref_temperature{REF_TEMPERATURE};
     uint16_t reserved{};
 };
+static_assert(sizeof(CalibrationHdr) == 8, "unexpected structure size");
 
-struct MassTempCoeff {
-    float slope;
-    float offset;
-    float ref_temp;
+struct Coeffs {
+    float mass_offset{};
+    float mass_slope{};
+    float temperature_slope{};
+    float mass_cross_temperature{};
+    float quadratic_temperature{};
+    float quadratic_mass{};
 };
+static_assert(sizeof(Coeffs) == 24, "unexpected structure size");
 
-struct MassCoeff {
-    float slope;
-    float offset;
+union SensorUnion {
+    Coeffs coeffs{};
+    float raw[MAX_COEFF_COUNT];
 };
+static_assert(sizeof(SensorUnion) == (sizeof(float) * MAX_COEFF_COUNT), "unexpected struct size");
 
 struct Calibration {
     CalibrationHdr hdr{};
-    // MassTemperatureCoeff mass_temperature_coeff{};
-    union {
-        MassTemperatureCoeffRaw mass_temp_raw{};  // legacy raw array access
-        MassTempCoeff mass_temp_coeff_sets[MASS_SENSOR_COUNT]; // structured access
-    };
-    union {
-        MassCoeffRaw mass_raw{};
-        MassCoeff mass_coeff_set;
-    };
-
+    SensorUnion sensor[MAX_MASS_SENSOR_COUNT]{};
 };
+static_assert(sizeof(Calibration) ==
+    sizeof(CalibrationHdr) + (sizeof(SensorUnion) * MAX_MASS_SENSOR_COUNT),
+    "unexpected structure size");
 
 struct NvmCalibration : NvmStructBase {
     Calibration payload{};
 
-    static constexpr Version_t VERSION = 2;
+    static constexpr Version_t VERSION = 1;
 };
+static_assert(136 == sizeof(NvmCalibration), "unexpected structure size");
 
 
 struct Identify {
@@ -328,13 +332,6 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
 
 template <>
 inline void NvmStoreBase<NvmCalibration>::migrate() {
-    if (value_storage.hdr.version < 2) {
-        // Initialize the new header in payload
-        value_storage.hdr.version = NvmCalibration::VERSION;
-        value_storage.payload.hdr.mass_sensor_count = MASS_SENSOR_COUNT;
-        value_storage.payload.hdr.coeff_count = MAX_COEFF_COUNT;
-        value_storage.payload.hdr.reserved = 0;
-    }
     _migrate();
 }
 

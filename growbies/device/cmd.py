@@ -4,7 +4,7 @@ import ctypes
 import logging
 
 from .common import BaseStructure, PacketHdr
-from .common.calibration import NvmCalibration, NvmCalibration2
+from .common.calibration import NvmCalibration
 from .common.identify import NvmIdentify1, NvmIdentify2, NvmIdentify3
 from .common.tare import NvmTare
 
@@ -123,36 +123,6 @@ class SetCalibrationDeviceCmd(BaseDeviceCmd):
 
     @calibration.setter
     def calibration(self, calibration: NvmCalibration):
-        setattr(self, self.Field.CALIBRATION, calibration)
-
-    @property
-    def init(self) -> bool:
-        return getattr(self, self.Field.INIT)
-
-    @init.setter
-    def init(self, value: bool):
-        setattr(self, self.Field.INIT, value)
-
-class SetCalibrationDeviceCmd2(BaseDeviceCmd):
-    OP = DeviceCmdOp.SET_CALIBRATION
-    VERSION = 2
-
-    class Field(BaseDeviceCmd.Field):
-        INIT = '_init'
-        CALIBRATION = '_calibration'
-
-    _fields_ = [
-        (Field.INIT, ctypes.c_bool),
-        (Field.CALIBRATION, NvmCalibration2)
-
-    ]
-
-    @property
-    def calibration(self) -> NvmCalibration2:
-        return getattr(self, self.Field.CALIBRATION)
-
-    @calibration.setter
-    def calibration(self, calibration: NvmCalibration2):
         setattr(self, self.Field.CALIBRATION, calibration)
 
     @property

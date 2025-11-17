@@ -4,7 +4,7 @@ import ctypes
 import logging
 
 from .common import  BaseStructure, BaseUnion, PacketHdr, TBaseStructure
-from .common.calibration import NvmCalibration, NvmCalibration2
+from .common.calibration import NvmCalibration
 from .common.identify import NvmIdentify1, NvmIdentify2, NvmIdentify3
 from .common.read import DataPoint
 from .common.tare import NvmTare
@@ -46,10 +46,8 @@ class DeviceRespOp(IntEnum):
                 else:
                     _raise_version_error(hdr)
             elif hdr.type == cls.CALIBRATION:
-                if hdr.version == 1:
+                if hdr.version >= 1:
                     resp = NvmCalibration.from_buffer(resp)
-                elif hdr.version >= 2:
-                    resp = NvmCalibration2.from_buffer(resp)
                 else:
                     _raise_version_error(hdr)
             elif hdr.type == cls.IDENTIFY:

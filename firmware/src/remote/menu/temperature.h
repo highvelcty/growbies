@@ -6,7 +6,7 @@
 #include <Arduino.h>
 
 #include "base.h"
-#include "measure/measure_intf.h"
+#include "measure/stack.h"
 #include "nvm/nvm.h"
 
 

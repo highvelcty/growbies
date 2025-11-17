@@ -3,7 +3,7 @@
 #include <U8x8lib.h>
 #include <cstdio>
 #include <Arduino.h>
-#include "measure/measure_intf.h"
+#include "measure/stack.h"
 
 // -----------------------------------------------------------------------------
 // Display constants

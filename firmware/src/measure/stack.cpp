@@ -1,5 +1,5 @@
 #include "build_cfg.h"
-#include "measure_intf.h"
+#include "stack.h"
 
 namespace growbies_hf {
 
@@ -21,8 +21,9 @@ void MeasurementStack::begin() {
     const auto mass_channels = channels_.get_by_type(SensorType::MASS);
     const auto temp_channels = channels_.get_by_type(SensorType::TEMPERATURE);
 
-    aggregate_mass_ = AggregateMass(mass_channels, temp_channels);
     aggregate_temp_ = AggregateTemperature(temp_channels);
+    aggregate_mass_ = AggregateMass(mass_channels, &aggregate_temp_);
+
 }
 
 void MeasurementStack::update() {
@@ -38,18 +39,18 @@ void MeasurementStack::update() {
     multi_hx711_.power_off();
 
     if (ready) {
+        // Update TEMPERATURE channels
+        const auto temp_channels = channels_.get_by_type(SensorType::TEMPERATURE);
+        for (size_t ii = 0; ii < temp_channels.size() && ii < temp_values.size(); ++ii) {
+            temp_channels[ii]->update(temp_values[ii]);
+        }
+
         // Update MASS channels
         const auto mass_channels = channels_.get_by_type(SensorType::MASS);
         for (size_t ii = 0; ii < mass_channels.size() && ii < mass_values.size(); ++ii) {
             mass_channels[ii]->update(mass_values[ii]);
         }
         aggregate_mass_.update();
-
-        // Update TEMPERATURE channels
-        const auto temp_channels = channels_.get_by_type(SensorType::TEMPERATURE);
-        for (size_t ii = 0; ii < temp_channels.size() && ii < temp_values.size(); ++ii) {
-            temp_channels[ii]->update(temp_values[ii]);
-        }
     }
 }
 

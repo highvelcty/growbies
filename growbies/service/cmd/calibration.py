@@ -5,8 +5,7 @@ from ..common import ServiceCmd, ServiceCmdError
 from ..utils import serials_to_devices
 from growbies.cli.common import internal_to_external_field, PositionalParam
 from growbies.device.common import calibration as cal_mod
-from growbies.device.cmd import (GetCalibrationDeviceCmd, SetCalibrationDeviceCmd,
-                                 SetCalibrationDeviceCmd2)
+from growbies.device.cmd import GetCalibrationDeviceCmd, SetCalibrationDeviceCmd
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
@@ -19,7 +18,7 @@ def _init(worker):
     cmd.init = True
     _ = worker.cmd(cmd)
 
-def execute(cmd: ServiceCmd) -> Optional[cal_mod.Calibration | cal_mod.Calibration2]:
+def execute(cmd: ServiceCmd) -> Optional[cal_mod.Calibration]:
     pool = get_pool()
     serial = cmd.kw.pop(PositionalParam.SERIAL)
     init = cmd.kw.pop(Param.INIT)
@@ -33,45 +32,31 @@ def execute(cmd: ServiceCmd) -> Optional[cal_mod.Calibration | cal_mod.Calibrati
         _init(worker)
         return None
 
-    nvm_cal: cal_mod.Calibration | cal_mod.Calibration2 = worker.cmd(GetCalibrationDeviceCmd())
-    version = nvm_cal.hdr.version
-    cal = nvm_cal.payload
+    nvm_cal: cal_mod.NvmCalibration = worker.cmd(GetCalibrationDeviceCmd())
+    cal: cal_mod.Calibration = nvm_cal.payload
 
 
     if all(value is None for value in cmd.kw.values()):
         return cal
 
-    _exc_coeff_out_of_range = ServiceCmdError(f'Coefficient count out of range. Max is '
-                                              f'{cal.get_max_coeff_count()} ')
+    coeff_sets = cmd.kw.pop(
+        internal_to_external_field(cal_mod.SensorCalibration.Field.COEFFS), list())
+    for coeff_set in coeff_sets:
+        sensor = int(coeff_set[0])
+        coeffs = coeff_set[1:]
 
-    mass_temp_coeffs_list = cmd.kw.pop(
-        internal_to_external_field(cal_mod.Calibration.Field.MASS_TEMP_COEFF), list())
-    matrix = cal.mass_temp_coeff
-    for mass_temp_coeffs in mass_temp_coeffs_list:
-        sensor = int(mass_temp_coeffs[0])
-        coeffs = mass_temp_coeffs[1:]
-        try:
-            matrix[sensor] = coeffs
-        except IndexError:
-            raise ServiceCmdError(f'Sensor index out of range. '
-                                  f'Max is {cal.get_max_sensor_count()}')
-    try:
-        cal.mass_temp_coeff = matrix
-    except IndexError:
-        raise _exc_coeff_out_of_range
+        max_sensor_idx = cal.hdr.mass_sensor_count - 1
+        max_coeffs_count = cal.hdr.coeff_count
+        if sensor > max_sensor_idx:
+            raise ServiceCmdError(f'Sensor index out of range. Max is {max_sensor_idx}')
+        if len(coeffs) > max_coeffs_count:
+            raise ServiceCmdError(f'Coefficient list length of {len(coeffs)} exceeds maximum '
+                                  f'length of {max_coeffs_count}')
 
-    mass_coeff_list = cmd.kw.pop(internal_to_external_field(cal_mod.Calibration.Field.MASS_COEFF),
-                                 list())
-    if mass_coeff_list:
-        try:
-            cal.mass_coeff = mass_coeff_list
-        except IndexError:
-            raise _exc_coeff_out_of_range
+        for idx, coeff in enumerate(coeffs):
+            cal.sensor[sensor].raw[idx] = coeff
 
-    if version == 1:
-        cmd = SetCalibrationDeviceCmd(calibration=nvm_cal)
-    else:
-        cmd = SetCalibrationDeviceCmd2(calibration=nvm_cal)
+    cmd = SetCalibrationDeviceCmd(calibration=nvm_cal)
 
     _ = worker.cmd(cmd)
     return None

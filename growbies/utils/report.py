@@ -24,14 +24,15 @@ def format_float_table(title, headers: list[str], data: list[list[float]]) -> st
 
     return str(table)
 
-def format_float_list(title, headers: list[str], data: list[float]):
+def format_float_list(title, headers: list[str], datas: list[list[float]]):
     table = PrettyTable(headers)
 
     table.title = title
     table.float_format = f'.{PRECISION}'
     table.align = 'l'
 
-    table.add_row(data)
+    for data in datas:
+        table.add_row(data)
 
     return str(table)
 

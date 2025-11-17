@@ -1,6 +1,6 @@
 #include "constants.h"
 #include "flags.h"
-#include "measure/measure_intf.h"
+#include "measure/stack.h"
 #include "nvm/nvm.h"
 #include "protocol/cmd_exec.h"
 

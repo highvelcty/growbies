@@ -46,7 +46,7 @@ namespace growbies_hf {
         MeasurementChannels channels_{};
         MultiHX711 multi_hx711_{};
         MultiThermistor multi_thermistor_{};
-        AggregateMass aggregate_mass_{{}};
+        AggregateMass aggregate_mass_{{}, nullptr};
         AggregateTemperature aggregate_temp_{{}};
     };
 

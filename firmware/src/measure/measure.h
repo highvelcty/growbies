@@ -113,13 +113,36 @@ namespace growbies_hf {
         std::vector<MeasurementChannel> channels_;
     };
 
+// -------------------------------
+// Aggregates TEMPERATURE channels
+// -------------------------------
+class AggregateTemperature {
+public:
+    explicit AggregateTemperature(const std::vector<MeasurementChannel*>& temp_channels)
+        : channels_(temp_channels) {}
+
+    float average_temperature() const {
+        float sum = 0.0f;
+        size_t count = 0;
+        for (const auto* ch : channels_) {
+            if (ch && ch->type() == SensorType::TEMPERATURE) {
+                sum += ch->value();
+                ++count;
+            }
+        }
+        return (count > 0) ? (sum / static_cast<float>(count)) : 0.0f;
+    }
+
+private:
+    std::vector<MeasurementChannel*> channels_;
+};
 
 class AggregateMass {
 public:
     explicit AggregateMass(const std::vector<MeasurementChannel*>& mass_channels,
-                           const std::vector<MeasurementChannel*>& temp_channels = {})
+                           AggregateTemperature* temperature)
         : channels_(mass_channels),
-          temps_(temp_channels),
+          temperature_(temperature),
           rate_index_(0),
           rate_count_(0),
           last_mass_(0.0f),
@@ -132,45 +155,43 @@ public:
     void update() {
         float total = 0.0f;
 
-        const auto* cal = calibration_store->payload();
-        const auto& cal_hdr = cal->hdr;
+        // ---- Load Calibration ----
+        const auto* nvm_cal = calibration_store->payload();
+        const auto& cal_hdr = nvm_cal->hdr;
+        const auto& sensors = nvm_cal->sensor;
 
-        const auto& coeffs_sets = calibration_store->payload()->mass_temp_coeff_sets;
+        const uint8_t sensor_count = cal_hdr.mass_sensor_count;
+        const float Tref = cal_hdr.ref_temperature;
+
+        // ---- Aggregate Temperature (via AggregateTemperature) ----
+        const float T = (temperature_ != nullptr) ? temperature_->average_temperature() : 0.0f;
+        const float dT = T - Tref;
+
+        // ---- Per-sensor Mass Processing ----
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
             const auto* ch = channels_[ii];
             if (!ch || ch->type() != SensorType::MASS) continue;
 
             float mass = ch->value();
 
-            // Only apply compensation if we have valid calibration data for this sensor
-            if (ii < cal_hdr.mass_sensor_count) {
-                float Tcell = 0.0f;
-                bool apply_temp_comp = false;
+            // Apply calibration only if sensor index is valid
+            if (ii < sensor_count) {
+                const auto& coeffs = sensors[ii].coeffs;
 
-                // Prefer one-to-one temperature channel mapping
-                if (ii < temps_.size() && temps_[ii] && temps_[ii]->type() ==
-                    SensorType::TEMPERATURE) {
-                    Tcell = temps_[ii]->value();
-                    apply_temp_comp = true;
-                }
-                // Otherwise, use the first shared temperature sensor
-                else if (!temps_.empty() && temps_[0] && temps_[0]->type() ==
-                    SensorType::TEMPERATURE) {
-                    Tcell = temps_[0]->value();
-                    apply_temp_comp = true;
-                }
+                // Full supported model:
+                // M = c0 + c1*M + c2*dT + c3*(M*dT) + c4*(dT²) + c5*(M²)
+                float corrected = coeffs.mass_offset;
+                corrected += coeffs.mass_slope * mass;
+                corrected += coeffs.temperature_slope * dT;
+                corrected += coeffs.mass_cross_temperature * (mass * dT);
+                corrected += coeffs.quadratic_temperature * (dT * dT);
+                corrected += coeffs.quadratic_mass * (mass * mass);
 
-                if (apply_temp_comp) {
-                    const auto& coeff_set = coeffs_sets[ii];
-                    mass += coeff_set.slope * (Tcell - coeff_set.ref_temp) + coeff_set.offset;
-                }
+                mass = corrected;
             }
 
             total += mass;
         }
-
-        // Mass calibration - meyere, this needs to be per sensor
-        total = ((total * cal->mass_coeff_set.slope) + cal->mass_coeff_set.offset);
 
         // --- Rate calculation section ---
         const uint32_t now = millis();
@@ -209,7 +230,7 @@ public:
         static constexpr size_t RATE_WINDOW_SIZE = 5;
 
         std::vector<MeasurementChannel*> channels_;      // MASS channels
-        std::vector<MeasurementChannel*> temps_;         // TEMPERATURE channels
+        AggregateTemperature* temperature_;
 
         std::array<float, RATE_WINDOW_SIZE> mass_buffer_{};
         std::array<uint32_t, RATE_WINDOW_SIZE> timestamp_buffer_{};
@@ -217,31 +238,6 @@ public:
         size_t rate_count_;
         float last_mass_;
         float last_rate_;
-    };
-
-
-    // -------------------------------
-    // Aggregates TEMPERATURE channels
-    // -------------------------------
-    class AggregateTemperature {
-    public:
-        explicit AggregateTemperature(const std::vector<MeasurementChannel*>& temp_channels)
-            : channels_(temp_channels) {}
-
-        float average_temperature() const {
-            float sum = 0.0f;
-            size_t count = 0;
-            for (const auto* ch : channels_) {
-                if (ch && ch->type() == SensorType::TEMPERATURE) {
-                    sum += ch->value();
-                    ++count;
-                }
-            }
-            return (count > 0) ? (sum / static_cast<float>(count)) : 0.0f;
-        }
-
-    private:
-        std::vector<MeasurementChannel*> channels_;
     };
 
 }  // namespace growbies_hf

@@ -1,6 +1,6 @@
 #include "cmd_exec.h"
 #include "command.h"
-#include "measure/measure_intf.h"
+#include "measure/stack.h"
 #include "remote/remote_high.h"
 
 void CmdExec::exec() {

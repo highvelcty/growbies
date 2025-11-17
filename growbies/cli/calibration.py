@@ -12,9 +12,9 @@ def make_cli(parser: ArgumentParser):
                             help=PositionalParam.get_help_str(PositionalParam.SERIAL))
     parser.add_argument(f'--{Param.INIT}', action='store_true',
                         help='Set to initialize to default values.')
-    klass = cal_mod.Calibration2
+    klass = cal_mod.SensorCalibration
     parser.add_argument(
-        f'--{internal_to_external_field(klass.Field.MASS_TEMP_COEFF)}',
+        f'--{internal_to_external_field(klass.Field.COEFFS)}',
         action='append',
         default=argparse.SUPPRESS,
         metavar='SENSOR_ROW [VALUE ...]',
@@ -24,11 +24,3 @@ def make_cli(parser: ArgumentParser):
         help = f'Set mass/temperature correction coefficients for a sensor. Each row '
                f'represents a sensor and each column a coefficient. Missing coefficients will '
                f'remain unchanged.')
-
-    parser.add_argument(
-        f'--{internal_to_external_field(klass.Field.MASS_COEFF)}',
-        default=argparse.SUPPRESS,
-        metavar='VALUE [VALUE ...]',
-        nargs = '+',
-        type=float,
-        help = f'Set mass calibration coefficients. Missing coefficients will remain unchanged.')

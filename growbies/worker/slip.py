@@ -28,7 +28,7 @@ SLIP_ESC_END = 0xDC
 SLIP_ESC_ESC = 0xDD
 
 class BaseDataLink(threading.Thread, ABC):
-    DEBUG_DATALINK = False
+    DEBUG_DATALINK = True
     # In normal operation, it is expected that no more than 1-2 frames are typically outstanding.
     # This will buffer some history if the consumer becomes outpaced, but this is only expected
     # in an exception case.
