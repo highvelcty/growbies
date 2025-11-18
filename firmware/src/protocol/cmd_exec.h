@@ -18,6 +18,8 @@ public:
 
     void exec();
 
+    void update_telemetry(bool async = false) const;
+
 private:
     // Private constructor for singleton
     CmdExec() = default;

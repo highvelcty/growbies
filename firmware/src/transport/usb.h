@@ -7,7 +7,9 @@ namespace transport {
 constexpr int SLIP_BUF_ALLOC_BYTES = 512;
 constexpr int PACKET_CRC_BYTES = 2;
 constexpr int PACKET_MIN_BYTES = sizeof(PacketHdr) + PACKET_CRC_BYTES;
-
+//                                                 escape                     END PAD
+constexpr int MAX_RESP_BYTES = (SLIP_BUF_ALLOC_BYTES / 2) - PACKET_CRC_BYTES - 1 - 2 \
+                                - sizeof(PacketHdr);
 
 enum Slip {
     SLIP_END = 0xC0,
@@ -65,12 +67,18 @@ public:
     // This technique allows introspection of output packet size without passing the
     // type explicitly. The template and the unused parameter allow this to happen.
     template <typename RespType>
-    void send_resp(const RespType* _, const size_t num_bytes) const {
-            resp_hdr->id = cmd_hdr->id;
-            resp_hdr->resp    = RespType::TYPE;
-            resp_hdr->version = RespType::VERSION;
-            UsbNetwork::send_packet(resp_hdr, sizeof(*resp_hdr) + num_bytes);
+    void send_resp(const RespType* _, const size_t num_bytes,
+        const bool async = false) const {
+        if (async) {
+            resp_hdr->id = 0;
         }
+        else {
+            resp_hdr->id = cmd_hdr->id;
+        }
+        resp_hdr->resp    = RespType::TYPE;
+        resp_hdr->version = RespType::VERSION;
+        UsbNetwork::send_packet(resp_hdr, sizeof(*resp_hdr) + num_bytes);
+    }
 
     ErrorCode recv_cmd();
     void reset() { network.reset(); }

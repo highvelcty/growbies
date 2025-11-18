@@ -188,8 +188,14 @@ class Worker(Thread):
                 self._out_queue.put_nowait(item)
             else:
                 hdr, resp = item
-                self._out_queue.put_nowait((type(hdr).from_buffer_copy(hdr),
-                                            type(resp).from_buffer_copy(resp)))
+                hdr_copy = type(hdr).from_buffer_copy(hdr)
+
+                if isinstance(resp, DataPoint):
+                    resp_copy = resp
+                else:
+                    resp_copy = type(resp).from_buffer_copy(resp)
+
+                self._out_queue.put_nowait((hdr_copy, resp_copy))
         except Full:
             logger.error('Worker output queue full.')
 

@@ -28,7 +28,7 @@ SLIP_ESC_END = 0xDC
 SLIP_ESC_ESC = 0xDD
 
 class BaseDataLink(threading.Thread, ABC):
-    DEBUG_DATALINK = True
+    DEBUG_DATALINK = False
     # In normal operation, it is expected that no more than 1-2 frames are typically outstanding.
     # This will buffer some history if the consumer becomes outpaced, but this is only expected
     # in an exception case.
@@ -222,7 +222,7 @@ class Network(SerialDatalink, ABC):
         return chk == calc_bytes
 
 class Transport(Network, ABC):
-    DEBUG_TRANSPORT = False
+    DEBUG_TRANSPORT = True
     def recv_resp(self, block=True, timeout: Optional[float] = None) \
             -> tuple[Optional[RespPacketHdr], Optional[TDeviceResp]]:
         frame = super().recv_packet(block=block, timeout=timeout)

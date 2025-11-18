@@ -86,11 +86,9 @@ void CmdExec::exec() {
             }
         }
         else if (in_packet_hdr->cmd == Cmd::READ) {
-            const auto* cmd = reinterpret_cast<CmdRead*>(usb_transport.get_cmd_buf());
-            error = usb_transport.validate_cmd(sizeof(*cmd));
+            error = usb_transport.validate_cmd(sizeof(CmdRead));
             if (!error) {
-                // meyere to be implemented
-                // measure(in_packet_hdr->id, cmd->times, cmd->raw);
+                update_telemetry(false);
             }
         }
         else if (in_packet_hdr->cmd == Cmd::GET_TARE) {
@@ -125,4 +123,26 @@ void CmdExec::exec() {
         resp->error = error;
         usb_transport.send_resp(resp, sizeof(*resp));
     }
+}
+
+void CmdExec::update_telemetry(const bool async) const {
+    auto datapoint = DataPoint(usb_transport.get_resp_buf(), MAX_RESP_BYTES);
+    const auto& stack = growbies_hf::MeasurementStack::get();
+
+    for (auto tare : tare_store->payload()->tares) {
+        datapoint.add<float>(EP_TARE, tare.value);
+    }
+
+    datapoint.add<float>(EP_MASS, stack.aggregate_mass().total_mass());
+    datapoint.add<float>(EP_TEMPERATURE, stack.aggregate_temp().average());
+
+    for (auto sensor_mass : stack.aggregate_mass().sensor_masses()) {
+        datapoint.add<float>(EP_MASS_SENSOR, sensor_mass);
+    }
+
+    for (auto sensor_temp : stack.aggregate_temp().sensor_temperatures()) {
+        datapoint.add<float>(EP_TEMPERATURE_SENSORS, sensor_temp);
+    }
+
+    usb_transport.send_resp(&datapoint, datapoint.get_size(), async);
 }

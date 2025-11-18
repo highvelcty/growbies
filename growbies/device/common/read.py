@@ -3,7 +3,7 @@ import logging
 from ctypes import sizeof
 from datetime import datetime
 from enum import IntEnum
-from math import nan
+from math import nan, isnan
 from typing import Optional
 
 from prettytable import PrettyTable
@@ -78,6 +78,7 @@ class DataPoint:
             self._timestamp = timestamp
         self._type_vals = dict()
 
+        # Copy for queue passing safety across threads.
         if isinstance(buf, memoryview):
             buf = bytearray(buf)
 
@@ -118,18 +119,21 @@ class DataPoint:
                         offset += required
 
     def _get_table(self) -> PrettyTable:
+        def fmt(val: float) -> str:
+            if isnan(val):
+                return 'nan'
+            return f'{val:.2f}'
+
         mass_sensors = list_str_wrap(self._type_vals.get(TLVHdr.EndpointType.MASS_SENSORS, []))
         mass_errors = list_str_wrap(self._type_vals.get(TLVHdr.EndpointType.MASS_ERRORS, []))
-        total_mass = self._type_vals.get(TLVHdr.EndpointType.MASS,
-                                         [TLVHdr.EndpointType.MASS.type(nan)])[0]
-        total_mass = f'{total_mass:.2f}'
+        total_mass = self._type_vals.get(TLVHdr.EndpointType.MASS, [nan])[0]
+        total_mass = fmt(total_mass)
         temp_sensors = list_str_wrap(
             self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE_SENSORS, []))
         temp_errors = list_str_wrap(self._type_vals.get(
             TLVHdr.EndpointType.TEMPERATURE_ERRORS, []))
-        avg_temp = self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE,
-                                       [TLVHdr.EndpointType.TEMPERATURE.type(nan)])[0]
-        avg_temp = f'{avg_temp:.2f}'
+        avg_temp = self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE, [nan])[0]
+        avg_temp = fmt(avg_temp)
         tare_values = list_str_wrap(self._type_vals.get(TLVHdr.EndpointType.TARE, []))
 
         table = PrettyTable(title = 'DataPoint')

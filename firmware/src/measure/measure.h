@@ -21,8 +21,7 @@ public:
         : type_(type),
           gross_filter_(gross_min, gross_max),
           smoother_(alpha),
-          last_smoothed_(0.0f)
-    {}
+          last_smoothed_(0.0f) {}
 
     Sample update(const float raw_value) {
         // Gross threshold filter
@@ -83,6 +82,14 @@ public:
         return channels_.empty() ? 0.0f : sum / static_cast<float>(channels_.size());
     }
 
+    std::vector<float> sensor_temperatures() const {
+        std::vector<float> temps;
+        temps.reserve(channels_.size());
+        for (const auto& ch : channels_) temps.push_back(ch.value());
+        return temps;
+    }
+
+
 private:
     std::vector<MeasurementChannel> channels_;
 };
@@ -95,6 +102,7 @@ public:
     explicit AggregateMass(const size_t num_sensors, AggregateTemperature* temperature)
         : channels_(num_sensors, MeasurementChannel(SensorType::MASS)),
           temperature_(temperature),
+          per_sensor_mass_(num_sensors, 0.0f),
           rate_index_(0),
           rate_count_(0),
           last_mass_(0.0f),
@@ -133,6 +141,7 @@ public:
                      + coeffs.quadratic_mass * (mass * mass);
             }
 
+            per_sensor_mass_[ii] = mass;
             total += mass;
         }
 
@@ -156,8 +165,10 @@ public:
         last_mass_ = total;
     }
 
-    float total_mass() const { return last_mass_; }
     float mass_rate() const { return last_rate_; }
+    const std::vector<float>& sensor_masses() const { return per_sensor_mass_; }
+    float total_mass() const { return last_mass_; }
+
 
 private:
     static constexpr size_t RATE_WINDOW_SIZE = 5;
@@ -166,6 +177,7 @@ private:
 
     std::array<float, RATE_WINDOW_SIZE> mass_buffer_{};
     std::array<uint32_t, RATE_WINDOW_SIZE> timestamp_buffer_{};
+    std::vector<float> per_sensor_mass_{};
     size_t rate_index_;
     size_t rate_count_;
     float last_mass_;

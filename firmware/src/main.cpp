@@ -20,7 +20,7 @@ void task_exec_cmd() {
 }
 
 void task_measure() {
-    auto& measurement_stack = growbies_hf::MeasurementStack::get();
+    const auto& measurement_stack = growbies_hf::MeasurementStack::get();
     measurement_stack.update();
 }
 
@@ -36,6 +36,10 @@ void task_remote_update() {
     const RemoteHigh& remote = RemoteHigh::get();
     remote.update();
 #endif
+}
+
+void task_telemetry_update() {
+    CmdExec::get().update_telemetry(true);
 }
 
 void setup() {
@@ -60,7 +64,8 @@ void loop() {
         {task_exec_cmd,             10, 0},
         {task_measure,              25, 0},
         {task_remote_service,       50, 0},
-        {task_remote_update,        100, 0}
+        {task_remote_update,        100, 0},
+        {task_telemetry_update,     5000, 0}
     };
 
     const unsigned long now = millis();

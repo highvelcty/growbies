@@ -67,6 +67,7 @@ class DeviceRespOp(IntEnum):
             else:
                 raise ServiceCmdError(f'Unrecognized response type: {hdr.type}')
         except ValueError as err:
+            logger.exception(err, exc_info=True)
             raise ServiceCmdError(f'Packet deserialization exception for type "{hdr.type}". '
                                   f'{err}') from err
 
