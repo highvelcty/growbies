@@ -8,8 +8,7 @@ class Param:
     RAW = 'raw'
 
 def make_cli(parser: ArgumentParser):
-    parser.add_argument(PositionalParam.SERIAL, type=str,
-                            help=PositionalParam.get_help_str(PositionalParam.SERIAL))
+    parser.add_argument(PositionalParam.SERIAL, type=str, help=PositionalParam.SERIAL.help)
     parser.add_argument(f'--{Param.TIMES}', type=int, nargs='?',
                         default=ReadDeviceCmd.DEFAULT_TIMES,
                         help='The number of samples to take for the read operations')

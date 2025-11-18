@@ -1,18 +1,25 @@
 from argparse import ArgumentParser
 
+from growbies.device.common import MassUnitsType
 from growbies.cli.common import PositionalParam
 
 class Param:
+
     INIT = 'init'
-    INDEX = 'index'
+    SLOT = 'slot'
     VALUE = 'value'
+    DISPLAY_UNITS = 'display_units'
 
 def make_cli(parser: ArgumentParser):
-    parser.add_argument(PositionalParam.SERIAL, type=str,
-                            help=PositionalParam.get_help_str(PositionalParam.SERIAL))
+    parser.add_argument(PositionalParam.FUZZY_ID,
+                        type=str, help=PositionalParam.FUZZY_ID.help)
     parser.add_argument(f'--{Param.INIT}', action='store_true',
                         help='Set to initialize to default values.')
-    parser.add_argument(Param.INDEX, nargs="?", type=int, help="Tare index to set")
-    parser.add_argument(Param.VALUE, nargs="?", type=float,
-                        help="Value to set at index. Input NAN (case insensitive) to omit the "
-                             "slot.")
+    parser.add_argument(Param.SLOT, nargs="?", type=int, help="Tare slot to set")
+    parser.add_argument(f'--{Param.VALUE}', type=float, required=False,
+                        help="Value to set for the specified tare slot.")
+    parser.add_argument(f'--{Param.DISPLAY_UNITS}', type=int,
+                        choices=tuple(x.value for x in MassUnitsType),
+                        required=False,
+                        help='{' + ','.join([f'{x.value}={x}' for x in MassUnitsType]) + '}',
+                        metavar='')

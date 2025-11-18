@@ -124,6 +124,7 @@ public:
 
             if (ii < cal_hdr.mass_sensor_count) {
                 const auto& coeffs = sensors[ii].coeffs;
+                // M = c0 + c1*M + c2*dT + c3*(M*dT) + c4*(dT²) + c5*(M²)
                 mass = coeffs.mass_offset
                      + coeffs.mass_slope * mass
                      + coeffs.temperature_slope * dT

@@ -29,12 +29,13 @@ typedef float MassCoeffRaw[MAX_COEFF_COUNT];
 typedef float TareValue[TARE_COUNT];
 
 enum TareIdx : int {
-    TARE_0 = 0,
-    TARE_1 = 1,
-    TARE_2 = 2,
-    AUTO_0 = 3,
-    AUTO_1 = 4,
-    AUTO_2 = 5,
+    GLOBAL = 0,
+    TARE_0 = 1,
+    TARE_1 = 2,
+    TARE_2 = 3,
+    AUTO_0 = 4,
+    AUTO_1 = 5,
+    AUTO_2 = 6,
 };
 
 const char* get_tare_name(TareIdx idx);
@@ -67,16 +68,19 @@ struct NvmStructBase{
 
 
 struct Tare {
-    TareValue values{};
-    Tare() {
-        for (auto &v : values) {
-            v = NAN;
-        }
-    }
+    float value{};
+    MassUnits display_units{};
+    uint8_t Reserved[3]{};
+    Elapsed_t timestamp{};
+};
+static_assert(12 == sizeof(Tare), "unexpected struct sizes");
+
+struct Tares {
+    Tare tares[TARE_COUNT]{};
 };
 
 struct NvmTare : NvmStructBase {
-    Tare payload{};
+    Tares payload{};
 
     static constexpr Version_t VERSION = 1;
 };

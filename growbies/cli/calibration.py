@@ -8,8 +8,7 @@ class Param:
     INIT = 'init'
 
 def make_cli(parser: ArgumentParser):
-    parser.add_argument(PositionalParam.SERIAL, type=str,
-                            help=PositionalParam.get_help_str(PositionalParam.SERIAL))
+    parser.add_argument(PositionalParam.SERIAL, type=str, help=PositionalParam.SERIAL.help)
     parser.add_argument(f'--{Param.INIT}', action='store_true',
                         help='Set to initialize to default values.')
     klass = cal_mod.SensorCalibration

@@ -19,6 +19,22 @@ TS_PRECISION_FMT = f'{{:.0{PRECISION}f}}'
 TS_t = Union[str, datetime, int, float]
 
 
+def get_elapsed_str(seconds: int) -> str:
+    """
+    Convert elapsed seconds into a human-friendly string:
+    "W days, X hours, Y minutes, Z seconds"
+    """
+
+    if seconds < 0:
+        raise ValueError("Elapsed time cannot be negative")
+
+    days, rem = divmod(seconds, 86400)
+    hours, rem = divmod(rem, 3600)
+    minutes, seconds = divmod(rem, 60)
+
+    return f"{days} days, {hours} hours, {minutes} minutes, {seconds} seconds"
+
+
 def get_unix_time(ts: Optional[TS_t] = None, fmt: str = FMT) -> float:
     """
     :param ts: A timestamp that may take the following forms:

@@ -2,13 +2,13 @@ from argparse import ArgumentParser
 
 from growbies.cli.common import internal_to_external_field, PositionalParam
 from growbies.device.common import identify as id_mod
+from growbies.device.common import MassUnitsType
 
 class Param:
     INIT = 'init'
 
 def make_cli(parser: ArgumentParser):
-    parser.add_argument(PositionalParam.SERIAL, type=str,
-                            help=PositionalParam.get_help_str(PositionalParam.SERIAL))
+    parser.add_argument(PositionalParam.SERIAL, type=str, help=PositionalParam.SERIAL.help)
     parser.add_argument(f'--{Param.INIT}', action='store_true',
                         help='Set to initialize to default values.')
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.SERIAL_NUMBER)}',
@@ -61,8 +61,8 @@ def make_cli(parser: ArgumentParser):
     parser.set_defaults(no_flip=None)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.MASS_UNITS)}',
                         metavar='{' + ','.join(
-                            [f'{x.value}={x.name}' for x in id_mod.MassUnitsType]) + '}',
-                        choices=tuple(id_mod.MassUnitsType), default=None, type=int)
+                            [f'{x.value}={x.name}' for x in MassUnitsType]) + '}',
+                        choices=tuple(MassUnitsType), default=None, type=int)
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.TEMPERATURE_UNITS)}',
                         metavar='{' + ','.join(
                             [f'{x.value}={x.name}' for x in id_mod.TemperatureUnitsType]) + '}',

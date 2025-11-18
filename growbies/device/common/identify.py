@@ -1,13 +1,12 @@
 from ctypes import sizeof
 from datetime import datetime
 from enum import IntEnum
-from typing import Optional
 import ctypes
 
 from packaging.version import InvalidVersion, Version
 
 from . import nvm
-from .common import BaseStructure
+from .common import BaseStructure, MassUnitsType
 from growbies.utils import timestamp
 from growbies.utils.ctypes_utils import cstring_to_str
 from growbies.utils.types import Serial_t, ModelNumber_t
@@ -30,12 +29,6 @@ class FootType(IntEnum):
 
 class MassSensorType(IntEnum):
     GENERIC = 0
-
-class MassUnitsType(IntEnum):
-    GRAMS = 0
-    KILOGRAMS = 1
-    OUNCES = 2
-    POUNDS = 3
 
 class PcbaType(IntEnum):
     ARDUINO = 0

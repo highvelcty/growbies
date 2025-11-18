@@ -5,8 +5,19 @@ _INTERNAL_FIELD_NAME_DELINEATOR = '_'
 CMD = 'cmd'
 
 class PositionalParam(StrEnum):
+    FUZZY_ID = 'fuzzy_id'
     SERIAL = 'serial'
     SERIALS = 'serials'
+
+    @property
+    def help(self) -> str:
+        if self == self.FUZZY_ID:
+            return 'A partial ID or name of device.'
+        elif self == self.SERIAL:
+            return 'The serial number of a device.'
+        elif self == self.SERIALS:
+            return 'A list of serial numbers. This can be unique partial matches.'
+        raise ValueError(f'"{self} does not exist.')
 
     @classmethod
     def get_help_str(cls, sub_cmd_: 'PositionalParam') -> str:

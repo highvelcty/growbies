@@ -131,7 +131,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
     }
 
     bool _convert_units(const float grams, const MassUnits new_units) {
-        float converted_mass = grams - tare_store->payload()->values[tare_idx];
+        float converted_mass = grams - tare_store->payload()->tares[tare_idx].value;
         MassUnits converted_units = new_units;
 
         constexpr float GRAMS_PER_KG = 1000.0f;

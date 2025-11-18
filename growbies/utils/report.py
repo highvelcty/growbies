@@ -1,6 +1,6 @@
 from uuid import UUID
 from prettytable import PrettyTable
-from typing import Optional
+from typing import Any, Optional
 import textwrap
 
 from growbies.constants import TABLE_COLUMN_WIDTH
@@ -24,8 +24,8 @@ def format_float_table(title, headers: list[str], data: list[list[float]]) -> st
 
     return str(table)
 
-def format_float_list(title, headers: list[str], datas: list[list[float]]):
-    table = PrettyTable(headers)
+def make_table(title, cols: list[str], datas: list[list[Any]]):
+    table = PrettyTable(cols)
 
     table.title = title
     table.float_format = f'.{PRECISION}'

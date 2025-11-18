@@ -1,1 +1,1 @@
-from .common import BaseStructure, BaseUnion, PacketHdr, TBaseStructure, TBaseUnion
+from .common import BaseStructure, BaseUnion, PacketHdr, TBaseStructure, TBaseUnion, MassUnitsType

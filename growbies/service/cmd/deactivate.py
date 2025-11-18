@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 def make_cli(parser: ArgumentParser):
     parser.add_argument(PositionalParam.SERIALS, nargs='+', type=str,
-                        help=PositionalParam.get_help_str(PositionalParam.SERIALS))
+                        help=PositionalParam.SERIALS.help)
 
 def execute(cmd: ServiceCmd):
     devices = serials_to_devices(*cmd.kw[PositionalParam.SERIALS])

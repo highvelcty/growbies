@@ -4,7 +4,7 @@ import logging
 from . import nvm
 from .common import BaseStructure, BaseUnion
 from growbies.utils.ctypes_utils import get_ctypes_2d_array, set_ctypes_2d_array
-from growbies.utils.report import format_float_list, format_float_table
+from growbies.utils.report import make_table, format_float_table
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +187,7 @@ class Calibration(BaseStructure):
             datas.append(row)
 
         # Use PrettyTable formatter
-        table_str = format_float_list('Mass Calibration Coefficients', cols, datas)
+        table_str = make_table('Mass Calibration Coefficients', cols, datas)
         return table_str
 
 class NvmCalibration(nvm.BaseNvm):

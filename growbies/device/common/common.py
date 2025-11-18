@@ -1,5 +1,6 @@
 from typing import Any, TYPE_CHECKING, Union, NewType
 import ctypes
+from enum import IntEnum
 import logging
 
 from growbies.cli.common import internal_to_external_field
@@ -9,6 +10,15 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+class MassUnitsType(IntEnum):
+    GRAMS = 0
+    KILOGRAMS = 1
+    OUNCES = 2
+    POUNDS = 3
+
+    def __str__(self):
+        return self.name
 
 class _StructUnionMixin:
     class Field: pass
