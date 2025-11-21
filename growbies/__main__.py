@@ -1,6 +1,5 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
-from growbies.cli import (calibration, device, identify, loopback, project, read, session, tag,
-                          tare, user)
+from growbies.cli import (calibration, device, identify, project, read, session, tag, tare, user)
 from growbies.cli.common import CMD
 from growbies.service.common import ServiceOp
 import argcomplete
@@ -26,7 +25,6 @@ for cmd in ServiceOp:
 calibration.make_cli(parsers[ServiceOp.CAL])
 device.make_cli(parsers[ServiceOp.DEVICE])
 identify.make_cli(parsers[ServiceOp.ID])
-loopback.make_cli(parsers[ServiceOp.LOOPBACK])
 project.make_cli(parsers[ServiceOp.PROJECT])
 read.make_cli(parsers[ServiceOp.READ])
 session.make_cli(parsers[ServiceOp.SESSION])

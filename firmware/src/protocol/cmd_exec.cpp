@@ -14,11 +14,7 @@ void CmdExec::exec() {
     if (!error) {
         const auto in_packet_hdr = usb_transport.get_cmd_hdr();
 
-        if (in_packet_hdr->cmd == Cmd::LOOPBACK) {
-            const auto resp = new (resp_buf) RespVoid;
-            usb_transport.send_resp(resp, sizeof(*resp));
-        }
-        else if (in_packet_hdr->cmd == Cmd::GET_CALIBRATION) {
+        if (in_packet_hdr->cmd == Cmd::GET_CALIBRATION) {
             error = usb_transport.validate_cmd(sizeof(CmdGetCalibration));
             if(!error) {
                 auto* resp = new (resp_buf) RespGetCalibration();

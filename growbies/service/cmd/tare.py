@@ -2,8 +2,7 @@ from typing import Optional
 import logging
 
 from ..common import ServiceCmd, ServiceCmdError
-from ..utils import serials_to_devices
-from growbies.cli.common import PositionalParam
+from growbies.cli.common import Param as CommonParam
 from growbies.cli.tare import Param
 from growbies.db.engine import get_db_engine
 from growbies.device.common import tare as tare_mod
@@ -21,7 +20,7 @@ def execute(cmd: ServiceCmd) -> Optional[tare_mod.Tares]:
     engine = get_db_engine()
     pool = get_pool()
 
-    fuzzy_id = cmd.kw.pop(PositionalParam.FUZZY_ID, None)
+    fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID, None)
     init = cmd.kw.pop(Param.INIT)
     slot = cmd.kw.pop(Param.SLOT)
     value = cmd.kw.pop(Param.VALUE)

@@ -6,7 +6,6 @@
 #pragma pack(1)
 
 enum class Cmd: uint16_t {
-    LOOPBACK = 0,
     GET_CALIBRATION = 1,
     SET_CALIBRATION = 2,
     GET_DATAPOINT = 3,
@@ -116,7 +115,6 @@ struct CmdSetTare : BaseCmd {
     NvmTare tare{};
 };
 
-struct CmdLoopback : BaseCmd {};
 struct CmdPowerOnHx711 : BaseCmd {};
 struct CmdPowerOffHx711 : BaseCmd {};
 struct CmdRead : BaseCmd {

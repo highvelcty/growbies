@@ -2,8 +2,9 @@ import logging
 
 from ..common import ServiceCmd, ServiceCmdError
 from ..utils import serials_to_devices
-from growbies.cli.common import PositionalParam
+from growbies.cli.common import Param as CommonParam
 from growbies.cli.read import Param
+from growbies.db.engine import get_db_engine
 from growbies.device.common.read import DataPoint
 from growbies.device.cmd import ReadDeviceCmd
 from growbies.worker.pool import get_pool
@@ -11,12 +12,13 @@ from growbies.worker.pool import get_pool
 logger = logging.getLogger(__name__)
 
 def execute(cmd: ServiceCmd) -> DataPoint:
+    engine = get_db_engine()
     pool = get_pool()
-    serial = cmd.kw.pop(PositionalParam.SERIAL)
+    fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID, None)
+    device = engine.device.get(fuzzy_id)
     raw = cmd.kw.pop(Param.RAW)
     times = cmd.kw.pop(Param.TIMES)
 
-    device = serials_to_devices(serial)[0]
     try:
         worker = pool.workers[device.id]
     except KeyError:

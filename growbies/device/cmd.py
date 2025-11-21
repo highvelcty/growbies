@@ -11,7 +11,6 @@ from .common.tare import NvmTare
 logger = logging.getLogger(__name__)
 
 class DeviceCmdOp(IntEnum):
-    LOOPBACK = 0
     GET_CALIBRATION = 1
     SET_CALIBRATION = 2
     GET_DATAPOINT = 3
@@ -283,10 +282,6 @@ class SetTareDeviceCmd(BaseDeviceCmd):
     @tare.setter
     def tare(self, val: NvmTare):
         setattr(self, self.Field.TARE, val)
-
-class LoopbackDeviceCmd(BaseDeviceCmd):
-    OP = DeviceCmdOp.LOOPBACK
-    VERSION = 1
 
 class PowerOffHx711DeviceCmd(BaseDeviceCmd):
     OP = DeviceCmdOp.POWER_OFF_HX711

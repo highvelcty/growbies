@@ -8,7 +8,6 @@ class ServiceOp(StrEnum):
     CAL = 'cal'
     DEVICE = 'device'
     ID = 'id'
-    LOOPBACK = 'loopback'
     PROJECT = 'project'
     READ = 'read'
     SESSION = 'session'
@@ -20,8 +19,6 @@ class ServiceOp(StrEnum):
     def help(self) -> str:
         if self == self.DEVICE:
             return 'Physical device interface and management.'
-        elif self == self.LOOPBACK:
-            return 'A no operation command/response.'
         elif self == self.ID:
             return f'Get/set device identify information.'
         elif self == self.PROJECT:
@@ -44,8 +41,6 @@ class ServiceOp(StrEnum):
         desc = ''
         if self == self.CAL:
             desc = f'List/modify/initialize device calibration.'
-        elif self == self.LOOPBACK:
-            desc = 'Test basic command/response functionality with a device.'
         elif self == self.ID:
             desc = f'List/modify/initialize device identify information.'
         elif self == self.PROJECT:

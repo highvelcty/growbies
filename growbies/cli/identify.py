@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 
-from growbies.cli.common import internal_to_external_field, PositionalParam
+from growbies.cli.common import internal_to_external_field
+from growbies.cli.common import Param as CommonParam
 from growbies.device.common import identify as id_mod
 from growbies.device.common import MassUnitsType
 
@@ -8,7 +9,8 @@ class Param:
     INIT = 'init'
 
 def make_cli(parser: ArgumentParser):
-    parser.add_argument(PositionalParam.SERIAL, type=str, help=PositionalParam.SERIAL.help)
+    parser.add_argument(CommonParam.FUZZY_ID, nargs='?', default=None,
+                        help=CommonParam.FUZZY_ID.help)
     parser.add_argument(f'--{Param.INIT}', action='store_true',
                         help='Set to initialize to default values.')
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.SERIAL_NUMBER)}',

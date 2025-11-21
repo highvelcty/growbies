@@ -2,8 +2,9 @@ from typing import Optional
 import logging
 
 from ..common import ServiceCmd, ServiceCmdError
-from ..utils import serials_to_devices
-from growbies.cli.common import internal_to_external_field, PositionalParam
+from growbies.cli.common import internal_to_external_field
+from growbies.cli.common import Param as CommonParam
+from growbies.db.engine import get_db_engine
 from growbies.device.common import calibration as cal_mod
 from growbies.device.cmd import GetCalibrationDeviceCmd, SetCalibrationDeviceCmd
 from growbies.worker.pool import get_pool
@@ -19,10 +20,12 @@ def _init(worker):
     _ = worker.cmd(cmd)
 
 def execute(cmd: ServiceCmd) -> Optional[cal_mod.Calibration]:
+    engine = get_db_engine()
     pool = get_pool()
-    serial = cmd.kw.pop(PositionalParam.SERIAL)
+    fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID, None)
+    device = engine.device.get(fuzzy_id)
+
     init = cmd.kw.pop(Param.INIT)
-    device = serials_to_devices(serial)[0]
     try:
         worker = pool.workers[device.id]
     except KeyError:

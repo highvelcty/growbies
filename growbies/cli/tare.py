@@ -1,18 +1,17 @@
 from argparse import ArgumentParser
 
 from growbies.device.common import MassUnitsType
-from growbies.cli.common import PositionalParam
+from growbies.cli.common import Param as CommonParam
 
 class Param:
-
     INIT = 'init'
     SLOT = 'slot'
     VALUE = 'value'
     DISPLAY_UNITS = 'display_units'
 
 def make_cli(parser: ArgumentParser):
-    parser.add_argument(PositionalParam.FUZZY_ID,
-                        type=str, help=PositionalParam.FUZZY_ID.help)
+    parser.add_argument(CommonParam.FUZZY_ID,
+                        type=str, help=CommonParam.FUZZY_ID.help)
     parser.add_argument(f'--{Param.INIT}', action='store_true',
                         help='Set to initialize to default values.')
     parser.add_argument(Param.SLOT, nargs="?", type=int, help="Tare slot to set")
