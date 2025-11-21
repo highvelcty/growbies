@@ -70,3 +70,6 @@ def make_cli(parser: ArgumentParser):
     parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.CONTRAST)}',
                         default=None, type=int,
                         help='Set the display contrast (0-255).')
+    parser.add_argument(f'--{internal_to_external_field(id_mod.Identify.Field.TELEMETRY_INTERVAL)}',
+                        default=None, type=float,
+                        help='How often to transmit telemetry in seconds. 0.0 means "off".')

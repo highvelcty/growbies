@@ -1,6 +1,8 @@
 import ctypes
+import textwrap
 
 from .common import BaseStructure
+from growbies.utils.report import INDENT
 
 class NvmHdr(BaseStructure):
     class Field(BaseStructure.Field):
@@ -70,3 +72,13 @@ class BaseNvm(BaseStructure):
     @payload.setter
     def payload(self, value):
         setattr(self, self.Field.PAYLOAD, value)
+
+
+    def __str__(self):
+        str_list = [
+            'Header:',
+            str(self.hdr),
+            '\nPayload:',
+            str(self.payload)
+        ]
+        return '\n'.join(str_list)

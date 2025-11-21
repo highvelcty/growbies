@@ -9,9 +9,9 @@ from typing import Optional
 from prettytable import PrettyTable
 
 from .common import BaseStructure
-from growbies.constants import INDENT, UINT8_MAX
+from growbies.constants import UINT8_MAX
 from growbies.service.common import ServiceCmdError
-from growbies.utils.report import format_dropped_bytes, list_str_wrap
+from growbies.utils.report import format_dropped_bytes, INDENT, list_str_wrap
 from growbies.utils.timestamp import get_utc_iso_ts_str, get_utc_dt, TS_t
 
 logger = logging.getLogger(__name__)

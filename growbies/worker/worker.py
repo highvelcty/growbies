@@ -129,19 +129,20 @@ class Worker(Thread):
         self._cmd_id = (self._cmd_id % UINT8_MAX) + 1
         return self._cmd_id
 
+    def _record_datapoint(self, datapoint: DataPoint, async_: bool = False):
+        tare_id = self._db_engine.tare.insert(datapoint.tare).id
+        datapoint = self._db_engine.datapoint.insert(self._device_id, tare_id, datapoint)
+        for sess in self._db_engine.session.get_active_by_device_id(self._device_id):
+            self._db_engine.link.session_datapoint.add(sess.id, datapoint.id)
+        logger.info(f'Recorded {"a" if async_ else ""}synchronous datapoint.')
+
     def _process_async(self, hdr: RespPacketHdr, resp: TDeviceResp | ErrorDeviceResp):
         if hdr.type == DeviceRespOp.ERROR:
             resp: ErrorDeviceResp
             logger.error(f'Received asynchronous error response with '
                          f'error code {resp.error} 0x{resp.error:X}')
         elif hdr.type == DeviceRespOp.DATAPOINT:
-            resp: DataPoint
-            tare_id = self._db_engine.tare.insert(resp.tare).id
-            datapoint = self._db_engine.datapoint.insert(self._device_id, tare_id, resp)
-            for sess in self._db_engine.session.get_active_by_device_id(self._device_id):
-                self._db_engine.link.session_datapoint.add(sess.id, datapoint.id)
-
-            logger.info(f'Received asynchronous {hdr.type} response.')
+            self._record_datapoint(resp, async_ = True)
         else:
             logger.error(f'Invalid response type received: {hdr.type}.')
 

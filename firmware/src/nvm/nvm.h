@@ -17,6 +17,7 @@
 #pragma pack(1)
 
 constexpr int DEFAULT_CONTRAST = 16;
+constexpr float DEFAULT_TELEMETRY_INTERVAL_SEC = 5.0;
 
 constexpr int MAX_MASS_SENSOR_COUNT = 5;
 constexpr uint8_t MAX_COEFF_COUNT = 6;
@@ -151,6 +152,7 @@ struct Identify {
     MassUnits mass_units{};
     TemperatureUnits temperature_units{};
     uint8_t contrast{DEFAULT_CONTRAST};
+    float telemetry_interval{DEFAULT_TELEMETRY_INTERVAL_SEC};
 
     // Constructor with version parameter
     explicit Identify() {
@@ -158,15 +160,28 @@ struct Identify {
         this->mass_sensor_count = MASS_SENSOR_COUNT;
         this->temperature_sensor_count = TEMPERATURE_SENSOR_COUNT;
     }
+
+    uint32_t telemetry_interval_ms() const {
+        if (telemetry_interval <= 0.0f) {
+            return 0;  // telemetry disabled
+        }
+        // Clamp to UINT32_MAX to prevent overflow
+        constexpr auto max_ms = static_cast<float>(UINT32_MAX);
+        const float ms = telemetry_interval * 1000.0f;
+        if (ms > max_ms) {
+            return UINT32_MAX;
+        }
+        return static_cast<uint32_t>(ms);
+    }
 };
-static_assert(sizeof(Identify) == 115, "unexpected structure size");
+static_assert(sizeof(Identify) == 119, "unexpected structure size");
 
 struct NvmIdentify : NvmStructBase {
     Identify payload{};
 
-    static constexpr Version_t VERSION = 4;
+    static constexpr Version_t VERSION = 5;
 };
-static_assert(sizeof(NvmIdentify) == 123, "unexpected structure size");
+static_assert(sizeof(NvmIdentify) == 127, "unexpected structure size");
 
 #if ARDUINO_ARCH_AVR
 constexpr int PARTITION_A_OFFSET = 0;
@@ -329,6 +344,10 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
         // These values come from the build now and are no longer configurable at run time.
         value_storage.payload.mass_sensor_count = MASS_SENSOR_COUNT;
         value_storage.payload.temperature_sensor_count = TEMPERATURE_SENSOR_COUNT;
+    }
+
+    if (value_storage.hdr.version < 5) {
+        value_storage.payload.telemetry_interval = DEFAULT_TELEMETRY_INTERVAL_SEC;
     }
 
     _migrate();

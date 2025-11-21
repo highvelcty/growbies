@@ -5,6 +5,8 @@ import textwrap
 
 from growbies.constants import TABLE_COLUMN_WIDTH
 
+INDENT_SPACES = 4
+INDENT = ' ' * INDENT_SPACES
 PRECISION = 6
 
 def format_float_table(title, headers: list[str], data: list[list[float]]) -> str:

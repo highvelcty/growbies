@@ -72,6 +72,7 @@ class Identify(BaseStructure):
         MASS_UNITS = '_mass_units'
         TEMPERATURE_UNITS = '_temperature_units'
         CONTRAST = '_contrast'
+        TELEMETRY_INTERVAL = '_telemetry_interval'
 
     _fields_ = [
         (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
@@ -273,6 +274,14 @@ class Identify(BaseStructure):
     def contrast(self, value: int):
         setattr(self, self.Field.CONTRAST, value)
 
+    @property
+    def telemetry_interval(self) -> float:
+        return getattr(self, self.Field.TELEMETRY_INTERVAL)
+
+    @telemetry_interval.setter
+    def telemetry_interval(self, value: float):
+        setattr(self, self.Field.TELEMETRY_INTERVAL, value)
+
 class Identify1(Identify):
     _fields_ = [
         (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 32),
@@ -301,6 +310,15 @@ class Identify2(Identify1):
 class Identify3(Identify2):
     _fields_ = [
         (Identify.Field.CONTRAST, ctypes.c_uint8)
+    ]
+
+class Identify4(Identify3):
+    # No change on gateway side
+    pass
+
+class Identify5(Identify4):
+    _fields_ = [
+        (Identify.Field.TELEMETRY_INTERVAL, ctypes.c_float)
     ]
 
 class NvmIdentify1(nvm.BaseNvm):
@@ -356,3 +374,36 @@ class NvmIdentify3(nvm.BaseNvm):
     @payload.setter
     def payload(self, value: Identify3):
         super().payload = value
+
+class NvmIdentify4(nvm.BaseNvm):
+    VERSION = 4
+
+    _fields_ = [
+        (nvm.BaseNvm.Field.HDR, nvm.NvmHdr),
+        (nvm.BaseNvm.Field.PAYLOAD, Identify4)
+    ]
+
+    @property
+    def payload(self) -> Identify4:
+        return super().payload
+
+    @payload.setter
+    def payload(self, value: Identify4):
+        super().payload = value
+
+class NvmIdentify5(nvm.BaseNvm):
+    VERSION = 5
+
+    _fields_ = [
+        (nvm.BaseNvm.Field.HDR, nvm.NvmHdr),
+        (nvm.BaseNvm.Field.PAYLOAD, Identify5)
+    ]
+
+    @property
+    def payload(self) -> Identify5:
+        return super().payload
+
+    @payload.setter
+    def payload(self, value: Identify5):
+        super().payload = value
+

@@ -222,7 +222,7 @@ class Network(SerialDatalink, ABC):
         return chk == calc_bytes
 
 class Transport(Network, ABC):
-    DEBUG_TRANSPORT = True
+    DEBUG_TRANSPORT = False
     def recv_resp(self, block=True, timeout: Optional[float] = None) \
             -> tuple[Optional[RespPacketHdr], Optional[TDeviceResp]]:
         frame = super().recv_packet(block=block, timeout=timeout)
