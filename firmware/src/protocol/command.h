@@ -173,7 +173,7 @@ struct RespGetTare : BaseResp {
     explicit RespGetTare(const NvmTare& tare_ = NvmTare{})
         : tare(tare_) {}
 };
-static_assert(sizeof(RespGetTare) < MAX_SLIP_UNENCODED_PACKET_BYTES);
+static_assert(sizeof(RespGetTare) < MAX_SLIP_UNENCODED_PACKET_BYTES, "buffer overflow");
 
 struct TLVHdr {
     EndpointType type;

@@ -69,7 +69,7 @@ private:
 // -------------------------------
 class AggregateTemperature {
 public:
-    explicit AggregateTemperature(size_t num_sensors)
+    explicit AggregateTemperature(const size_t num_sensors)
         : channels_(num_sensors, MeasurementChannel(SensorType::TEMPERATURE)) {}
 
     MeasurementChannel& channel(const size_t idx) { return channels_[idx]; }

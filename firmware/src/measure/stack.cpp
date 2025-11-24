@@ -17,7 +17,7 @@ namespace growbies_hf {
 
         std::vector<float> mass_vals, temp_vals;
         if (ready) {
-            // Sample mass before temperatuure to give thermistors settling time
+            // Sample mass before temperature to give thermistors settling time
             mass_vals = multi_hx711_.sample();
             temp_vals = multi_thermistor_.sample();
         }
