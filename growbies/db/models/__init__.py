@@ -9,7 +9,7 @@ from .link import *
 
 # Higher level models after lower level models. Alphabetical for neatness within group.
 from .account import Account
-from .datapoint import DataPoint
+from .datapoint import DataPoint, DataPointMassSensor
 from .device import Device
 from .gateway import Gateway
 from .project import Project

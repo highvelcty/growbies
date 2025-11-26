@@ -4,7 +4,6 @@ from ctypes import sizeof
 from datetime import datetime
 from enum import IntEnum
 from math import nan, isnan
-from typing import Optional
 
 from prettytable import PrettyTable
 
@@ -33,7 +32,7 @@ class TLVHdr(BaseStructure):
                               self.TEMPERATURE_SENSORS, self.TEMPERATURE):
                 return ctypes.c_float
             elif self.value in (self.MASS_ERRORS, self.TEMPERATURE_ERRORS):
-                return ctypes.c_uint8
+                return ctypes.c_uint32
             else:
                 return bytes
 
@@ -71,7 +70,7 @@ class TLVHdr(BaseStructure):
         setattr(self, self.Field.LENGTH, value)
 
 class DataPoint:
-    def __init__(self, buf: bytearray | memoryview, timestamp:  Optional[TS_t] = None):
+    def __init__(self, buf: bytearray | memoryview, timestamp:  TS_t | None = None):
         if timestamp is None:
             self._timestamp = get_utc_dt()
         else:
@@ -178,11 +177,11 @@ class DataPoint:
         return self._type_vals.get(TLVHdr.EndpointType.MASS, [float('nan')])[0]
 
     @property
-    def mass_errors(self) -> list[float]:
+    def mass_errors(self) -> list[int]:
         return self._type_vals.get(TLVHdr.EndpointType.MASS_ERRORS, list())
 
     @property
-    def temperature_sensors(self) -> list[float]:
+    def temperature_sensors(self) -> list[int]:
         return self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE_SENSORS, list())
 
     @property
@@ -190,7 +189,7 @@ class DataPoint:
         return self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE, [float('nan')])[0]
 
     @property
-    def temperature_errors(self) -> list[float]:
+    def temperature_errors(self) -> list[int]:
         return self._type_vals.get(TLVHdr.EndpointType.TEMPERATURE_ERRORS, list())
 
     @property
@@ -204,3 +203,18 @@ class DataPoint:
     @property
     def unknown(self) -> list[bytes]:
         return self._type_vals.get(TLVHdr.EndpointType.UNKNOWN, list())
+
+    def get_mass_error_at_idx(self, idx: int) -> int | None:
+        if idx < len(self.mass_errors):
+            return self.mass_errors[idx]
+        elif idx >= len(self.mass_sensors):
+            raise IndexError(f'Index {idx} must be less than {len(self.mass_sensors)}')
+        return None
+
+    def get_temperature_error_at_idx(self, idx: int) -> int | None:
+        if idx < len(self.temperature_errors):
+            return self.temperature_errors[idx]
+        elif idx >= len(self.temperature_sensors):
+            raise IndexError(f'Index {idx} must be less than {len(self.temperature_sensors)}')
+        return None
+

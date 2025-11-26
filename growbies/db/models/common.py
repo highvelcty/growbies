@@ -20,7 +20,7 @@ class BaseModel(SQLModel, table=False):
 
 
 class BaseTable(BaseModel, table=False):
-    id: Any
+    id: Any # This must be overridden.
 
     @property
     def short_uuid(self) -> str:
