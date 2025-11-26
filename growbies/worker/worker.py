@@ -142,6 +142,8 @@ class Worker(Thread):
             resp: ErrorDeviceResp
             logger.error(f'Received asynchronous error response with '
                          f'error code {resp.error} 0x{resp.error:X}')
+        elif hdr.type == DeviceRespOp.DATAPOINT:
+            pass
         else:
             logger.error(f'Invalid response type received: {hdr.type}.')
 

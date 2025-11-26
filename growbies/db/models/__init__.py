@@ -13,7 +13,7 @@ from .datapoint import DataPoint
 from .device import Device
 from .gateway import Gateway
 from .project import Project
-from .session import Session
+from .session import Session, SessionNameToken
 from .tag import Tag
 from .tare import Tare
 from .user import User

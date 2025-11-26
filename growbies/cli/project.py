@@ -39,13 +39,14 @@ def make_cli(parser: ArgumentParser):
     subparsers = parser.add_subparsers(dest=Param.ACTION, required=False, help=Param.ACTION.help,)
     for act in Action:
         act_parser = subparsers.add_parser(act, help=act.help)
-        act_parser.add_argument(Param.FUZZY_ID, nargs='?', default=None,
-                                help=Param.FUZZY_ID.help)
         if act == Action.NEW:
             act_parser.add_argument(ModParam.NAME, help=ModParam.NAME.help)
             act_parser.add_argument(f'--{ModParam.DESCRIPTION}', type=str,
                                     help=ModParam.DESCRIPTION.help,
                                     default=SUPPRESS)
+        else:
+            act_parser.add_argument(Param.FUZZY_ID, nargs='?', default=None,
+                                    help=Param.FUZZY_ID.help)
         if act == Action.MOD:
             for param in ModParam:
                 act_parser.add_argument(f'--{param}', type=str, help=param.help, default=SUPPRESS)

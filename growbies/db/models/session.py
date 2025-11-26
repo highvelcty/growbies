@@ -19,12 +19,15 @@ from growbies.utils.report import list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import DeviceID, SessionID
 
+from .datapoint import DataPoint
 if TYPE_CHECKING:
-    from .datapoint import DataPoint
     from .device import Device
     from .project import Project
     from .tag import Tag
     from .user import User
+
+class SessionNameToken(StrEnum):
+    CAL = 'cal'
 
 class Session(BaseTable, table=True):
     class Key(StrEnum):
@@ -208,11 +211,22 @@ class SessionEngine(BaseNamedTableEngine):
             i_entity = get_entity(entity_name_or_id)
             link_engine.add(sess.id, i_entity.id)
 
-    def get(self, name_or_id: str) -> Session:
-        sess = self._get_one(name_or_id, Session.devices, Session.projects, Session.tags,
+    def get(self, fuzzy_id: str) -> Session:
+        sess = self._get_one(fuzzy_id, Session.devices, Session.projects, Session.tags,
                              Session.users)
         self._populate_datapoint_count(sess)
         return sess
+
+    def get_datapoints(self, session_id: SessionID) -> list['DataPoint']:
+        with self._engine.new_session() as db_sees:
+            # noinspection PyTypeChecker
+            return db_sees.exec(
+                select(DataPoint)
+
+                .join(SessionDataPointLink, SessionDataPointLink.right_id == DataPoint.id)
+                .where(SessionDataPointLink.left_id == session_id)
+                .order_by(DataPoint.timestamp)
+            ).all()
 
     def rm(self, name: str, action: Action, entity: Entity, *names: str):
         ...
