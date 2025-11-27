@@ -8,13 +8,26 @@ from .common import BaseLink
 from growbies.db.models.common import BaseLinkEngine
 if TYPE_CHECKING:
     from growbies.db.engine import DBEngine
-from growbies.utils.types import (DataPointID, DeviceID, ProjectID, SessionID, TagID,
+from growbies.utils.types import (CalibrationID, DataPointID, DeviceID, ProjectID, SessionID, TagID,
                                   UserID)
 
-__all__ = ['SessionDataPointLink', 'SessionDeviceLink', 'SessionProjectLink', 'SessionTagLink',
-           'SessionUserLink',
-           'SessionDataPointLinkEngine', 'SessionDeviceLinkEngine', 'SessionProjectLinkEngine',
-           'SessionUserLinkEngine', 'LinkEngine']
+__all__ = [
+    # link tables
+    'SessionDataPointLink', 'SessionDeviceLink', 'SessionProjectLink', 'SessionTagLink',
+    'SessionUserLink', 'DataPointCalibrationLink',
+    # engines
+    'DataPointCalibrationLinkEngine', 'SessionDataPointLinkEngine', 'SessionDeviceLinkEngine',
+    'SessionProjectLinkEngine', 'SessionUserLinkEngine', 'LinkEngine']
+
+class DataPointCalibrationLink(BaseLink, table=True):
+    datapoint_id: DataPointID = Field(
+        foreign_key="datapoint.id",
+        primary_key=True
+    )
+    calibration_id: CalibrationID = Field(
+        foreign_key="calibration.id",
+        primary_key=True
+    )
 
 class SessionDataPointLink(BaseLink, table=True):
     left_id: SessionID = Field(
@@ -76,6 +89,9 @@ class SessionUserLink(BaseLink, table=True):
                          primary_key=True)
     )
 
+class DataPointCalibrationLinkEngine(BaseLinkEngine):
+    model_class = DataPointCalibrationLink
+
 class SessionDataPointLinkEngine(BaseLinkEngine):
     model_class = SessionDataPointLink
 
@@ -93,6 +109,7 @@ class SessionUserLinkEngine(BaseLinkEngine):
 
 class LinkEngine:
     def __init__(self, engine: 'DBEngine'):
+        self.datapoint_calibration = DataPointCalibrationLinkEngine(engine)
         self.session_datapoint = SessionDataPointLinkEngine(engine)
         self.session_device = SessionDeviceLinkEngine(engine)
         self.session_project = SessionProjectLinkEngine(engine)

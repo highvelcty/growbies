@@ -7,11 +7,13 @@ import logging
 import uuid
 
 from .common import BaseTable, BaseTableEngine
-from .link import SessionDataPointLink
+from .link import DataPointCalibrationLink, SessionDataPointLink
 if TYPE_CHECKING:
+    from .calibration import Calibration
     from .session import Session
 from growbies.device.common.read import DataPoint as DeviceDataPoint
-from growbies.utils.types import DataPointID, DeviceID, TareID
+from growbies.utils.types import (DataPointID, DataPointMassSensorID,
+                                  DataPointTemperatureSensorID, DeviceID, TareID)
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +26,7 @@ class DataPoint(BaseTable, table=True):
     )
     tare_id: TareID = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('tare.id', ondelete='CASCADE'),
-                         nullable=False)
-    )
+                         nullable=False))
 
     timestamp: datetime = Field(nullable=False, index=True)
     mass: float = Field(nullable=False)
@@ -33,12 +34,15 @@ class DataPoint(BaseTable, table=True):
 
     # Relationships
     mass_sensors: list['DataPointMassSensor'] = Relationship(back_populates='datapoint')
-    temperature_sensors: 'DataPointTemperatureSensor' = Relationship(back_populates='datapoint')
+    temperature_sensors: list['DataPointTemperatureSensor'] = Relationship(
+        back_populates='datapoint')
     sessions: List['Session'] = Relationship(back_populates='datapoints',
                                              link_model=SessionDataPointLink)
+    calibrations: list['Calibration'] = Relationship(back_populates='datapoints',
+        link_model=DataPointCalibrationLink)
 
 class DataPointMassSensor(BaseTable, table=True):
-    id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: Optional[DataPointMassSensorID] = Field(default_factory=uuid.uuid4, primary_key=True)
     datapoint_id: Optional[uuid.UUID] = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('datapoint.id', ondelete='CASCADE'),
                          nullable=False)
@@ -50,7 +54,7 @@ class DataPointMassSensor(BaseTable, table=True):
     datapoint: DataPoint | None = Relationship(back_populates='mass_sensors')
 
 class DataPointTemperatureSensor(BaseTable, table=True):
-    id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: Optional[DataPointTemperatureSensorID] = Field(default_factory=uuid.uuid4, primary_key=True)
     datapoint_id: DataPointID = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('datapoint.id', ondelete='CASCADE'),
                          nullable=False)
