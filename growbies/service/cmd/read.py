@@ -1,7 +1,6 @@
 import logging
 
 from ..common import ServiceCmd, ServiceCmdError
-from ..utils import serials_to_devices
 from growbies.cli.common import Param as CommonParam
 from growbies.cli.read import Param
 from growbies.db.engine import get_db_engine
@@ -16,12 +15,13 @@ def execute(cmd: ServiceCmd) -> DataPoint:
     pool = get_pool()
     fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID, None)
     device = engine.device.get(fuzzy_id)
-    raw = cmd.kw.pop(Param.RAW)
-    times = cmd.kw.pop(Param.TIMES)
 
+    ref_mass = cmd.kw.pop(Param.REF_MASS.py_name, None)
+    sensor_ref_mass = cmd.kw.pop(Param.SENSOR_REF_MASS.py_name, None)
     try:
         worker = pool.workers[device.id]
     except KeyError:
         raise ServiceCmdError(f'Serial number "{device.serial}" is inactive.')
 
-    return worker.cmd(ReadDeviceCmd(raw=raw, times=times))
+    return worker.cmd(ReadDeviceCmd(ref_mass, sensor_ref_mass))
+

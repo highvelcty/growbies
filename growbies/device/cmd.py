@@ -71,36 +71,21 @@ class GetCalibrationDeviceCmd(BaseDeviceCmd):
     VERSION = 1
 
 class ReadDeviceCmd(BaseDeviceCmd):
-    DEFAULT_TIMES = 7
     OP = DeviceCmdOp.READ
     VERSION = 1
 
-    class Field(BaseDeviceCmd.Field):
-        TIMES = '_times'
-        RAW = '_raw'
-
-    _fields_ = [
-        (Field.TIMES, ctypes.c_uint8),
-        (Field.RAW, ctypes.c_bool)
-    ]
+    def __init__(self, ref_mass: float | None, sensor_ref_mass: list[float] | None):
+        super().__init__()
+        self._ref_mass = ref_mass
+        self._sensor_ref_mass = sensor_ref_mass
 
     @property
-    def raw(self) -> bool:
-        return getattr(self, self.Field.RAW)
-
-    @raw.setter
-    def raw(self, value: Optional[bool]):
-        setattr(self, self.Field.RAW, bool(value))
+    def ref_mass(self) -> float | None:
+        return self._ref_mass
 
     @property
-    def times(self) -> int:
-        return getattr(self, self.Field.TIMES)
-
-    @times.setter
-    def times(self, value: int):
-        if value is None:
-            value = self.DEFAULT_TIMES
-        setattr(self, self.Field.TIMES, value)
+    def sensor_ref_mass(self) -> list[float] | None:
+        return self._sensor_ref_mass
 
 class SetCalibrationDeviceCmd(BaseDeviceCmd):
     OP = DeviceCmdOp.SET_CALIBRATION

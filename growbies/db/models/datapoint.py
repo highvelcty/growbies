@@ -7,11 +7,11 @@ import logging
 import uuid
 
 from .common import BaseTable, BaseTableEngine
-from .link import DataPointCalibrationLink, SessionDataPointLink
+from .link import SessionDataPointLink
 if TYPE_CHECKING:
-    from .calibration import Calibration
     from .session import Session
 from growbies.device.common.read import DataPoint as DeviceDataPoint
+from growbies.device.cmd import ReadDeviceCmd
 from growbies.utils.types import (DataPointID, DataPointMassSensorID,
                                   DataPointTemperatureSensorID, DeviceID, TareID)
 
@@ -31,6 +31,7 @@ class DataPoint(BaseTable, table=True):
     timestamp: datetime = Field(nullable=False, index=True)
     mass: float = Field(nullable=False)
     temperature: float = Field(nullable=False)
+    ref_mass: float = Field(nullable=True)
 
     # Relationships
     mass_sensors: list['DataPointMassSensor'] = Relationship(back_populates='datapoint')
@@ -38,8 +39,6 @@ class DataPoint(BaseTable, table=True):
         back_populates='datapoint')
     sessions: List['Session'] = Relationship(back_populates='datapoints',
                                              link_model=SessionDataPointLink)
-    calibrations: list['Calibration'] = Relationship(back_populates='datapoints',
-        link_model=DataPointCalibrationLink)
 
 class DataPointMassSensor(BaseTable, table=True):
     id: Optional[DataPointMassSensorID] = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -50,6 +49,7 @@ class DataPointMassSensor(BaseTable, table=True):
     idx: int = Field(nullable=False)
     mass: float = Field(nullable=False)
     error: int = Field(nullable=True)
+    ref_mass: float = Field(nullable=True)
 
     datapoint: DataPoint | None = Relationship(back_populates='mass_sensors')
 
@@ -68,40 +68,51 @@ class DataPointTemperatureSensor(BaseTable, table=True):
 
 # --- Engine for inserting datapoints ---
 class DataPointEngine(BaseTableEngine):
-    def insert(self, device_id: DeviceID, tare_id: TareID, device_dp: DeviceDataPoint) \
-            -> DataPoint:
+    def insert(self, device_id: DeviceID, tare_id: TareID, device_dp: DeviceDataPoint,
+               cmd: ReadDeviceCmd | None) -> DataPoint:
         with self._engine.new_session() as session:
-            # Insert main DataPoint row
+
+            # --- Insert main DataPoint row ---
             dp_row = DataPoint(
                 timestamp=device_dp.timestamp,
                 device_id=device_id,
                 mass=device_dp.mass,
                 tare_id=tare_id,
-                temperature=device_dp.temperature
+                temperature=device_dp.temperature,
+                ref_mass=cmd.ref_mass if cmd and cmd.ref_mass is not None else None,
             )
             session.add(dp_row)
             session.commit()
             session.refresh(dp_row)
 
-            # Bulk insert per-sensor mass rows
-            mass_rows = [
-                DataPointMassSensor(
-                    datapoint_id=dp_row.id,
-                    idx=idx,
-                    mass=mass,
-                    error=device_dp.get_mass_error_at_idx(idx)
+            # --- Bulk insert per-sensor mass rows ---
+            mass_rows = []
+            for idx, mass in enumerate(device_dp.mass_sensors):
+                sensor_ref = None
+                if cmd and cmd.sensor_ref_mass is not None:
+                    # Only assign if list is long enough and element is not None
+                    if idx < len(cmd.sensor_ref_mass):
+                        sensor_ref = cmd.sensor_ref_mass[idx]
+
+                mass_rows.append(
+                    DataPointMassSensor(
+                        datapoint_id=dp_row.id,
+                        idx=idx,
+                        mass=mass,
+                        error=device_dp.get_mass_error_at_idx(idx),
+                        ref_mass=sensor_ref,
+                    )
                 )
-                for idx, mass in enumerate(device_dp.mass_sensors)
-            ]
+
             session.add_all(mass_rows)
 
-            # Bulk insert per-sensor temperature rows
+            # --- Bulk insert per-sensor temperature rows ---
             temp_rows = [
                 DataPointTemperatureSensor(
                     datapoint_id=dp_row.id,
                     idx=idx,
                     temperature=temp,
-                    error=device_dp.get_temperature_error_at_idx(idx)
+                    error=device_dp.get_temperature_error_at_idx(idx),
                 )
                 for idx, temp in enumerate(device_dp.temperature_sensors)
             ]

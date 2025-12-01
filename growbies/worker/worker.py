@@ -4,13 +4,13 @@ import queue
 import time
 from queue import Queue, Empty, Full
 from threading import Event, Thread
-from typing import Optional
+from typing import cast, Optional
 
 from serial.serialutil import SerialException
 
 from growbies.constants import UINT8_MAX
 from growbies.db.engine import get_db_engine
-from growbies.device.cmd import TDeviceCmd
+from growbies.device.cmd import TDeviceCmd, ReadDeviceCmd
 from growbies.device.resp import (DeviceRespOp, DeviceError, DataPoint, ErrorDeviceResp,
                                   RespPacketHdr, TDeviceResp)
 from growbies.service.common import ServiceCmdError
@@ -87,6 +87,9 @@ class Worker(Thread):
                 elapsed = time.time() - startt
                 continue
 
+            if hdr.type == DeviceRespOp.DATAPOINT:
+                self._record_datapoint(resp, cast(ReadDeviceCmd, cmd))
+
             return resp
 
         raise exc_timeout
@@ -129,23 +132,21 @@ class Worker(Thread):
         self._cmd_id = (self._cmd_id % UINT8_MAX) + 1
         return self._cmd_id
 
-    def _record_datapoint(self, datapoint: DataPoint, async_: bool = False):
+    def _record_datapoint(self, datapoint: DataPoint, cmd: ReadDeviceCmd | None = None):
         tare_id = self._db_engine.tare.insert(datapoint.tare).id
-        datapoint = self._db_engine.datapoint.insert(self._device_id, tare_id, datapoint)
+        datapoint = self._db_engine.datapoint.insert(self._device_id, tare_id, datapoint, cmd)
         for sess in self._db_engine.session.get_active_by_device_id(self._device_id):
             self._db_engine.link.session_datapoint.add(sess.id, datapoint.id)
-        logger.info(f'Recorded {"a" if async_ else ""}synchronous datapoint.')
 
-    @staticmethod
-    def _process_async(hdr: RespPacketHdr, resp: TDeviceResp | ErrorDeviceResp):
+    def _process_async(self, hdr: RespPacketHdr, resp: TDeviceResp | ErrorDeviceResp):
         if hdr.type == DeviceRespOp.ERROR:
             resp: ErrorDeviceResp
             logger.error(f'Received asynchronous error response with '
                          f'error code {resp.error} 0x{resp.error:X}')
         elif hdr.type == DeviceRespOp.DATAPOINT:
-            pass
+            self._record_datapoint(resp)
         else:
-            logger.error(f'Invalid response type received: {hdr.type}.')
+            logger.error(f'Invalid asynchronous response type received: {hdr.type}.')
 
     def _service_cmds(self):
         while not self._stop_event.is_set() and self._intf and self._intf.is_alive():
@@ -157,25 +158,18 @@ class Worker(Thread):
             except Empty:
                 continue
             except Exception as err:
-                # meyere, need to handle errors from async/sync
                 self._put_no_wait(err)
                 continue
 
             if resp is None:
                 continue
 
-            if hdr.type == DeviceRespOp.DATAPOINT:
-                self._record_datapoint(resp, async_ = bool(hdr.id))
+            logger.info(f'Received {"a" if hdr.id == 0 else ""}synchronous {hdr.type}')
 
             if hdr.id == 0:
                 self._process_async(hdr, resp)
-            elif hdr.id == self._cmd_id:
-                logger.info(f'Received synchronous {hdr.type} response.')
-                self._put_no_wait((hdr, resp))
             else:
-                logger.warning(f'Received out of sequence response. Expected response ID '
-                               f'{self._cmd_id}, observed {hdr.id}.')
-
+                self._put_no_wait((hdr, resp))
 
         if self._intf and not self._intf.is_alive():
             logger.error(f'SLIP thread died.')

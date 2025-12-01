@@ -117,10 +117,7 @@ struct CmdSetTare : BaseCmd {
 
 struct CmdPowerOnHx711 : BaseCmd {};
 struct CmdPowerOffHx711 : BaseCmd {};
-struct CmdRead : BaseCmd {
-    uint8_t times{0};
-    bool raw{};
-};
+struct CmdRead : BaseCmd {};
 
 // --- Base Responses
 struct BaseResp {};

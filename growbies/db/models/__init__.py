@@ -9,7 +9,6 @@ from .link import *
 
 # Higher level models after lower level models. Alphabetical for neatness within group.
 from .account import Account
-from .calibration import Calibration
 from .datapoint import DataPoint, DataPointMassSensor, DataPointTemperatureSensor
 from .device import Device
 from .gateway import Gateway

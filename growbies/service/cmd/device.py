@@ -6,8 +6,6 @@ from ..common import ServiceCmd
 from growbies.cli.device import Action, Param, ModParam, ReadParam
 from growbies.db.engine import get_db_engine
 from growbies.db.models.device import Device, Devices
-from growbies.device.cmd import ReadDeviceCmd
-from growbies.service.common import ServiceCmdError
 from growbies.worker.pool import get_pool
 
 
@@ -39,13 +37,4 @@ def execute(cmd: ServiceCmd) -> Optional[Device | Devices]:
         dev = engine.device.get(fuzzy_id)
         dev.name = new_name
         engine.device.upsert(dev)
-    elif action == Action.READ:
-        pool = get_pool()
-        raw = cmd.kw.pop(ReadParam.RAW)
-        times = cmd.kw.pop(ReadParam.TIMES)
-        dev = engine.device.get(fuzzy_id)
-        if not dev.is_active():
-            raise ServiceCmdError(f'Device "{fuzzy_id}" is inactive.')
-        worker = pool.workers[dev.id]
-        return worker.cmd(ReadDeviceCmd(raw=raw, times=times))
     return None
