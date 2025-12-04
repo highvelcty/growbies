@@ -1,9 +1,9 @@
 from typing import Optional
 import logging
 
-from ..common import ServiceCmd, ServiceCmdError
+from growbies.service.common import ServiceCmd, ServiceCmdError
 from growbies.cli.common import Param as CommonParam
-from growbies.cli.identify import Param
+from growbies.cli.nvm.identify import Param
 from growbies.db.engine import get_db_engine
 from growbies.device.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,
                                  SetIdentifyDeviceCmd2, SetIdentifyDeviceCmd3,

@@ -3,6 +3,7 @@ from enum import StrEnum
 _INTERNAL_FIELD_NAME_DELINEATOR = '_'
 
 CMD = 'cmd'
+SUBCMD = 'subcmd'
 
 class Param(StrEnum):
     FUZZY_ID = 'fuzzy_id'

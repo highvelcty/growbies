@@ -7,20 +7,21 @@ class ServiceCmdError(Exception):
 class ServiceOp(StrEnum):
     CAL = 'cal'
     DEVICE = 'device'
-    ID = 'id'
+    NVM = 'nvm'
     PROJECT = 'project'
     READ = 'read'
     SESSION = 'session'
     TAG = 'tag'
-    TARE = 'tare'
     USER = 'user'
 
     @property
     def help(self) -> str:
-        if self == self.DEVICE:
+        if self == self.CAL:
+            return 'Device Calibration application interface.'
+        elif self == self.DEVICE:
             return 'Physical device interface and management.'
-        elif self == self.ID:
-            return f'Get/set device identify information.'
+        elif self == self.NVM:
+            return f'Access Non-volatile memory backed data.'
         elif self == self.PROJECT:
             return f'Project management.'
         elif self == self.READ:
@@ -29,8 +30,6 @@ class ServiceOp(StrEnum):
             return f'Session management.'
         elif self == self.TAG:
             return f'Interface to session tagging.'
-        elif self == self.TARE:
-            return f'Get/set mass tare.'
         elif self == self.USER:
             return f'Get/set user accounts.'
         else:
@@ -40,9 +39,11 @@ class ServiceOp(StrEnum):
     def description(self) -> str:
         desc = ''
         if self == self.CAL:
-            desc = f'List/modify/initialize device calibration.'
-        elif self == self.ID:
-            desc = f'List/modify/initialize device identify information.'
+            desc = 'A utility application to aid in device calibration.'
+        elif self == self.DEVICE:
+            desc = f'Physical device interface and management.'
+        elif self == self.NVM:
+            desc = f'List/modify/initialize non-volatile memory data.'
         elif self == self.PROJECT:
             desc = f'Projects contain sessions.'
         elif self == self.READ:
@@ -52,8 +53,6 @@ class ServiceOp(StrEnum):
             desc = f'List/add/modify/remove sessions.'
         elif self == self.TAG:
             desc = f'List/add/modify/remove tags.'
-        elif self == self.TARE:
-            desc = f'Read, modify or initialize tare.'
         elif self == self.USER:
             desc = f'List/add/modify/remove users.'
 

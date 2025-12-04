@@ -322,7 +322,11 @@ class Identify5(Identify4):
         (Identify.Field.TELEMETRY_INTERVAL, ctypes.c_float)
     ]
 
-class NvmIdentify1(nvm.BaseNvm):
+class BaseNvmIdentify(nvm.BaseNvm):
+    pass
+TNvmIdentify = NewType('TNvmIdentify', BaseNvmIdentify)
+
+class NvmIdentify1(BaseNvmIdentify):
     VERSION = 1
 
     _fields_ = [
@@ -344,9 +348,9 @@ class NvmIdentify1(nvm.BaseNvm):
     def payload(self, value: Identify1):
         super().payload = value
 
-TNvmIdentify = NewType('TNvmIdentify', NvmIdentify1)
 
-class NvmIdentify2(NvmIdentify1):
+
+class NvmIdentify2(BaseNvmIdentify):
     VERSION = 2
 
     _fields_ = [
@@ -362,7 +366,7 @@ class NvmIdentify2(NvmIdentify1):
     def payload(self, value: Identify2):
         super().payload = value
 
-class NvmIdentify3(NvmIdentify2):
+class NvmIdentify3(BaseNvmIdentify):
     VERSION = 3
 
     _fields_ = [
@@ -378,7 +382,7 @@ class NvmIdentify3(NvmIdentify2):
     def payload(self, value: Identify3):
         super().payload = value
 
-class NvmIdentify4(NvmIdentify3):
+class NvmIdentify4(BaseNvmIdentify):
     VERSION = 4
 
     _fields_ = [
@@ -394,7 +398,7 @@ class NvmIdentify4(NvmIdentify3):
     def payload(self, value: Identify4):
         super().payload = value
 
-class NvmIdentify5(NvmIdentify4):
+class NvmIdentify5(BaseNvmIdentify):
     VERSION = 5
 
     _fields_ = [

@@ -1,5 +1,4 @@
-import argparse
-from argparse import ArgumentParser
+from argparse import ArgumentParser, SUPPRESS
 
 from growbies.cli.common import internal_to_external_field
 from growbies.cli.common import Param as CommonParam
@@ -17,7 +16,7 @@ def make_cli(parser: ArgumentParser):
     parser.add_argument(
         f'--{internal_to_external_field(klass.Field.COEFFS)}',
         action='append',
-        default=argparse.SUPPRESS,
+        default=SUPPRESS,
         metavar='SENSOR_ROW [VALUE ...]',
 
         nargs='+',
