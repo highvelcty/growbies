@@ -8,7 +8,7 @@ from growbies.db.engine import get_db_engine
 from growbies.device.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,
                                  SetIdentifyDeviceCmd2, SetIdentifyDeviceCmd3,
                                  SetIdentifyDeviceCmd4, SetIdentifyDeviceCmd5)
-from growbies.device.common import identify as id_mod
+from growbies.device.common.identify import TNvmIdentify
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ def _init(worker):
     cmd.init = True
     _ = worker.cmd(cmd)
 
-def execute(cmd: ServiceCmd) -> Optional[id_mod.Identify1]:
+def execute(cmd: ServiceCmd) -> Optional[TNvmIdentify]:
     engine = get_db_engine()
     pool = get_pool()
     init = cmd.kw.pop(Param.INIT)
@@ -34,7 +34,7 @@ def execute(cmd: ServiceCmd) -> Optional[id_mod.Identify1]:
         _init(worker)
         return None
 
-    ident = worker.cmd(GetIdentifyDeviceCmd())
+    ident: TNvmIdentify = worker.cmd(GetIdentifyDeviceCmd())
 
     if all(value is None for value in cmd.kw.values()):
         return ident

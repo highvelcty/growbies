@@ -7,6 +7,7 @@ ModelNumber_t = Annotated[str, 'ModelNumber_t']
 
 # Table IDs
 class AccountID(UUID): pass
+class CalibrationSessionID(UUID): pass
 class DataPointID(UUID): pass
 class DataPointMassSensorID(UUID): pass
 class DataPointTemperatureSensorID(UUID): pass

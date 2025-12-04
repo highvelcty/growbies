@@ -1,8 +1,7 @@
+from typing import NewType
 import ctypes
-import textwrap
 
 from .common import BaseStructure
-from growbies.utils.report import INDENT
 
 class NvmHdr(BaseStructure):
     class Field(BaseStructure.Field):
@@ -82,3 +81,5 @@ class BaseNvm(BaseStructure):
             str(self.payload)
         ]
         return '\n'.join(str_list)
+
+TBaseNvm = NewType('TBaseNvm', BaseNvm)

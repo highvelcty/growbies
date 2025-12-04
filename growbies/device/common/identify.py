@@ -1,6 +1,7 @@
 from ctypes import sizeof
 from datetime import datetime
 from enum import IntEnum
+from typing import NewType
 import ctypes
 
 from packaging.version import InvalidVersion, Version
@@ -337,13 +338,15 @@ class NvmIdentify1(nvm.BaseNvm):
 
     @property
     def payload(self) -> Identify1:
-        return super().payload
+        return getattr(self, self.Field.PAYLOAD)
 
     @payload.setter
     def payload(self, value: Identify1):
         super().payload = value
 
-class NvmIdentify2(nvm.BaseNvm):
+TNvmIdentify = NewType('TNvmIdentify', NvmIdentify1)
+
+class NvmIdentify2(NvmIdentify1):
     VERSION = 2
 
     _fields_ = [
@@ -353,13 +356,13 @@ class NvmIdentify2(nvm.BaseNvm):
 
     @property
     def payload(self) -> Identify2:
-        return super().payload
+        return getattr(self, self.Field.PAYLOAD)
 
     @payload.setter
     def payload(self, value: Identify2):
         super().payload = value
 
-class NvmIdentify3(nvm.BaseNvm):
+class NvmIdentify3(NvmIdentify2):
     VERSION = 3
 
     _fields_ = [
@@ -369,13 +372,13 @@ class NvmIdentify3(nvm.BaseNvm):
 
     @property
     def payload(self) -> Identify3:
-        return super().payload
+        return getattr(self, self.Field.PAYLOAD)
 
     @payload.setter
     def payload(self, value: Identify3):
         super().payload = value
 
-class NvmIdentify4(nvm.BaseNvm):
+class NvmIdentify4(NvmIdentify3):
     VERSION = 4
 
     _fields_ = [
@@ -385,13 +388,13 @@ class NvmIdentify4(nvm.BaseNvm):
 
     @property
     def payload(self) -> Identify4:
-        return super().payload
+        return getattr(self, self.Field.PAYLOAD)
 
     @payload.setter
     def payload(self, value: Identify4):
         super().payload = value
 
-class NvmIdentify5(nvm.BaseNvm):
+class NvmIdentify5(NvmIdentify4):
     VERSION = 5
 
     _fields_ = [
@@ -401,9 +404,8 @@ class NvmIdentify5(nvm.BaseNvm):
 
     @property
     def payload(self) -> Identify5:
-        return super().payload
+        return getattr(self, self.Field.PAYLOAD)
 
     @payload.setter
     def payload(self, value: Identify5):
         super().payload = value
-

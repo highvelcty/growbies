@@ -48,7 +48,6 @@ from growbies.service.queue import IDQueue, ServiceQueue
 drop_privileges()
 logger = logging.getLogger(__name__)
 
-
 # Execution continues here on execution not invoked by tab.
 known, unknown = parser.parse_known_args(sys.argv[1:])
 kw = vars(known)
