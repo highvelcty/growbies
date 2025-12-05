@@ -1,6 +1,8 @@
-from .worker import Worker
-from growbies.utils.types import DeviceID, WorkerID
 import logging
+from .worker import Worker
+from growbies.service.common import ServiceCmdError
+from growbies.utils.types import DeviceID, WorkerID
+
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,12 @@ class Pool:
     def disconnect_all(self):
         for worker in self._workers.values():
             worker.stop()
+
+    def get_if_active_only(self, device_id: DeviceID) -> Worker:
+        try:
+            return  self.workers[device_id]
+        except KeyError:
+            raise ServiceCmdError(f'Device ID "{device_id}" is inactive.')
 
     def join_all(self, *worker_ids: WorkerID, timeout=None):
         for worker_id in worker_ids:

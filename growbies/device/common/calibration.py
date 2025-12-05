@@ -1,9 +1,9 @@
+from enum import StrEnum
 import ctypes
 import logging
 
 from . import nvm
 from .common import BaseStructure, BaseUnion
-from growbies.utils.ctypes_utils import get_ctypes_2d_array, set_ctypes_2d_array
 from growbies.utils.report import make_table, format_float_table
 
 logger = logging.getLogger(__name__)

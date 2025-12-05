@@ -105,12 +105,22 @@ class RespPacketHdr(PacketHdr):
 TDeviceResp = BaseStructure | BaseUnion
 
 class ErrorDeviceResp(BaseStructure):
-    class Field(PacketHdr.Field):
+    class Field(BaseStructure.Field):
+        HDR = '_hdr'
         ERROR = '_error'
 
     _fields_ = [
+        (Field.HDR, PacketHdr),
         (Field.ERROR, ctypes.c_uint32)
     ]
+
+    @property
+    def hdr(self) -> PacketHdr:
+        return getattr(self, self.Field.HDR)
+
+    @hdr.setter
+    def hdr(self, value: PacketHdr):
+        setattr(self, self.Field.HDR, value)
 
     @property
     def error(self) -> DeviceErrorCode | int:

@@ -7,14 +7,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 from prettytable import PrettyTable
-from sqlalchemy import event, func, inspect
+from sqlalchemy import exists, event, func, inspect
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, select, Field, Relationship
 
-from .common import BaseTable, BaseNamedTableEngine, SortedTable
+from .common import BaseTable, BaseNamedTableEngine, BuiltinTagName, SortedTable
 from .link import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, SessionTagLink,
                    SessionUserLink)
-from growbies.cli.session import Action, Entity
 from growbies.utils.report import list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import DeviceID, SessionID
@@ -26,8 +25,12 @@ if TYPE_CHECKING:
     from .tag import Tag
     from .user import User
 
-class SessionNameToken(StrEnum):
-    CAL = 'cal'
+class Entity(StrEnum):
+    DATAPOINT = 'datapoint'
+    DEVICE = 'device'
+    PROJECT = 'project'
+    TAG = 'tag'
+    USER = 'user'
 
 class Session(BaseTable, table=True):
     class Key(StrEnum):
@@ -47,7 +50,6 @@ class Session(BaseTable, table=True):
         PROJECTS = 'projects'
         TAGS = 'tags'
         USERS = 'users'
-
 
     id: Optional[SessionID] = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
@@ -228,21 +230,10 @@ class SessionEngine(BaseNamedTableEngine):
                 .order_by(DataPoint.timestamp)
             ).all()
 
-    def rm(self, name: str, action: Action, entity: Entity, *names: str):
-        ...
-
     def ls(self) -> Sessions:
         with self._engine.new_session() as sess:
             sessions = sess.exec(select(Session)).all()
         return Sessions(sessions)
-
-    def _populate_datapoint_count(self, session: Session) -> None:
-        with self._engine.new_session() as db:
-            count_stmt = select(func.count()).where(
-                SessionDataPointLink.left_id == session.id
-            )
-            session.datapoint_count = db.exec(count_stmt).first()
-
 
     def get_active_by_device_id(self, device_id: DeviceID) -> Sessions:
         with self._engine.new_session() as db_sess:
@@ -258,12 +249,92 @@ class SessionEngine(BaseNamedTableEngine):
             )
             return Sessions(db_sess.exec(stmt).all())
 
+    # def get_calibration_restorable_devices(self, session_id: SessionID) -> list[DeviceID]:
+    #     """
+    #     A calibration restorable device is any device in this session that does not have an
+    #     additional active calibration session linked to it. A calibration session differs from aa
+    #     regular session by a calibration tag.
+    #     """
+    #     from .tag import Tag
+    #     with self._engine.new_session() as db:
+    #         # Subquery: any other active calibration session holding this device?
+    #         # noinspection PyTypeChecker,PyUnresolvedReferences
+    #         other_active_cal = (
+    #             select(SessionDeviceLink.right_id)
+    #             .join(Session, Session.id == SessionDeviceLink.left_id)
+    #             .join(SessionTagLink, SessionTagLink.left_id == Session.id)
+    #             .join(Tag, Tag.id == SessionTagLink.right_id)
+    #             .where(
+    #                 SessionDeviceLink.right_id == SessionDeviceLink.right_id,
+    #                 Session.id != session_id,
+    #                 Session.active.is_(True),
+    #                 Tag.name == BuiltinTagName.CALIBRATION
+    #             )
+    #         )
+    #
+    #         stmt = (
+    #             select(SessionDeviceLink.right_id)
+    #             .where(SessionDeviceLink.left_id == session_id)
+    #             .where(~exists(other_active_cal))
+    #         )
+    #         return db.exec(stmt).all()
 
-    def upsert(self, model: Session, update_fields: Optional[dict] = None) -> Session:
-        return super().upsert(
-            model,
-            {Session.Key.NAME: model.name, Session.Key.ACTIVE: model.active,
-             Session.Key.DESCRIPTION: model.description,
-             Session.Key.NOTES: model.notes,
-             Session.Key.META: model.meta}
-        )
+    def get_calibration_restorable_devices(self, session_id: SessionID) -> list[DeviceID]:
+        """
+        A calibration restorable device is any device in this session that does not have an
+        additional active calibration session linked to it. A calibration session differs from aa
+        regular session by a calibration tag.
+        """
+        # Runtime import to avoid circular dependencies.
+
+        from .tag import Tag
+        with self._engine.new_session() as db:
+            # noinspection PyTypeChecker,PyUnresolvedReferences
+            other_active_cal = (
+                select(SessionDeviceLink.right_id)
+                .join(Session, Session.id == SessionDeviceLink.left_id)
+                .join(SessionTagLink, SessionTagLink.left_id == Session.id)
+                .join(Tag, Tag.id == SessionTagLink.right_id)
+                .where(
+                    Session.id != session_id,
+                    Session.active.is_(True),
+                    Tag.name == BuiltinTagName.CALIBRATION
+                )
+            )
+
+            stmt = (
+                select(SessionDeviceLink.right_id)
+                .where(SessionDeviceLink.left_id == session_id)
+                .where(~exists(other_active_cal))
+            )
+
+            return db.exec(stmt).all()
+
+    def _populate_datapoint_count(self, session: Session) -> None:
+        with self._engine.new_session() as db:
+            count_stmt = select(func.count()).where(
+                SessionDataPointLink.left_id == session.id
+            )
+            session.datapoint_count = db.exec(count_stmt).first()
+
+
+    def upsert(self, model: Session, fields: Optional[dict] = None) -> Session:
+        _fields = {
+            Session.Key.NAME: model.name,
+            Session.Key.ACTIVE: model.active,
+            Session.Key.DESCRIPTION: model.description,
+            Session.Key.NOTES: model.notes,
+            Session.Key.META: model.meta,
+        }
+        if fields:
+            _fields.update(fields)
+
+        return super().upsert(model, _fields)
+
+    def prefix_list(self, prefix: str) -> Sessions:
+        with self._engine.new_session() as db:
+            # noinspection PyUnresolvedReferences
+            stmt = select(Session).where(Session.name.like(prefix))
+            results = db.exec(stmt).all()
+
+        return Sessions(results)

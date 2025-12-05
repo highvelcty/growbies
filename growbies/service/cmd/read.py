@@ -16,8 +16,8 @@ def execute(cmd: ServiceCmd) -> DataPoint:
     fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID, None)
     device = engine.device.get(fuzzy_id)
 
-    ref_mass = cmd.kw.pop(Param.REF_MASS.py_name, None)
-    sensor_ref_mass = cmd.kw.pop(Param.SENSOR_REF_MASS.py_name, None)
+    ref_mass = cmd.kw.pop(Param.REF_MASS, None)
+    sensor_ref_mass = cmd.kw.pop(Param.SENSOR_REF_MASS, None)
     try:
         worker = pool.workers[device.id]
     except KeyError:

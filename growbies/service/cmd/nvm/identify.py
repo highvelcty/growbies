@@ -1,34 +1,50 @@
-from typing import Optional
+from typing import Any, Optional
 import logging
 
-from growbies.service.common import ServiceCmd, ServiceCmdError
+from growbies.service.common import ServiceCmd, ServiceCmdError, ServiceOp
+from growbies.cli.common import SUBCMD
 from growbies.cli.common import Param as CommonParam
+from growbies.cli.nvm import SubCmd
 from growbies.cli.nvm.identify import Param
 from growbies.db.engine import get_db_engine
 from growbies.device.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,
                                  SetIdentifyDeviceCmd2, SetIdentifyDeviceCmd3,
                                  SetIdentifyDeviceCmd4, SetIdentifyDeviceCmd5)
-from growbies.device.common.identify import TNvmIdentify
+from growbies.device.common.identify import TNvmIdentify, Identify
+from growbies.utils.types import DeviceID
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
+
+class IdentifyCmd(ServiceCmd):
+    def __init__(self, device_id: DeviceID):
+        kw = {
+            CommonParam.FUZZY_ID: device_id
+        }
+        super().__init__(ServiceOp.NVM, kw)
 
 def _init(worker):
     cmd = SetIdentifyDeviceCmd1(init=True)
     cmd.init = True
     _ = worker.cmd(cmd)
 
+def get(device_id: DeviceID) -> TNvmIdentify:
+    return execute(IdentifyCmd(device_id))
+
+def update(device_id: DeviceID, identify_fields: dict[Identify.Field, Any]):
+    cmd = IdentifyCmd(device_id)
+    for field, value in identify_fields.items():
+        cmd.kw[field.public_name] = value
+    return execute(cmd)
+
 def execute(cmd: ServiceCmd) -> Optional[TNvmIdentify]:
     engine = get_db_engine()
     pool = get_pool()
-    init = cmd.kw.pop(Param.INIT)
+    init = cmd.kw.pop(Param.INIT, None)
 
     fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID, None)
     device = engine.device.get(fuzzy_id)
-    try:
-        worker = pool.workers[device.id]
-    except KeyError:
-        raise ServiceCmdError(f'Serial number "{device.serial}" is inactive.')
+    worker = pool.get_if_active_only(device.id)
 
     if init:
         _init(worker)

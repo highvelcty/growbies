@@ -1,6 +1,6 @@
 from ctypes import sizeof
 from datetime import datetime
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 from typing import NewType
 import ctypes
 
@@ -323,7 +323,14 @@ class Identify5(Identify4):
     ]
 
 class BaseNvmIdentify(nvm.BaseNvm):
-    pass
+    @property
+    def payload(self) -> Identify1:
+        return getattr(self, self.Field.PAYLOAD)
+
+    @payload.setter
+    def payload(self, value: Identify1):
+        super().payload = value
+
 TNvmIdentify = NewType('TNvmIdentify', BaseNvmIdentify)
 
 class NvmIdentify1(BaseNvmIdentify):
@@ -339,16 +346,6 @@ class NvmIdentify1(BaseNvmIdentify):
 
         self.hdr.version = self.VERSION
         self.hdr.length = sizeof(self.payload)
-
-    @property
-    def payload(self) -> Identify1:
-        return getattr(self, self.Field.PAYLOAD)
-
-    @payload.setter
-    def payload(self, value: Identify1):
-        super().payload = value
-
-
 
 class NvmIdentify2(BaseNvmIdentify):
     VERSION = 2

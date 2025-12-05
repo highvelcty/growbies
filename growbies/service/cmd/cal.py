@@ -1,6 +1,6 @@
 import logging
 
-from . import eval_, ls, mon, new, plot, resume, stop
+from growbies.app.cal import evaluate, ls, mon, new, plot, resume, stop
 from growbies.cli.common import SUBCMD
 from growbies.cli.cal import SubCmd
 from growbies.service.common import ServiceOp, ServiceCmd, ServiceCmdError
@@ -13,7 +13,7 @@ def execute(cmd: ServiceCmd):
     subcmd = cmd.kw.pop(SUBCMD)
 
     if subcmd == SubCmd.EVAL:
-        return eval_.execute(cmd)
+        return evaluate.execute(cmd)
     elif subcmd == SubCmd.LS:
         return ls.execute(cmd)
     elif subcmd == SubCmd.MON:

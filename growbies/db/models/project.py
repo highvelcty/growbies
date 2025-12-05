@@ -80,7 +80,7 @@ class ProjectEngine(BaseNamedTableEngine):
     def list(self) -> Projects:
         return Projects(self._get_all(Project.sessions))
 
-    def upsert(self, model: Project, update_fields: Optional[dict] = None) -> Project:
+    def upsert(self, model: Project, fields: Optional[dict] = None) -> Project:
         return super().upsert(
             model,
             {Project.Key.NAME: model.name, Project.Key.DESCRIPTION: model.description}

@@ -1,13 +1,12 @@
+from enum import StrEnum
 from typing import Any, TYPE_CHECKING, Union, NewType
 import ctypes
 from enum import IntEnum
 import logging
 
-from growbies.cli.common import internal_to_external_field
 if TYPE_CHECKING:
     from ..cmd import DeviceCmdOp
     from ..resp import DeviceRespOp
-
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +19,15 @@ class MassUnitsType(IntEnum):
     def __str__(self):
         return self.name
 
+_PROTECTED_FIELD_NAME_DELINEATOR = '_'
+def _protected_to_public_field_name(field: str):
+    return field.lstrip(_PROTECTED_FIELD_NAME_DELINEATOR)
+
 class _StructUnionMixin:
-    class Field: pass
+    class Field(StrEnum):
+        @property
+        def public_name(self) -> str:
+            return _protected_to_public_field_name(self)
 
     @classmethod
     def qualname(cls):
@@ -51,7 +57,7 @@ class _StructUnionMixin:
     def get_str(self, prefix: str = '', offset = 0):
         _str_list = list()
         for field_name, field_type, field_offset, field_size in self.all_fields():
-            external_name = internal_to_external_field(field_name)
+            external_name = _protected_to_public_field_name(field_name)
             is_anonymous = field_name in getattr(self, '_anonymous_', [])
             if is_anonymous:
                 next_name = f'{prefix}'

@@ -6,27 +6,13 @@ import textwrap
 from prettytable import PrettyTable
 from sqlmodel import Field, Relationship
 
-from .common import BaseTable, BaseNamedTableEngine, SortedTable
+from .common import BaseTable, BaseNamedTableEngine, BuiltinTagName, SortedTable
 from .link import SessionTagLink
 from .session import Session
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.service.common import ServiceCmdError
 from growbies.utils.report import short_uuid
 from growbies.utils.types import TagID
-
-class BuiltinName(StrEnum):
-    READ_ONLY = 'read-only'
-    TEMPLATE = 'template'
-
-    @property
-    def description(self) -> str:
-        if self == self.READ_ONLY:
-            return 'Read-only access. No updating or removal will be permitted with this tag.'
-        elif self == self.TEMPLATE:
-            return (f'A template from which concrete sessions can be derived. The '
-                    f'"{self.READ_ONLY}" tag will automatically be added if it is not already.')
-        else:
-            return f''
 
 class Tag(BaseTable, table=True):
     class Key(StrEnum):
@@ -85,7 +71,7 @@ class TagEngine(BaseNamedTableEngine):
         super().remove(name_or_id)
 
     def upsert(self, model: Tag,
-               update_fields: Optional[dict] = None,
+               fields: Optional[dict] = None,
                _override_builtin_check: bool = False) -> Tag:
         if model.builtin and not _override_builtin_check:
             raise ServiceCmdError(f"Cannot modify builtin tag: {model.name}")
@@ -97,7 +83,7 @@ class TagEngine(BaseNamedTableEngine):
         )
 
     def _init_builtin_tags(self):
-        for name in BuiltinName:
+        for name in BuiltinTagName:
             existing = self.get_exact(name)
             if not existing:
                 tag = Tag(name=name, builtin=True, description=name.description)

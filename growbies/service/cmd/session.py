@@ -2,9 +2,10 @@ from typing import Optional
 import logging
 
 from ..common import ServiceCmd
-from growbies.cli.session import Action, Entity, Param, ModParam, ModNewParam, RmParam
+from growbies.cli.common import Param as commonParam
+from growbies.cli.session import Action, Param, ModParam, ModNewParam, RmParam
 from growbies.db.engine import get_db_engine
-from growbies.db.models.session import Session, Sessions
+from growbies.db.models.session import Entity, Session, Sessions
 from growbies.utils.report import decode_escapes
 
 logger = logging.getLogger(__name__)
@@ -12,7 +13,7 @@ logger = logging.getLogger(__name__)
 def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
     engine = get_db_engine()
 
-    session_name = cmd.kw.pop(Param.FUZZY_NAME, None)
+    session_name = cmd.kw.pop(commonParam.FUZZY_ID, None)
     action = cmd.kw.pop(Param.ACTION)
 
     if action in (Action.ACTIVATE, Action.DEACTIVATE):

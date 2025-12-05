@@ -1,8 +1,10 @@
 from argparse import ArgumentParser
 from enum import StrEnum
 
+from growbies.db.models.session import Entity
+from growbies.cli.common import Param as commonParam
+
 class Param(StrEnum):
-    FUZZY_NAME = 'fuzzy_name'
     ACTION = 'action'
 
 class ModNewParam(StrEnum):
@@ -46,31 +48,24 @@ class Action(StrEnum):
         else:
             return ''
 
-class Entity(StrEnum):
-    DATAPOINT = 'datapoint'
-    DEVICE = 'device'
-    PROJECT = 'project'
-    TAG = 'tag'
-    USER = 'user'
-
 def make_cli(parser: ArgumentParser):
     subparsers = parser.add_subparsers(dest=Param.ACTION, required=False)
 
     # LS
     ls_parser = subparsers.add_parser(Action.LS, help='List session details.')
-    ls_parser.add_argument(Param.FUZZY_NAME, nargs='?', default=None,
+    ls_parser.add_argument(commonParam.FUZZY_ID, nargs='?', default=None,
                            help='Session to operate on.')
 
     # Activate / Deactivate
     for act in (Action.ACTIVATE, Action.DEACTIVATE):
         act_parser = subparsers.add_parser(act, help=f'{act.capitalize()} session.')
-        act_parser.add_argument(Param.FUZZY_NAME, nargs='?', default=None,
+        act_parser.add_argument(commonParam.FUZZY_ID, nargs='?', default=None,
                                 help='Session to operate on.')
 
     # Add / Remove
     for cmd in (Action.ADD, Action.RM):
         cmd_parser = subparsers.add_parser(cmd, help=cmd.help)
-        cmd_parser.add_argument(Param.FUZZY_NAME, nargs='?', default=None,
+        cmd_parser.add_argument(commonParam.FUZZY_ID, nargs='?', default=None,
                                 help='Session to operate on.')
         for entity in (Entity.DEVICE, Entity.PROJECT, Entity.TAG, Entity.USER):
             cmd_parser.add_argument(
@@ -85,7 +80,7 @@ def make_cli(parser: ArgumentParser):
     # New / Mod
     for cmd in (Action.NEW, Action.MOD):
         cmd_parser = subparsers.add_parser(cmd, help=cmd.help)
-        cmd_parser.add_argument(Param.FUZZY_NAME, nargs='?', default=None,
+        cmd_parser.add_argument(commonParam.FUZZY_ID, nargs='?', default=None,
                                 help='Session to operate on.')
         cmd_parser.add_argument(f'--{ModNewParam.DESCRIPTION}', type=str,
                                 help='Session description.')

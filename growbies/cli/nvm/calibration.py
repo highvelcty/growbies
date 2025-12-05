@@ -1,6 +1,5 @@
 from argparse import ArgumentParser, SUPPRESS
 
-from growbies.cli.common import internal_to_external_field
 from growbies.cli.common import Param as CommonParam
 from growbies.device.common import calibration as cal_mod
 
@@ -14,7 +13,7 @@ def make_cli(parser: ArgumentParser):
                         help='Set to initialize to default values.')
     klass = cal_mod.SensorCalibration
     parser.add_argument(
-        f'--{internal_to_external_field(klass.Field.COEFFS)}',
+        f'--{klass.Field.COEFFS.public_name}',
         action='append',
         default=SUPPRESS,
         metavar='SENSOR_ROW [VALUE ...]',

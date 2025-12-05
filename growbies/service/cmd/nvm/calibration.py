@@ -1,7 +1,6 @@
 from typing import Optional
 import logging
 
-from growbies.cli.common import internal_to_external_field
 from growbies.cli.common import Param as CommonParam
 from growbies.db.engine import get_db_engine
 from growbies.device.common import calibration as cal_mod
@@ -42,8 +41,7 @@ def execute(cmd: ServiceCmd) -> Optional[cal_mod.Calibration]:
     if all(value is None for value in cmd.kw.values()):
         return cal
 
-    coeff_sets = cmd.kw.pop(
-        internal_to_external_field(cal_mod.SensorCalibration.Field.COEFFS), list())
+    coeff_sets = cmd.kw.pop(cal_mod.SensorCalibration.Field.COEFFS.public_name, list())
     for coeff_set in coeff_sets:
         sensor = int(coeff_set[0])
         coeffs = coeff_set[1:]

@@ -132,7 +132,7 @@ class DeviceEngine(BaseNamedTableEngine):
             self._overwrite(device)
         return Devices(elements=[dev.model_copy() for dev in merged_devices])
 
-    def upsert(self, model: Device, update_fields: Optional[dict] = None) -> Device:
+    def upsert(self, model: Device, fields: Optional[dict] = None) -> Device:
         return super().upsert(model, {Device.Key.NAME: model.name, Device.Key.STATE: model.state})
 
     def clear_active(self, id_: UUID):

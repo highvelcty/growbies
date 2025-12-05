@@ -3,7 +3,7 @@ import logging
 from .common import ServiceOp, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
 from growbies.device.resp import DeviceError
-from growbies.service.cmd import device, ls, project, read, session, tag, user
+from growbies.service.cmd import cal, device, ls, project, read, session, tag, user
 from growbies.service.cmd import nvm
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
@@ -35,6 +35,8 @@ class Service:
                     logger.info(f'Servicing {cmd.op} command.')
                     with IDQueue(cmd.qid) as resp_q:
                         try:
+                            if cmd.op == ServiceOp.CAL:
+                                resp_q.put(cal.execute(cmd))
                             if cmd.op == ServiceOp.DEVICE:
                                 resp_q.put(device.execute(cmd))
                             elif cmd.op == ServiceOp.NVM:

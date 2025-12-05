@@ -50,7 +50,7 @@ class UserEngine(BaseNamedTableEngine):
     def list(self) -> Users:
         return Users(self._get_all(self.model_class.sessions))
 
-    def upsert(self, model: User, update_fields: Optional[dict] = None) -> User:
+    def upsert(self, model: User, fields: Optional[dict] = None) -> User:
         return super().upsert(
             model,
             {User.Key.NAME: model.name, User.Key.EMAIL: model.email}

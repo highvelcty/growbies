@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from enum import StrEnum
 
-from . import new, resume, stop, mon, ls, eval_, plot
+from . import new, resume, stop, mon, ls, evaluate, plot
 from growbies.cli.common import SUBCMD
 
 __all__ = ['SubCmd', 'make_cli']
@@ -33,11 +33,7 @@ class SubCmd(StrEnum):
                     'does not exist.')
         elif self == self.STOP:
             desc = 'Stop a session.'
-
-        return (f'{self.help}\n'
-                f'\n'
-                f'{desc}')
-
+        return desc
     @property
     def help(self):
         if self == self.EVAL:
@@ -64,7 +60,7 @@ def make_cli(parser: ArgumentParser):
         parsers[subcmd] = parser_adder.add_parser(subcmd,
                                                   description=subcmd.description, help=subcmd.help,
                                                   formatter_class=RawDescriptionHelpFormatter)
-    eval_.make_cli(parsers[SubCmd.EVAL])
+    evaluate.make_cli(parsers[SubCmd.EVAL])
     ls.make_cli(parsers[SubCmd.LS])
     mon.make_cli(parsers[SubCmd.MON])
     new.make_cli(parsers[SubCmd.NEW])

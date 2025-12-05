@@ -3,7 +3,7 @@ import numpy as np
 from prettytable import PrettyTable
 
 from growbies.db.engine import get_db_engine
-from growbies.db.models import Session, SessionNameToken
+from growbies.db.models import Session
 
 class CalData:
     _REF_TEMP = 25.0

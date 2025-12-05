@@ -1,11 +1,14 @@
 from enum import StrEnum
 
-_INTERNAL_FIELD_NAME_DELINEATOR = '_'
-
 CMD = 'cmd'
 SUBCMD = 'subcmd'
 
-class Param(StrEnum):
+class BaseParam(StrEnum):
+    @property
+    def kw_cli_name(self):
+        return self.value.replace('_', '-')
+
+class Param(BaseParam):
     FUZZY_ID = 'fuzzy_id'
     ACTION = 'action'
 
@@ -18,6 +21,3 @@ class Param(StrEnum):
             return 'The action to take.'
         else:
             return ''
-
-def internal_to_external_field(field: str):
-    return field.lstrip(_INTERNAL_FIELD_NAME_DELINEATOR)

@@ -4,6 +4,12 @@ from typing import Optional, TypeVar
 class ServiceCmdError(Exception):
     pass
 
+class NoResultsServiceCmdError(ServiceCmdError):
+    pass
+
+class MultipleResultsServiceCmdError(ServiceCmdError):
+    pass
+
 class ServiceOp(StrEnum):
     CAL = 'cal'
     DEVICE = 'device'

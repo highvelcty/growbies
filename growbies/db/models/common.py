@@ -1,4 +1,5 @@
 from abc import ABC
+from enum import StrEnum
 from typing import Any, Generic, Iterator, Optional, TYPE_CHECKING, Type, TypeVar
 from uuid import UUID
 
@@ -9,9 +10,26 @@ from sqlmodel import SQLModel, select
 
 if TYPE_CHECKING:
     from growbies.db.engine import DBEngine
-from growbies.service.common import ServiceCmdError
+from growbies.service.common import (ServiceCmdError, MultipleResultsServiceCmdError,
+    NoResultsServiceCmdError)
 from growbies.utils.report import short_uuid
 
+class BuiltinTagName(StrEnum):
+    CALIBRATION = 'calibration'
+    READ_ONLY = 'read-only'
+    TEMPLATE = 'template'
+
+    @property
+    def description(self) -> str:
+        if self == self.CALIBRATION:
+            return 'A calibration session.'
+        elif self == self.READ_ONLY:
+            return 'Read-only access. No updating or removal will be permitted with this tag.'
+        elif self == self.TEMPLATE:
+            return (f'A template from which concrete sessions can be derived. The '
+                    f'"{self.READ_ONLY}" tag will automatically be added if it is not already.')
+        else:
+            return f''
 
 TSQLModel = TypeVar('TSQLModel', bound='BaseTable')
 
@@ -81,11 +99,11 @@ class BaseNamedTableEngine(BaseTableEngine):
     def _get_one(self, fuzzy_id: str | UUID, *relationships) -> TSQLModel:
         results = self._get_multi(fuzzy_id, *relationships)
         if not results:
-            raise ServiceCmdError(f'No results for "{fuzzy_id}" in the '
-                                  f'"{self.model_class.__tablename__}" table.')
+            raise NoResultsServiceCmdError(f'No results for "{fuzzy_id}" in the '
+                                           f'"{self.model_class.__tablename__}" table.')
         elif len(results) > 1:
-            raise ServiceCmdError(f'Multiple results for "{fuzzy_id}" in the'
-                                  f'"{self.model_class.__tablename__} table.')
+            raise MultipleResultsServiceCmdError(f'Multiple results for "{fuzzy_id}" in the'
+                                                 f'"{self.model_class.__tablename__} table.')
         return results[0]
 
     def remove(self, fuzzy_id: str | UUID):
@@ -94,7 +112,7 @@ class BaseNamedTableEngine(BaseTableEngine):
             sess.delete(to_remove)
             sess.commit()
 
-    def upsert(self, model: TSQLModel, update_fields: Optional[dict] = None) -> TSQLModel:
+    def upsert(self, model: TSQLModel, fields: Optional[dict] = None) -> TSQLModel:
         try:
             existing = self._get_one(model.id)
         except ServiceCmdError:
@@ -102,8 +120,8 @@ class BaseNamedTableEngine(BaseTableEngine):
 
         if existing:
             # Update
-            if update_fields:
-                for key, value in update_fields.items():
+            if fields:
+                for key, value in fields.items():
                     setattr(existing, key, value)
 
             with self._engine.new_session() as session:
