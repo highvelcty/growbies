@@ -14,7 +14,7 @@ def execute(cmd: ServiceCmd):
 
     if subcmd == SubCmd.EVAL:
         return evaluate.execute(cmd)
-    elif subcmd == SubCmd.LS:
+    elif subcmd in (None, SubCmd.LS):  # default
         return ls.execute(cmd)
     elif subcmd == SubCmd.MON:
         return mon.execute(cmd)

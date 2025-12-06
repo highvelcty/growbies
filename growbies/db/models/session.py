@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 from prettytable import PrettyTable
 from sqlalchemy import exists, event, func, inspect
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import selectinload
 from sqlmodel import Column, select, Field, Relationship
 
 from .common import BaseTable, BaseNamedTableEngine, BuiltinTagName, SortedTable
@@ -168,23 +169,138 @@ def update_timestamp(_mapper, _connection, target: Session):
                 target.end_time = get_utc_dt()
 
 class Sessions(SortedTable[Session]):
+    def __init__(self, *args,
+                 show_active: bool = True,
+                 show_id: bool = True,
+                 show_device_ids: bool = False,
+                 show_device_names: bool = False,
+                 show_name: bool = True,
+                 show_description = True,
+                 show_notes = True,
+                 **kw):
+        super().__init__(*args, **kw)
+        self._show_active = show_active
+        self._show_id = show_id
+        self._show_device_ids = show_device_ids
+        self._show_device_names = show_device_names
+        self._show_name = show_name
+        self._show_description = show_description
+        self._show_notes = show_notes
+
+    @property
+    def show_active(self) -> bool:
+        return self._show_active
+
+    @show_active.setter
+    def show_active(self, value: bool):
+        self._show_active = value
+
+    @property
+    def show_id(self) -> bool:
+        return self._show_id
+
+    @show_id.setter
+    def show_id(self, value: bool):
+        self._show_id = value
+
+    @property
+    def show_device_ids(self) -> bool:
+        return self._show_device_ids
+
+    @show_device_ids.setter
+    def show_device_ids(self, value: bool):
+        self._show_device_ids = value
+
+    @property
+    def show_device_names(self) -> bool:
+        return self._show_device_names
+
+    @show_device_names.setter
+    def show_device_names(self, value: bool):
+        self._show_device_names = value
+
+    @property
+    def show_name(self) -> bool:
+        return self._show_name
+
+    @show_name.setter
+    def show_name(self, value: bool):
+        self._show_name = value
+
+    @property
+    def show_description(self) -> bool:
+        return self._show_description
+
+    @show_description.setter
+    def show_description(self, value: bool):
+        self._show_description = value
+
+    @property
+    def show_notes(self) -> bool:
+        return self._show_notes
+
+    @show_notes.setter
+    def show_notes(self, value: bool):
+        self._show_notes = value
+
+
+
     def __str__(self):
         table = PrettyTable(title=self.table_name())
         table.preserve_internal_whitespace = True
-        table.field_names = (Session.Key.ID, Session.Key.NAME, Session.Key.ACTIVE,
-                             Session.Key.DESCRIPTION, Session.Key.NOTES)
+
+        field_names = list()
+        if self._show_id:
+            field_names.append(Session.Key.ID)
+        if self._show_name:
+            field_names.append(Session.Key.NAME)
+        if self._show_device_ids:
+            field_names.append('Device IDs')
+        if self._show_device_names:
+            field_names.append('Device Names')
+        if self._show_active:
+            field_names.append(Session.Key.ACTIVE)
+        if self._show_description:
+            field_names.append(Session.Key.DESCRIPTION)
+        if self._show_notes:
+            field_names.append(Session.Key.NOTES)
+
+        table.field_names = field_names
 
         for field in table.field_names:
             table.align[field] = 'l'
 
         for sess in self._rows:
-            table.add_row([
-                short_uuid(sess.id),
-                sess.name,
-                sess.active,
-                wrap_for_column(sess.description),
-                wrap_for_column(sess.notes)
-            ])
+            row = list()
+            if self._show_id:
+                row.append(short_uuid(sess.id))
+            if self._show_name:
+                row.append(sess.name)
+            if self._show_device_ids:
+                row.append(
+                    wrap_for_column(', '.join(short_uuid(dev.id) for dev in sess.devices),
+                                    max_column_width=self.max_column_width)
+                )
+            if self._show_device_names:
+                row.append(
+                    wrap_for_column(
+                        ', '.join(
+                            dev.name if dev.name != str(dev.id) else short_uuid(dev.name)
+                            for dev in sess.devices
+                        ),
+                        max_column_width=self.max_column_width
+                    )
+                )
+            if self._show_active:
+                row.append(sess.active)
+            if self._show_description:
+                row.append(wrap_for_column(sess.description,
+                                           max_column_width=self.max_column_width))
+            if self._show_notes:
+                row.append(wrap_for_column(sess.notes,
+                                           max_column_width=self.max_column_width))
+
+            table.add_row(row)
 
         return str(table)
 
@@ -219,22 +335,6 @@ class SessionEngine(BaseNamedTableEngine):
         self._populate_datapoint_count(sess)
         return sess
 
-    def get_datapoints(self, session_id: SessionID) -> list['DataPoint']:
-        with self._engine.new_session() as db_sees:
-            # noinspection PyTypeChecker
-            return db_sees.exec(
-                select(DataPoint)
-
-                .join(SessionDataPointLink, SessionDataPointLink.right_id == DataPoint.id)
-                .where(SessionDataPointLink.left_id == session_id)
-                .order_by(DataPoint.timestamp)
-            ).all()
-
-    def ls(self) -> Sessions:
-        with self._engine.new_session() as sess:
-            sessions = sess.exec(select(Session)).all()
-        return Sessions(sessions)
-
     def get_active_by_device_id(self, device_id: DeviceID) -> Sessions:
         with self._engine.new_session() as db_sess:
             # Python syntax, building SQL expressions
@@ -249,36 +349,6 @@ class SessionEngine(BaseNamedTableEngine):
             )
             return Sessions(db_sess.exec(stmt).all())
 
-    # def get_calibration_restorable_devices(self, session_id: SessionID) -> list[DeviceID]:
-    #     """
-    #     A calibration restorable device is any device in this session that does not have an
-    #     additional active calibration session linked to it. A calibration session differs from aa
-    #     regular session by a calibration tag.
-    #     """
-    #     from .tag import Tag
-    #     with self._engine.new_session() as db:
-    #         # Subquery: any other active calibration session holding this device?
-    #         # noinspection PyTypeChecker,PyUnresolvedReferences
-    #         other_active_cal = (
-    #             select(SessionDeviceLink.right_id)
-    #             .join(Session, Session.id == SessionDeviceLink.left_id)
-    #             .join(SessionTagLink, SessionTagLink.left_id == Session.id)
-    #             .join(Tag, Tag.id == SessionTagLink.right_id)
-    #             .where(
-    #                 SessionDeviceLink.right_id == SessionDeviceLink.right_id,
-    #                 Session.id != session_id,
-    #                 Session.active.is_(True),
-    #                 Tag.name == BuiltinTagName.CALIBRATION
-    #             )
-    #         )
-    #
-    #         stmt = (
-    #             select(SessionDeviceLink.right_id)
-    #             .where(SessionDeviceLink.left_id == session_id)
-    #             .where(~exists(other_active_cal))
-    #         )
-    #         return db.exec(stmt).all()
-
     def get_calibration_restorable_devices(self, session_id: SessionID) -> list[DeviceID]:
         """
         A calibration restorable device is any device in this session that does not have an
@@ -286,7 +356,6 @@ class SessionEngine(BaseNamedTableEngine):
         regular session by a calibration tag.
         """
         # Runtime import to avoid circular dependencies.
-
         from .tag import Tag
         with self._engine.new_session() as db:
             # noinspection PyTypeChecker,PyUnresolvedReferences
@@ -310,13 +379,41 @@ class SessionEngine(BaseNamedTableEngine):
 
             return db.exec(stmt).all()
 
-    def _populate_datapoint_count(self, session: Session) -> None:
-        with self._engine.new_session() as db:
-            count_stmt = select(func.count()).where(
-                SessionDataPointLink.left_id == session.id
-            )
-            session.datapoint_count = db.exec(count_stmt).first()
+    def get_datapoints(self, session_id: SessionID) -> list['DataPoint']:
+        with self._engine.new_session() as db_sees:
+            # noinspection PyTypeChecker
+            return db_sees.exec(
+                select(DataPoint)
 
+                .join(SessionDataPointLink, SessionDataPointLink.right_id == DataPoint.id)
+                .where(SessionDataPointLink.left_id == session_id)
+                .order_by(DataPoint.timestamp)
+            ).all()
+
+    def ls(self) -> Sessions:
+        """Eager load the links."""
+        with self._engine.new_session() as db:
+            # noinspection PyTypeChecker
+            stmt = (
+                select(Session)
+                .options(
+                    selectinload(Session.devices),
+                    selectinload(Session.projects),
+                    selectinload(Session.tags),
+                    selectinload(Session.users),
+                )
+            )
+            sessions = db.exec(stmt).all()
+
+        return Sessions(sessions)
+
+    def prefix_list(self, prefix: str) -> Sessions:
+        with self._engine.new_session() as db:
+            # noinspection PyUnresolvedReferences
+            stmt = select(Session).where(Session.name.like(prefix))
+            results = db.exec(stmt).all()
+
+        return Sessions(results)
 
     def upsert(self, model: Session, fields: Optional[dict] = None) -> Session:
         _fields = {
@@ -331,10 +428,9 @@ class SessionEngine(BaseNamedTableEngine):
 
         return super().upsert(model, _fields)
 
-    def prefix_list(self, prefix: str) -> Sessions:
+    def _populate_datapoint_count(self, session: Session) -> None:
         with self._engine.new_session() as db:
-            # noinspection PyUnresolvedReferences
-            stmt = select(Session).where(Session.name.like(prefix))
-            results = db.exec(stmt).all()
-
-        return Sessions(results)
+            count_stmt = select(func.count()).where(
+                SessionDataPointLink.left_id == session.id
+            )
+            session.datapoint_count = db.exec(count_stmt).first()

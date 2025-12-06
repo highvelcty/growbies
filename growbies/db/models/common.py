@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from growbies.db.engine import DBEngine
 from growbies.service.common import (ServiceCmdError, MultipleResultsServiceCmdError,
     NoResultsServiceCmdError)
-from growbies.utils.report import short_uuid
+from growbies.utils.report import short_uuid, TABLE_COLUMN_WIDTH
 
 class BuiltinTagName(StrEnum):
     CALIBRATION = 'calibration'
@@ -191,9 +191,19 @@ class SortedTable(Generic[TSortedTable]):
     def table_name(cls):
         return cls.__name__
 
-    def __init__(self, elements: list[TSortedTable] = None):
+    def __init__(self, elements: list[TSortedTable] = None,
+                 max_column_width: int = TABLE_COLUMN_WIDTH):
+        self._max_column_width = max_column_width
         self._rows: list[TSortedTable] = elements if elements is not None else []
         self.sort()
+
+    @property
+    def max_column_width(self) -> int:
+        return self._max_column_width
+
+    @max_column_width.setter
+    def max_column_width(self, value):
+        self._max_column_width = value
 
     def append(self, item: TSortedTable):
         self._rows.append(item)

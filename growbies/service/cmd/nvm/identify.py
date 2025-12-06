@@ -2,9 +2,7 @@ from typing import Any, Optional
 import logging
 
 from growbies.service.common import ServiceCmd, ServiceCmdError, ServiceOp
-from growbies.cli.common import SUBCMD
 from growbies.cli.common import Param as CommonParam
-from growbies.cli.nvm import SubCmd
 from growbies.cli.nvm.identify import Param
 from growbies.db.engine import get_db_engine
 from growbies.device.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,

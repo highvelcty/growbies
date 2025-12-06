@@ -1,15 +1,12 @@
 import logging
 
 from . import DefaultCalSessionName
-from growbies.app.cal import CalibrateSession
 from growbies.cli.common import Param as CommonParam
 from growbies.cli.cal import SubCmd
 from growbies.cli.cal.new import Param
 from growbies.db.engine import get_db_engine
 from growbies.db.models.session import Entity, Session
 from growbies.db.models.common import BuiltinTagName
-from growbies.device.common.identify import Identify
-from growbies.service.cmd.nvm import identify
 from growbies.service.common import NoResultsServiceCmdError, ServiceCmd, ServiceCmdError
 
 logger = logging.getLogger(__name__)
@@ -35,9 +32,6 @@ def execute(cmd: ServiceCmd):
         else:
             raise ServiceCmdError(f'Session "{session_name}" already exists. See also '
                                   f'the "{SubCmd.RESUME}" sub-command.')
-
-    CalibrateSession(device.id).save()
-    identify.update(device.id, {Identify.Field.TELEMETRY_INTERVAL: 0})
 
     sess.active = True
     engine.session.upsert(sess)

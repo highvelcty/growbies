@@ -8,16 +8,9 @@ cli:
     - stop session
         - restore identify state
 """
-import os
-import pickle
 import re
 
-from growbies.utils.paths import InstallPaths
-from growbies.device.common.identify import Identify
-from growbies.service.cmd.nvm import identify
-from growbies.utils.types import DeviceID
-
-__all__ = ['DefaultCalSessionName', 'CalibrateSession']
+__all__ = ['DefaultCalSessionName']
 
 class DefaultCalSessionName(str):
     DELIMITER = '-'
@@ -51,40 +44,3 @@ class DefaultCalSessionName(str):
     def idx(self) -> int:
         # parse the numeric suffix
         return int(self.split(self.DELIMITER)[-1])
-
-
-class CalibrationData:
-    def __init__(self, telemetry_interval):
-        self._telemetry_interval = telemetry_interval
-
-    @property
-    def telemetry_interval(self):
-        return self._telemetry_interval
-
-class CalibrateSession:
-    _PREFIX = 'calibrate_'
-    _POSTFIX = '.pkl'
-    _FILE_FMT = f'{_PREFIX}{{device_id}}{_POSTFIX}'
-
-    def __init__(self, device_id: DeviceID):
-        self._device_id = device_id
-        self._path = (InstallPaths.RUN_GROWBIES.value / self._FILE_FMT.format(device_id=device_id))
-
-    def save(self):
-        if not self._path.exists():
-            _ident = identify.get(self._device_id)
-            calibration_data = CalibrationData(_ident.payload.telemetry_interval)
-            with open(self._path, 'wb') as outf:
-                # noinspection PyTypeChecker
-                pickle.dump(calibration_data, outf)
-
-    def restore(self):
-        try:
-            with open(self._path, 'rb') as inf:
-                cal_data = pickle.load(inf)
-                identify.update(
-                    self._device_id,
-                    {Identify.Field.TELEMETRY_INTERVAL: cal_data.telemetry_interval})
-            os.remove(self._path)
-        except FileNotFoundError:
-            pass

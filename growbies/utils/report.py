@@ -93,12 +93,12 @@ def list_str_wrap(the_list, wrap=4, indent=1) -> str:
 def short_uuid(uuid: str | UUID):
     return str(uuid)[:7]
 
-def wrap_for_column(col_str: Optional[str]) -> str:
+def wrap_for_column(col_str: Optional[str], max_column_width: int = TABLE_COLUMN_WIDTH) -> str:
     if col_str is None:
         return ''
     wrapped_lines = []
     for line in col_str.splitlines():
-        wrapped_lines.extend(textwrap.wrap(line, width=TABLE_COLUMN_WIDTH) or [''])
+        wrapped_lines.extend(textwrap.wrap(line, width=max_column_width) or [''])
     return '\n'.join(wrapped_lines)
 
 def decode_escapes(a_str: Optional[str]) -> Optional[str]:

@@ -53,13 +53,14 @@ class SubCmd(StrEnum):
         return f'Help for element {self} has not been implemented.'
 
 def make_cli(parser: ArgumentParser):
-    parser_adder = parser.add_subparsers(dest=SUBCMD, required=True)
-
+    parser_adder = parser.add_subparsers(dest=SUBCMD, required=False, 
+                                         description=f'Default is {SubCmd.LS}')
     parsers = dict()
     for subcmd in SubCmd:
         parsers[subcmd] = parser_adder.add_parser(subcmd,
                                                   description=subcmd.description, help=subcmd.help,
                                                   formatter_class=RawDescriptionHelpFormatter)
+
     evaluate.make_cli(parsers[SubCmd.EVAL])
     ls.make_cli(parsers[SubCmd.LS])
     mon.make_cli(parsers[SubCmd.MON])
