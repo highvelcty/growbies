@@ -1,3 +1,4 @@
+import os
 import re
 import logging
 import shlex
@@ -32,11 +33,14 @@ def _discover_info(devices: Devices):
 
     session = get_session()
 
+    env = os.environ.copy()
+    env['SYSTEMD_PAGER'] = 'cat'
     for path in paths:
-        cmd = f'udevadm info --attribute-walk --no-pager {path}'
+        cmd = f'udevadm info --attribute-walk {path}'
         try:
             proc = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE, check=True, encoding='utf-8')
+                                  stderr=subprocess.PIPE, check=True, encoding='utf-8',
+                                  env=env)
         except subprocess.CalledProcessError as err:
             logger.error(err.stderr)
             logger.exception(err)
