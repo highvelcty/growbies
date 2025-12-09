@@ -42,9 +42,9 @@ if SubCmd.INIT == sub_cmd:
                 break
             else:
                 print('Unrecognized input.')
-    cfg = Cfg()
-    cfg.save()
-    print(f'Initialized {APPNAME.capitalize()} configuration at: {cfg.PATH}')
+    _cfg = Cfg()
+    _cfg.save()
+    print(f'Initialized {APPNAME.capitalize()} configuration at: {_cfg.PATH}')
 else:
     print(Cfg())
 

@@ -92,7 +92,7 @@ class InstallPaths(Enum):
     # /etc
     ETC = Path(f'/etc')
     ETC_GROWBIES = ETC / APPNAME
-    ETC_GROWBIES_YAML = ETC_GROWBIES / 'growbies.yaml'
+    ETC_GROWBIES_CFG = ETC_GROWBIES / 'growbies.cfg'
 
     SYS_BUS_USB_DEVICES = Path('/sys/bus/usb/devices')
     DEV = Path('/dev')

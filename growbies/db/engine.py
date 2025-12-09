@@ -6,7 +6,8 @@ from sqlalchemy import Engine
 from sqlmodel import create_engine, Session, SQLModel
 
 from .models import account, gateway, device, datapoint, link, project, session, tag, tare, user
-from growbies.constants import SQLMODEL_LOCAL_ADDRESS
+from growbies.constants import SQLMODEL_ADDRESS_FMT
+from growbies.cfg import get_cfg
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,10 @@ class DBEngine:
 
     @staticmethod
     def _create_engine() -> Engine:
-        return create_engine(SQLMODEL_LOCAL_ADDRESS, echo=False, echo_pool=False)
+        cfg = get_cfg()
+        address = SQLMODEL_ADDRESS_FMT.format(address = cfg.database.address)
+        logger.error(f'emey connecting to: {address}')
+        return create_engine(address, echo=False, echo_pool=False)
 
 
     def _init_tables(self):

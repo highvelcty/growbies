@@ -1,5 +1,6 @@
 from typing import Optional
 import logging
+import cProfile, pstats, io
 
 from ..common import ServiceCmd
 from growbies.cli.common import Param as commonParam
@@ -67,5 +68,14 @@ def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
     elif action == Action.LS:
         return engine.session.get(session_name)
     else:
-        return engine.session.list()
+        pr = cProfile.Profile()
+        pr.enable()
+        resp = engine.session.list()
+        pr.disable()
+        s = io.StringIO()
+        ps = pstats.Stats(pr, stream=s).sort_stats('cumulative')
+        ps.print_stats()
+
+        logger.error("cProfile results:\n" + s.getvalue())
+        return resp
     return None

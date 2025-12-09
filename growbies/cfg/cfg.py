@@ -1,61 +1,87 @@
-from pydantic import BaseModel, Field
+import configparser
+from dataclasses import dataclass, field
+from enum import StrEnum
+from pathlib import Path
 from typing import ClassVar
-from yaml import safe_load
 
-from growbies.constants import APPNAME, YAML_INDENT
+from growbies.constants import APPNAME
 from growbies.utils.paths import InstallPaths
 
-class Base(BaseModel):
-    def _doc_str_to_yaml(self, _ret_str: list[str], indent: str, strip: bool = False):
-        if strip:
-            lines = self.__doc__.strip().splitlines()
-        else:
-            lines = self.__doc__.splitlines()
-        for line in lines:
-            _ret_str.append(f'{indent}# {line}')
 
-    def _make_yaml(self, _ret_str: list[str], _level: int = 0):
-        indent = ' ' * YAML_INDENT * _level
-        # noinspection PyTypeChecker
-        for key in self.model_fields:
-            value = getattr(self, key)
-            if isinstance(value, Base):
-                _ret_str.append('')
-                value._doc_str_to_yaml(_ret_str, indent, strip=True)
-                _ret_str.append(f'{indent}{key}:')
-                value._make_yaml(_ret_str, _level + 1)
-            else:
-                _ret_str.append(f'{indent}{key}: {value}')
-
-    def __str__(self):
-        ret_str = list()
-        self._doc_str_to_yaml(ret_str, '')
-        self._make_yaml(ret_str)
-        return '\n'.join(ret_str)
-
-
-class Account(Base):
+@dataclass
+class Account:
     """Account configuration."""
     name: str = 'Default'
 
-class Gateway(Base):
+
+@dataclass
+class Database:
+    """Database configuration."""
+    address: str = ''
+
+@dataclass
+class Gateway:
     """Gateway configuration."""
     name: str = 'Default'
 
-class Cfg(Base):
-    account: Account = Field(default_factory=Account)
-    gateway: Gateway = Field(default_factory=Gateway)
 
-    PATH: ClassVar = InstallPaths.ETC_GROWBIES_YAML.value
+@dataclass
+class Cfg:
+    class Section(StrEnum):
+        ACCOUNT = 'account'
+        DATABASE = 'database'
+        GATEWAY = 'gateway'
 
-    @classmethod
-    def load(cls):
-        with open(cls.PATH, 'r') as inf:
-            return cls(**safe_load(inf))
+    class AccountSectionKey(StrEnum):
+        NAME = 'name'
+
+    class DatabaseSectionKey(StrEnum):
+        ADDRESS = 'address'
+
+    class GatewaySectionKey(StrEnum):
+        NAME = 'name'
+
+    account: Account = field(default_factory=Account)
+    database: Database = field(default_factory=Database)
+    gateway: Gateway = field(default_factory=Gateway)
+
+    PATH: ClassVar[Path] = InstallPaths.ETC_GROWBIES_CFG.value
+
+    def __post_init__(self):
+        """Load configuration from file automatically on construction."""
+        if self.PATH.exists():
+            cfg = configparser.ConfigParser()
+            cfg.read(self.PATH)
+
+            self.account.name = cfg.get(self.Section.ACCOUNT, self.AccountSectionKey.NAME,
+                                        fallback=self.account.name)
+            self.database.address = cfg.get(self.Section.DATABASE, self.DatabaseSectionKey.ADDRESS,
+                                            fallback=self.database.address)
+            self.gateway.name = cfg.get(self.Section.GATEWAY, self.GatewaySectionKey.NAME,
+                                        fallback=self.gateway.name)
 
     def save(self):
         self.PATH.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.PATH, 'w') as outf:
-            outf.write(str(self))
+        cfg = configparser.ConfigParser()
 
-Cfg.__doc__ = f'\n{APPNAME.capitalize()} configuration.\n\n'
+        cfg[self.Section.ACCOUNT] = {self.AccountSectionKey.NAME: self.account.name}
+        cfg[self.Section.DATABASE] = {self.DatabaseSectionKey.ADDRESS: self.database.address}
+        cfg[self.Section.GATEWAY] = {self.GatewaySectionKey.NAME: self.gateway.name}
+
+        with open(self.PATH, 'w') as f:
+            cfg.write(f)
+
+    def __str__(self):
+        parts = [f"# {APPNAME.capitalize()} configuration.\n",
+                 f"[{self.Section.ACCOUNT}]\n{self.AccountSectionKey.NAME} = {self.account.name}\n",
+                 f"[{self.Section.DATABASE}]\n{self.DatabaseSectionKey.ADDRESS} = "
+                 f"{self.database.address}\n",
+                 f"[{self.Section.GATEWAY}]\n{self.GatewaySectionKey.NAME} = {self.gateway.name}\n"]
+        return ''.join(parts)
+
+_cfg = None
+def get_cfg() -> Cfg:
+    global _cfg
+    if _cfg is None:
+        _cfg = Cfg()
+    return _cfg

@@ -71,6 +71,7 @@ class BaseNamedTableEngine(BaseTableEngine):
             # Convert to DTOs
             return [self.model_class.model_validate(obj) for obj in results]
 
+
     def _get_exact(self, name: str, *relationships) -> Optional[TSQLModel]:
         with self._engine.new_session() as session:
             stmt = select(self.model_class).where(
