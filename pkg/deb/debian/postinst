@@ -20,7 +20,7 @@ if ! id -u "${PATH_APPNAME}" >/dev/null 2>&1; then
 fi
 # Add the newly created user to the dialout group for serial port access
 usermod -aG dialout "${PATH_APPNAME}"
-# Make application user the owner of the pertinent application paths
+# Make application user` the owner of the pertinent application paths
 chown -R "${PATH_APPNAME}":"${PATH_APPNAME}" \
   "${PATH_USR_LIB_GROWBIES}" "${PATH_VAR_LIB_GROWBIES}" "${PATH_VAR_LOG_GROWBIES}" \
   "${PATH_ETC_GROWBIES}"

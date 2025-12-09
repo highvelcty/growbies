@@ -18,6 +18,9 @@ TimeoutStopSec=20
 
 RuntimeDirectory=growbies
 RuntimeDirectoryMode=2770
+# New files will be created with 664 permissions as opposed to the default of 022 resulting in
+# 644 permissions
+UMask = 0002
 SuccessExitStatus=0
 
 [Install]
