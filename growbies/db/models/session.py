@@ -14,6 +14,7 @@ from sqlmodel import Column, select, Field, Relationship
 from .common import BaseTable, BaseNamedTableEngine, BuiltinTagName, SortedTable
 from .link import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, SessionTagLink,
                    SessionUserLink)
+from growbies.cli.session import Entity
 from growbies.utils.report import list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import DeviceID, SessionID
@@ -24,13 +25,6 @@ if TYPE_CHECKING:
     from .project import Project
     from .tag import Tag
     from .user import User
-
-class Entity(StrEnum):
-    DATAPOINT = 'datapoint'
-    DEVICE = 'device'
-    PROJECT = 'project'
-    TAG = 'tag'
-    USER = 'user'
 
 class Session(BaseTable, table=True):
     class Key(StrEnum):

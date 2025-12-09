@@ -3,9 +3,9 @@ import logging
 
 from ..common import ServiceCmd
 from growbies.cli.common import Param as commonParam
-from growbies.cli.session import Action, Param, ModParam, ModNewParam, RmParam
+from growbies.cli.session import Action, Param, ModParam, ModNewParam, RmParam, Entity
 from growbies.db.engine import get_db_engine
-from growbies.db.models.session import Entity, Session, Sessions
+from growbies.db.models.session import Session, Sessions
 from growbies.utils.report import decode_escapes
 
 logger = logging.getLogger(__name__)

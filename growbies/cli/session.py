@@ -1,7 +1,6 @@
 from argparse import ArgumentParser
 from enum import StrEnum
 
-from growbies.db.models.session import Entity
 from growbies.cli.common import Param as commonParam
 
 class Param(StrEnum):
@@ -47,6 +46,15 @@ class Action(StrEnum):
                     f'permanently.')
         else:
             return ''
+
+
+class Entity(StrEnum):
+    DATAPOINT = 'datapoint'
+    DEVICE = 'device'
+    PROJECT = 'project'
+    TAG = 'tag'
+    USER = 'user'
+
 
 def make_cli(parser: ArgumentParser):
     subparsers = parser.add_subparsers(dest=Param.ACTION, required=False)

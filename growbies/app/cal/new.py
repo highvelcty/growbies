@@ -4,8 +4,9 @@ from . import DefaultCalSessionName
 from growbies.cli.common import Param as CommonParam
 from growbies.cli.cal import SubCmd
 from growbies.cli.cal.new import Param
+from growbies.cli.session import Entity
 from growbies.db.engine import get_db_engine
-from growbies.db.models.session import Entity, Session
+from growbies.db.models.session import Session
 from growbies.db.models.common import BuiltinTagName
 from growbies.service.common import NoResultsServiceCmdError, ServiceCmd, ServiceCmdError
 

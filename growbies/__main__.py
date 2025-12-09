@@ -47,6 +47,7 @@ from growbies.service.common import (ServiceCmd, ServiceOp, ServiceCmdError, TBa
 from growbies.service.queue import IDQueue, ServiceQueue
 
 drop_privileges()
+
 logger = logging.getLogger(__name__)
 
 # Execution continues here on execution not invoked by tab.
@@ -65,7 +66,6 @@ def _run_cmd(cmd_: TBaseServiceCmd, timeout = DEFAULT_CMD_TIMEOUT_SECONDS):
             resp = next(resp_q.get_w_timeout(timeout=timeout))
         except StopIteration:
             resp = ServiceCmdError(f'Command {cmd_.op} timeout of {timeout} seconds.')
-
     if isinstance(resp, (ServiceCmdError, DeviceError)):
         sys.stderr.write(f'{resp}\n')
         sys.stderr.flush()
@@ -73,5 +73,4 @@ def _run_cmd(cmd_: TBaseServiceCmd, timeout = DEFAULT_CMD_TIMEOUT_SECONDS):
     else:
         if resp is not None:
             print(resp)
-
 _run_cmd(ServiceCmd(op=cmd, kw=kw))

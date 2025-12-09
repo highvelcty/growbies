@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 def execute(cmd: ServiceCmd) -> Optional[tag.Tags]:
     engine = get_db_engine().tag
-
     fuzzy_id = cmd.kw.pop(Param.FUZZY_ID, None)
     action = cmd.kw.pop(Param.ACTION)
 
