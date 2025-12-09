@@ -12,7 +12,7 @@ from growbies.service.common import NoResultsServiceCmdError, ServiceCmd, Servic
 
 logger = logging.getLogger(__name__)
 
-def execute(cmd: ServiceCmd):
+def execute(cmd: ServiceCmd) -> None:
     engine = get_db_engine()
     fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID)
     device = engine.device.get(fuzzy_id)

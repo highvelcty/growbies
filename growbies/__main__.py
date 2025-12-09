@@ -14,6 +14,8 @@ python -X importtime -m growbies 2>&1 \
     | awk -F'|' '{cum=$2; gsub(/ /,"",cum); print cum "|" $0}' \
     | sort -nr \
     | cut -d'|' -f2-
+    
+Note: imports can be triggered by what is received on the queue.    
 """
 
 parser = ArgumentParser(description=pkg_doc, formatter_class=RawDescriptionHelpFormatter)

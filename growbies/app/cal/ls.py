@@ -8,7 +8,7 @@ from growbies.service.common import ServiceCmd
 
 logger = logging.getLogger(__name__)
 
-def execute(cmd: ServiceCmd):
+def execute(cmd: ServiceCmd) -> Sessions:
     engine = get_db_engine()
 
     show_inactive = cmd.kw.pop(Param.INACTIVE, False)

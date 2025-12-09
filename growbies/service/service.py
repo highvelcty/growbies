@@ -36,31 +36,35 @@ class Service:
                     with IDQueue(cmd.qid) as resp_q:
                         try:
                             if cmd.op == ServiceOp.CAL:
-                                resp_q.put(cal.execute(cmd))
+                                resp = cal.execute(cmd)
                             elif cmd.op == ServiceOp.DEVICE:
-                                resp_q.put(device.execute(cmd))
+                                resp = device.execute(cmd)
                             elif cmd.op == ServiceOp.NVM:
-                                resp_q.put(nvm.execute(cmd))
+                                resp = nvm.execute(cmd)
                             elif cmd.op == ServiceOp.PROJECT:
-                                resp_q.put(project.execute(cmd))
+                                resp = project.execute(cmd)
                             elif cmd.op == ServiceOp.READ:
-                                resp_q.put(read.execute(cmd))
+                                resp = read.execute(cmd)
                             elif cmd.op == ServiceOp.SESSION:
-                                resp_q.put(session.execute(cmd))
+                                resp = session.execute(cmd)
                             elif cmd.op == ServiceOp.TAG:
-                                resp_q.put(tag.execute(cmd))
+                                resp = tag.execute(cmd)
                             elif cmd.op == ServiceOp.USER:
-                                resp_q.put(user.execute(cmd))
+                                resp = user.execute(cmd)
                             else:
-                                raise ServiceCmdError(f'Unknown command "{cmd.op}" received.')
-                        except DeviceError as err:
+                                resp = ServiceCmdError(f'Unknown command "{cmd.op}" received.')
+                        except (DeviceError, ServiceCmdError) as err:
                             logger.error(err)
-                            resp_q.put(err)
-                        except ServiceCmdError as err:
-                            logger.error(err)
-                            resp_q.put(err)
+                            resp = err
+
+                        if isinstance(resp, Exception) or resp is None:
+                            resp_q.put(resp)
+                        else:
+                            resp_q.put(str(resp))
+
         except KeyboardInterrupt:
             pass
         get_pool().disconnect_all()
         get_pool().join_all()
         logger.info('Service exit.')
+

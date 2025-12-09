@@ -70,7 +70,7 @@ class Queue:
                 timeout_remaining = timeout - (time.time() - startt)
                 if timeout_remaining < 0:
                     break
-                events.extend(self._inotify.read(timeout=int(timeout_remaining) * 1000))
+                events.extend(self._inotify.read(timeout=int(timeout_remaining * 1000)))
 
             if events:
                 contents = self._read_contents()
