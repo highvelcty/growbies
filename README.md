@@ -34,31 +34,33 @@ See [setup.cfg](setup.cfg) for other optional dependencies.
 
 Other Setup
 ===========
-To allow non-root access to the serial port, add the user to the `dialout` group. Be sure to 
-logout/login for the changes to take effect.
-
 Installing [platformio udev rules](https://docs.platformio.org/en/latest/core/installation/udev-rules.html) 
 made the /dev/tty* devices accessible from within a rootless podman container.
+
+To allow non-root access to the serial port, add the user to the `dialout` group. Be sure to 
+logout/login for the changes to take effect.
 
 Arduino Setup
 =============
 - Install [arduino-cli](https://arduino.github.io/arduino-cli/1.1/installation/)
 - Install arduino uno board platform `./arduino-cli core install arduino:avr`
 
-RPM Dependencies
-================
-The associated optional pip build dependency tags are shown in brackets.
+Arg Complete Setup (Optional)
+=============================
+Growbies supports CLI tab completion via the pip package `argcomplete`. To install and configure:
 
-opensuse:
-  - python3<xx>
-  - python3<xx>-tk [GUI]
-  - tesseract-ocr [TRAINING]
-ubuntu 20.04:
-  - add-apt-repository ppa:deadsnakes/ppa 
-    - python3<xx>
-    - python3<xx>-tk [GUI]
-    - python3<xx>-venv
-  - tesseract-ocr [TRAINING]
+- `sudo pip install argcomplete`
+- `sudo activate-global-python-argcomplete`
+- `echo 'eval "$(register-python-argcomplete growbies)"' >> ~/.bashrc`
+- `source ~/.bashrc`
+
+Add User to growbies group
+==========================
+A `growbies` group is created at package installation time. This group can access the `growbies` 
+systemd service. Add your user to this group to gain access to the client:
+
+- `sudo usermod -aG growbies <username>`
+- Logout and back in.
 
 Notes
 =====

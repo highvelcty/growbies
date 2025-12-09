@@ -11,7 +11,6 @@ from growbies.session import get_session
 
 logger = logging.getLogger(__name__)
 
-
 class SupportedVidPid:
     ESPRESSIF_DEBUG = (0x303a, 0x1001)
     FTDI_FT232 = (0x0403, 0x6001)
