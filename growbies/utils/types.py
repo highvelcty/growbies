@@ -6,20 +6,11 @@ Serial_t = Annotated[str, 'Serial_t']
 ModelNumber_t = Annotated[str, 'ModelNumber_t']
 
 # Table IDs
-class AccountID(UUID): pass
-class CalibrationSessionID(UUID): pass
-class DataPointID(UUID): pass
-class DataPointMassSensorID(UUID): pass
-class DataPointTemperatureSensorID(UUID): pass
 class DeviceID(UUID): pass
-class FuzzyID(UUID): pass
-class GatewayID(UUID): pass
-class ProjectID(UUID): pass
 class SessionID(UUID): pass
-class TagID(UUID): pass
 class TareID(UUID): pass
-class UserID(UUID): pass
 class WorkerID(UUID): pass
 
 # Composites
+FuzzyID = UUID | str
 SerialOrDeviceID_t = DeviceID | Serial_t

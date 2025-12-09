@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 import uuid
 
 from prettytable import PrettyTable
@@ -8,7 +8,7 @@ from sqlmodel import Field, Relationship
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
 from .link import SessionUserLink
 from growbies.utils.report import short_uuid
-from growbies.utils.types import FuzzyID, UserID
+from growbies.utils.types import FuzzyID
 
 if TYPE_CHECKING:
     from .session import Session
@@ -19,10 +19,10 @@ class User(BaseTable, table=True):
         NAME = 'name'
         EMAIL = 'email'
         SESSIONS = 'sessions'
-    id: Optional[UserID] = Field(default_factory=uuid.uuid4, primary_key=True)
-    name: str = ''
-    email: Optional[str] = None
 
+    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = ''
+    email: str | None = None
     sessions: list['Session'] = Relationship(back_populates='users',link_model=SessionUserLink)
 
 class Users(SortedTable[User]):
@@ -50,7 +50,7 @@ class UserEngine(BaseNamedTableEngine):
     def list(self) -> Users:
         return Users(self._get_all(self.model_class.sessions))
 
-    def upsert(self, model: User, fields: Optional[dict] = None) -> User:
+    def upsert(self, model: User, fields: dict | None = None) -> User:
         return super().upsert(
             model,
             {User.Key.NAME: model.name, User.Key.EMAIL: model.email}

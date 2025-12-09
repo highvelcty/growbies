@@ -14,7 +14,7 @@ from .link import SessionDeviceLink
 if TYPE_CHECKING:
     from .session import Session
 from growbies.utils.report import format_8bit_binary, short_uuid
-from growbies.utils.types import Serial_t, DeviceID, GatewayID
+from growbies.utils.types import Serial_t
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +36,9 @@ class Device(BaseTable, table=True):
         PATH = 'path'
         STATE = 'state'
 
-    id: Optional[DeviceID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(default='')
-    gateway: GatewayID = Field(
+    gateway: uuid.UUID = Field(
         sa_column=Column(
             UUID(as_uuid=True),
             ForeignKey(
@@ -115,7 +115,7 @@ class DeviceEngine(BaseNamedTableEngine):
     model_class = Device
 
     def get(self, fuzzy_id: str | UUID) -> Device:
-        return self._get_one(fuzzy_id, Device.sessions)
+        return self._get_one(fuzzy_id, Device.gateways, Device.sessions)
 
     def init_start_connection(self, id_: UUID):
         existing = self.get(id_)
@@ -124,13 +124,13 @@ class DeviceEngine(BaseNamedTableEngine):
         self.upsert(existing)
 
     def list(self) -> Devices:
-        return Devices(self._get_all(Device.sessions))
+        return Devices(self._get_all(Device.gateways, Device.sessions))
 
     def merge_with_discovered(self, discovered_devices: Devices) -> Devices:
         merged_devices = self._merge_with_discovered(discovered_devices)
         for device in merged_devices:
             self._overwrite(device)
-        return Devices(elements=[dev.model_copy() for dev in merged_devices])
+        return Devices(elements=[self.model_class.model_validate(dev) for dev in merged_devices])
 
     def upsert(self, model: Device, fields: Optional[dict] = None) -> Device:
         return super().upsert(model, {Device.Key.NAME: model.name, Device.Key.STATE: model.state})
@@ -203,4 +203,4 @@ class DeviceEngine(BaseNamedTableEngine):
             merged = db_sess.merge(device)  # either updates existing or inserts
             db_sess.commit()  # ensure it persists
             db_sess.refresh(merged)
-            return merged
+            return self.model_class.model_validate(merged)

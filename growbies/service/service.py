@@ -37,7 +37,7 @@ class Service:
                         try:
                             if cmd.op == ServiceOp.CAL:
                                 resp_q.put(cal.execute(cmd))
-                            if cmd.op == ServiceOp.DEVICE:
+                            elif cmd.op == ServiceOp.DEVICE:
                                 resp_q.put(device.execute(cmd))
                             elif cmd.op == ServiceOp.NVM:
                                 resp_q.put(nvm.execute(cmd))

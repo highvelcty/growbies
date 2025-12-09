@@ -1,6 +1,6 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Optional, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 import uuid
 import logging
 
@@ -9,7 +9,6 @@ logger = logging.getLogger(__name__)
 from prettytable import PrettyTable
 from sqlalchemy import exists, event, func, inspect
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import selectinload
 from sqlmodel import Column, select, Field, Relationship
 
 from .common import BaseTable, BaseNamedTableEngine, BuiltinTagName, SortedTable
@@ -52,7 +51,7 @@ class Session(BaseTable, table=True):
         TAGS = 'tags'
         USERS = 'users'
 
-    id: Optional[SessionID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
     active: bool = Field(default=False)
     description: Optional[str] = None
@@ -307,7 +306,7 @@ class Sessions(SortedTable[Session]):
 class SessionEngine(BaseNamedTableEngine):
     model_class = Session
 
-    def add(self, sess_name_or_id: str, entity: Entity, *entity_names_or_ids: str):
+    def add_entity(self, sess_name_or_id: str, entity: Entity, *entity_names_or_ids: str):
         sess = self.get(sess_name_or_id)
 
         if entity == Entity.DEVICE:
@@ -347,7 +346,8 @@ class SessionEngine(BaseNamedTableEngine):
                     self.model_class.active == True
                 )
             )
-            return Sessions(db_sess.exec(stmt).all())
+            results = [self.model_class.model_validate(sess) for sess in db_sess.exec(stmt).all()]
+            return Sessions(results)
 
     def get_calibration_restorable_devices(self, session_id: SessionID) -> list[DeviceID]:
         """
@@ -380,40 +380,51 @@ class SessionEngine(BaseNamedTableEngine):
             return db.exec(stmt).all()
 
     def get_datapoints(self, session_id: SessionID) -> list['DataPoint']:
-        with self._engine.new_session() as db_sees:
-            # noinspection PyTypeChecker
-            return db_sees.exec(
-                select(DataPoint)
-
-                .join(SessionDataPointLink, SessionDataPointLink.right_id == DataPoint.id)
-                .where(SessionDataPointLink.left_id == session_id)
-                .order_by(DataPoint.timestamp)
-            ).all()
-
-    def ls(self) -> Sessions:
-        """Eager load the links."""
         with self._engine.new_session() as db:
             # noinspection PyTypeChecker
             stmt = (
-                select(Session)
-                .options(
-                    selectinload(Session.devices),
-                    selectinload(Session.projects),
-                    selectinload(Session.tags),
-                    selectinload(Session.users),
-                )
+                select(DataPoint)
+                .join(SessionDataPointLink, SessionDataPointLink.right_id == DataPoint.id)
+                .where(SessionDataPointLink.left_id == session_id)
+                .order_by(DataPoint.timestamp)
             )
-            sessions = db.exec(stmt).all()
 
-        return Sessions(sessions)
+            return [DataPoint.model_validate(dp) for dp in db.exec(stmt).all()]
+
+    def list(self) -> Sessions:
+        """Return all sessions with links eagerly loaded, using base class accessors."""
+        return Sessions(self._get_all(Session.devices, Session.projects, Session.tags,
+                                      Session.users))
 
     def prefix_list(self, prefix: str) -> Sessions:
+        """Return sessions whose name starts with the given prefix, as DTOs."""
         with self._engine.new_session() as db:
             # noinspection PyUnresolvedReferences
-            stmt = select(Session).where(Session.name.like(prefix))
-            results = db.exec(stmt).all()
+            stmt = select(self.model_class).where(self.model_class.name.like(f"{prefix}%"))
+            orm_sessions = db.exec(stmt).all()
+            return Sessions([self.model_class.model_validate(sess) for sess in orm_sessions])
 
-        return Sessions(results)
+    def remove_entity(self, sess_name_or_id: str, entity: Entity, *entity_names_or_ids: str):
+        sess = self.get(sess_name_or_id)
+
+        if entity == Entity.DEVICE:
+            link_engine = self._engine.link.session_device
+            get_entity = self._engine.device.get
+        elif entity == Entity.PROJECT:
+            link_engine = self._engine.link.session_project
+            get_entity = self._engine.project.get
+        elif entity == Entity.TAG:
+            link_engine = self._engine.link.session_tag
+            get_entity = self._engine.tag.get
+        elif entity == Entity.USER:
+            link_engine = self._engine.link.session_user
+            get_entity = self._engine.user.get
+        else:
+            raise ValueError(f"Unsupported entity type: {entity}")
+
+        for entity_name_or_id in entity_names_or_ids:
+            i_entity = get_entity(entity_name_or_id)
+            link_engine.remove(sess.id, i_entity.id)
 
     def upsert(self, model: Session, fields: Optional[dict] = None) -> Session:
         _fields = {

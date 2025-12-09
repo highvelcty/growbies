@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
+import uuid
 
-from sqlmodel import Column, Field, SQLModel
+from sqlmodel import Column, Field
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy import ForeignKey
 
@@ -8,8 +9,6 @@ from .common import BaseLink
 from growbies.db.models.common import BaseLinkEngine
 if TYPE_CHECKING:
     from growbies.db.engine import DBEngine
-from growbies.utils.types import (DataPointID, DeviceID, ProjectID, SessionID, TagID,
-                                  UserID)
 
 __all__ = [
     # link tables
@@ -20,60 +19,60 @@ __all__ = [
     'SessionProjectLinkEngine', 'SessionUserLinkEngine', 'LinkEngine']
 
 class SessionDataPointLink(BaseLink, table=True):
-    left_id: SessionID = Field(
+    left_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('session.id', ondelete='CASCADE'),
                          primary_key=True)
     )
-    right_id: DataPointID = Field(
+    right_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('datapoint.id', ondelete='CASCADE'),
                          primary_key=True)
     )
 
 class SessionDeviceLink(BaseLink, table=True):
-    left_id: SessionID = Field(
+    left_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('session.id', ondelete='CASCADE'),
                          primary_key=True)
     )
-    right_id: DeviceID = Field(
+    right_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('device.id', ondelete='CASCADE'),
                          primary_key=True)
     )
 
 class SessionProjectLink(BaseLink, table=True):
-    left_id: SessionID = Field(
+    left_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('session.id', ondelete='CASCADE'),
                          primary_key=True)
     )
-    right_id: ProjectID = Field(
+    right_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('project.id', ondelete='CASCADE'),
                          primary_key=True)
     )
 
 class SessionTagLink(BaseLink, table=True):
-    left_id: SessionID = Field(
+    left_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('session.id', ondelete='CASCADE'),
                          primary_key=True)
     )
-    right_id: TagID = Field(
+    right_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('tag.id', ondelete='CASCADE'),
                          primary_key=True)
     )
 
 class SessionUserLink(BaseLink, table=True):
-    left_id: SessionID = Field(
+    left_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('session.id', ondelete='CASCADE'),
                          primary_key=True)
     )
-    right_id: UserID = Field(
+    right_id: uuid.UUID = Field(
         sa_column=Column(PG_UUID(as_uuid=True),
                          ForeignKey('user.id', ondelete='CASCADE'),
                          primary_key=True)

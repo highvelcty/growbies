@@ -1,6 +1,6 @@
 from enum import StrEnum
 from typing import Optional
-from uuid import uuid4
+from uuid import UUID, uuid4
 import textwrap
 
 from prettytable import PrettyTable
@@ -12,7 +12,6 @@ from .session import Session
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.service.common import ServiceCmdError
 from growbies.utils.report import short_uuid
-from growbies.utils.types import TagID
 
 class Tag(BaseTable, table=True):
     class Key(StrEnum):
@@ -22,7 +21,7 @@ class Tag(BaseTable, table=True):
         DESCRIPTION = 'description'
         SESSIONS = 'sessions'
 
-    id: Optional[TagID] = Field(default_factory=uuid4, primary_key=True)
+    id: UUID | None = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(unique=True, index=True)
     builtin: bool = Field(default=False, nullable=False)
     description: Optional[str] = None

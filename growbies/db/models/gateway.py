@@ -6,11 +6,11 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlmodel import Column, Field, Relationship
 
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
-from growbies.utils.types import AccountID, GatewayID
 
 if TYPE_CHECKING:
     from .account import Account
     from .device import Device
+from growbies.utils.types import FuzzyID
 
 class Gateway(BaseTable, table=True):
     class Key:
@@ -19,9 +19,9 @@ class Gateway(BaseTable, table=True):
         ACCOUNTS = 'accounts'
         DEVICES = 'devices'
 
-    id: GatewayID = Field(default_factory=uuid4, primary_key=True)
+    id: UUID = Field(default_factory=uuid4, primary_key=True)
     name: str = Field(sa_column=Column(String, unique=True, index=True))
-    account: AccountID = Field(
+    account: UUID = Field(
         sa_column=Column(
             PG_UUID(as_uuid=True),
             ForeignKey(
@@ -41,8 +41,8 @@ class Gateways(SortedTable[Gateway]):
 class GatewayEngine(BaseNamedTableEngine):
     model_class = Gateway
 
-    def get(self, fuzzy_id: str | UUID) -> Gateway:
+    def get(self, fuzzy_id: FuzzyID) -> Gateway:
         return self._get_one(fuzzy_id, self.model_class.devices)
 
-    def get_multi(self, fuzzy_id: str | UUID) -> Gateways:
+    def get_multi(self, fuzzy_id: FuzzyID) -> Gateways:
         return Gateways(self._get_multi(fuzzy_id, self.model_class.devices))

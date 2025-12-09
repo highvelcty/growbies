@@ -24,14 +24,24 @@ def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
             sess.active = False
         engine.session.upsert(sess)
     elif action in (Action.ADD, Action.RM):
-        remove_self = cmd.kw.pop(RmParam.SELF, None)
-        if remove_self:
-            engine.session.remove(session_name)
+        if action == Action.ADD:
+            engine.session.add_entity(session_name, Entity.DEVICE, *cmd.kw.pop(Entity.DEVICE, ()))
+            engine.session.add_entity(session_name, Entity.PROJECT, *cmd.kw.pop(Entity.PROJECT, ()))
+            engine.session.add_entity(session_name, Entity.TAG, *cmd.kw.pop(Entity.TAG, ()))
+            engine.session.add_entity(session_name, Entity.USER, *cmd.kw.pop(Entity.USER, ()))
         else:
-            engine.session.add(session_name, Entity.DEVICE, *cmd.kw.pop(Entity.DEVICE, ()))
-            engine.session.add(session_name, Entity.PROJECT, *cmd.kw.pop(Entity.PROJECT, ()))
-            engine.session.add(session_name, Entity.TAG, *cmd.kw.pop(Entity.TAG, ()))
-            engine.session.add(session_name, Entity.USER, *cmd.kw.pop(Entity.USER, ()))
+            remove_self = cmd.kw.pop(RmParam.SELF, None)
+            if remove_self:
+                engine.session.remove(session_name)
+            else:
+                engine.session.remove_entity(session_name, Entity.DEVICE,
+                                             *cmd.kw.pop(Entity.DEVICE, ()))
+                engine.session.remove_entity(session_name, Entity.PROJECT,
+                                             *cmd.kw.pop(Entity.PROJECT, ()))
+                engine.session.remove_entity(session_name, Entity.TAG,
+                                             *cmd.kw.pop(Entity.TAG, ()))
+                engine.session.remove_entity(session_name, Entity.USER,
+                                             *cmd.kw.pop(Entity.USER, ()))
     elif action in (Action.MOD, Action.NEW):
         if action == Action.NEW:
             sess = Session(name=session_name)
@@ -57,5 +67,5 @@ def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
     elif action == Action.LS:
         return engine.session.get(session_name)
     else:
-        return engine.session.ls()
+        return engine.session.list()
     return None

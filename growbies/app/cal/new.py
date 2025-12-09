@@ -36,6 +36,6 @@ def execute(cmd: ServiceCmd):
     sess.active = True
     engine.session.upsert(sess)
 
-    engine.session.add(sess.id, Entity.DEVICE, device.id)
+    engine.session.add_entity(sess.id, Entity.DEVICE, device.id)
     tag = engine.tag.get(BuiltinTagName.CALIBRATION)
-    engine.session.add(sess.id, Entity.TAG, tag.id)
+    engine.session.add_entity(sess.id, Entity.TAG, tag.id)

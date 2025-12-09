@@ -66,7 +66,10 @@ class BaseNamedTableEngine(BaseTableEngine):
             stmt = select(self.model_class)
             for rel in relationships:
                 stmt = stmt.options(selectinload(rel))
-            return session.exec(stmt).all()
+            results = session.exec(stmt).all()
+
+            # Convert to DTOs
+            return [self.model_class.model_validate(obj) for obj in results]
 
     def _get_exact(self, name: str, *relationships) -> Optional[TSQLModel]:
         with self._engine.new_session() as session:
@@ -78,7 +81,10 @@ class BaseNamedTableEngine(BaseTableEngine):
             results = session.exec(stmt.limit(2)).all()
             if len(results) > 1:
                 raise ServiceCmdError(f'Multiple results for name "{name}"')
-            return results[0] if results else None
+
+            if not results:
+                return None
+            return self.model_class.model_validate(results[0])
 
     def _get_multi(self, fuzzy_id: str | UUID, *relationships) -> list[TSQLModel]:
         """
@@ -92,9 +98,11 @@ class BaseNamedTableEngine(BaseTableEngine):
 
             result = session.exec(stmt)
             if hasattr(result, 'scalars'):
-                return result.scalars().all()
+                results = result.scalars().all()
             else:
-                return result.all()
+                results = result.all()
+
+            return [self.model_class.model_validate(obj) for obj in results]
 
     def _get_one(self, fuzzy_id: str | UUID, *relationships) -> TSQLModel:
         results = self._get_multi(fuzzy_id, *relationships)
@@ -109,7 +117,8 @@ class BaseNamedTableEngine(BaseTableEngine):
     def remove(self, fuzzy_id: str | UUID):
         to_remove = self._get_one(fuzzy_id)
         with self._engine.new_session() as sess:
-            sess.delete(to_remove)
+            orm = sess.merge(to_remove)
+            sess.delete(orm)
             sess.commit()
 
     def upsert(self, model: TSQLModel, fields: Optional[dict] = None) -> TSQLModel:
@@ -124,18 +133,11 @@ class BaseNamedTableEngine(BaseTableEngine):
                 for key, value in fields.items():
                     setattr(existing, key, value)
 
-            with self._engine.new_session() as session:
-                session.add(existing)  # ensures SQLModel tracks it
-                session.commit()
-                session.refresh(existing)
-                return existing
-        else:
-            # Insert
-            with self._engine.new_session() as session:
-                session.add(model)
-                session.commit()
-                session.refresh(model)
-                return model
+        with self._engine.new_session() as session:
+            orm = session.merge(existing if existing else model)
+            session.commit()
+            session.refresh(orm)
+            return self.model_class.model_validate(orm)
 
 TLink = TypeVar('TLink', bound='BaseLink')
 TLinkEngine = TypeVar('TLinkEngine', bound='BaseLinkEngine')
@@ -162,7 +164,8 @@ class BaseLinkEngine(Generic[TLink], ABC):
                 .where(self.model_class.left_id == left_id)
                 .where(self.model_class.right_id == right_id)
             )
-            return session.exec(stmt).first()
+            res = session.exec(stmt).first()
+            return self.model_class.model_validate(res) if res else None
 
     def add(self, left_id: UUID, right_id: UUID):
         """Add a link if it does not already exist."""
@@ -180,7 +183,8 @@ class BaseLinkEngine(Generic[TLink], ABC):
         if not link:
             return  # nothing to remove
         with self._engine.new_session() as session:
-            session.delete(link)
+            orm = session.merge(link)
+            session.delete(orm)
             session.commit()
 
 TSortedTable = TypeVar('TSortedTable')
@@ -220,3 +224,4 @@ class SortedTable(Generic[TSortedTable]):
 
     def __iter__(self) -> Iterator[TSortedTable]:
         return iter(self._rows)
+

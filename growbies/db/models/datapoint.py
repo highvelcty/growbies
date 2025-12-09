@@ -12,26 +12,25 @@ if TYPE_CHECKING:
     from .session import Session
 from growbies.device.common.read import DataPoint as DeviceDataPoint
 from growbies.device.cmd import ReadDeviceCmd
-from growbies.utils.types import (DataPointID, DataPointMassSensorID,
-                                  DataPointTemperatureSensorID, DeviceID, TareID)
+from growbies.utils.types import (DeviceID, TareID)
 
 logger = logging.getLogger(__name__)
 
 class DataPoint(BaseTable, table=True):
-    id: Optional[DataPointID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     # Foreign keys
-    device_id: DeviceID = Field(
+    device_id: uuid.UUID = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('device.id', ondelete='CASCADE'),
                          nullable=False)
     )
-    tare_id: TareID = Field(
+    tare_id: uuid.UUID = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('tare.id', ondelete='CASCADE'),
                          nullable=False))
 
     timestamp: datetime = Field(nullable=False, index=True)
     mass: float = Field(nullable=False)
     temperature: float = Field(nullable=False)
-    ref_mass: float = Field(nullable=True)
+    ref_mass: float | None = Field(nullable=True)
 
     # Relationships
     mass_sensors: list['DataPointMassSensor'] = Relationship(back_populates='datapoint')
@@ -41,39 +40,41 @@ class DataPoint(BaseTable, table=True):
                                              link_model=SessionDataPointLink)
 
 class DataPointMassSensor(BaseTable, table=True):
-    id: Optional[DataPointMassSensorID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     datapoint_id: Optional[uuid.UUID] = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('datapoint.id', ondelete='CASCADE'),
                          nullable=False)
     )
     idx: int = Field(nullable=False)
     mass: float = Field(nullable=False)
-    error: int = Field(nullable=True)
-    ref_mass: float = Field(nullable=True)
+    error: int | None = Field(nullable=True)
+    ref_mass: float | None = Field(nullable=True)
 
     datapoint: DataPoint | None = Relationship(back_populates='mass_sensors')
 
 class DataPointTemperatureSensor(BaseTable, table=True):
-    id: Optional[DataPointTemperatureSensorID] = Field(default_factory=uuid.uuid4, primary_key=True)
-    datapoint_id: DataPointID = Field(
+    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
+    datapoint_id: uuid.UUID = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('datapoint.id', ondelete='CASCADE'),
                          nullable=False)
     )
     idx: int = Field(nullable=False)
     temperature: float = Field(nullable=False)
-    error: int = Field(nullable=True)
+    error: int | None = Field(nullable=True)
 
     datapoint: DataPoint | None = Relationship(back_populates='temperature_sensors')
 
 
 # --- Engine for inserting datapoints ---
 class DataPointEngine(BaseTableEngine):
+    model_class = DataPoint
+
     def insert(self, device_id: DeviceID, tare_id: TareID, device_dp: DeviceDataPoint,
                cmd: ReadDeviceCmd | None) -> DataPoint:
         with self._engine.new_session() as session:
 
             # --- Insert main DataPoint row ---
-            dp_row = DataPoint(
+            dp_row = self.model_class(
                 timestamp=device_dp.timestamp,
                 device_id=device_id,
                 mass=device_dp.mass,
@@ -120,4 +121,4 @@ class DataPointEngine(BaseTableEngine):
 
             session.commit()
             session.refresh(dp_row)
-            return dp_row
+            return self.model_class.model_validate(dp_row)

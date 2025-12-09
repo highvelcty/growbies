@@ -13,7 +13,6 @@ from .link import SessionProjectLink
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.utils.report import short_uuid
 from growbies.utils.timestamp import get_utc_dt
-from growbies.utils.types import ProjectID
 
 if TYPE_CHECKING:
     from .session import Session
@@ -27,7 +26,7 @@ class Project(BaseTable, table=True):
         UPDATED_AT = 'updated_at'
         SESSIONS = 'sessions'
 
-    id: Optional[ProjectID] = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str
     description: Optional[str] = None
     created_at: datetime = Field(default_factory=get_utc_dt, nullable=False)

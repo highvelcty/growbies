@@ -14,12 +14,13 @@ def execute(cmd: ServiceCmd):
     show_inactive = cmd.kw.pop(Param.INACTIVE, False)
 
     the_list = list()
-    for sess in engine.session.ls():
+    for sess in engine.session.list():
         if BuiltinTagName.CALIBRATION in (tag.name for tag in sess.tags):
             if show_inactive:
                 the_list.append(sess)
             elif sess.active:
                 the_list.append(sess)
 
+        the_list.append(sess)
     return Sessions(the_list, show_id=False, show_device_names=True, show_active=show_inactive)
 
