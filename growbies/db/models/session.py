@@ -11,7 +11,7 @@ from sqlalchemy import exists, event, func, inspect
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Column, select, Field, Relationship
 
-from .common import BaseTable, BaseNamedTableEngine, BuiltinTagName, SortedTable
+from .common import BaseTable, BaseNamedTableEngine, BuiltinTagName, SortedTable, TSQLModel
 from .link import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, SessionTagLink,
                    SessionUserLink)
 from growbies.cli.session import Entity
@@ -340,7 +340,7 @@ class SessionEngine(BaseNamedTableEngine):
                     self.model_class.active == True
                 )
             )
-            results = [self.model_class.model_validate(sess) for sess in db_sess.exec(stmt).all()]
+            results = db_sess.exec(stmt).all()
             return Sessions(results)
 
     def get_calibration_restorable_devices(self, session_id: SessionID) -> list[DeviceID]:
@@ -383,7 +383,7 @@ class SessionEngine(BaseNamedTableEngine):
                 .order_by(DataPoint.timestamp)
             )
 
-            return [DataPoint.model_validate(dp) for dp in db.exec(stmt).all()]
+            return db.exec(stmt).all()
 
     def list(self) -> Sessions:
         """Return all sessions with links eagerly loaded, using base class accessors."""
@@ -396,7 +396,7 @@ class SessionEngine(BaseNamedTableEngine):
             # noinspection PyUnresolvedReferences
             stmt = select(self.model_class).where(self.model_class.name.like(f"{prefix}%"))
             orm_sessions = db.exec(stmt).all()
-            return Sessions([self.model_class.model_validate(sess) for sess in orm_sessions])
+            return Sessions(orm_sessions)
 
     def remove_entity(self, sess_name_or_id: str, entity: Entity, *entity_names_or_ids: str):
         sess = self.get(sess_name_or_id)

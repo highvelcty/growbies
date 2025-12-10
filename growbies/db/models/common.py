@@ -67,10 +67,15 @@ class BaseNamedTableEngine(BaseTableEngine):
             for rel in relationships:
                 stmt = stmt.options(selectinload(rel))
             results = session.exec(stmt).all()
+            return results
 
             # Convert to DTOs
-            return [self.model_class.model_validate(obj) for obj in results]
-
+            # Exclude datapoints from DTO conversion
+            # meyere
+            # return [
+            #     self.model_class.model_validate(obj.model_dump(exclude={}))
+            #     for obj in results
+            # ]
 
     def _get_exact(self, name: str, *relationships) -> Optional[TSQLModel]:
         with self._engine.new_session() as session:
@@ -85,7 +90,7 @@ class BaseNamedTableEngine(BaseTableEngine):
 
             if not results:
                 return None
-            return self.model_class.model_validate(results[0])
+            return results[0]
 
     def _get_multi(self, fuzzy_id: str | UUID, *relationships) -> list[TSQLModel]:
         """
@@ -103,7 +108,7 @@ class BaseNamedTableEngine(BaseTableEngine):
             else:
                 results = result.all()
 
-            return [self.model_class.model_validate(obj) for obj in results]
+            return results
 
     def _get_one(self, fuzzy_id: str | UUID, *relationships) -> TSQLModel:
         results = self._get_multi(fuzzy_id, *relationships)
@@ -138,7 +143,7 @@ class BaseNamedTableEngine(BaseTableEngine):
             orm = session.merge(existing if existing else model)
             session.commit()
             session.refresh(orm)
-            return self.model_class.model_validate(orm)
+            return orm
 
 TLink = TypeVar('TLink', bound='BaseLink')
 TLinkEngine = TypeVar('TLinkEngine', bound='BaseLinkEngine')
@@ -166,7 +171,7 @@ class BaseLinkEngine(Generic[TLink], ABC):
                 .where(self.model_class.right_id == right_id)
             )
             res = session.exec(stmt).first()
-            return self.model_class.model_validate(res) if res else None
+            return res if res else None
 
     def add(self, left_id: UUID, right_id: UUID):
         """Add a link if it does not already exist."""

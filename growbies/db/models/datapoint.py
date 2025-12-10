@@ -121,4 +121,4 @@ class DataPointEngine(BaseTableEngine):
 
             session.commit()
             session.refresh(dp_row)
-            return self.model_class.model_validate(dp_row)
+            return dp_row

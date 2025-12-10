@@ -130,7 +130,7 @@ class DeviceEngine(BaseNamedTableEngine):
         merged_devices = self._merge_with_discovered(discovered_devices)
         for device in merged_devices:
             self._overwrite(device)
-        return Devices(elements=[self.model_class.model_validate(dev) for dev in merged_devices])
+        return Devices(elements=[dev for dev in merged_devices])
 
     def upsert(self, model: Device, fields: Optional[dict] = None) -> Device:
         return super().upsert(model, {Device.Key.NAME: model.name, Device.Key.STATE: model.state})
@@ -203,4 +203,4 @@ class DeviceEngine(BaseNamedTableEngine):
             merged = db_sess.merge(device)  # either updates existing or inserts
             db_sess.commit()  # ensure it persists
             db_sess.refresh(merged)
-            return self.model_class.model_validate(merged)
+            return merged

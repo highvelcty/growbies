@@ -20,7 +20,4 @@ def execute(cmd: ServiceCmd) -> Sessions:
                 the_list.append(sess)
             elif sess.active:
                 the_list.append(sess)
-
-        the_list.append(sess)
     return Sessions(the_list, show_id=False, show_device_names=True, show_active=show_inactive)
-

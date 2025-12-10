@@ -32,4 +32,4 @@ class TareEngine(BaseNamedTableEngine):
             session.add(tare_row)
             session.commit()
             session.refresh(tare_row)
-            return self.model_class.model_validate(tare_row)
+            return tare_row
