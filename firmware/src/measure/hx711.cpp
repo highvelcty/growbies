@@ -40,9 +40,7 @@ void MultiHX711::begin() {
 #endif
     }
 
-#if POWER_CONTROL
     power_off();
-#endif
 }
 
 void MultiHX711::add_device(HX711* hx) {
@@ -50,21 +48,25 @@ void MultiHX711::add_device(HX711* hx) {
 }
 
 void MultiHX711::power_off() const {
+#if POWER_CONTROL
     for (const auto* hx : devices) {
         if (hx) HX711::power_off();
     }
     delayMicroseconds(HX711_POWER_DELAY);
+#endif
 }
 
 void MultiHX711::power_on() const {
+#if POWER_CONTROL
     for (const auto* hx : devices) {
         if (hx) HX711::power_on();
     }
     delayMicroseconds(HX711_POWER_DELAY);
+#endif
 }
 
 std::vector<float> MultiHX711::sample() const{
-    std::vector<int32_t> readings(devices.size(), 0);
+    std::vector<uint32_t> readings(devices.size(), 0);
     std::vector<float> float_readings(devices.size(), 0);
 
 #if ARDUINO_ARCH_AVR
@@ -95,13 +97,13 @@ std::vector<float> MultiHX711::sample() const{
         // sensitive section when SCK is high.
         for (size_t jj = 0; jj < devices.size(); ++jj) {
             const bool a_bit = static_cast<bool>(gpio_in_reg & get_HX711_dout_port_bit(jj));
-            readings[jj] = (readings[jj] << 1) | static_cast<int32_t>(a_bit);
+            readings[jj] = (readings[jj] << 1) | a_bit;
         }
 
     }
 
     // Set gain for next reading (channel A, 128x gain)
-    for (uint8_t gg = 0; gg < 3; ++gg) {
+    for (uint8_t gg = 0; gg < 1; ++gg) {
         delayMicroseconds(HX711_BIT_BANG_DELAY);
         digitalWrite(HX711_SCK_PIN, HIGH);
         delayMicroseconds(HX711_BIT_BANG_DELAY);
@@ -109,12 +111,15 @@ std::vector<float> MultiHX711::sample() const{
     }
 
     for (size_t kk = 0; kk < readings.size(); ++kk) {
-        const auto reading = readings[kk];
-        if (reading & (1UL << (HX711_DAC_BITS - 1))) {
-            float_readings[kk] = static_cast<float>(reading | (0xFFUL << HX711_DAC_BITS));
+        const uint32_t raw = readings[kk];
+        int32_t signed_val;
+
+        if (raw & (1UL << (HX711_DAC_BITS - 1))) {
+            signed_val = static_cast<int32_t>(raw | SIGN_MASK);
         } else {
-            float_readings[kk] = static_cast<float>(reading);
+            signed_val = static_cast<int32_t>(raw);
         }
+        float_readings[kk] = static_cast<float>(signed_val);
     }
 
     return float_readings;

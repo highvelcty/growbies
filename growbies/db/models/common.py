@@ -196,6 +196,7 @@ class BaseLinkEngine(Generic[TLink], ABC):
 TSortedTable = TypeVar('TSortedTable')
 
 class SortedTable(Generic[TSortedTable]):
+    sort_key = 'name'
 
     @classmethod
     def table_name(cls):
@@ -219,8 +220,9 @@ class SortedTable(Generic[TSortedTable]):
         self._rows.append(item)
 
     def sort(self, reverse: bool = False):
-        """Sort items in place by name (case-insensitive)."""
-        self._rows.sort(key=lambda x: x.name, reverse=reverse)
+        """Sort items in place."""
+        if self.sort_key is not None:
+            self._rows.sort(key=lambda x: getattr(x, self.sort_key), reverse=reverse)
 
     def __getitem__(self, index):
         return self._rows[index]

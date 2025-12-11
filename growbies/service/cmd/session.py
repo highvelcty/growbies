@@ -69,3 +69,19 @@ def execute(cmd: ServiceCmd) -> Optional[Session | Sessions]:
     else:
         return engine.session.list()
     return None
+
+def main():
+    from argparse import ArgumentParser, RawDescriptionHelpFormatter
+    import sys
+
+    from growbies.cli.session import make_cli
+    from growbies.service.common import ServiceOp, ServiceCmd
+
+    parser = ArgumentParser(description='Session interface.',
+                             formatter_class=RawDescriptionHelpFormatter)
+    make_cli(parser)
+    known, unknown = parser.parse_known_args(sys.argv[1:])
+    print(execute(ServiceCmd(ServiceOp.SESSION, kw=vars(known))))
+
+if __name__ == '__main__':
+    main()

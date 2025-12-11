@@ -57,7 +57,7 @@ def start(path: Path, file_level: int = logging.DEBUG, stdout_level: int = loggi
                             f'%(thread_name)s '
                             f'%(levelname)s| '
                             f'%(message)s',
-                            timestamp.BASE_FMT)
+                            timestamp.BASE_DT_FMT)
     fmt.converter = time.gmtime
 
 

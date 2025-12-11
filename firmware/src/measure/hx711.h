@@ -8,6 +8,7 @@
 namespace growbies_hf {
 
     constexpr int HX711_DAC_BITS = 24;
+    static constexpr uint32_t SIGN_MASK = ~((1UL << HX711_DAC_BITS) - 1);
     constexpr int HX711_BIT_BANG_DELAY = 3;
 
     // The specification says 64uS with SCK high will power down. Double this to be sure.

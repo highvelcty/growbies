@@ -4,11 +4,11 @@ from typing import Optional, Union
 
 UTC_Z = 'Z'
 
-BASE_FMT = '%Y-%m-%dT%H:%M:%S'
+BASE_DT_FMT = '%Y-%m-%dT%H:%M:%S'
 
 #: The timestamp string format.
-FMT = f'{BASE_FMT}.%f{UTC_Z}'
-FMT_INT = f'{BASE_FMT}{UTC_Z}'
+FMT_DT = f'{BASE_DT_FMT}.%f{UTC_Z}'
+FMT_DT_INT = f'{BASE_DT_FMT}{UTC_Z}'
 
 PRECISION = 6
 
@@ -35,7 +35,7 @@ def get_elapsed_str(seconds: int) -> str:
     return f"{days} days, {hours} hours, {minutes} minutes, {seconds} seconds"
 
 
-def get_unix_time(ts: Optional[TS_t] = None, fmt: str = FMT) -> float:
+def get_unix_time(ts: Optional[TS_t] = None, fmt: str = FMT_DT) -> float:
     """
     :param ts: A timestamp that may take the following forms:
         - a string, matching the :data:`FMT` format.
@@ -65,7 +65,7 @@ def get_unix_time(ts: Optional[TS_t] = None, fmt: str = FMT) -> float:
         return round(time.time(), PRECISION)
 
 
-def get_utc_dt(ts: Optional[TS_t] = None, fmt: str = FMT) -> datetime:
+def get_utc_dt(ts: Optional[TS_t] = None, fmt: str = FMT_DT) -> datetime:
     """
     :param ts: A timestamp that may take the following forms:
         - a string, matching the :data:`FMT` format.
@@ -92,7 +92,7 @@ def get_utc_dt(ts: Optional[TS_t] = None, fmt: str = FMT) -> datetime:
 
 
 def get_utc_iso_ts_str(ts: Optional[TS_t] = None,
-                       fmt: str = FMT, timespec: str = 'microseconds') -> str:
+                       fmt: str = FMT_DT, timespec: str = 'microseconds') -> str:
     """
     :param ts: A timestamp that may take the following forms:
         - a string, matching the :data:`FMT` format.

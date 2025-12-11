@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import StrEnum
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import Field, Relationship
@@ -6,7 +7,7 @@ from typing import List, Optional, TYPE_CHECKING
 import logging
 import uuid
 
-from .common import BaseTable, BaseTableEngine
+from .common import BaseTable, BaseTableEngine, SortedTable
 from .link import SessionDataPointLink
 if TYPE_CHECKING:
     from .session import Session
@@ -17,6 +18,18 @@ from growbies.utils.types import (DeviceID, TareID)
 logger = logging.getLogger(__name__)
 
 class DataPoint(BaseTable, table=True):
+    class Key(StrEnum):
+        ID = 'id'
+        DEVICE_ID = 'device_id'
+        TARE_ID = 'tare_id'
+        TIMESTAMP = 'timestamp'
+        MASS = 'mass'
+        TEMPERATURE = 'temperature'
+        REF_MASS = 'ref_mass'
+        MASS_SENSORS = 'mass_sensors'
+        TEMPERATURE_SENSORS = 'temperature_sensors'
+        SESSIONS = 'sessions'
+
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     # Foreign keys
     device_id: uuid.UUID = Field(
@@ -33,9 +46,12 @@ class DataPoint(BaseTable, table=True):
     ref_mass: float | None = Field(nullable=True)
 
     # Relationships
-    mass_sensors: list['DataPointMassSensor'] = Relationship(back_populates='datapoint')
+    mass_sensors: list['DataPointMassSensor'] = Relationship(
+        back_populates='datapoint',
+        sa_relationship_kwargs={'order_by': lambda: DataPointMassSensor.idx})
     temperature_sensors: list['DataPointTemperatureSensor'] = Relationship(
-        back_populates='datapoint')
+        back_populates='datapoint',
+        sa_relationship_kwargs={'order_by': lambda: DataPointTemperatureSensor.idx})
     sessions: List['Session'] = Relationship(back_populates='datapoints',
                                              link_model=SessionDataPointLink)
 
@@ -64,6 +80,9 @@ class DataPointTemperatureSensor(BaseTable, table=True):
 
     datapoint: DataPoint | None = Relationship(back_populates='temperature_sensors')
 
+
+class DataPoints(SortedTable[DataPoint]):
+    sort_key = None
 
 # --- Engine for inserting datapoints ---
 class DataPointEngine(BaseTableEngine):

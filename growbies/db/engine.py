@@ -31,7 +31,6 @@ class DBEngine:
     def _create_engine() -> Engine:
         cfg = get_cfg()
         address = SQLMODEL_ADDRESS_FMT.format(address = cfg.database.address)
-        logger.error(f'emey connecting to: {address}')
         return create_engine(address, echo=False, echo_pool=False)
 
 

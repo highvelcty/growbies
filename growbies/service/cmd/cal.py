@@ -27,3 +27,18 @@ def execute(cmd: ServiceCmd):
     elif subcmd == SubCmd.STOP:
         return stop.execute(cmd)
     raise ServiceCmdError(f'Invalid {ServiceOp.CAL} sub-cmd "{subcmd}".')
+
+def main():
+    from argparse import ArgumentParser, RawDescriptionHelpFormatter
+    import sys
+
+    from growbies.cli.cal import make_cli
+
+    parser = ArgumentParser(description='Calibration interface.',
+                             formatter_class=RawDescriptionHelpFormatter)
+    make_cli(parser)
+    known, unknown = parser.parse_known_args(sys.argv[1:])
+    print(execute(ServiceCmd(ServiceOp.CAL, kw=vars(known))))
+
+if __name__ == '__main__':
+    main()

@@ -12,16 +12,16 @@ namespace growbies_hf {
 // -------------------------------
 // Single measurement channel
 // -------------------------------
-class MeasurementChannel {
-public:
-    explicit MeasurementChannel(const SensorType type,
-                                const float gross_min = -1e6f,
-                                const float gross_max = 1e6f,
-                                const float alpha = 0.2f)
-        : type_(type),
-          gross_filter_(gross_min, gross_max),
-          smoother_(alpha),
-          last_smoothed_(0.0f) {}
+    class MeasurementChannel {
+    public:
+        explicit MeasurementChannel(const SensorType type,
+                                    const float gross_min = -1e6f,
+                                    const float gross_max = 1e6f,
+                                    const float alpha = 0.2f)
+            : type_(type),
+              gross_filter_(gross_min, gross_max),
+              smoother_(alpha),
+              last_smoothed_(0.0f) {}
 
     Sample update(const float raw_value) {
         // Gross threshold filter

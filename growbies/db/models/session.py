@@ -1,17 +1,19 @@
 from datetime import datetime
 from enum import StrEnum
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 import uuid
 import logging
 
 logger = logging.getLogger(__name__)
 
 from prettytable import PrettyTable
-from sqlalchemy import exists, event, func, inspect
+from sqlalchemy import event, func, inspect
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import selectinload
 from sqlmodel import Column, select, Field, Relationship
 
-from .common import BaseTable, BaseNamedTableEngine, BuiltinTagName, SortedTable, TSQLModel
+from .common import BaseTable, BaseNamedTableEngine, SortedTable
+from .datapoint import DataPoint, DataPoints
 from .link import (SessionDataPointLink, SessionDeviceLink, SessionProjectLink, SessionTagLink,
                    SessionUserLink)
 from growbies.cli.session import Entity
@@ -19,7 +21,7 @@ from growbies.utils.report import list_str_wrap, short_uuid, wrap_for_column
 from growbies.utils.timestamp import get_utc_dt
 from growbies.utils.types import DeviceID, SessionID
 
-from .datapoint import DataPoint
+
 if TYPE_CHECKING:
     from .device import Device
     from .project import Project
@@ -236,8 +238,6 @@ class Sessions(SortedTable[Session]):
     def show_notes(self, value: bool):
         self._show_notes = value
 
-
-
     def __str__(self):
         table = PrettyTable(title=self.table_name())
         table.preserve_internal_whitespace = True
@@ -343,47 +343,20 @@ class SessionEngine(BaseNamedTableEngine):
             results = db_sess.exec(stmt).all()
             return Sessions(results)
 
-    def get_calibration_restorable_devices(self, session_id: SessionID) -> list[DeviceID]:
-        """
-        A calibration restorable device is any device in this session that does not have an
-        additional active calibration session linked to it. A calibration session differs from aa
-        regular session by a calibration tag.
-        """
-        # Runtime import to avoid circular dependencies.
-        from .tag import Tag
-        with self._engine.new_session() as db:
-            # noinspection PyTypeChecker,PyUnresolvedReferences
-            other_active_cal = (
-                select(SessionDeviceLink.right_id)
-                .join(Session, Session.id == SessionDeviceLink.left_id)
-                .join(SessionTagLink, SessionTagLink.left_id == Session.id)
-                .join(Tag, Tag.id == SessionTagLink.right_id)
-                .where(
-                    Session.id != session_id,
-                    Session.active.is_(True),
-                    Tag.name == BuiltinTagName.CALIBRATION
-                )
-            )
-
-            stmt = (
-                select(SessionDeviceLink.right_id)
-                .where(SessionDeviceLink.left_id == session_id)
-                .where(~exists(other_active_cal))
-            )
-
-            return db.exec(stmt).all()
-
-    def get_datapoints(self, session_id: SessionID) -> list['DataPoint']:
+    def get_datapoints(self, session_id: SessionID) -> DataPoints:
         with self._engine.new_session() as db:
             # noinspection PyTypeChecker
             stmt = (
                 select(DataPoint)
+                .options(
+                    selectinload(DataPoint.mass_sensors),
+                    selectinload(DataPoint.temperature_sensors)
+                )
                 .join(SessionDataPointLink, SessionDataPointLink.right_id == DataPoint.id)
                 .where(SessionDataPointLink.left_id == session_id)
                 .order_by(DataPoint.timestamp)
             )
-
-            return db.exec(stmt).all()
+            return DataPoints(db.exec(stmt).all())
 
     def list(self) -> Sessions:
         """Return all sessions with links eagerly loaded, using base class accessors."""
