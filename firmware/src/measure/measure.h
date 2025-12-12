@@ -14,29 +14,16 @@ namespace growbies_hf {
 // -------------------------------
     class MeasurementChannel {
     public:
-        explicit MeasurementChannel(const SensorType type,
-                                    const float gross_min = -1e6f,
-                                    const float gross_max = 1e6f,
-                                    const float alpha = 0.2f)
+        explicit MeasurementChannel(const SensorType type, const float alpha = 0.2f)
             : type_(type),
-              gross_filter_(gross_min, gross_max),
               smoother_(alpha),
               last_smoothed_(0.0f) {}
 
     Sample update(const float raw_value) {
-        // Gross threshold filter
-        const auto filtered = gross_filter_.update(raw_value);
-        if (!filtered.valid) {
-            flags_.valid = false;
-            flags_.out_of_range = true;
-            return Sample(raw_value, type_, flags_);
-        }
-
-        flags_.valid = true;
         flags_.out_of_range = false;
 
         // Median filter
-        const float median_value = median_filter_.update(filtered.value);
+        const float median_value = median_filter_.update(raw_value);
 
         // IIR smoothing
         last_smoothed_ = smoother_.update(median_value);
@@ -45,9 +32,7 @@ namespace growbies_hf {
     }
 
     float value() const noexcept { return last_smoothed_; }
-    float last_valid() const noexcept { return gross_filter_.last_valid(); }
     void reset() {
-        gross_filter_.reset();
         median_filter_.reset();
         smoother_.reset();
         last_smoothed_ = 0.0f;
@@ -58,7 +43,6 @@ namespace growbies_hf {
 private:
     SensorType type_;
     SampleFlags flags_{};
-    GrossThresholdFilter gross_filter_;
     SlidingMedianFilter median_filter_;
     IIRSmoother smoother_;
     float last_smoothed_;

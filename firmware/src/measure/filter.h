@@ -14,39 +14,6 @@ namespace growbies_hf {
         explicit OptionalFloat(const float v) : valid(true), value(v) {}
     };
 
-    // Optional gross threshold filter for a single scalar channel
-    class GrossThresholdFilter {
-    public:
-        static constexpr auto MIN_VAL = -1e6f;
-        static constexpr auto MAX_VAL = 1e6f;
-
-        explicit GrossThresholdFilter(const float min_val = MIN_VAL,
-            const float max_val = MAX_VAL)
-            : min_(min_val), max_(max_val), last_valid_(0.0f) {}
-
-        OptionalFloat update(const float value) {
-            if (value < min_ || value > max_) {
-                return {};  // out-of-range - default construct return type
-            }
-            last_valid_ = value;
-            return OptionalFloat(value);
-        }
-
-        void reset(const float default_value = 0.0f) {
-            last_valid_ = default_value;
-        }
-
-        float last_valid() const { return last_valid_; }
-
-        void set_min(const float min_val) { min_ = min_val; }
-        void set_max(const float max_val) { max_ = max_val; }
-
-    private:
-        float min_;
-        float max_;
-        float last_valid_;
-    };
-
     class SlidingMedianFilter {
     public:
         static constexpr size_t WINDOW_SIZE = 5;

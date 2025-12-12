@@ -15,13 +15,11 @@ namespace growbies_hf {
 
     // Flags for describing sample validity or acquisition errors
     struct SampleFlags {
-        bool valid           : 1;  // sample is valid
-        bool out_of_range    : 1;  // sensor exceeded measurable limits
+        bool out_of_range    : 1;  // sensor exceeded load range
         bool timeout         : 1;  // sensor read timeout
         bool reserved        : 5;  // reserved for expansion
 
-        constexpr SampleFlags() : valid(true), out_of_range(false),
-                                  timeout(false), reserved(false) {}
+        constexpr SampleFlags() : out_of_range(false), timeout(false), reserved(false) {}
     };
 
     // Represents one raw measurement sample before filtering.

@@ -18,11 +18,11 @@ def execute(cmd: ServiceCmd):
     fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID)
     session = engine.get(fuzzy_id)
 
-    plot_mass_vs_time(session)
+    # plot_mass_vs_time(session)
     # plot_ref_mass_vs_temperature(session)
     # plot_error_plane_per_sensor(session)
     # plot_error_plane_per_sensor_interaction_separated(session)
-    # plot_error_plane_per_sensor_quadratic(session)
+    plot_error_plane_per_sensor_quadratic(session)
 
 def plot_mass_vs_time(session: Session):
     engine = get_db_engine().session
@@ -125,13 +125,12 @@ def plot_mass_vs_time(session: Session):
     ax_mass.legend(loc="upper left")
     ax_mass.set_title(f"Mass & Temperature session {session.name}")
 
-
-    # # Right y-axis: Temperature
-    # ax_temp = ax_mass.twinx()
-    # ax_temp.plot(timestamps, temperature_values, label="Temperature", color="tab:red", linewidth=2)
-    # ax_temp.scatter(timestamps, temperature_values, color="tab:red", alpha=0.7, marker='.')
-    # ax_temp.set_ylabel("Temperature (°C)")
-    # ax_temp.legend(loc="upper right")
+    # Right y-axis: Temperature
+    ax_temp = ax_mass.twinx()
+    ax_temp.plot(timestamps, temperature_values, label="Temperature", color="tab:red", linewidth=2)
+    ax_temp.scatter(timestamps, temperature_values, color="tab:red", alpha=0.7, marker='.')
+    ax_temp.set_ylabel("Temperature (°C)")
+    ax_temp.legend(loc="upper right")
 
     # Format x-axis
     ax_mass.xaxis.set_major_formatter(DateFormatter(FMT_DT_INT))
