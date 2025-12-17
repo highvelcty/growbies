@@ -21,9 +21,9 @@ constexpr float DEFAULT_TELEMETRY_INTERVAL_SEC = 5.0;
 
 constexpr int MAX_MASS_SENSOR_COUNT = 5;
 constexpr uint8_t MAX_COEFF_COUNT = 6;
-constexpr uint8_t COEFF_COUNT = 4;
+constexpr uint8_t COEFF_COUNT = 6;
 constexpr uint8_t TARE_COUNT = 8;
-constexpr float REF_TEMPERATURE = 25.0;
+constexpr float REF_TEMPERATURE = 22.0;
 
 typedef float MassTemperatureCoeffRaw[MAX_MASS_SENSOR_COUNT][MAX_COEFF_COUNT];
 typedef float MassCoeffRaw[MAX_COEFF_COUNT];
@@ -97,10 +97,10 @@ static_assert(sizeof(CalibrationHdr) == 8, "unexpected structure size");
 struct Coeffs {
     float mass_offset{};
     float mass_slope{};
+    float mass_quadratic{};
+    float temperature_offset{};
     float temperature_slope{};
-    float mass_cross_temperature{};
-    float quadratic_temperature{};
-    float quadratic_mass{};
+    float temperature_quadratic{};
 };
 static_assert(sizeof(Coeffs) == 24, "unexpected structure size");
 
@@ -355,6 +355,7 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
 
 template <>
 inline void NvmStoreBase<NvmCalibration>::migrate() {
+    value_storage.payload.hdr.coeff_count = COEFF_COUNT;
     _migrate();
 }
 

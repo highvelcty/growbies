@@ -8,7 +8,7 @@ namespace growbies_hf {
         multi_thermistor_.begin();
 
         aggregate_temp_ = new AggregateTemperature(TEMPERATURE_SENSOR_COUNT);
-        aggregate_mass_ = new AggregateMass(MASS_SENSOR_COUNT, aggregate_temp_);
+        aggregate_mass_ = new AggregateMass(MASS_SENSOR_COUNT, *aggregate_temp_);
     }
 
     void MeasurementStack::update() const {

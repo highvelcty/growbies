@@ -3,7 +3,6 @@
 #include <vector>
 #include <array>
 #include "filter.h"
-#include "hx711.h"
 #include "nvm/nvm.h"
 #include "sample.h"
 
@@ -83,7 +82,7 @@ private:
 // -------------------------------
 class AggregateMass {
 public:
-    explicit AggregateMass(const size_t num_sensors, AggregateTemperature* temperature)
+    explicit AggregateMass(const size_t num_sensors, AggregateTemperature& temperature)
         : channels_(num_sensors, MeasurementChannel(SensorType::MASS)),
           temperature_(temperature),
           per_sensor_mass_(num_sensors, 0.0f),
@@ -108,7 +107,6 @@ public:
         const auto& cal_hdr = nvm_cal->hdr;
         const auto& sensors = nvm_cal->sensor;
         const float Tref = cal_hdr.ref_temperature;
-        const float dT = (temperature_ ? temperature_->average() : 0.0f) - Tref;
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
             auto& ch = channels_[ii];
@@ -116,13 +114,32 @@ public:
 
             if (ii < cal_hdr.mass_sensor_count) {
                 const auto& coeffs = sensors[ii].coeffs;
-                // M = c0 + c1*M + c2*dT + c3*(M*dT) + c4*(dT²) + c5*(M²)
-                mass = coeffs.mass_offset
-                     + coeffs.mass_slope * mass
-                     + coeffs.temperature_slope * dT
-                     + coeffs.mass_cross_temperature * (mass * dT)
-                     + coeffs.quadratic_temperature * (dT * dT)
-                     + coeffs.quadratic_mass * (mass * mass);
+
+
+                // --- Per-sensor temperature if available ---
+                float sensor_temp_value = 0.0f;
+                if (ii < temperature_.size()) {
+                    sensor_temp_value = temperature_.sensor_temperatures()[ii];
+                }
+                // Fallback to aggregate average
+                else {
+                    sensor_temp_value = temperature_.average();
+                }
+                const float dT = sensor_temp_value - Tref;
+
+                // --- Mass calibration ---
+                const float calibrated_mass = coeffs.mass_offset
+                                              + coeffs.mass_slope * mass
+                                              + coeffs.mass_quadratic * mass * mass;
+
+
+                // --- Temperature correction ---
+                const float delta_M_temp = coeffs.temperature_offset
+                                           + coeffs.temperature_slope * dT
+                                           + coeffs.temperature_quadratic * dT * dT;
+
+                // --- Total corrected mass ---
+                mass = calibrated_mass + delta_M_temp;
             }
 
             per_sensor_mass_[ii] = mass;
@@ -157,7 +174,7 @@ public:
 private:
     static constexpr size_t RATE_WINDOW_SIZE = 5;
     std::vector<MeasurementChannel> channels_;
-    AggregateTemperature* temperature_;
+    AggregateTemperature& temperature_;
 
     std::array<float, RATE_WINDOW_SIZE> mass_buffer_{};
     std::array<uint32_t, RATE_WINDOW_SIZE> timestamp_buffer_{};

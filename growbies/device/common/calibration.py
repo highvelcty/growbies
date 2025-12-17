@@ -1,17 +1,18 @@
-from enum import StrEnum
 import ctypes
 import logging
 
 from . import nvm
 from .common import BaseStructure, BaseUnion
-from growbies.utils.report import make_table, format_float_table
+from growbies.utils.report import make_table
 
 logger = logging.getLogger(__name__)
+
+REF_TEMPERATURE_C = 22.0
 
 class CalibrationHdr(BaseStructure):
     MAX_MASS_SENSOR_COUNT = 5
     MAX_COEFFS_COUNT = 6
-    REF_TEMPERATURE = 25.0
+    REF_TEMPERATURE = REF_TEMPERATURE_C
 
     class Field(BaseStructure.Field):
         MASS_SENSOR_COUNT = '_mass_sensor_count'
@@ -177,7 +178,7 @@ class Calibration(BaseStructure):
         return getattr(self, self.Field.SENSOR)
 
     def __str__(self):
-        max_cols = ['Sensor', 'M Off', 'M Slope', 'T Slope', 'M x T', 'T^2', 'M^2']
+        max_cols = ['Sensor', 'M Off', 'M Slope', 'M Quad', 'T Off', 'T Slope', 'T Quad']
 
         cols = max_cols[:1 + self.hdr.coeff_count]
         datas = []
@@ -187,8 +188,9 @@ class Calibration(BaseStructure):
             datas.append(row)
 
         # Use PrettyTable formatter
-        table_str = make_table('Mass Calibration Coefficients', cols, datas)
+        table_str = make_table('Mass & Temp Calibration Coefficients', cols, datas)
         return table_str
+
 
 class NvmCalibration(nvm.BaseNvm):
     _fields_ = [

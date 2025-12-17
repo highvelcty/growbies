@@ -141,7 +141,7 @@ class DataPoint:
             table.align[field] = 'l'
         table.add_row(['Timestamp', get_utc_iso_ts_str(self._timestamp, timespec='seconds')])
         table.add_row(['Mass (g)', total_mass])
-        table.add_row(['Mass Sensors (DAC)', mass_sensors])
+        table.add_row(['Mass Sensors (ADC)', mass_sensors])
         table.add_row(['Mass Errors', mass_errors])
         table.add_row(['Tare', tare_values])
         table.add_row(['Temperature (*C)', avg_temp])
