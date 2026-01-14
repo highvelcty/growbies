@@ -17,12 +17,26 @@ class SupportedVidPid:
 
     all_ = (ESPRESSIF_DEBUG, FTDI_FT232)
 
+class DiscoveredDevice:
+    vid = None
+    pid = None
+    serial = None
+
+    def reset(self):
+        self.vid = None
+        self.pid = None
+        self.serial = None
+
+    def valid(self) -> bool:
+        return (self.vid, self.pid) in SupportedVidPid.all_ and self.serial
+
 def execute() -> Devices:
     discovered_devices = Devices()
     _discover_info(discovered_devices)
     return get_db_engine().device.merge_with_discovered(discovered_devices)
 
 def _discover_info(devices: Devices):
+    block_start_re = re.compile(r"^\s*looking at device '")
     vid_re = re.compile(r'.*idVendor.*==\"([0-9a-fA-F]+)\"')
     pid_re = re.compile(r'.*idProduct.*==\"([0-9a-fA-F]+)\"')
     serial_re = re.compile(r'.*serial.*==\"([^\"]+)\"')
@@ -45,25 +59,28 @@ def _discover_info(devices: Devices):
             logger.exception(err)
             continue
 
-        vid = None
-        pid = None
-        serial = None
+        discovered_device = DiscoveredDevice()
 
         for line in proc.stdout.splitlines():
+            if block_start_re.match(line):
+                discovered_device.reset()
+
             vid_search = vid_re.search(line)
             if vid_search:
-                vid = int(vid_search.group(1), 16)
+                discovered_device.vid = int(vid_search.group(1), 16)
+
             pid_search = pid_re.search(line)
-
             if pid_search:
-                pid = int(pid_search.group(1), 16)
+                discovered_device.pid = int(pid_search.group(1), 16)
 
-            if (vid, pid) in SupportedVidPid.all_:
-                serial_search = serial_re.search(line)
-                if serial_search:
-                    serial = serial_search.group(1)
-                    break
+            serial_search = serial_re.search(line)
+            if serial_search:
+                discovered_device.serial = serial_search.group(1)
 
-        if serial:
-            devices.append(Device(gateway=session.gateway.id, vid=vid, pid=pid, serial=serial,
-                                  path=str(path), state=ConnectionState.DISCOVERED))
+            if discovered_device.valid():
+                devices.append(Device(gateway=session.gateway.id,
+                                      vid=discovered_device.vid,
+                                      pid=discovered_device.pid,
+                                      serial=discovered_device.serial,
+                                      path=str(path), state=ConnectionState.DISCOVERED))
+                break

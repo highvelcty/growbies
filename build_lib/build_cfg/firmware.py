@@ -8,7 +8,7 @@ PIOENV = 'PIOENV'
 FILENAME = BASE_FILENAME + '.h'
 
 class Default(Base):
-    _FIRMWARE_VERSION = f'0.0.1-dev0'
+    _FIRMWARE_VERSION = f'0.0.1-dev1'
 
     class Key(Base.Key):
         FIRMWARE_VERSION: Base.Key.type_ = 'FIRMWARE_VERSION'

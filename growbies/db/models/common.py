@@ -53,13 +53,22 @@ class BaseTableEngine(Generic[TSQLModel], ABC):
 
 class BaseNamedTableEngine(BaseTableEngine):
 
+    # def _make_get_stmt(self, fuzzy_id: str | UUID):
+    #     return select(self.model_class).where(
+    #         or_(
+    #             cast(self.model_class.name, String).ilike(f"%{fuzzy_id}%"),
+    #             cast(self.model_class.id, String).ilike(f"{fuzzy_id}%"),
+    #         )
+    #     )
+
     def _make_get_stmt(self, fuzzy_id: str | UUID):
-        return select(self.model_class).where(
-            or_(
-                cast(self.model_class.name, String).ilike(f"%{fuzzy_id}%"),
-                cast(self.model_class.id, String).ilike(f"{fuzzy_id}%"),
-            )
-        )
+        conditions = [cast(self.model_class.id, String).ilike(f"{fuzzy_id}%")]
+
+        # Only add 'name' condition if model_class has it
+        if hasattr(self.model_class, 'name'):
+            conditions.insert(0, cast(self.model_class.name, String).ilike(f"%{fuzzy_id}%"))
+
+        return select(self.model_class).where(or_(*conditions))
 
     def _get_all(self, *relationships) -> list[TSQLModel]:
         with self._engine.new_session() as session:

@@ -6,7 +6,7 @@ from .common import Base, BASE_FILENAME, get_git_hash
 FILENAME = BASE_FILENAME + '.py'
 
 class Default(Base):
-    _VERSION = '0.0.1-dev0'
+    _VERSION = '0.0.1-dev1'
 
     class Key(Base.Key):
         VERSION: Base.Key.type_ = 'VERSION'

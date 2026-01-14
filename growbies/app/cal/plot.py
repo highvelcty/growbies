@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import math
 import numpy as np
+import matplotlib.dates as mdates
+from datetime import datetime
 
 
 from growbies.cli.common import Param as CommonParam
@@ -20,7 +22,7 @@ def execute(cmd: ServiceCmd):
     fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID)
     session = engine.get(fuzzy_id)
 
-    # plot_mass_vs_time(session)
+    plot_mass_vs_time(session)
     # plot_ref_mass_vs_temperature(session)
     # plot_error_plane_per_sensor(session)
     # plot_error_plane_per_sensor_interaction_separated(session)
@@ -28,76 +30,26 @@ def execute(cmd: ServiceCmd):
     # plot_error_heatmap_mass_per_sensor(session)
     # plot_residual_vs_corrected_mass(session)
     # plot_mass_vs_temp(session)
+
     # plot_mass_cal(session)
-    plot_temperature_correction(session)
+    # plot_temperature_correction(session)
+    # plot_range_test(session)
 
 def plot_mass_vs_time(session: Session):
     engine = get_db_engine().session
+    tare_engine = get_db_engine().tare
     datapoints = engine.get_datapoints(session.id)
 
     if not datapoints:
         raise ServiceCmdError(f"No datapoints found for session {session.id}")
 
     # ---- Extract main mass ----
-    timestamps = [dp.timestamp for dp in datapoints]
-    mass_values = [dp.mass for dp in datapoints]
-
-    # ---- Extract per-sensor mass ----
-    max_sensors = len(datapoints[0].mass_sensors)
-
-    # sensor_traces[i] = list of mass values for sensor i
-    sensor_traces = [[] for _ in range(max_sensors)]
-
+    timestamps = list()
+    mass_values = list()
     for dp in datapoints:
-        # enforce ordering, in case the DB order isn't stable
-        sensors_sorted = sorted(dp.mass_sensors, key=lambda s: s.idx)
-
-        for i in range(max_sensors):
-            if i < len(sensors_sorted):
-                sensor_traces[i].append(sensors_sorted[i].mass)
-            else:
-                # no value — keep timeline consistent
-                sensor_traces[i].append(None)
-
-    # ---- Temperature ----
-    temperature_values = [dp.temperature for dp in datapoints]
-
-    # ---- Plot ----
-    fig, ax_mass = plt.subplots()
-
-    # Left y-axis: Mass
-    ax_mass.plot(timestamps, mass_values, label="Aggregate Mass", linewidth=2)
-    # per-sensor lines
-    for i in range(max_sensors):
-        ax_mass.plot(timestamps, sensor_traces[i], label=f"Sensor {i} mass")
-
-    ax_mass.set_ylabel("Mass (g)")
-    ax_mass.set_xlabel("Time")
-    ax_mass.legend(loc="upper left")
-    ax_mass.set_title(f"Mass & Temperature session {session.name}")
-
-    # Right y-axis: Temperature
-    ax_temp = ax_mass.twinx()
-    ax_temp.plot(timestamps, temperature_values, label="Temperature", color="tab:red", linewidth=2)
-    ax_temp.set_ylabel("Temperature (°C)")
-    ax_temp.legend(loc="upper right")
-
-    # Format x-axis with ISO UTC
-    ax_mass.xaxis.set_major_formatter(DateFormatter(FMT_DT_INT))
-    fig.autofmt_xdate()
-    plt.tight_layout()
-    plt.show()
-
-def plot_mass_vs_time(session: Session):
-    engine = get_db_engine().session
-    datapoints = engine.get_datapoints(session.id)
-
-    if not datapoints:
-        raise ServiceCmdError(f"No datapoints found for session {session.id}")
-
-    # ---- Extract main mass ----
-    timestamps = [dp.timestamp for dp in datapoints]
-    mass_values = [dp.mass for dp in datapoints]
+        tare_val = tare_engine.get(dp.tare_id).values[1]
+        timestamps.append(dp.timestamp)
+        mass_values.append(dp.mass - tare_val)
 
     # ---- Extract per-sensor mass ----
     max_sensors = len(datapoints[0].mass_sensors)
@@ -119,13 +71,13 @@ def plot_mass_vs_time(session: Session):
     fig, ax_mass = plt.subplots()
 
     # Aggregate mass line + dots
-    ax_mass.plot(timestamps, mass_values, label="Aggregate Mass", linewidth=2)
-    ax_mass.scatter(timestamps, mass_values, alpha=0.7, marker='.')
+    ax_mass.plot(timestamps, mass_values, label="Aggregate Mass", linewidth=1, marker='.')
+    # ax_mass.scatter(timestamps, mass_values, alpha=0.7, marker='.')
 
     # Per-sensor lines + dots
     for i in range(max_sensors):
-        ax_mass.plot(timestamps, sensor_traces[i], label=f"Sensor {i} mass")
-        ax_mass.scatter(timestamps, sensor_traces[i], alpha=0.7, marker = '.')
+        ax_mass.plot(timestamps, sensor_traces[i], label=f"Sensor {i} mass", marker='.', alpha=.25)
+        # ax_mass.scatter(timestamps, sensor_traces[i], alpha=0.7, marker = '.')
 
     ax_mass.set_ylabel("Mass (g)")
     ax_mass.set_xlabel("Time")
@@ -134,8 +86,9 @@ def plot_mass_vs_time(session: Session):
 
     # Right y-axis: Temperature
     ax_temp = ax_mass.twinx()
-    ax_temp.plot(timestamps, temperature_values, label="Temperature", color="tab:red", linewidth=2)
-    ax_temp.scatter(timestamps, temperature_values, color="tab:red", alpha=0.7, marker='.')
+    ax_temp.plot(timestamps, temperature_values, label="Temperature", color="purple",
+                 marker='.', linewidth=1, alpha=.25)
+    # ax_temp.scatter(timestamps, temperature_values, color="tab:red", alpha=0.7, marker='.')
     ax_temp.set_ylabel("Temperature (°C)")
     ax_temp.legend(loc="upper right")
 
@@ -1075,12 +1028,13 @@ def plot_mass_cal(session: "Session"):
 def plot_temperature_correction(session: "Session"):
     """
     Plots temperature correction for all sensors in the session.
-    For each sensor, produces:
-      1. Mass & Temperature vs Time
-      2. Mass vs Temperature Δ (T - Tref) with quadratic regression fit
-         Bottom x-axis: ΔT for regression
-         Top x-axis: absolute temperature
-    Returns a list of coefficient tuples [(a0, a1, a2), ...] for each sensor.
+
+    Returns a list of dicts per sensor:
+      {
+        "linear": (b0, b1),
+        "quadratic": (a0, a1, a2),
+        "cubic": (c0, c1, c2, c3)
+      }
     """
     engine = get_db_engine().session
     datapoints = engine.get_datapoints(session.id)
@@ -1092,10 +1046,7 @@ def plot_temperature_correction(session: "Session"):
     all_coeffs = []
 
     for sensor_idx in range(max_sensors):
-        timestamps = []
-        masses = []
-        ref_masses = []
-        temps = []
+        timestamps, masses, ref_masses, temps = [], [], [], []
 
         for dp in datapoints:
             mass = dp.mass_sensors[sensor_idx].mass
@@ -1111,97 +1062,257 @@ def plot_temperature_correction(session: "Session"):
         ref_masses = np.array(ref_masses)
         temps = np.array(temps)
 
-        # --- Subplot 1: Mass & Temperature vs Time ---
-        fig, (ax_time, ax_mass_temp) = plt.subplots(2, 1, figsize=(12, 10))
+        # ------------------------------------------------------------------
+        # Layout
+        # ------------------------------------------------------------------
+        fig = plt.figure(figsize=(14, 10))
+        gs = fig.add_gridspec(2, 2, height_ratios=[1.4, 1.0], width_ratios=[2.5, 1.5])
 
-        ax1 = ax_time
-        ax1.plot(timestamps, masses, 'b.-', label='Mass (g)')
-        ax1.set_xlabel('Time')
-        ax1.set_ylabel('Mass (g)', color='tab:blue')
-        ax1.tick_params(axis='y', labelcolor='tab:blue')
+        ax_mass_temp = fig.add_subplot(gs[0, :])
+        ax_time = fig.add_subplot(gs[1, 0])
+        ax_stats = fig.add_subplot(gs[1, 1])
 
-        ax2 = ax1.twinx()
-        ax2.plot(timestamps, temps, 'r.-', label='Temperature (°C)')
-        ax2.set_ylabel('Temperature (°C)', color='tab:red')
-        ax2.tick_params(axis='y', labelcolor='tab:red')
-
-        lines1, labels1 = ax1.get_legend_handles_labels()
-        lines2, labels2 = ax2.get_legend_handles_labels()
-        ax1.legend(lines1 + lines2, labels1 + labels2, loc='best')
-        ax1.set_title(f'Sensor {sensor_idx}: Mass & Temperature vs Time')
-
-        # --- Subplot 2: Mass vs Temperature Δ ---
+        # ------------------------------------------------------------------
+        # Mass vs ΔT
+        # ------------------------------------------------------------------
         delta_T = temps - REF_TEMPERATURE_C
-        x_sorted_idx = np.argsort(delta_T)
-        delta_T_sorted = delta_T[x_sorted_idx]
-        mass_sorted = masses[x_sorted_idx]
-        ref_masses_sorted =ref_masses[x_sorted_idx]
-        abs_temp_sorted = temps[x_sorted_idx]
+        idx = np.argsort(delta_T)
 
-        # Quadratic fit in ΔT
-        a0, a1, a2, residuals = _quadratic_fit(delta_T_sorted, mass_sorted)
-        rmse = np.sqrt(np.mean(residuals**2))
-        sigma1 = np.std(residuals, ddof=1)
-        sigma2 = 2 * sigma1
-        sigma3 = 3 * sigma1
-        mass_pred = a0 + a1*delta_T_sorted + a2*delta_T_sorted**2
+        x = delta_T[idx]
+        y = masses[idx]
+        ref_sorted = ref_masses[idx]
 
-        ax3 = ax_mass_temp
-        ax3.plot(delta_T_sorted, mass_sorted, 'b.-', label='Mass (g)')
-        ax3.plot(delta_T_sorted, mass_pred, 'g--', label='Quadratic Fit')
-        ax3.set_xlabel('Temperature Δ (°C)')
-        ax3.set_ylabel('Mass (g)', color='tab:blue')
-        ax3.tick_params(axis='y', labelcolor='tab:blue')
+        # Fits
+        b0, b1, res_l = _linear_fit(x, y)
+        a0, a1, a2, res_q = _quadratic_fit(x, y)
+        c0, c1, c2, c3, res_c = _cubic_fit(x, y)
 
-        # --- Twin-x for absolute temperature ---
-        ax_top = ax3.twiny()
-         # Align top axis ticks with bottom axis by using a fixed transform
-        bottom_ticks = ax3.get_xticks()
-        ax_top.set_xticks(bottom_ticks + REF_TEMPERATURE_C)
-        ax_top.set_xlim(ax3.get_xlim()[0] + REF_TEMPERATURE_C,
-                        ax3.get_xlim()[1] + REF_TEMPERATURE_C)
+        y_l = b0 + b1 * x
+        y_q = a0 + a1 * x + a2 * x**2
+        y_c = c0 + c1 * x + c2 * x**2 + c3 * x**3
+
+        # Plot
+        ax_mass_temp.plot(x, y, 'b.-', label='Mass (g)')
+        ax_mass_temp.plot(x, y_l, 'k:', label='Linear fit')
+        ax_mass_temp.plot(x, y_q, 'g--', label='Quadratic fit')
+        ax_mass_temp.plot(x, y_c, 'c-.', label='Cubic fit')
+
+        ax_mass_temp.set_xlabel('Temperature Δ (°C)')
+        ax_mass_temp.set_ylabel('Mass (g)')
+
+        # Absolute temperature axis
+        ax_top = ax_mass_temp.twiny()
+        ticks = ax_mass_temp.get_xticks()
+        ax_top.set_xticks(ticks + REF_TEMPERATURE_C)
+        ax_top.set_xlim(ax_mass_temp.get_xlim()[0] + REF_TEMPERATURE_C,
+                         ax_mass_temp.get_xlim()[1] + REF_TEMPERATURE_C)
         ax_top.set_xlabel('Absolute Temperature (°C)')
 
-        # Residuals on secondary y-axis
-        ax4 = ax3.twinx()
-        ax4.plot(delta_T_sorted, residuals, 'm.-', label='Residuals (g)', alpha=.5)
-        for s, style in zip([sigma1, sigma2, sigma3], ['--', ':', '-.']):
-            ax4.axhline(s, color='gray', linestyle=style, linewidth=0.8)
-            ax4.axhline(-s, color='gray', linestyle=style, linewidth=0.8)
-        ax4.set_ylabel('Residuals (g)', color='magenta')
-        ax4.tick_params(axis='y', labelcolor='magenta')
+        # Residuals
+        ax_res = ax_mass_temp.twinx()
+        ax_res.plot(x, res_q, 'm.-', alpha=0.5, label='Quadratic residuals')
+        ax_res.set_ylabel('Residuals (g)', color='magenta')
+        ax_res.tick_params(axis='y', labelcolor='magenta')
 
-        lines3, labels3 = ax3.get_legend_handles_labels()
-        lines4, labels4 = ax4.get_legend_handles_labels()
-        ax3.legend(lines3 + lines4, labels3 + labels4, loc='best')
+        # Legend (explicitly include residuals)
+        h1, l1 = ax_mass_temp.get_legend_handles_labels()
+        h2, l2 = ax_res.get_legend_handles_labels()
+        ax_mass_temp.legend(h1 + h2, l1 + l2, loc='best')
 
-        # Raw statistics - measured vs reference
-        raw_residuals = mass_sorted - ref_masses_sorted
-        rmse_raw = np.sqrt(np.mean(raw_residuals ** 2))
-        sigma1_raw = np.std(raw_residuals, ddof=1)
-        sigma2_raw = 2 * sigma1_raw
-        sigma3_raw = 3 * sigma1_raw
+        ax_mass_temp.set_title(f'Sensor {sensor_idx}: Mass vs Temperature Δ')
 
-        coeff_text = (
-            f"Mass_corrected = {a0:.3f} + {a1:.3f}*ΔT + {a2:.6f}*ΔT^2\n"
-            f'Reference Temperature (°C) = {REF_TEMPERATURE_C}\n'
-            f"RMSE = {rmse:.3f} g, 1σ = {sigma1:.3f} g, 2σ = {sigma2:.3f} g, 3σ = {sigma3:.3f} g\n"
-            f"RMSE raw = {rmse_raw:.3f} g, 1σ = {sigma1_raw:.3f} g, 2σ = {sigma2_raw:.3f} g, "
-            f"3σ = {sigma3_raw:.3f} g\n"
+        # ------------------------------------------------------------------
+        # Time series
+        # ------------------------------------------------------------------
+        ax_time.plot(timestamps, masses, 'b.-', label='Mass (g)')
+        ax_t2 = ax_time.twinx()
+        ax_t2.plot(timestamps, temps, 'r.-', label='Temperature (°C)')
+
+        ax_time.set_xlabel('Time')
+        ax_time.set_ylabel('Mass (g)', color='tab:blue')
+        ax_t2.set_ylabel('Temperature (°C)', color='tab:red')
+
+        # Combine legends (fixes missing temperature)
+        h1, l1 = ax_time.get_legend_handles_labels()
+        h2, l2 = ax_t2.get_legend_handles_labels()
+        ax_time.legend(h1 + h2, l1 + l2, loc='best')
+
+        ax_time.set_title('Mass & Temperature vs Time')
+
+        # ------------------------------------------------------------------
+        # Stats box
+        # ------------------------------------------------------------------
+        ax_stats.axis('off')
+
+        def stats(res):
+            rmse = np.sqrt(np.mean(res**2))
+            s1 = np.std(res, ddof=1)
+            return rmse, s1, 2*s1, 3*s1
+
+        rmse_raw, s1r, s2r, s3r = stats(y - ref_sorted)
+        rmse_l, s1l, s2l, s3l = stats(res_l)
+        rmse_q, s1q, s2q, s3q = stats(res_q)
+        rmse_c, s1c, s2c, s3c = stats(res_c)
+
+        text = (
+            f"Reference temperature: {REF_TEMPERATURE_C} °C\n\n"
+
+            "Raw (measured vs reference):\n"
+            f"  RMSE={rmse_raw:.3f} g | 1σ={s1r:.3f} | 2σ={s2r:.3f} | 3σ={s3r:.3f}\n\n"
+
+            "Linear:\n"
+            f"  Mass = {b0:.3f} + {b1:.3f}·ΔT\n"
+            f"  RMSE={rmse_l:.3f} g | 1σ={s1l:.3f} | 2σ={s2l:.3f} | 3σ={s3l:.3f}\n\n"
+
+            "Quadratic:\n"
+            f"  Mass = {a0:.3f} + {a1:.3f}·ΔT + {a2:.6f}·ΔT²\n"
+            f"  RMSE={rmse_q:.3f} g | 1σ={s1q:.3f} | 2σ={s2q:.3f} | 3σ={s3q:.3f}\n\n"
+
+            "Cubic:\n"
+            f"  Mass = {c0:.3f} + {c1:.3f}·ΔT + {c2:.6f}·ΔT² + {c3:.6f}·ΔT³\n"
+            f"  RMSE={rmse_c:.3f} g | 1σ={s1c:.3f} | 2σ={s2c:.3f} | 3σ={s3c:.3f}"
         )
-        ax3.text(0.02, 0.95, coeff_text, transform=ax3.transAxes,
-                 fontsize=10, verticalalignment='top',
-                 bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
-        ax3.set_title(f'Sensor {sensor_idx}: Mass vs Temperature Δ')
+        ax_stats.text(
+            0, 1, text,
+            va='top', ha='left',
+            fontsize=10,
+            bbox=dict(boxstyle='round', facecolor='white', alpha=0.9),
+        )
 
         fig.tight_layout()
         plt.show()
 
-        all_coeffs.append((a0, a1, a2))
+        all_coeffs.append({
+            "linear": (b0, b1),
+            "quadratic": (a0, a1, a2),
+            "cubic": (c0, c1, c2, c3),
+        })
 
     return all_coeffs
 
+def plot_range_test(session: 'Session'):
+    """
+    Plots the range test for an assembled scale.
+
+    Layout:
+      ┌─────────────────────────────────────────┐
+      │ Top: Mass vs Temperature                │
+      │      y1 = Mass, y2 = Residuals         │
+      ├─────────────────────────────────────────┤
+      │ Bottom: Mass & Temperature vs Time      │
+      │      y1 = Mass, y2 = Temperature       │
+      └─────────────────────────────────────────┘
+
+    Residuals = reference mass - measured mass - tare
+    Timestamps are shown in UTC with 'Z'.
+    """
+    session_engine = get_db_engine().session
+    tare_engine = get_db_engine().tare
+    datapoints = session_engine.get_datapoints(session.id)
+
+    if not datapoints:
+        raise ServiceCmdError(f"No datapoints found for session {session.id}")
+
+    timestamps, masses, ref_masses, temps, tares = [], [], [], [], []
+
+    for dp in datapoints:
+        if dp.ref_mass is not None and dp.mass < 17500:
+            tare_val = tare_engine.get(dp.tare_id).values[1]
+            timestamps.append(dp.timestamp)
+            masses.append(dp.mass - tare_val)
+            ref_masses.append(dp.ref_mass)
+            temps.append(dp.temperature)  # assembly-level temperature
+
+    timestamps = np.array(timestamps)
+    masses = np.array(masses)
+    ref_masses = np.array(ref_masses)
+    temps = np.array(temps)
+    residuals = ref_masses - masses
+
+    # ------------------------------------------------------------------
+    # Figure setup
+    # ------------------------------------------------------------------
+    fig, (ax_temp, ax_time) = plt.subplots(
+        2, 1, figsize=(14, 10), sharex=False, gridspec_kw={"height_ratios": [1, 1]}
+    )
+
+    # ------------------------------------------------------------------
+    # Top: Mass vs Temperature
+    # ------------------------------------------------------------------
+    ax_temp.plot(temps, masses, 'b.-', label='Mass (g)')
+    ax_temp.set_xlabel('Temperature (°C)')
+    ax_temp.set_ylabel('Mass (g)', color='tab:blue')
+    ax_temp.tick_params(axis='y', labelcolor='tab:blue')
+
+    ax_residual = ax_temp.twinx()
+    ax_residual.plot(temps, residuals, 'm.-', label='Residual (g)', alpha=0.6)
+    ax_residual.set_ylabel('Residual (g)', color='magenta')
+    ax_residual.tick_params(axis='y', labelcolor='magenta')
+
+    # Combine legends
+    lines1, labels1 = ax_temp.get_legend_handles_labels()
+    lines2, labels2 = ax_residual.get_legend_handles_labels()
+    ax_temp.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+
+    ax_temp.set_title('Assembly: Mass & Residual vs Temperature')
+
+    # ------------------------------------------------------------------
+    # Bottom: Mass & Temperature vs Time
+    # ------------------------------------------------------------------
+    ax1 = ax_time
+    ax1.plot(timestamps, masses, 'b.-', label='Mass (g)')
+    ax1.set_xlabel('Time (UTC)')
+    ax1.set_ylabel('Mass (g)', color='tab:blue')
+    ax1.tick_params(axis='y', labelcolor='tab:blue')
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M:%SZ'))
+    plt.setp(ax1.get_xticklabels(), rotation=45, ha='right')
+
+    ax2 = ax1.twinx()
+    ax2.plot(timestamps, temps, 'r.-', label='Temperature (°C)')
+    ax2.set_ylabel('Temperature (°C)', color='tab:red')
+    ax2.tick_params(axis='y', labelcolor='tab:red')
+
+    # Combine legends
+    lines1, labels1 = ax1.get_legend_handles_labels()
+    lines2, labels2 = ax2.get_legend_handles_labels()
+    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+
+    ax1.set_title('Assembly: Mass & Temperature vs Time')
+
+    # ------------------------------------------------------------------
+    # Report tare value on figure (opposite horizontally from legends)
+    # ------------------------------------------------------------------
+    fig.text(
+        0.85, 0.95, f"Tare Value: {tare_val:.3f} g",
+        fontsize=12, bbox=dict(boxstyle='round', facecolor='white', alpha=0.8)
+    )
+
+    fig.tight_layout()
+    plt.show()
+
+
+
+def _cubic_fit(x: np.ndarray, y: np.ndarray):
+    """
+    Fits y = c0 + c1*x + c2*x^2 + c3*x^3
+    Returns (c0, c1, c2, c3, residuals)
+    """
+    coeffs = np.polyfit(x, y, deg=3)
+    c3, c2, c1, c0 = coeffs
+    y_pred = c0 + c1*x + c2*x**2 + c3*x**3
+    residuals = y - y_pred
+    return c0, c1, c2, c3, residuals
+
+def _linear_fit(x: np.ndarray, y: np.ndarray):
+    """
+    Fits y = b0 + b1*x
+    Returns (b0, b1, residuals)
+    """
+    b1, b0 = np.polyfit(x, y, deg=1)
+    y_pred = b0 + b1 * x
+    residuals = y - y_pred
+    return b0, b1, residuals
 
 def _quadratic_fit(x: np.ndarray, y: np.ndarray) -> tuple[float, float, float, np.ndarray]:
     """
@@ -1213,4 +1324,3 @@ def _quadratic_fit(x: np.ndarray, y: np.ndarray) -> tuple[float, float, float, n
     a0, a1, a2 = coeffs
     y_pred = a0 + a1*x + a2*x**2
     residuals = y - y_pred
-    return a0, a1, a2, residuals

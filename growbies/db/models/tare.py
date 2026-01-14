@@ -16,6 +16,9 @@ class Tare(BaseTable, table=True):
 class TareEngine(BaseNamedTableEngine):
     model_class = Tare
 
+    def get(self, fuzzy_id: str) -> Tare:
+        return self._get_one(fuzzy_id)
+
     def insert(self, values: List[float]) -> Tare:
         """
         Insert a new tare row for a given list of floats.
