@@ -24,9 +24,13 @@ float Thermistor::read_voltage() const {
 }
 
 float Thermistor::sample() const {
+    // Thermistor on the top of the resistor divider
     const float vout = read_voltage();
-    const float r_therm = (vout * THERMISTOR_SERIES_RESISTOR)
-                          / (THERMISTOR_SUPPLY_VOLTAGE - vout);
+    // const float r_therm = (vout * THERMISTOR_SERIES_RESISTOR)
+    //                       / (THERMISTOR_SUPPLY_VOLTAGE - vout);
+    const float r_therm =
+        (THERMISTOR_SERIES_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
+        / vout;
 
     const float inv_T = STEINHART_HART_A
                       + (STEINHART_HART_B * logf(r_therm))
@@ -37,9 +41,13 @@ float Thermistor::sample() const {
 
 
 float Thermistor::sample_beta() const {
+    // Thermistor on the top of the resistor divider
     const float vout = read_voltage();
-    const float r_therm = (vout * THERMISTOR_SERIES_RESISTOR)
-                          / (THERMISTOR_SUPPLY_VOLTAGE - vout);
+    // const float r_therm = (vout * THERMISTOR_SERIES_RESISTOR)
+    //                       / (THERMISTOR_SUPPLY_VOLTAGE - vout);
+    const float r_therm =
+        (THERMISTOR_SERIES_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
+        / vout;
 
     const float inv_T = (1.0f / THERMISTOR_NOMINAL_TEMPERATURE)
                       + (1.0f / THERMISTOR_BETA_COEFF)
@@ -59,7 +67,7 @@ float Thermistor::sample_beta() const {
     }
 }
 
-    std::vector<float> MultiThermistor::sample() const {
+std::vector<float> MultiThermistor::sample() const {
     std::vector<float> readings;
     readings.reserve(devices_.size());
     for (const auto* therm : devices_) {

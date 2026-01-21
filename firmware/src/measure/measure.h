@@ -60,15 +60,24 @@ public:
     size_t size() const { return channels_.size(); }
 
     float average() const {
+        const auto temps = sensor_temperatures();
+        if (temps.empty()) return 0.0f;
+
         float sum = 0.0f;
-        for (const auto& ch : channels_) sum += ch.value();
-        return channels_.empty() ? 0.0f : sum / static_cast<float>(channels_.size());
+        for (const float t : temps) sum += t;
+        return sum / static_cast<float>(temps.size());
     }
 
     std::vector<float> sensor_temperatures() const {
         std::vector<float> temps;
         temps.reserve(channels_.size());
-        for (const auto& ch : channels_) temps.push_back(ch.value());
+        const auto* nvm_cal = calibration_store->payload();
+        const auto& sensors = nvm_cal->sensor;
+        for (size_t ii = 0; ii < channels_.size(); ++ii) {
+            auto& ch = channels_[ii];
+            const auto& coeffs = sensors[ii].coeffs;
+            temps.push_back(ch.value() - coeffs.thermistor_offset);
+        }
         return temps;
     }
 
@@ -125,6 +134,7 @@ public:
                 else {
                     sensor_temp_value = temperature_.average();
                 }
+
                 const float dT = sensor_temp_value - Tref;
 
                 // --- Mass calibration ---

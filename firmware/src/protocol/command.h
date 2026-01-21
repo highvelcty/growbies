@@ -148,7 +148,7 @@ struct RespGetCalibration : BaseResp {
         : calibration(cal) {}
 };
 static_assert(sizeof(RespGetCalibration) < MAX_SLIP_UNENCODED_PACKET_BYTES, "buffer overflow");
-static_assert(136 == sizeof(RespGetCalibration), "unexpected structure size");
+static_assert(156 == sizeof(RespGetCalibration), "unexpected structure size");
 
 struct RespGetIdentify : BaseResp {
     static constexpr auto VERSION = NvmIdentify::VERSION;

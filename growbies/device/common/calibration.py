@@ -11,7 +11,7 @@ REF_TEMPERATURE_C = 22.0
 
 class CalibrationHdr(BaseStructure):
     MAX_MASS_SENSOR_COUNT = 5
-    MAX_COEFFS_COUNT = 6
+    MAX_COEFFS_COUNT = 7
     REF_TEMPERATURE = REF_TEMPERATURE_C
 
     class Field(BaseStructure.Field):
@@ -74,6 +74,7 @@ class Coeffs(BaseStructure):
         MASS_CROSS_TEMPERATURE = '_mass_cross_temperature'
         QUADRATIC_TEMPERATURE = '_quadratic_temperature'
         QUADRATIC_MASS = '_quadratic_mass'
+        THERMISTOR_OFFSET = '_thermistor_offset'
 
     _fields_ = [
         (Field.MASS_OFFSET, ctypes.c_float),
@@ -81,7 +82,8 @@ class Coeffs(BaseStructure):
         (Field.TEMPERATURE_SLOPE, ctypes.c_float),
         (Field.MASS_CROSS_TEMPERATURE, ctypes.c_float),
         (Field.QUADRATIC_TEMPERATURE, ctypes.c_float),
-        (Field.QUADRATIC_MASS, ctypes.c_float)
+        (Field.QUADRATIC_MASS, ctypes.c_float),
+        (Field.THERMISTOR_OFFSET, ctypes.c_float)
     ]
 
     @property
@@ -132,6 +134,14 @@ class Coeffs(BaseStructure):
     def quadratic_mass(self, value: float):
         setattr(self, self.Field.QUADRATIC_MASS, value)
 
+    @property
+    def thermistor_offset(self):
+        return getattr(self, self.Field.THERMISTOR_OFFSET)
+
+    @thermistor_offset.setter
+    def thermistor_offset(self, value: float):
+        setattr(self, self.Field.THERMISTOR_OFFSET, value)
+
 class SensorCalibration(BaseUnion):
     class Field(BaseUnion.Field):
         COEFFS = '_coeffs'
@@ -178,7 +188,8 @@ class Calibration(BaseStructure):
         return getattr(self, self.Field.SENSOR)
 
     def __str__(self):
-        max_cols = ['Sensor', 'M Off', 'M Slope', 'M Quad', 'T Off', 'T Slope', 'T Quad']
+        max_cols = ['Sensor', 'M Off', 'M Slope', 'M Quad', 'T Off', 'T Slope', 'T Quad',
+                    'Therm Off']
 
         cols = max_cols[:1 + self.hdr.coeff_count]
         datas = []
@@ -187,10 +198,8 @@ class Calibration(BaseStructure):
             row = [sensor_idx] + self.sensor[sensor_idx].raw[:self.hdr.coeff_count]
             datas.append(row)
 
-        # Use PrettyTable formatter
         table_str = make_table('Mass & Temp Calibration Coefficients', cols, datas)
         return table_str
-
 
 class NvmCalibration(nvm.BaseNvm):
     _fields_ = [

@@ -55,15 +55,16 @@ enum Pins : int {
     TEMPERATURE_PIN_0 = A0,
     TEMPERATURE_PIN_1 = A1,
     TEMPERATURE_PIN_2 = A2,
-    DOUT_0_PIN = D7,
-    HX711_SCK_PIN = D8,
+    DOUT_0_PIN = D10,
     DOUT_1_PIN = D9,
-    DOUT_2_PIN = D10,
+    DOUT_2_PIN = D8,
+    DOUT_3_PIN = D7,
+    HX711_SCK_PIN = D6,
     LED_PIN = D9,
     HW_I2C_SDA_PIN = D4,
     HW_I2C_SCL_PIN = D5,
-    BUTTON_0_PIN = D3,
-    BUTTON_1_PIN = D6,
+    BUTTON_0_PIN = D2,
+    BUTTON_1_PIN = D3,
 #endif
 };
 

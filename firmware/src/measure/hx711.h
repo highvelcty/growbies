@@ -16,7 +16,7 @@ namespace growbies_hf {
     // Additional`ly, this is used for power on delay to allow for settling of in rush current
     constexpr int HX711_POWER_DELAY = 64 * 2;
     constexpr int WAIT_READY_RETRY_DELAY_MS = 10;
-    constexpr int WAIT_READY_RETRIES = 10;
+    constexpr int WAIT_READY_RETRIES = 100;
 
 
     /// HX711 driver for a single load cell

@@ -20,8 +20,8 @@ constexpr int DEFAULT_CONTRAST = 16;
 constexpr float DEFAULT_TELEMETRY_INTERVAL_SEC = 5.0;
 
 constexpr int MAX_MASS_SENSOR_COUNT = 5;
-constexpr uint8_t MAX_COEFF_COUNT = 6;
-constexpr uint8_t COEFF_COUNT = 6;
+constexpr uint8_t MAX_COEFF_COUNT = 7;
+constexpr uint8_t COEFF_COUNT = 7;
 constexpr uint8_t TARE_COUNT = 8;
 constexpr float REF_TEMPERATURE = 22.0;
 
@@ -101,8 +101,9 @@ struct Coeffs {
     float temperature_offset{};
     float temperature_slope{};
     float temperature_quadratic{};
+    float thermistor_offset{};
 };
-static_assert(sizeof(Coeffs) == 24, "unexpected structure size");
+static_assert(sizeof(Coeffs) == 28, "unexpected structure size");
 
 union SensorUnion {
     Coeffs coeffs{};
@@ -123,7 +124,7 @@ struct NvmCalibration : NvmStructBase {
 
     static constexpr Version_t VERSION = 1;
 };
-static_assert(136 == sizeof(NvmCalibration), "unexpected structure size");
+static_assert(156 == sizeof(NvmCalibration), "unexpected structure size");
 
 
 struct Identify {
@@ -331,6 +332,9 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
                  FIRMWARE_VERSION);
     }
 
+    value_storage.payload.mass_sensor_count = MASS_SENSOR_COUNT;
+    value_storage.payload.temperature_sensor_count = TEMPERATURE_SENSOR_COUNT;
+
     if (value_storage.hdr.version < 2) {
         value_storage.payload.mass_units = MassUnits::GRAMS;
         value_storage.payload.temperature_units = TemperatureUnits::FAHRENHEIT;
@@ -338,12 +342,6 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
 
     if (value_storage.hdr.version < 3) {
         value_storage.payload.contrast = DEFAULT_CONTRAST;
-    }
-
-    if (value_storage.hdr.version < 4) {
-        // These values come from the build now and are no longer configurable at run time.
-        value_storage.payload.mass_sensor_count = MASS_SENSOR_COUNT;
-        value_storage.payload.temperature_sensor_count = TEMPERATURE_SENSOR_COUNT;
     }
 
     if (value_storage.hdr.version < 5) {

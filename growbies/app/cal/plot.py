@@ -22,7 +22,7 @@ def execute(cmd: ServiceCmd):
     fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID)
     session = engine.get(fuzzy_id)
 
-    plot_mass_vs_time(session)
+    # plot_mass_vs_time(session)
     # plot_ref_mass_vs_temperature(session)
     # plot_error_plane_per_sensor(session)
     # plot_error_plane_per_sensor_interaction_separated(session)
@@ -31,7 +31,7 @@ def execute(cmd: ServiceCmd):
     # plot_residual_vs_corrected_mass(session)
     # plot_mass_vs_temp(session)
 
-    # plot_mass_cal(session)
+    plot_mass_cal(session)
     # plot_temperature_correction(session)
     # plot_range_test(session)
 
@@ -919,7 +919,10 @@ def plot_mass_cal(session: "Session"):
                 timestamps.append(dp.timestamp)
                 adc.append(dp.mass_sensors[sensor_idx].mass)        # ADC reading
                 ref_mass.append(dp.mass_sensors[sensor_idx].ref_mass)  # grams
-                sensor_temp.append(dp.temperature_sensors[sensor_idx].temperature)
+                if len(dp.temperature_sensors) > 1:
+                    sensor_temp.append(dp.temperature_sensors[sensor_idx].temperature)
+                else:
+                    sensor_temp.append(dp.temperature_sensors[0].temperature)
 
         timestamps = np.array(timestamps)
         adc = np.array(adc, dtype=float)
