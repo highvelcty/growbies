@@ -59,7 +59,7 @@ BUTTON RemoteLow::service() {
     }
     else {
         arm_isr = false;
-        if (now - hold_start_time >= hold_delay) {
+        if (now - hold_start_time >= hold_delay && hold_button != EVENT::SELECT) {
             last_button_pressed = hold_button;
             hold_delay = 0;
         }

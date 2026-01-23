@@ -30,13 +30,10 @@ typedef float MassCoeffRaw[MAX_COEFF_COUNT];
 typedef float TareValue[TARE_COUNT];
 
 enum TareIdx : int {
-    GLOBAL = 0,
-    TARE_0 = 1,
-    TARE_1 = 2,
-    TARE_2 = 3,
-    AUTO_0 = 4,
-    AUTO_1 = 5,
-    AUTO_2 = 6,
+    TARE_0 = 0,
+    TARE_1 = 1,
+    TARE_2 = 2,
+    GLOBAL = 7,
 };
 
 const char* get_tare_name(TareIdx idx);

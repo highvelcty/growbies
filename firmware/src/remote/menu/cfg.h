@@ -128,7 +128,6 @@ struct ConfigurationMenu final : BaseCfgMenu {
               "Configuration",
               0,
               std::vector<std::shared_ptr<BaseMenu>>{
-                  // std::make_shared<UnitsMenu>(display_),
                   std::make_shared<DisplayMenu>(display_),
               }) {}
 };

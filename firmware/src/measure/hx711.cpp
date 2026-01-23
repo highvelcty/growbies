@@ -52,7 +52,7 @@ void MultiHX711::power_off() const {
     for (const auto* hx : devices) {
         if (hx) HX711::power_off();
     }
-    delayMicroseconds(HX711_POWER_DELAY);
+    delayMicroseconds(HX711_POWER_DELAY_US);
 #endif
 }
 
@@ -61,7 +61,7 @@ void MultiHX711::power_on() const {
     for (const auto* hx : devices) {
         if (hx) HX711::power_on();
     }
-    delayMicroseconds(HX711_POWER_DELAY);
+    delayMicroseconds(HX711_POWER_DELAY_US);
 #endif
 }
 

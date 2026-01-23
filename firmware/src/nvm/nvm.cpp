@@ -15,9 +15,6 @@ const char* get_tare_name(const TareIdx idx) {
         case TareIdx::TARE_0: return "Tare 0";
         case TareIdx::TARE_1: return "Tare 1";
         case TareIdx::TARE_2: return "Tare 2";
-        case TareIdx::AUTO_0: return "Auto 0";
-        case TareIdx::AUTO_1: return "Auto 1";
-        case TareIdx::AUTO_2: return "Auto 2";
+        default: return "Unknown";
     }
-    return "Unknown";
 }

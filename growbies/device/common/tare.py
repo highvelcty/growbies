@@ -49,6 +49,8 @@ class Tare(BaseStructure):
 
 class Tares(BaseStructure):
     TARE_COUNT = 8
+    USER_SLOTS = (0,1,2)
+    GLOBAL_SLOT = TARE_COUNT - 1
     class Field(BaseStructure.Field):
         TARES = '_tares'
 
@@ -58,36 +60,26 @@ class Tares(BaseStructure):
 
     @classmethod
     def get_name(cls, slot: int) -> str:
-        if slot == 0:
+        if slot in cls.USER_SLOTS:
+            return f'Tare {slot}'
+        elif slot == cls.GLOBAL_SLOT:
             return 'Global'
-        elif slot == 1:
-            return 'Tare 0'
-        elif slot == 2:
-            return 'Tare 1'
-        elif slot == 3:
-            return 'Tare 2'
-        elif slot == 4:
-            return 'Auto 0'
-        elif slot == 5:
-            return 'Auto 1'
-        elif slot == 6:
-            return 'Auto 2'
-        elif slot == 7:
-            return 'Reserved'
-        raise IndexError(f'Slot {slot} is out of range [0, {cls.TARE_COUNT - 1}].')
+        elif slot < cls.GLOBAL_SLOT:
+            return f'Reserved {slot}'
+        else:
+            raise IndexError(f'Slot {slot} is out of range [0, {cls.TARE_COUNT - 1}].')
 
     @classmethod
     def get_description(cls, slot: int) -> str:
-        if slot == 0:
+        if slot in cls.USER_SLOTS:
+            return 'General purpose user tare slot.'
+        elif slot == cls.GLOBAL_SLOT:
             return ('Global tare value that is subtracted from the measured mass prior to '
                     'subtracting all other tare slots.')
-        elif slot in (1,2,3):
-            return 'General purpose user tare slot.'
-        elif slot in (4,5,6):
-            return 'Edge detect, semi-automatic set tare slot.'
-        elif slot == 7:
-            return 'For future use.'
-        raise IndexError(f'Slot {slot} is out of range [0, {cls.TARE_COUNT - 1}].')
+        elif slot < cls.GLOBAL_SLOT:
+            return f'Reserved'
+        else:
+            raise IndexError(f'Slot {slot} is out of range [0, {cls.TARE_COUNT - 1}].')
 
     @property
     def tares(self) -> list[Tare]:

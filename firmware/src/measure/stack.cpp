@@ -12,15 +12,21 @@ namespace growbies_hf {
     }
 
     void MeasurementStack::update() const {
-        multi_hx711_.power_on();
-        const bool ready = multi_hx711_.wait_ready();
-
         std::vector<float> mass_vals, temp_vals;
-        if (ready) {
-            // Sample mass before temperature to give thermistors settling time
-            mass_vals = multi_hx711_.sample();
-            temp_vals = multi_thermistor_.sample();
+        bool ready = false;
+
+        multi_hx711_.power_on();
+
+        for (int ii = 0; ii < MeasurementStack::THROWAWAY_SAMPLES + 1; ++ii) {
+            ready = multi_hx711_.wait_ready();
+
+            if (ready) {
+                // Sample mass before temperature to give thermistors settling time
+                mass_vals = multi_hx711_.sample();
+                temp_vals = multi_thermistor_.sample();
+            }
         }
+
         multi_hx711_.power_off();
 
         if (!ready) return;

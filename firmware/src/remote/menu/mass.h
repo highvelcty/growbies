@@ -6,6 +6,7 @@
 #include <memory>
 #include <Arduino.h>
 
+
 #include "base.h"
 #include "measure/stack.h"
 #include "nvm/nvm.h"
@@ -14,6 +15,114 @@
 // -----------------------------------------------------------------------------
 // MassDrawing
 // -----------------------------------------------------------------------------
+struct TareZeroLeaf final : BaseStrMenuLeaf {
+    constexpr static int TARE_SAMPLE_DELAY = 2000;
+    TareIdx tare_idx;
+
+    explicit TareZeroLeaf(U8X8& display_, TareIdx tare_idx_)
+        : BaseStrMenuLeaf(display_, 2)
+        , tare_idx(tare_idx_) {
+        msg = "zero";
+    }
+
+    void draw(const bool selected) override {
+        BaseStrMenuLeaf::draw(selected);
+    }
+
+    void on_up() override {
+        ;
+    }
+
+    void on_down() override {
+        ;
+    }
+
+    void on_select() override {
+        static const char* dots[] = {
+            ".",
+            "..",
+            "...",
+            "....",
+            ".....",
+            "......",
+            ".......",
+            "........"
+        };
+
+        static const char* back_dots[] = {
+            "....... ",
+            "......  ",
+            ".....   ",
+            "....    ",
+            "...     ",
+            "..      ",
+            ".       ",
+            "        "
+        };
+        const auto& stack = growbies_hf::MeasurementStack::get();
+        constexpr size_t dots_len = sizeof(dots) / sizeof(dots[0]);
+
+
+        for (const char* s : dots) {
+            msg = s;
+            draw(true);
+            delay(TARE_SAMPLE_DELAY / dots_len);
+        }
+
+
+        std::vector<float> samples;
+        samples.reserve(dots_len);
+
+        stack.update();
+        tare_store->edit().payload.tares[tare_idx].value = stack.aggregate_mass().total_mass();
+        identify_store->commit();
+        // for (const char* s : back_dots) {
+        //     stack.update();
+        //     samples.push_back(stack.aggregate_mass().total_mass());
+        //     msg = s;
+        //     draw(true);
+        //     delay(100);
+        // }
+        //
+        // // Remove min and max, then average
+        // float avg = 0.0f;
+        // float sum = 0.0f;
+        // const auto minmax = std::minmax_element(samples.begin(), samples.end());
+        // const auto min_it = minmax.first;
+        // const auto max_it = minmax.second;
+        //
+        // for (auto it = samples.begin(); it != samples.end(); ++it) {
+        //     if (it != min_it && it != max_it) {
+        //         sum += *it;
+        //     }
+        //
+        // avg = sum / static_cast<float>(samples.size() - 2);
+        // }
+        //
+        // tare_store->edit().payload.tares[tare_idx].value = avg;
+        // identify_store->commit();
+
+        msg = "zero";
+    }
+
+
+    void synchronize() override {
+        ;
+    }
+};
+
+struct TareMenu final : BaseCfgMenu {
+    explicit TareMenu(U8X8& display_, TareIdx tare_idx)
+        : BaseCfgMenu(
+            display_,
+            "Tare",
+            1,
+            std::vector<std::shared_ptr<BaseMenu>>{
+                std::make_shared<TareZeroLeaf>(display_, tare_idx),
+            }) {}
+};
+
+
 struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
     MassUnits units{MassUnits::GRAMS};
 
@@ -102,6 +211,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
               display_,
               get_tare_name(tare_idx_),
               std::vector<std::shared_ptr<BaseMenu>>{
+                  std::make_shared<TareMenu>(display_, tare_idx_),
                   std::make_shared<MassUnitsMenu>(display_),
               }), tare_idx(tare_idx_)
     {

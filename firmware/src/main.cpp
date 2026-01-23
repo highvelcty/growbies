@@ -3,45 +3,10 @@
 #include "task.h"
 #include "measure/stack.h"
 #include "nvm/nvm.h"
-#include "protocol/cmd_exec.h"
 
 #if FEATURE_DISPLAY
 #include "remote/remote_high.h"
 #endif
-
-// // Simple cooperative task structure
-// struct Task {
-//     void (*fn)();
-//     unsigned long interval_ms;
-//     unsigned long last_run;
-// };
-//
-// void task_exec_cmd() {
-//     CmdExec::get().exec();
-// }
-//
-// void task_measure() {
-//     const auto& measurement_stack = growbies_hf::MeasurementStack::get();
-//     measurement_stack.update();
-// }
-//
-// void task_remote_service() {
-// #if FEATURE_DISPLAY
-//     RemoteHigh& remote = RemoteHigh::get();
-//     remote.service();
-// #endif
-// }
-//
-// void task_remote_update() {
-// #if FEATURE_DISPLAY
-//     const RemoteHigh& remote = RemoteHigh::get();
-//     remote.update();
-// #endif
-// }
-//
-// void task_telemetry_update() {
-//     CmdExec::get().update_telemetry(true);
-// }
 
 void setup() {
     calibration_store->begin();
@@ -71,7 +36,7 @@ void loop() {
 
     const unsigned long now = millis();
 
-    for (auto task : tasks) {
+    for (const auto task : tasks) {
         // skip telemetry if disabled
         if (task->interval_ms() == 0) {
             continue;
@@ -81,25 +46,3 @@ void loop() {
 
     delay(SMALL_DELAY_MS);
 }
-
-
-// void loop() {
-//     static Task tasks[] = {
-//         {task_exec_cmd,             10, 0},
-//         {task_measure,              25, 0},
-//         {task_remote_service,       50, 0},
-//         {task_remote_update,        100, 0},
-//         {task_telemetry_update,     5000, 0}
-//     };
-//
-//     const unsigned long now = millis();
-//
-//     for (auto & task : tasks) {
-//         if (now - task.last_run >= task.interval_ms) {
-//             task.fn();
-//             task.last_run = now;
-//         }
-//     }
-//
-//     delay(SMALL_DELAY_MS);
-// }

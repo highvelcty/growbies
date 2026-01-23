@@ -13,7 +13,7 @@ namespace growbies_hf {
 // -------------------------------
     class MeasurementChannel {
     public:
-        explicit MeasurementChannel(const SensorType type, const float alpha = 0.2f)
+        explicit MeasurementChannel(const SensorType type, const float alpha = 1.0f)
             : type_(type),
               smoother_(alpha),
               last_smoothed_(0.0f) {}
