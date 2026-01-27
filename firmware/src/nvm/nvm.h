@@ -18,6 +18,7 @@
 
 constexpr int DEFAULT_CONTRAST = 16;
 constexpr float DEFAULT_TELEMETRY_INTERVAL_SEC = 5.0;
+constexpr int DEFAULT_SLEEP_TO_SEC = 15.0;
 
 constexpr int MAX_MASS_SENSOR_COUNT = 5;
 constexpr uint8_t MAX_COEFF_COUNT = 7;
@@ -151,6 +152,7 @@ struct Identify {
     TemperatureUnits temperature_units{};
     uint8_t contrast{DEFAULT_CONTRAST};
     float telemetry_interval{DEFAULT_TELEMETRY_INTERVAL_SEC};
+    float sleep_timeout{DEFAULT_SLEEP_TO_SEC};
 
     // Constructor with version parameter
     explicit Identify() {
@@ -163,7 +165,6 @@ struct Identify {
         if (telemetry_interval <= 0.0f) {
             return 0;  // telemetry disabled
         }
-        // Clamp to UINT32_MAX to prevent overflow
         constexpr auto max_ms = static_cast<float>(UINT32_MAX);
         const float ms = telemetry_interval * 1000.0f;
         if (ms > max_ms) {
@@ -171,15 +172,27 @@ struct Identify {
         }
         return static_cast<uint32_t>(ms);
     }
+
+    uint32_t sleep_timeout_ms() const {
+        if (sleep_timeout <= 0.0f) {
+            return 0;  // sleep disabled
+        }
+        constexpr auto max_ms = static_cast<float>(UINT32_MAX);
+        const float ms = sleep_timeout * 1000.0f;
+        if (ms > max_ms) {
+            return UINT32_MAX;
+        }
+        return static_cast<uint32_t>(ms);
+    }
 };
-static_assert(sizeof(Identify) == 119, "unexpected structure size");
+static_assert(sizeof(Identify) == 123, "unexpected structure size");
 
 struct NvmIdentify : NvmStructBase {
     Identify payload{};
 
-    static constexpr Version_t VERSION = 5;
+    static constexpr Version_t VERSION = 6;
 };
-static_assert(sizeof(NvmIdentify) == 127, "unexpected structure size");
+static_assert(sizeof(NvmIdentify) == 131, "unexpected structure size");
 
 #if ARDUINO_ARCH_AVR
 constexpr int PARTITION_A_OFFSET = 0;
@@ -343,6 +356,10 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
 
     if (value_storage.hdr.version < 5) {
         value_storage.payload.telemetry_interval = DEFAULT_TELEMETRY_INTERVAL_SEC;
+    }
+
+    if (value_storage.hdr.version < 6) {
+        value_storage.payload.sleep_timeout = DEFAULT_SLEEP_TO_SEC;
     }
 
     _migrate();

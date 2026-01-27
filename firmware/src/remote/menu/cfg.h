@@ -109,6 +109,78 @@ struct FlipMenu final : BaseCfgMenu {
               }) {}
 };
 
+struct SleepMenuLeaf final : BaseIntMenuLeaf {
+    static constexpr size_t values_len = 17;
+    static const int* values() {
+        static constexpr int v[values_len] = {
+            0, 1, 2, 3, 5, 8, 15, 20, 30,
+            60, 90, 120, 240, 360, 480, 600, 1200
+        };
+        return v;
+    }
+    static constexpr int default_idx = 6;
+    int idx{default_idx};
+
+    explicit SleepMenuLeaf(U8X8& display_) : BaseIntMenuLeaf(display_, 3) {
+        value = values()[idx];
+    }
+
+    void on_up() override {
+        if (idx == values_len - 1) {
+            idx = 0;
+        }
+        else {
+            ++idx;
+        }
+        value = values()[idx];
+    }
+
+    void on_down() override {
+
+        if (idx == 0) {
+            idx = values_len - 1;
+        }
+        else {
+            --idx;
+        }
+        value = values()[idx];
+    }
+
+    void on_select() override {
+        identify_store->edit().payload.sleep_timeout = static_cast<float>(value);
+        identify_store->commit();
+    }
+
+    void synchronize() override {
+        const int stored =
+            static_cast<int>(identify_store->view()->payload.sleep_timeout);
+
+        // Default to the first element
+        size_t new_idx = 0;
+
+        for (size_t i = 0; i < values_len; ++i) {
+            if (values()[i] <= stored) {
+                new_idx = i;   // candidate
+            } else {
+                break;        // table is sorted, so we’re done
+            }
+        }
+
+        idx = static_cast<int>(new_idx);
+        value = static_cast<int>(stored);
+    }
+};
+
+struct SleepMenu final : BaseCfgMenu {
+    explicit SleepMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Sleep TO (s)",
+            2, std::vector<std::shared_ptr<BaseMenu>>{
+                    std::make_shared<SleepMenuLeaf>(display_)
+            }) {}
+};
+
 struct DisplayMenu final : BaseCfgMenu {
     explicit DisplayMenu(U8X8& display_)
         : BaseCfgMenu(
@@ -121,6 +193,17 @@ struct DisplayMenu final : BaseCfgMenu {
             }) {}
 };
 
+struct PowerMenu final : BaseCfgMenu {
+    explicit PowerMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Power",
+            1,
+            std::vector<std::shared_ptr<BaseMenu>>{
+                std::make_shared<SleepMenu>(display_)
+            }) {}
+};
+
 struct ConfigurationMenu final : BaseCfgMenu {
     explicit ConfigurationMenu(U8X8& display_)
         : BaseCfgMenu(
@@ -129,5 +212,6 @@ struct ConfigurationMenu final : BaseCfgMenu {
               0,
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<DisplayMenu>(display_),
+                  std::make_shared<PowerMenu>(display_),
               }) {}
 };

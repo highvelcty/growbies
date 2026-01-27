@@ -74,3 +74,7 @@ def make_cli(parser: ArgumentParser):
     parser.add_argument(f'--{id_mod.Identify.Field.TELEMETRY_INTERVAL.public_name}',
                         default=None, type=float,
                         help='How often to transmit telemetry in seconds. 0.0 means "off".')
+    parser.add_argument(f'--{id_mod.Identify.Field.SLEEP_TIMEOUT.public_name}',
+                        default=None, type=float,
+                        help='The interval, in seconds, to enter low power sleep mode. 0.0 means '
+                             '"do not sleep".')

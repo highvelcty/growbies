@@ -20,6 +20,7 @@ public:
     RemoteHigh();
     void begin();
 
+    void display_power_save(bool on_off);
     bool service();
     void up();
     void down();
@@ -28,12 +29,12 @@ public:
     void synchronize() const;
     void update() const;
 
-    U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
 
 private:
+    U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
     RemoteLow remote;
 
-    std::vector<size_t> menu_path{0};  // Index path down the tree
+    std::vector<size_t> menu_path{0};  // Index path up the tree
     std::vector<std::shared_ptr<BaseMenu>> menu_root;
     const std::vector<std::shared_ptr<BaseMenu>>* level_from_path() const;
 

@@ -5,7 +5,8 @@ import logging
 
 from .common import BaseStructure, PacketHdr
 from .common.calibration import NvmCalibration
-from .common.identify import NvmIdentify1, NvmIdentify2, NvmIdentify3, NvmIdentify4, NvmIdentify5
+from .common.identify import (NvmIdentify1, NvmIdentify2, NvmIdentify3, NvmIdentify4,
+                              NvmIdentify5, NvmIdentify6)
 from .common.tare import NvmTare
 
 logger = logging.getLogger(__name__)
@@ -233,6 +234,27 @@ class SetIdentifyDeviceCmd5(BaseDeviceCmd):
 
     @identify.setter
     def identify(self, val: NvmIdentify5):
+        setattr(self, self.Field.IDENTIFY, val)
+
+class SetIdentifyDeviceCmd6(BaseDeviceCmd):
+    OP = DeviceCmdOp.SET_IDENTIFY
+    VERSION = NvmIdentify6.VERSION
+
+    class Field(BaseDeviceCmd.Field):
+        INIT = '_init'
+        IDENTIFY = '_identify'
+
+    _fields_ = [
+        (Field.INIT, ctypes.c_bool),
+        (Field.IDENTIFY, NvmIdentify6),
+    ]
+
+    @property
+    def identify(self) -> NvmIdentify6:
+        return getattr(self, self.Field.IDENTIFY)
+
+    @identify.setter
+    def identify(self, val: NvmIdentify6):
         setattr(self, self.Field.IDENTIFY, val)
 
 class GetTareDeviceCmd(BaseDeviceCmd):

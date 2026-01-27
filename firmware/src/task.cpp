@@ -1,6 +1,8 @@
 #include "task.h"
 #include "measure/stack.h"
+#include "nvm/nvm.h"
 #include "protocol/cmd_exec.h"
+#include "system_state.h"
 #if FEATURE_DISPLAY
 #include "remote/remote_high.h"
 #endif
@@ -35,11 +37,6 @@ void task_exec_cmd() {
     CmdExec::get().exec();
 }
 
-void task_measure() {
-    const auto& measurement_stack = growbies_hf::MeasurementStack::get();
-    measurement_stack.update();
-}
-
 void task_remote_service() {
 #if FEATURE_DISPLAY
     RemoteHigh::get().service();
@@ -48,7 +45,19 @@ void task_remote_service() {
 
 void task_remote_update() {
 #if FEATURE_DISPLAY
-    RemoteHigh::get().update();
+    auto& remote_high = RemoteHigh::get();
+    auto& system_state = SystemState::get();
+
+    if (system_state.is_active()) {
+        const auto sleep_timeout_ms = identify_store->view()->payload.sleep_timeout_ms();
+        if (sleep_timeout_ms && system_state.idle_time_ms(millis()) > sleep_timeout_ms) {
+            remote_high.display_power_save(true);
+            system_state.set_display_off();
+        }
+        else {
+            RemoteHigh::get().update();
+        }
+    }
 #endif
 }
 

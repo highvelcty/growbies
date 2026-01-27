@@ -28,9 +28,8 @@ void setup() {
 void loop() {
     static Task* tasks[] = {
         new StaticTask(task_exec_cmd,       10),
-        new StaticTask(task_measure,        25),
         new StaticTask(task_remote_service, 50),
-        new StaticTask(task_remote_update,  100),
+        new StaticTask(task_remote_update,  200),
         new TelemetryTask()
     };
 

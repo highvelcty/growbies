@@ -74,6 +74,7 @@ class Identify(BaseStructure):
         TEMPERATURE_UNITS = '_temperature_units'
         CONTRAST = '_contrast'
         TELEMETRY_INTERVAL = '_telemetry_interval'
+        SLEEP_TIMEOUT = '_sleep_timeout'
 
     _fields_ = [
         (Field.FIRMWARE_VERSION, ctypes.c_char * 32),
@@ -283,6 +284,14 @@ class Identify(BaseStructure):
     def telemetry_interval(self, value: float):
         setattr(self, self.Field.TELEMETRY_INTERVAL, value)
 
+    @property
+    def sleep_timeout(self) -> float:
+        return getattr(self, self.Field.SLEEP_TIMEOUT)
+
+    @sleep_timeout.setter
+    def sleep_timeout(self, value: float):
+        setattr(self, self.Field.SLEEP_TIMEOUT, value)
+
 class Identify1(Identify):
     _fields_ = [
         (Identify.Field.SERIAL_NUMBER, ctypes.c_char * 32),
@@ -320,6 +329,11 @@ class Identify4(Identify3):
 class Identify5(Identify4):
     _fields_ = [
         (Identify.Field.TELEMETRY_INTERVAL, ctypes.c_float)
+    ]
+
+class Identify6(Identify5):
+    _fields_ = [
+        (Identify.Field.SLEEP_TIMEOUT, ctypes.c_float)
     ]
 
 class BaseNvmIdentify(nvm.BaseNvm):
@@ -409,4 +423,19 @@ class NvmIdentify5(BaseNvmIdentify):
 
     @payload.setter
     def payload(self, value: Identify5):
+        super().payload = value
+
+class NvmIdentify6(BaseNvmIdentify):
+    VERSION = 6
+    _fields_ = [
+        (nvm.BaseNvm.Field.HDR, nvm.NvmHdr),
+        (nvm.BaseNvm.Field.PAYLOAD, Identify6)
+    ]
+
+    @property
+    def payload(self) -> Identify6:
+        return getattr(self, self.Field.PAYLOAD)
+
+    @payload.setter
+    def payload(self, value: Identify6):
         super().payload = value

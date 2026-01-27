@@ -21,17 +21,4 @@ namespace growbies_hf {
 
         constexpr SampleFlags() : out_of_range(false), timeout(false), reserved(false) {}
     };
-
-    // Represents one raw measurement sample before filtering.
-    struct Sample {
-        float value;                 // raw or calibrated value (grams, °C, etc.)
-        SensorType type;             // which sensor produced it
-        SampleFlags flags;           // status flags
-
-        explicit constexpr Sample(const float v = 0.0f,
-                const SensorType t = SensorType::UNKNOWN,
-                const SampleFlags f = SampleFlags{})
-            : value(v), type(t), flags(f) {}
-    };
-
 }  // namespace growbies_hf

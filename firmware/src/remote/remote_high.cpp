@@ -1,4 +1,5 @@
 #include "remote_high.h"
+#include "system_state.h"
 
 // initialize static singleton pointer
 RemoteHigh* RemoteHigh::instance = nullptr;
@@ -30,8 +31,25 @@ void RemoteHigh::begin() {
     RemoteLow::begin();
 }
 
+void RemoteHigh::display_power_save(const bool on_off) {
+    display.setPowerSave(on_off);
+}
+
 bool RemoteHigh::service() {
     const BUTTON button_pressed = remote.service();
+    auto& system_state = SystemState::get();
+
+    // Wake
+    if (button_pressed != BUTTON::NONE) {
+        system_state.notify_activity(millis());
+        if (!system_state.is_active()) {
+            display.setPowerSave(false);
+            system_state.set_active();
+            return true;
+        }
+    }
+
+    // Execute
     if (button_pressed == BUTTON::DOWN) {
         down();
     }
@@ -41,16 +59,16 @@ bool RemoteHigh::service() {
     else if (button_pressed == BUTTON::SELECT) {
         select();
     }
-    else {
-        return false;
+
+    if (button_pressed != BUTTON::NONE) {
+        system_state.notify_activity(millis());
     }
-    return true;
+    return button_pressed != BUTTON::NONE;
 }
 
 // -----------------------------------------------------------------------------
 // Menu selection
 // -----------------------------------------------------------------------------
-// const std::vector<std::shared_ptr<BaseMenu>>* Menu::level_from_path() const {
 const std::vector<std::shared_ptr<BaseMenu>>* RemoteHigh::level_from_path() const {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
 

@@ -8,7 +8,6 @@ namespace growbies_hf {
     class MeasurementStack {
     public:
         // HX711 filter needs to settle
-        static constexpr int THROWAWAY_SAMPLES = 2;
         static MeasurementStack& get() {
             static MeasurementStack instance;
             return instance;

@@ -36,7 +36,6 @@ struct TelemetryTask final : Task {
 
 // Declarations of task functions
 void task_exec_cmd();
-void task_measure();
 void task_remote_service();
 void task_remote_update();
 void task_telemetry_update();

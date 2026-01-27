@@ -13,22 +13,26 @@ namespace growbies_hf {
 
     void MeasurementStack::update() const {
         std::vector<float> mass_vals, temp_vals;
-        bool ready = false;
+        bool ready = true;
+
+        aggregate_mass_->reset();
+        aggregate_temp_->reset();
 
         multi_hx711_.power_on();
-
-        for (int ii = 0; ii < MeasurementStack::THROWAWAY_SAMPLES + 1; ++ii) {
+        for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
             ready = multi_hx711_.wait_ready();
 
             if (ready) {
-                // Sample mass before temperature to give thermistors settling time
                 mass_vals = multi_hx711_.sample();
+                // There is some settling with the thermistor, and it is typically longer than mass,
+                // hence this ordering.
                 temp_vals = multi_thermistor_.sample();
             }
+            else {
+                break;
+            }
         }
-
         multi_hx711_.power_off();
-
         if (!ready) return;
 
         // Update temperature before mass as mass is a function of temperature.

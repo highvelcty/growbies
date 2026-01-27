@@ -1,36 +1,30 @@
 #pragma once
 
 #include <vector>
-#include <array>
 #include "filter.h"
 #include "nvm/nvm.h"
 #include "sample.h"
 
 namespace growbies_hf {
 
+static constexpr size_t MEDIAN_FILTER_BUF_SIZE = 5;
+
 // -------------------------------
 // Single measurement channel
 // -------------------------------
-    class MeasurementChannel {
-    public:
-        explicit MeasurementChannel(const SensorType type, const float alpha = 1.0f)
-            : type_(type),
-              smoother_(alpha),
-              last_smoothed_(0.0f) {}
+class MeasurementChannel {
+public:
+    explicit MeasurementChannel(
+        const SensorType type,
+        const size_t median_window_size,
+        const float alpha = 1.0f)
+        : type_(type),
+          median_filter_(median_window_size),
+          smoother_(alpha),
+          last_smoothed_(0.0f)
+    {}
 
-    Sample update(const float raw_value) {
-        flags_.out_of_range = false;
 
-        // Median filter
-        const float median_value = median_filter_.update(raw_value);
-
-        // IIR smoothing
-        last_smoothed_ = smoother_.update(median_value);
-
-        return Sample(last_smoothed_, type_, flags_);
-    }
-
-    float value() const noexcept { return last_smoothed_; }
     void reset() {
         median_filter_.reset();
         smoother_.reset();
@@ -39,9 +33,18 @@ namespace growbies_hf {
 
     SensorType type() const noexcept { return type_; }
 
+    void update(const float raw_value) {
+        // Median filter
+        const float median_value = median_filter_.update(raw_value);
+
+        // IIR smoothing
+        last_smoothed_ = smoother_.update(median_value);
+    }
+
+    float value() const noexcept { return last_smoothed_; }
+
 private:
     SensorType type_;
-    SampleFlags flags_{};
     SlidingMedianFilter median_filter_;
     IIRSmoother smoother_;
     float last_smoothed_;
@@ -51,9 +54,12 @@ private:
 // Aggregate TEMPERATURE channels
 // -------------------------------
 class AggregateTemperature {
+
 public:
     explicit AggregateTemperature(const size_t num_sensors)
-        : channels_(num_sensors, MeasurementChannel(SensorType::TEMPERATURE)) {}
+        : channels_(num_sensors,
+            MeasurementChannel(SensorType::TEMPERATURE, MEDIAN_FILTER_BUF_SIZE))
+    {}
 
     MeasurementChannel& channel(const size_t idx) { return channels_[idx]; }
     const MeasurementChannel& channel(const size_t idx) const { return channels_[idx]; }
@@ -66,6 +72,12 @@ public:
         float sum = 0.0f;
         for (const float t : temps) sum += t;
         return sum / static_cast<float>(temps.size());
+    }
+
+    void reset() {
+        for (auto& ch : channels_) {
+            ch.reset();
+        }
     }
 
     std::vector<float> sensor_temperatures() const {
@@ -92,24 +104,30 @@ private:
 class AggregateMass {
 public:
     explicit AggregateMass(const size_t num_sensors, AggregateTemperature& temperature)
-        : channels_(num_sensors, MeasurementChannel(SensorType::MASS)),
+        : channels_(
+              num_sensors,
+              MeasurementChannel(SensorType::MASS, MEDIAN_FILTER_BUF_SIZE)),
           temperature_(temperature),
           per_sensor_mass_(num_sensors, 0.0f),
-          rate_index_(0),
-          rate_count_(0),
-          last_mass_(0.0f),
-          last_rate_(0.0f)
-    {
-        mass_buffer_.fill(0.0f);
-        timestamp_buffer_.fill(0);
-    }
+          total_mass_(0.0f)
+    {}
 
     MeasurementChannel& channel(const size_t idx) { return channels_[idx]; }
     const MeasurementChannel& channel(const size_t idx) const { return channels_[idx]; }
+    void reset() {
+        for (auto& ch : channels_) {
+            ch.reset();
+        }
+
+        std::fill(per_sensor_mass_.begin(), per_sensor_mass_.end(), 0.0f);
+        total_mass_ = 0.0f;
+    }
+    const std::vector<float>& sensor_masses() const { return per_sensor_mass_; }
     size_t size() const { return channels_.size(); }
+    float total_mass() const { return total_mass_; }
 
     void update() {
-        float total = 0.0f;
+        total_mass_ = 0.0f;
 
         // ---- Load Calibration ----
         const auto* nvm_cal = calibration_store->payload();
@@ -153,46 +171,15 @@ public:
             }
 
             per_sensor_mass_[ii] = mass;
-            total += mass;
+            total_mass_ += mass;
         }
-
-        // --- Rate calculation ---
-        const uint32_t now = millis();
-        mass_buffer_[rate_index_] = total;
-        timestamp_buffer_[rate_index_] = now;
-
-        rate_index_ = (rate_index_ + 1) % RATE_WINDOW_SIZE;
-        if (rate_count_ < RATE_WINDOW_SIZE) ++rate_count_;
-
-        if (rate_count_ > 1) {
-            const size_t oldest = (rate_index_ + RATE_WINDOW_SIZE - rate_count_) % RATE_WINDOW_SIZE;
-            const float delta_mass = total - mass_buffer_[oldest];
-            const auto delta_time = static_cast<float>(now - timestamp_buffer_[oldest]);
-            last_rate_ = (delta_time > 0) ? (delta_mass / (delta_time / 1000.0f)) : 0.0f;
-        } else {
-            last_rate_ = 0.0f;
-        }
-
-        last_mass_ = total;
     }
 
-    float mass_rate() const { return last_rate_; }
-    const std::vector<float>& sensor_masses() const { return per_sensor_mass_; }
-    float total_mass() const { return last_mass_; }
-
-
 private:
-    static constexpr size_t RATE_WINDOW_SIZE = 5;
     std::vector<MeasurementChannel> channels_;
     AggregateTemperature& temperature_;
-
-    std::array<float, RATE_WINDOW_SIZE> mass_buffer_{};
-    std::array<uint32_t, RATE_WINDOW_SIZE> timestamp_buffer_{};
     std::vector<float> per_sensor_mass_{};
-    size_t rate_index_;
-    size_t rate_count_;
-    float last_mass_;
-    float last_rate_;
+    float total_mass_;
 };
 
 }  // namespace growbies_hf

@@ -4,46 +4,43 @@
 #include <cstddef>
 
 namespace growbies_hf {
-
-    constexpr auto MEDIAN_FILTER_BUFFER_SIZE  = 5;
-
-    struct OptionalFloat {
-        bool valid;
-        float value;
-        OptionalFloat() : valid(false), value(0.0f) {}
-        explicit OptionalFloat(const float v) : valid(true), value(v) {}
-    };
-
     class SlidingMedianFilter {
     public:
-        static constexpr size_t WINDOW_SIZE = 5;
-
-        SlidingMedianFilter() : buffer_{}, index_(0), count_(0) {}
-
+        explicit SlidingMedianFilter(const size_t window_size)
+            : window_size_(window_size),
+              buffer_(window_size, 0.0f),
+              index_(0),
+              count_(0)
+        {
+            assert(window_size_ > 0);
+        }
         float update(const float value) {
             buffer_[index_] = value;
-            index_ = (index_ + 1) % WINDOW_SIZE;
-            if (count_ < WINDOW_SIZE) ++count_;
+            index_ = (index_ + 1) % window_size_;
+            if (count_ < window_size_) ++count_;
 
-            std::array<float, WINDOW_SIZE> temp{};
-            std::copy_n(buffer_.begin(), count_, temp.begin());
+            // Copy only the valid portion
+            temp_.assign(buffer_.begin(), buffer_.begin() + count_);
 
-            const auto mid = temp.begin() + count_ / 2;
-            std::nth_element(temp.begin(), mid, temp.begin() + count_);
+            const auto mid = temp_.begin() + count_ / 2;
+            std::nth_element(temp_.begin(), mid, temp_.end());
 
             return *mid;
         }
 
         void reset() {
-            buffer_.fill(0.0f);
+            std::fill(buffer_.begin(), buffer_.end(), 0.0f);
             index_ = 0;
             count_ = 0;
         }
 
     private:
-        std::array<float, WINDOW_SIZE> buffer_;
+        size_t window_size_;
+        std::vector<float> buffer_;
+        std::vector<float> temp_;
         size_t index_;
-        size_t count_;
+        int count_;
+
     };
 
 
