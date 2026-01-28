@@ -4,8 +4,10 @@
 #include <cstdio>
 #include <memory>
 #include <U8x8lib.h>
+#include "esp_sleep.h"
 
 #include "base.h"
+#include "constants.h"
 #include "measure/stack.h"
 #include "nvm/nvm.h"
 
@@ -109,7 +111,7 @@ struct FlipMenu final : BaseCfgMenu {
               }) {}
 };
 
-struct SleepMenuLeaf final : BaseIntMenuLeaf {
+struct SleepTimeoutMenuLeaf final : BaseIntMenuLeaf {
     static constexpr size_t values_len = 17;
     static const int* values() {
         static constexpr int v[values_len] = {
@@ -121,7 +123,7 @@ struct SleepMenuLeaf final : BaseIntMenuLeaf {
     static constexpr int default_idx = 6;
     int idx{default_idx};
 
-    explicit SleepMenuLeaf(U8X8& display_) : BaseIntMenuLeaf(display_, 3) {
+    explicit SleepTimeoutMenuLeaf(U8X8& display_) : BaseIntMenuLeaf(display_, 3) {
         value = values()[idx];
     }
 
@@ -171,13 +173,72 @@ struct SleepMenuLeaf final : BaseIntMenuLeaf {
     }
 };
 
+struct SleepTimeoutMenu final : BaseCfgMenu {
+    explicit SleepTimeoutMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Sleep TO (s)",
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{
+                    std::make_shared<SleepTimeoutMenuLeaf>(display_)
+            }) {}
+};
+
+struct SleepMenuLeaf final : BaseStrMenuLeaf {
+    bool doit{false};
+
+    explicit SleepMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
+        _set_msg();
+    }
+
+    void draw(const bool selected) override {
+        _set_msg();
+        BaseStrMenuLeaf::draw(selected);
+    }
+
+    void on_up() override {
+        doit = !doit;
+    }
+
+    void on_down() override {
+        on_up();
+    }
+
+    void on_select() override {
+        if (doit) {
+            display.setPowerSave(true);
+
+            // wait for buttons released and debounce
+            for (int i = 0; i < 10; ++i) {
+                if (digitalRead(BUTTON_0_PIN) == LOW && digitalRead(BUTTON_1_PIN) == LOW) {
+                    break;
+                }
+                delay(10);
+            }
+            delay(BUTTON_DEBOUNCE_MS);
+
+            esp_deep_sleep_start();
+        }
+    }
+
+    void _set_msg() {
+        if (doit) {
+            msg = "True";
+        }
+        else {
+            msg = "False";
+        }
+    }
+};
+
 struct SleepMenu final : BaseCfgMenu {
     explicit SleepMenu(U8X8& display_)
         : BaseCfgMenu(
             display_,
-            "Sleep TO (s)",
-            2, std::vector<std::shared_ptr<BaseMenu>>{
-                    std::make_shared<SleepMenuLeaf>(display_)
+            "Sleep",
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{
+                std::make_shared<SleepMenuLeaf>(display_)
             }) {}
 };
 
@@ -200,7 +261,8 @@ struct PowerMenu final : BaseCfgMenu {
             "Power",
             1,
             std::vector<std::shared_ptr<BaseMenu>>{
-                std::make_shared<SleepMenu>(display_)
+                std::make_shared<SleepMenu>(display_),
+                std::make_shared<SleepTimeoutMenu>(display_)
             }) {}
 };
 
@@ -211,7 +273,7 @@ struct ConfigurationMenu final : BaseCfgMenu {
               "Configuration",
               0,
               std::vector<std::shared_ptr<BaseMenu>>{
-                  std::make_shared<DisplayMenu>(display_),
                   std::make_shared<PowerMenu>(display_),
+                  std::make_shared<DisplayMenu>(display_),
               }) {}
 };

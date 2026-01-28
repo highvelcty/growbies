@@ -14,10 +14,14 @@ void RemoteLow::begin() {
     // Configure wake pin and attach ISR
     pinMode(BUTTON_0_PIN, INPUT);
     pinMode(BUTTON_1_PIN, INPUT);
-    instance->debounce_time = millis() + BUTTON_DEBOUNCE_MS;
     // To filter spurious noise during boot.
+    instance->debounce_time = millis() + BUTTON_DEBOUNCE_MS;
     attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), RemoteLow::wakeISR0, RISING);
     attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), RemoteLow::wakeISR1, RISING);
+    esp_deep_sleep_enable_gpio_wakeup((1ULL << digitalPinToGPIONumber(BUTTON_0_PIN)),
+        ESP_GPIO_WAKEUP_GPIO_HIGH);
+    esp_deep_sleep_enable_gpio_wakeup((1ULL << digitalPinToGPIONumber(BUTTON_1_PIN)),
+        ESP_GPIO_WAKEUP_GPIO_HIGH);
 }
 
 BUTTON RemoteLow::service() {
