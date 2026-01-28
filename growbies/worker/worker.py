@@ -11,8 +11,11 @@ from serial.serialutil import SerialException
 from growbies.constants import UINT8_MAX
 from growbies.db.engine import get_db_engine
 from growbies.device.cmd import TDeviceCmd, ReadDeviceCmd
-from growbies.device.resp import (DeviceRespOp, DeviceError, DataPoint, ErrorDeviceResp,
+from growbies.device.resp import (DeviceRespOp, DeviceError, ErrorDeviceResp,
                                   RespPacketHdr, TDeviceResp)
+from growbies.device.common.log import DeviceLog
+from growbies.device.common.read import DataPoint
+
 from growbies.service.common import ServiceCmdError
 from growbies.session import log
 from growbies.utils.types import DeviceID, WorkerID
@@ -143,6 +146,9 @@ class Worker(Thread):
             resp: ErrorDeviceResp
             logger.error(f'Received asynchronous error response with '
                          f'error code {resp.error} 0x{resp.error:X}')
+        elif hdr.type == DeviceRespOp.LOG:
+            resp: DeviceLog
+            logger.log(resp.level, resp.msg)
         elif hdr.type == DeviceRespOp.DATAPOINT:
             self._record_datapoint(resp)
         else:

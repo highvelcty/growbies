@@ -7,6 +7,7 @@ from .common import  BaseStructure, BaseUnion, PacketHdr, TBaseStructure
 from .common.calibration import NvmCalibration
 from .common.identify import (NvmIdentify1, NvmIdentify2, NvmIdentify3, NvmIdentify4,
                               NvmIdentify5, NvmIdentify6)
+from .common.log import DeviceLog
 from .common.read import DataPoint
 from .common.tare import NvmTare
 from growbies.service.common import ServiceCmdError
@@ -19,6 +20,7 @@ class DeviceRespOp(IntEnum):
     CALIBRATION = 2
     IDENTIFY = 3
     TARE = 4
+    LOG = 5
     ERROR = 0xFFFF
 
     def __str__(self):
@@ -41,14 +43,14 @@ class DeviceRespOp(IntEnum):
                     resp = ErrorDeviceResp.from_buffer(resp)
                 else:
                     _raise_version_error(hdr)
-            elif hdr.type == cls.DATAPOINT:
-                if hdr.version >= 1:
-                    resp = DataPoint(resp)
-                else:
-                    _raise_version_error(hdr)
             elif hdr.type == cls.CALIBRATION:
                 if hdr.version >= 1:
                     resp = NvmCalibration.from_buffer(resp)
+                else:
+                    _raise_version_error(hdr)
+            elif hdr.type == cls.DATAPOINT:
+                if hdr.version >= 1:
+                    resp = DataPoint(resp)
                 else:
                     _raise_version_error(hdr)
             elif hdr.type == cls.IDENTIFY:
@@ -64,6 +66,11 @@ class DeviceRespOp(IntEnum):
                     resp = NvmIdentify5.from_buffer(resp)
                 elif hdr.version >= 6:
                     resp = NvmIdentify6.from_buffer(resp)
+                else:
+                    _raise_version_error(hdr)
+            elif hdr.type == cls.LOG:
+                if hdr.version >= 1:
+                    resp = DeviceLog.from_buffer(resp)
                 else:
                     _raise_version_error(hdr)
             elif hdr.type == cls.TARE:
@@ -138,7 +145,6 @@ class ErrorDeviceResp(BaseStructure):
         setattr(self, self.Field.ERROR, value)
 
 class VoidDeviceResp(BaseStructure): pass
-
 
 class DeviceError(Exception):
     def __init__(self, error: DeviceErrorCode):

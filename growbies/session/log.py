@@ -10,6 +10,9 @@ from typing import Optional
 from growbies.utils import timestamp
 from growbies.utils.paths import RepoPaths
 
+DEVICE = 25
+logging.addLevelName(DEVICE, 'DEVICE')
+
 class ThreadLocal(threading.local):
     def __init__(self, /, **kw):
         self.__dict__.update(kw)

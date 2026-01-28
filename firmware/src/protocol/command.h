@@ -24,6 +24,7 @@ enum class Resp: uint16_t {
     CALIBRATION = 2,
     IDENTIFY = 3,
     TARE = 4,
+    LOG = 5,
     ERROR = 0xFFFF,
 };
 
@@ -51,6 +52,15 @@ typedef enum EndpointType: uint8_t {
     EP_TARE = 6,
     EP_UNKNOWN = 0xFF
 } EndpointType;
+
+typedef enum LoggingLevel: uint8_t {
+    DEBUG = 10,
+    INFO = 20,
+    DEVICE = 25,
+    WARNING = 30,
+    ERROR = 40,
+    CRITICAL = 50
+} LoggingLevel;
 
 // Bitwise operators for Error
 inline ErrorCode operator|(const ErrorCode lhs, const ErrorCode rhs) {
@@ -138,6 +148,27 @@ struct RespError : BaseResp {
         : error(ec) {}
 };
 
+struct RespDeviceLog : BaseResp {
+    static constexpr auto VERSION = 1;
+    static constexpr auto TYPE = Resp::LOG;
+    static constexpr auto MAX_MSG = 128;
+    LoggingLevel level{LoggingLevel::DEVICE};
+    char msg[MAX_MSG]{};
+
+    int format(const char* fmt, ...) {
+        va_list args;
+        va_start(args, fmt);
+
+        // vsnprintf guarantees null-termination as long as size > 0
+        const int ret = vsnprintf(msg, MAX_MSG, fmt, args);
+
+        va_end(args);
+
+        return ret; // number of chars that *would* have been written
+    }
+};
+static_assert(sizeof(RespDeviceLog) < MAX_SLIP_UNENCODED_PACKET_BYTES, "buffer overflow");
+
 struct RespGetCalibration : BaseResp {
     static constexpr auto VERSION = NvmCalibration::VERSION;
     static constexpr auto TYPE = Resp::CALIBRATION;
@@ -162,7 +193,7 @@ struct RespGetIdentify : BaseResp {
 static_assert(sizeof(RespGetIdentify) < MAX_SLIP_UNENCODED_PACKET_BYTES, "buffer overflow");
 
 struct RespGetTare : BaseResp {
-    static constexpr auto VERSION = 1;
+    static constexpr auto VERSION = NvmTare::VERSION;
     static constexpr auto TYPE = Resp::TARE;
 
     NvmTare tare{};

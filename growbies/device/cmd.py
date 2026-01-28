@@ -263,7 +263,7 @@ class GetTareDeviceCmd(BaseDeviceCmd):
 
 class SetTareDeviceCmd(BaseDeviceCmd):
     OP = DeviceCmdOp.SET_TARE
-    VERSION = 1
+    VERSION = 2
 
     class Field(BaseDeviceCmd.Field):
         INIT = '_init'

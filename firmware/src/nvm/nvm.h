@@ -14,6 +14,7 @@
 #include <Preferences.h>
 #endif
 
+
 #pragma pack(1)
 
 constexpr int DEFAULT_CONTRAST = 16;
@@ -65,14 +66,13 @@ struct NvmStructBase{
     static constexpr Version_t VERSION = 1;
 };
 
-
 struct Tare {
-    float value{};
-    MassUnits display_units{};
+    float value{0};
+    MassUnits display_units{MassUnits::GRAMS};
     uint8_t Reserved[3]{};
-    Elapsed_t timestamp{};
+    Elapsed_t timestamp{0};
 };
-static_assert(12 == sizeof(Tare), "unexpected struct sizes");
+static_assert(12 == sizeof(Tare), "unexpected struct size");
 
 struct Tares {
     Tare tares[TARE_COUNT]{};
@@ -81,8 +81,9 @@ struct Tares {
 struct NvmTare : NvmStructBase {
     Tares payload{};
 
-    static constexpr Version_t VERSION = 1;
+    static constexpr Version_t VERSION = 2;
 };
+static_assert(sizeof(NvmTare) == 104, "unexpected structure size");
 
 struct CalibrationHdr {
     uint8_t mass_sensor_count{MASS_SENSOR_COUNT};
@@ -318,7 +319,7 @@ protected:
         this->prefs.begin(this->ns, false);
         // Ignoring the boolean return indicating success.
         // meyere, fix this
-        this->prefs.putBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
+        this->prefs.putBytes(this->ns_key, &value, sizeof(value));
         this->prefs.end();
     }
 
@@ -370,7 +371,6 @@ inline void NvmStoreBase<NvmCalibration>::migrate() {
     value_storage.payload.hdr.coeff_count = COEFF_COUNT;
     _migrate();
 }
-
 
 #if ARDUINO_ARCH_AVR
 using CalibrationStore = AvrNvmStore<NvmCalibration>;

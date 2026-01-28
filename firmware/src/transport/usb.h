@@ -80,6 +80,16 @@ public:
         UsbNetwork::send_packet(resp_hdr, sizeof(*resp_hdr) + num_bytes);
     }
 
+    void send_log(const char* msg, ...) {
+        auto* resp = new (resp_buf) RespDeviceLog;
+        va_list args;
+        va_start(args, msg);
+        // vsnprintf guarantees null-termination as long as size > 0
+        const int ret = vsnprintf(resp->msg, RespDeviceLog::MAX_MSG, msg, args);
+        va_end(args);
+        send_resp(resp, sizeof(*resp), true);
+    }
+
     ErrorCode recv_cmd();
     void reset() { network.reset(); }
     ErrorCode validate_cmd(int exp_num_bytes);

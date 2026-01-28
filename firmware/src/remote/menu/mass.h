@@ -3,12 +3,14 @@
 #include <U8x8lib.h>
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 #include <memory>
 #include <Arduino.h>
 
 
 #include "base.h"
 #include "measure/stack.h"
+#include "system_state.h"
 #include "nvm/nvm.h"
 
 
@@ -17,37 +19,57 @@
 // -----------------------------------------------------------------------------
 class MassBuffer {
 public:
-    static constexpr size_t SIZE = 50;
-
     void add(const float value) {
-        buffer_[index_] = value;
-        index_ = (index_ + 1) % SIZE;
-        if (count_ < SIZE) {
-            ++count_;
+        if (!initialized_) {
+            filtered_ = value;
+            initialized_ = true;
+            return;
         }
+
+        const float error = fabsf(value - filtered_);
+        if (error >= STAY_AWAKE_THRESHOLD) {
+            auto& system_state = SystemState::get();
+            system_state.notify_activity(millis());
+        }
+
+        const float alpha = compute_alpha(error);
+
+        filtered_ = alpha * value + (1.0f - alpha) * filtered_;
     }
 
-    float average() const {
-        if (count_ == 0) return 0.0f;
-
-        float sum = 0.0f;
-        for (size_t i = 0; i < count_; ++i) {
-            sum += buffer_[i];
-        }
-        return sum / static_cast<float>(count_);
+    float value() const {
+        return initialized_ ? filtered_ : 0.0f;
     }
 
     void reset() {
-        buffer_.fill(0.0f);
-        index_ = 0;
-        count_ = 0;
+        filtered_ = 0.0f;
+        initialized_ = false;
     }
 
 private:
-    std::array<float, SIZE> buffer_{};
-    size_t index_ = 0;
-    size_t count_ = 0;
+    float filtered_ = 0.0f;
+    bool  initialized_ = false;
+
+    static constexpr float ALPHA_MIN = 0.01f;   // very stable
+    static constexpr float ALPHA_MAX = 0.6f;    // very responsive
+
+    // Error (grams) for full responsive
+    static constexpr float ERROR_THRESHOLD = 25.0f;
+    static constexpr float STAY_AWAKE_THRESHOLD = 5.0f;
+
+    static float compute_alpha(const float error) {
+        if (error <= 0.0f) {
+            return ALPHA_MIN;
+        }
+
+        const float alpha = sqrtf(error / ERROR_THRESHOLD);
+
+        if (alpha < ALPHA_MIN) return ALPHA_MIN;
+        if (alpha > ALPHA_MAX) return ALPHA_MAX;
+        return alpha;
+    }
 };
+
 
 // -----------------------------------------------------------------------------
 // MassDrawing
@@ -55,12 +77,12 @@ private:
 struct TareZeroLeaf final : BaseStrMenuLeaf {
     constexpr static int TARE_SAMPLE_DELAY = 2000;
     TareIdx tare_idx;
-    MassBuffer& buffer;
+    MassBuffer& mass_buffer;
 
     explicit TareZeroLeaf(U8X8& display_, const TareIdx tare_idx_, MassBuffer& buffer_)
         : BaseStrMenuLeaf(display_, 2),
         tare_idx(tare_idx_),
-        buffer(buffer_) {
+        mass_buffer(buffer_) {
         msg = "zero";
     }
 
@@ -125,8 +147,8 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
         for (const float v : samples) sum += v;
         avg = sum / static_cast<float>(samples.size());
         tare_store->edit().payload.tares[tare_idx].value = avg;
-        identify_store->commit();
-        buffer.reset();
+        tare_store->commit();
+        mass_buffer.reset();
 
         msg = "zero";
     }
@@ -270,7 +292,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
 
         buffer.add(new_value);
 
-        if (_convert_units(buffer.average(), new_units)) {
+        if (_convert_units(buffer.value(), new_units)) {
             redraw();
         }
         else {

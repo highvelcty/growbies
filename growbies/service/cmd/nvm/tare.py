@@ -12,7 +12,7 @@ from growbies.worker.pool import get_pool
 logger = logging.getLogger(__name__)
 
 def _init(worker):
-    cmd = SetTareDeviceCmd(init=True)
+    cmd = SetTareDeviceCmd()
     cmd.init = True
     _ = worker.cmd(cmd)
 
