@@ -9,7 +9,6 @@
 #include "base.h"
 #include "constants.h"
 #include "measure/battery.h"
-#include "measure/stack.h"
 #include "nvm/nvm.h"
 
 struct ContrastMenuLeaf final : BaseIntMenuLeaf {

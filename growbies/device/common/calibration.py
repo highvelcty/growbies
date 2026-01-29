@@ -161,7 +161,7 @@ class SensorCalibration(BaseUnion):
         setattr(self, self.Field.COEFFS, value)
 
     @property
-    def raw(self) -> ctypes.Array[float]:
+    def raw(self) -> ctypes.Array[ctypes.c_float]:
         return getattr(self, self.Field.RAW)
 
 class Calibration(BaseStructure):

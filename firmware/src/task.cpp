@@ -1,4 +1,7 @@
+#include "esp_sleep.h"
+
 #include "task.h"
+#include "measure/battery.h"
 #include "measure/stack.h"
 #include "nvm/nvm.h"
 #include "protocol/cmd_exec.h"
@@ -47,12 +50,18 @@ void task_remote_update() {
 #if FEATURE_DISPLAY
     auto& remote_high = RemoteHigh::get();
     auto& system_state = SystemState::get();
+    auto battery = Battery();
 
     if (system_state.is_active()) {
         const auto sleep_timeout_ms = identify_store->view()->payload.sleep_timeout_ms();
         if (sleep_timeout_ms && system_state.idle_time_ms(millis()) > sleep_timeout_ms) {
             remote_high.display_power_save(true);
-            system_state.set_display_off();
+            if (battery.is_charging()) {
+                system_state.set_display_off();
+            }
+            else {
+                esp_deep_sleep_start();
+            }
         }
         else {
             RemoteHigh::get().update();
