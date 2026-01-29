@@ -52,19 +52,22 @@ enum Pins : int {
     HW_I2C_SDA_PIN = 0xA4,
     HW_I2C_SCL_PIN = 0xA5,
 #elif HX711_PIN_CFG_1
-    TEMPERATURE_PIN_0 = A0,
-    TEMPERATURE_PIN_1 = A1,
-    TEMPERATURE_PIN_2 = A2,
-    DOUT_0_PIN = D10,
-    DOUT_1_PIN = D9,
-    DOUT_2_PIN = D8,
-    DOUT_3_PIN = D7,
-    HX711_SCK_PIN = D6,
-    LED_PIN = D9,
-    HW_I2C_SDA_PIN = D4,
-    HW_I2C_SCL_PIN = D5,
+    THERMISTOR_PIN_0 = A0,
+    THERMISTOR_PIN_1 = A1,
+    THERMISTOR_PIN_2 = A2,
+    BATTERY_SENSE_PIN = A1,
     BUTTON_0_PIN = D2,
     BUTTON_1_PIN = D3,
+    HW_I2C_SDA_PIN = D4,
+    HW_I2C_SCL_PIN = D5,
+    HX711_SCK_PIN = D6,
+    DOUT_3_PIN = D7,
+    DOUT_2_PIN = D8,
+    DOUT_1_PIN = D9,
+    DOUT_0_PIN = D10,
+
+
+
 #endif
 };
 
@@ -111,18 +114,18 @@ inline int get_HX711_dout_port_bit(const SensorIdx_t sensor) {
 
 inline int get_temperature_pin(const int mass_sensor_idx) {
     if (MASS_SENSOR_COUNT == 1) {
-        return TEMPERATURE_PIN_0;
+        return THERMISTOR_PIN_0;
     }
 #if HX711_PIN_CFG_0
     assert(false && "Unimplemented temperature pin mapping.");
 #elif HX711_PIN_CFG_1
     switch (mass_sensor_idx) {
         case 0:
-            return TEMPERATURE_PIN_0;
+            return THERMISTOR_PIN_0;
         case 1:
-            return TEMPERATURE_PIN_1;
+            return THERMISTOR_PIN_1;
         case 2:
-            return TEMPERATURE_PIN_2;
+            return THERMISTOR_PIN_2;
         default:
             assert(false && "Temperature pin out of range.");
     }

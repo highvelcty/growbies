@@ -26,8 +26,6 @@ float Thermistor::read_voltage() const {
 float Thermistor::sample() const {
     // Thermistor on the top of the resistor divider
     const float vout = read_voltage();
-    // const float r_therm = (vout * THERMISTOR_SERIES_RESISTOR)
-    //                       / (THERMISTOR_SUPPLY_VOLTAGE - vout);
     const float r_therm =
         (THERMISTOR_SERIES_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
         / vout;
@@ -43,8 +41,6 @@ float Thermistor::sample() const {
 float Thermistor::sample_beta() const {
     // Thermistor on the top of the resistor divider
     const float vout = read_voltage();
-    // const float r_therm = (vout * THERMISTOR_SERIES_RESISTOR)
-    //                       / (THERMISTOR_SUPPLY_VOLTAGE - vout);
     const float r_therm =
         (THERMISTOR_SERIES_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
         / vout;

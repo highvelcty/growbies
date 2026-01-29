@@ -11,17 +11,18 @@ RemoteLow::RemoteLow()
 }
 
 void RemoteLow::begin() {
-    // Configure wake pin and attach ISR
+    // configure button pins for floating input
     pinMode(BUTTON_0_PIN, INPUT);
     pinMode(BUTTON_1_PIN, INPUT);
-    // To filter spurious noise during boot.
-    instance->debounce_time = millis() + BUTTON_DEBOUNCE_MS;
+    // configure button pins for interrupt during runtime
     attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), RemoteLow::wakeISR0, RISING);
     attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), RemoteLow::wakeISR1, RISING);
-    esp_deep_sleep_enable_gpio_wakeup((1ULL << digitalPinToGPIONumber(BUTTON_0_PIN)),
-        ESP_GPIO_WAKEUP_GPIO_HIGH);
-    esp_deep_sleep_enable_gpio_wakeup((1ULL << digitalPinToGPIONumber(BUTTON_1_PIN)),
-        ESP_GPIO_WAKEUP_GPIO_HIGH);
+    // configure button pins to wake from deep sleep
+    esp_deep_sleep_enable_gpio_wakeup(1ULL << digitalPinToGPIONumber(BUTTON_0_PIN) |
+                                      1ULL << digitalPinToGPIONumber(BUTTON_1_PIN),
+                                      ESP_GPIO_WAKEUP_GPIO_HIGH);
+    // to filter spurious noise during boot.
+    instance->debounce_time = millis() + BUTTON_DEBOUNCE_MS;
 }
 
 BUTTON RemoteLow::service() {

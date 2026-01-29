@@ -8,6 +8,7 @@
 
 #include "base.h"
 #include "constants.h"
+#include "measure/battery.h"
 #include "measure/stack.h"
 #include "nvm/nvm.h"
 
@@ -185,7 +186,7 @@ struct SleepTimeoutMenu final : BaseCfgMenu {
 };
 
 struct SleepMenuLeaf final : BaseStrMenuLeaf {
-    bool doit{false};
+    bool doit{true};
 
     explicit SleepMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
         _set_msg();
@@ -242,6 +243,59 @@ struct SleepMenu final : BaseCfgMenu {
             }) {}
 };
 
+struct BatteryLeaf final : BaseStrMenuLeaf {
+    constexpr static size_t MSG_BUF_LEN = 16;
+    // Space pad messages out to the maximum message length of 11 characters so that shorter lines
+    // overwriting longer lines clear crufty characters.
+    const char* fmt_str = "%-11s";
+    char msg_buf[MSG_BUF_LEN]{};
+    Battery battery;
+    int test_val{0};
+
+    explicit BatteryLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
+        msg = msg_buf;
+        _set_msg();
+    }
+
+    void draw(const bool selected) override {
+        _set_msg();                 // refresh each draw
+        BaseStrMenuLeaf::draw(selected);
+    }
+
+    void update() override {
+        draw(cached_selected);
+    }
+
+    void _set_msg() {
+        if (battery.is_charging()) {
+            snprintf(msg_buf, MSG_BUF_LEN, "charging");
+            snprintf(msg_buf, MSG_BUF_LEN, fmt_str, msg_buf);
+
+
+        }
+        else {
+            snprintf(
+                msg_buf,
+                MSG_BUF_LEN,
+                "%d%% (%.1fV)", // 100% (4.2V)
+                battery.percentage(),
+                battery.voltage()
+            );
+        }
+    }
+};
+
+struct BatteryMenu final : BaseCfgMenu {
+    explicit BatteryMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Battery",
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{
+                std::make_shared<BatteryLeaf>(display_)
+            }) {}
+};
+
 struct DisplayMenu final : BaseCfgMenu {
     explicit DisplayMenu(U8X8& display_)
         : BaseCfgMenu(
@@ -262,7 +316,8 @@ struct PowerMenu final : BaseCfgMenu {
             1,
             std::vector<std::shared_ptr<BaseMenu>>{
                 std::make_shared<SleepMenu>(display_),
-                std::make_shared<SleepTimeoutMenu>(display_)
+                std::make_shared<SleepTimeoutMenu>(display_),
+                std::make_shared<BatteryMenu>(display_),
             }) {}
 };
 
