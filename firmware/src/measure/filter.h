@@ -1,75 +1,66 @@
 #pragma once
+
 #include <algorithm>
-#include <array>
 #include <cstddef>
+#include <vector>
 
-namespace growbies_hf {
-    class SlidingMedianFilter {
-    public:
-        explicit SlidingMedianFilter(const size_t window_size)
-            : window_size_(window_size),
-              buffer_(window_size, 0.0f),
-              index_(0),
-              count_(0)
-        {
-            assert(window_size_ > 0);
-        }
-        float update(const float value) {
-            buffer_[index_] = value;
-            index_ = (index_ + 1) % window_size_;
-            if (count_ < window_size_) ++count_;
+namespace growbies {
 
-            // Copy only the valid portion
-            temp_.assign(buffer_.begin(), buffer_.begin() + count_);
+// -----------------------------------------------------------------------------
+// Sliding median filter
+// -----------------------------------------------------------------------------
+class SlidingMedianFilter {
+public:
+    explicit SlidingMedianFilter(size_t window_size);
 
-            const auto mid = temp_.begin() + count_ / 2;
-            std::nth_element(temp_.begin(), mid, temp_.end());
+    float update(float value);
 
-            return *mid;
-        }
+    void reset();
 
-        void reset() {
-            std::fill(buffer_.begin(), buffer_.end(), 0.0f);
-            index_ = 0;
-            count_ = 0;
-        }
+private:
+    size_t window_size_;
+    std::vector<float> buffer_;
+    std::vector<float> temp_;
+    size_t index_;
+    int count_;
+};
 
-    private:
-        size_t window_size_;
-        std::vector<float> buffer_;
-        std::vector<float> temp_;
-        size_t index_;
-        int count_;
+// -----------------------------------------------------------------------------
+// Adaptive exponentially weighted moving average buffer
+//
+// RTC-retained state - persists through deep sleep
+// -----------------------------------------------------------------------------
 
-    };
+// RTC variables (defined in .cpp per requirement)
+extern bool  aewma_buffer_initialized;
+extern float aewma_buffer_last_value;
 
+class AEWMABuffer {
+public:
+    explicit AEWMABuffer(float alpha_threshold, float event_threshold);
 
-    // Simple single-pole IIR smoother
-    class IIRSmoother {
-    public:
-        static constexpr auto ALPHA = 0.2f;
-        explicit IIRSmoother(const float alpha = ALPHA)
-            : alpha_(alpha), initialized_(false), state_(0.0f) {}
+    bool add(float value);
 
-        float update(const float value) {
-            if (!initialized_) {
-                state_ = value;
-                initialized_ = true;
-            } else {
-                state_ = alpha_ * value + (1.0f - alpha_) * state_;
-            }
-            return state_;
-        }
+    float value();
 
-        void reset() {
-            initialized_ = false;
-            state_ = 0.0f;
-        }
+    void reset();
 
-    private:
-        float alpha_;
-        bool initialized_;
-        float state_;
-    };
+private:
+    float error = 0.0f;
 
-}  // namespace growbies_hf
+    // Threshold at which the buffer is purely responsive with weighting
+    float alpha_threshold = 0.0f;
+    float event_threshold = 0.0f;
+
+    static constexpr float ALPHA_MIN = 0.01f;   // very stable
+    static constexpr float ALPHA_MAX = 0.6f;    // very responsive
+
+    float compute_alpha() const;
+};
+
+// Mass Buffer Lazy-initialized Global Singleton
+constexpr float STAY_AWAKE_THRESH_GRAMS = 5.0;
+constexpr float EWMA_ALPHA_THRESH_GRAMS = 25.0;
+AEWMABuffer& mass_buffer();
+
+}

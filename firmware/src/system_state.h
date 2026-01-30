@@ -7,7 +7,7 @@ class SystemState {
 public:
     enum class PowerState : uint8_t {
         ACTIVE,        // Display on, normal operation
-        DISPLAY_OFF,   // Display powered down, MCU awake
+        IDLE,          // Display powered down, MCU awake
         DEEP_SLEEP     // MCU in deep sleep
     };
 
@@ -32,8 +32,8 @@ public:
         return state_ == PowerState::ACTIVE;
     }
 
-    bool is_display_off() const {
-        return state_ == PowerState::DISPLAY_OFF;
+    bool is_idle() const {
+        return state_ == PowerState::IDLE;
     }
 
     bool is_deep_sleep() const {
@@ -57,8 +57,8 @@ public:
     // -------------------------------------------------------------------------
     // State transitions (called by sleep task / policy code)
     // -------------------------------------------------------------------------
-    void set_display_off() {
-        state_ = PowerState::DISPLAY_OFF;
+    void set_idle() {
+        state_ = PowerState::IDLE;
     }
 
     void set_deep_sleep() {

@@ -1,75 +1,36 @@
-#include "esp_sleep.h"
-
 #include "task.h"
-#include "measure/battery.h"
-#include "measure/stack.h"
+#include "esp_sleep.h"
 #include "nvm/nvm.h"
-#include "protocol/cmd_exec.h"
-#include "system_state.h"
-#if FEATURE_DISPLAY
-#include "remote/remote_high.h"
-#endif
 
-// ------------------- StaticTask -------------------
-
-StaticTask::StaticTask(void (*fn)(), unsigned long interval)
-    : fn_(fn)
-{
-    static_interval_ms = interval;
-}
-
-void StaticTask::run() {
-    if (fn_) {
-        fn_();
-    }
-}
-
-// ------------------- TelemetryTask -------------------
-
-void TelemetryTask::run() {
-    CmdExec::get().update_telemetry(true);
-}
-
-uint32_t TelemetryTask::interval_ms() const {
-    return identify_store->payload()->telemetry_interval_ms();
-}
-
-// ------------------- Task function implementations -------------------
-
-void task_exec_cmd() {
-    CmdExec::get().exec();
-}
-
-void task_remote_service() {
-#if FEATURE_DISPLAY
-    RemoteHigh::get().service();
-#endif
-}
-
-void task_remote_update() {
-#if FEATURE_DISPLAY
-    auto& remote_high = RemoteHigh::get();
-    auto& system_state = SystemState::get();
-    auto battery = Battery();
-
+void PowerTransitionTask::run() {
     if (system_state.is_active()) {
         const auto sleep_timeout_ms = identify_store->view()->payload.sleep_timeout_ms();
         if (sleep_timeout_ms && system_state.idle_time_ms(millis()) > sleep_timeout_ms) {
-            remote_high.display_power_save(true);
-            if (battery.is_charging()) {
-                system_state.set_display_off();
-            }
-            else {
+            system_state.set_idle();
+            RemoteHigh::get().display_power_save(true);
+            if (not battery.is_charging()) {
                 esp_deep_sleep_start();
             }
         }
-        else {
-            RemoteHigh::get().update();
-        }
     }
-#endif
 }
 
-void task_telemetry_update() {
-    CmdExec::get().update_telemetry(true);
+void RemoteInputTask::run() {
+    remote_high.service();
+}
+
+void RemoteOutputTask::run() {
+    remote_high.update();
+}
+
+void SerialPortInTask::run() {
+    cmd_exec.exec();
+}
+
+void SerialPortOutTask::run() {
+    cmd_exec.update_telemetry(true);
+}
+
+uint32_t SerialPortOutTask::interval_ms() const {
+    return identify_store->payload()->telemetry_interval_ms();
 }

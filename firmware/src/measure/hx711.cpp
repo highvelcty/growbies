@@ -5,7 +5,7 @@
 #include "constants.h"
 #include "flags.h"
 
-namespace growbies_hf {
+namespace growbies {
 
 // ---------------- HX711 ----------------
 void HX711::power_off() {
@@ -159,4 +159,4 @@ bool MultiHX711::wait_ready() const {
     return all_ready;
 }
 
-}  // namespace growbies_hf
+}

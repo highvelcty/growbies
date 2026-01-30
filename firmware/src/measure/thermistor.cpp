@@ -4,8 +4,7 @@
 #include "constants.h"
 #include "hx711.h"
 
-namespace growbies_hf {
-
+namespace growbies {
 
 // --- Thermistor ------------------------
 void Thermistor::begin() const {
@@ -81,5 +80,5 @@ std::vector<float> MultiThermistor::sample() const {
     return readings;
 }
 
-}  // namespace growbies_hf
+}
 

@@ -19,7 +19,8 @@
 
 constexpr int DEFAULT_CONTRAST = 16;
 constexpr float DEFAULT_TELEMETRY_INTERVAL_SEC = 5.0;
-constexpr int DEFAULT_SLEEP_TO_SEC = 15.0;
+constexpr float DEFAULT_SLEEP_TO_SEC = 15.0;
+constexpr float DEFAULT_AUTO_WAKE_INTERVAL_SEC = 2.0;
 
 constexpr int MAX_MASS_SENSOR_COUNT = 5;
 constexpr uint8_t MAX_COEFF_COUNT = 7;
@@ -154,6 +155,7 @@ struct Identify {
     uint8_t contrast{DEFAULT_CONTRAST};
     float telemetry_interval{DEFAULT_TELEMETRY_INTERVAL_SEC};
     float sleep_timeout{DEFAULT_SLEEP_TO_SEC};
+    float auto_wake_interval{DEFAULT_AUTO_WAKE_INTERVAL_SEC};
 
     // Constructor with version parameter
     explicit Identify() {
@@ -162,38 +164,34 @@ struct Identify {
         this->temperature_sensor_count = TEMPERATURE_SENSOR_COUNT;
     }
 
-    uint32_t telemetry_interval_ms() const {
-        if (telemetry_interval <= 0.0f) {
+    static uint32_t float_to_uint32_t(const float value) {
+        if (value <= 0.0f) {
             return 0;  // telemetry disabled
         }
         constexpr auto max_ms = static_cast<float>(UINT32_MAX);
-        const float ms = telemetry_interval * 1000.0f;
+        const float ms = value * 1000.0f;
         if (ms > max_ms) {
             return UINT32_MAX;
         }
         return static_cast<uint32_t>(ms);
     }
 
+    uint32_t telemetry_interval_ms() const {
+        return float_to_uint32_t(telemetry_interval);
+    }
+
     uint32_t sleep_timeout_ms() const {
-        if (sleep_timeout <= 0.0f) {
-            return 0;  // sleep disabled
-        }
-        constexpr auto max_ms = static_cast<float>(UINT32_MAX);
-        const float ms = sleep_timeout * 1000.0f;
-        if (ms > max_ms) {
-            return UINT32_MAX;
-        }
-        return static_cast<uint32_t>(ms);
+        return float_to_uint32_t(sleep_timeout);
     }
 };
-static_assert(sizeof(Identify) == 123, "unexpected structure size");
+static_assert(sizeof(Identify) == 127, "unexpected structure size");
 
 struct NvmIdentify : NvmStructBase {
     Identify payload{};
 
-    static constexpr Version_t VERSION = 6;
+    static constexpr Version_t VERSION = 7;
 };
-static_assert(sizeof(NvmIdentify) == 131, "unexpected structure size");
+static_assert(sizeof(NvmIdentify) == 135, "unexpected structure size");
 
 #if ARDUINO_ARCH_AVR
 constexpr int PARTITION_A_OFFSET = 0;
@@ -361,6 +359,10 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
 
     if (value_storage.hdr.version < 6) {
         value_storage.payload.sleep_timeout = DEFAULT_SLEEP_TO_SEC;
+    }
+
+    if (value_storage.hdr.version < 7) {
+        value_storage.payload.auto_wake_interval = DEFAULT_AUTO_WAKE_INTERVAL_SEC;
     }
 
     _migrate();

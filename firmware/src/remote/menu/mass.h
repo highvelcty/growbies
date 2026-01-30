@@ -1,75 +1,18 @@
 #pragma once
 
 #include <U8x8lib.h>
-#include <cstdio>
 #include <cstring>
-#include <cmath>
 #include <memory>
 #include <Arduino.h>
 
 
 #include "base.h"
+#include "measure/filter.h"
 #include "measure/stack.h"
 #include "system_state.h"
 #include "nvm/nvm.h"
 
-
-// -----------------------------------------------------------------------------
-// Mass Buffer
-// -----------------------------------------------------------------------------
-class MassBuffer {
-public:
-    void add(const float value) {
-        if (!initialized_) {
-            filtered_ = value;
-            initialized_ = true;
-            return;
-        }
-
-        const float error = fabsf(value - filtered_);
-        if (error >= STAY_AWAKE_THRESHOLD) {
-            auto& system_state = SystemState::get();
-            system_state.notify_activity(millis());
-        }
-
-        const float alpha = compute_alpha(error);
-
-        filtered_ = alpha * value + (1.0f - alpha) * filtered_;
-    }
-
-    float value() const {
-        return initialized_ ? filtered_ : 0.0f;
-    }
-
-    void reset() {
-        filtered_ = 0.0f;
-        initialized_ = false;
-    }
-
-private:
-    float filtered_ = 0.0f;
-    bool  initialized_ = false;
-
-    static constexpr float ALPHA_MIN = 0.01f;   // very stable
-    static constexpr float ALPHA_MAX = 0.6f;    // very responsive
-
-    // Error (grams) for full responsive
-    static constexpr float ERROR_THRESHOLD = 25.0f;
-    static constexpr float STAY_AWAKE_THRESHOLD = 5.0f;
-
-    static float compute_alpha(const float error) {
-        if (error <= 0.0f) {
-            return ALPHA_MIN;
-        }
-
-        const float alpha = sqrtf(error / ERROR_THRESHOLD);
-
-        if (alpha < ALPHA_MIN) return ALPHA_MIN;
-        if (alpha > ALPHA_MAX) return ALPHA_MAX;
-        return alpha;
-    }
-};
-
+using namespace growbies;
 
 // -----------------------------------------------------------------------------
 // MassDrawing
@@ -77,12 +20,10 @@ private:
 struct TareZeroLeaf final : BaseStrMenuLeaf {
     constexpr static int TARE_SAMPLE_DELAY = 2000;
     TareIdx tare_idx;
-    MassBuffer& mass_buffer;
 
-    explicit TareZeroLeaf(U8X8& display_, const TareIdx tare_idx_, MassBuffer& buffer_)
+    explicit TareZeroLeaf(U8X8& display_, const TareIdx tare_idx_)
         : BaseStrMenuLeaf(display_, 2),
-        tare_idx(tare_idx_),
-        mass_buffer(buffer_) {
+        tare_idx(tare_idx_) {
         msg = "zero";
     }
 
@@ -120,7 +61,7 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
             ".       ",
             "        "
         };
-        const auto& stack = growbies_hf::MeasurementStack::get();
+        const auto& stack = growbies::MeasurementStack::get();
         constexpr size_t dots_len = sizeof(dots) / sizeof(dots[0]);
 
 
@@ -148,7 +89,7 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
         avg = sum / static_cast<float>(samples.size());
         tare_store->edit().payload.tares[tare_idx].value = avg;
         tare_store->commit();
-        mass_buffer.reset();
+        mass_buffer().reset();
 
         msg = "zero";
     }
@@ -166,13 +107,13 @@ struct TareCancelLeaf final : BaseStrMenuLeaf {
 };
 
 struct TareMenu final : BaseCfgMenu {
-    explicit TareMenu(U8X8& display, TareIdx tare_idx, MassBuffer& buffer)
+    explicit TareMenu(U8X8& display, TareIdx tare_idx)
         : BaseCfgMenu(
             display,
             "Tare",
             1,
             std::vector<std::shared_ptr<BaseMenu>>{
-                std::make_shared<TareZeroLeaf>(display, tare_idx, buffer),
+                std::make_shared<TareZeroLeaf>(display, tare_idx),
                 std::make_shared<TareCancelLeaf>(display)
             }) {}
 };
@@ -229,7 +170,8 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
             msg = "g: grams";
         }
         else if (units == MassUnits::KILOGRAMS) {
-            msg = "kg: kilog.";
+            msg = "kg: "
+                  "kilog.";
         }
         else if (units == MassUnits::OUNCES) {
             msg = "oz: ounces";
@@ -255,7 +197,6 @@ struct MassDrawing final : BaseTelemetryDrawing {
     MassUnits units{};
     TareIdx tare_idx{};
 
-    MassBuffer buffer{};
 
     MassDrawing(
         U8X8& display_,
@@ -267,7 +208,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
               display_,
               get_tare_name(tare_idx_),
               std::vector<std::shared_ptr<BaseMenu>>{
-                  std::make_shared<TareMenu>(display_, tare_idx_, buffer),
+                  std::make_shared<TareMenu>(display_, tare_idx_),
                   std::make_shared<MassUnitsMenu>(display_),
               }), tare_idx(tare_idx_)
     {
@@ -285,14 +226,17 @@ struct MassDrawing final : BaseTelemetryDrawing {
     }
 
     void update() override {
-        const auto& measurement_stack = growbies_hf::MeasurementStack::get();
+        const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
         const auto& new_value = measurement_stack.aggregate_mass().total_mass();
         const auto new_units = identify_store->view()->payload.mass_units;
 
-        buffer.add(new_value);
+        if (mass_buffer().add(new_value)) {
+            auto& system_state = SystemState::get();
+            system_state.notify_activity(millis());
+        }
 
-        if (_convert_units(buffer.value(), new_units)) {
+        if (_convert_units(mass_buffer().value(), new_units)) {
             redraw();
         }
         else {

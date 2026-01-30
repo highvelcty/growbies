@@ -65,7 +65,7 @@ void CmdExec::exec() {
         else if (in_packet_hdr->cmd == Cmd::POWER_ON_HX711) {
             error = usb_transport.validate_cmd(sizeof(CmdPowerOnHx711));
             if (!error) {
-                const auto& measurement_stack = growbies_hf::MeasurementStack::get();
+                const auto& measurement_stack = growbies::MeasurementStack::get();
                 measurement_stack.power_on();
                 const auto* resp = new (resp_buf) RespVoid;
 
@@ -75,7 +75,7 @@ void CmdExec::exec() {
         else if (in_packet_hdr->cmd == Cmd::POWER_OFF_HX711) {
             error = usb_transport.validate_cmd(sizeof(CmdPowerOffHx711));
             if (!error) {
-                const auto& measurement_stack = growbies_hf::MeasurementStack::get();
+                const auto& measurement_stack = growbies::MeasurementStack::get();
                 measurement_stack.power_off();
                 const auto* resp = new (resp_buf) RespVoid;
                 usb_transport.send_resp(resp, sizeof(*resp));
@@ -84,7 +84,7 @@ void CmdExec::exec() {
         else if (in_packet_hdr->cmd == Cmd::READ) {
             error = usb_transport.validate_cmd(sizeof(CmdRead));
             if (!error) {
-                const auto& measurement_stack = growbies_hf::MeasurementStack::get();
+                const auto& measurement_stack = growbies::MeasurementStack::get();
                 measurement_stack.update();
                 update_telemetry(false);
             }
@@ -125,7 +125,9 @@ void CmdExec::exec() {
 
 void CmdExec::update_telemetry(const bool async) const {
     auto datapoint = DataPoint(usb_transport.get_resp_buf(), MAX_RESP_BYTES);
-    const auto& stack = growbies_hf::MeasurementStack::get();
+    const auto& stack = MeasurementStack::get();
+
+    stack.update();
 
     for (auto tare : tare_store->payload()->tares) {
         datapoint.add<float>(EP_TARE, tare.value);

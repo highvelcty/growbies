@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Optional, NewType
+from typing import NewType
 import ctypes
 import logging
 

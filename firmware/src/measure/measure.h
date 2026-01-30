@@ -3,11 +3,18 @@
 #include <vector>
 #include "filter.h"
 #include "nvm/nvm.h"
-#include "sample.h"
 
-namespace growbies_hf {
+namespace growbies {
 
-static constexpr size_t MEDIAN_FILTER_BUF_SIZE = 5;
+static constexpr size_t MEDIAN_FILTER_BUF_SIZE = 3;
+
+enum class SensorType : uint8_t {
+    MASS,
+    TEMPERATURE,
+    HUMIDITY,
+    LIGHT,
+    UNKNOWN,
+};
 
 // -------------------------------
 // Single measurement channel
@@ -16,38 +23,30 @@ class MeasurementChannel {
 public:
     explicit MeasurementChannel(
         const SensorType type,
-        const size_t median_window_size,
-        const float alpha = 1.0f)
+        const size_t median_window_size)
         : type_(type),
           median_filter_(median_window_size),
-          smoother_(alpha),
-          last_smoothed_(0.0f)
+          last_value_(0.0f)
     {}
 
 
     void reset() {
         median_filter_.reset();
-        smoother_.reset();
-        last_smoothed_ = 0.0f;
+        last_value_ = 0.0f;
     }
 
     SensorType type() const noexcept { return type_; }
 
     void update(const float raw_value) {
-        // Median filter
-        const float median_value = median_filter_.update(raw_value);
-
-        // IIR smoothing
-        last_smoothed_ = smoother_.update(median_value);
+        last_value_ = median_filter_.update(raw_value);
     }
 
-    float value() const noexcept { return last_smoothed_; }
+    float value() const noexcept { return last_value_; }
 
 private:
     SensorType type_;
     SlidingMedianFilter median_filter_;
-    IIRSmoother smoother_;
-    float last_smoothed_;
+    float last_value_;
 };
 
 // -------------------------------
@@ -182,4 +181,4 @@ private:
     float total_mass_;
 };
 
-}  // namespace growbies_hf
+}

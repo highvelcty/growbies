@@ -1,41 +1,83 @@
 #pragma once
 
-// Base cooperative task
-struct Task {
+#include "protocol/cmd_exec.h"
+#include "measure/battery.h"
+#include "remote/remote_high.h"
+#include "system_state.h"
+
+class Task {
+public:
+    explicit Task(const unsigned long interval = 0)
+        : interval_ms_(interval)
+    {}
     virtual ~Task() = default;
     virtual void run() = 0;
-    virtual unsigned long interval_ms() const { return static_interval_ms; }
+    virtual unsigned long interval_ms() const { return interval_ms_; }
 
     void tick(const unsigned long now) {
-        if (now - last_run >= interval_ms()) {
+        if (ready_to_run(now)) {
             run();
             last_run = now;
         }
     }
 
 protected:
-    unsigned long static_interval_ms{0};
+    unsigned long interval_ms_{0};
     unsigned long last_run{0};
+
+private:
+    virtual bool ready_to_run(const unsigned long now) const {
+        if (interval_ms() == 0) {
+            return false;
+        }
+        if (now - last_run >= interval_ms()) {
+            return true;
+        }
+        return false;
+    };
 };
 
-// Standard static-interval task
-struct StaticTask final : Task {
-    StaticTask(void (*fn)(), unsigned long interval);
-
+class PowerTransitionTask final : public Task {
+public:
+    using Task::Task;
     void run() override;
 
 private:
-    void (*fn_)() = nullptr;
+    Battery battery;
+    SystemState& system_state = SystemState::get();
+
+    bool ready_to_run(const unsigned long now) const override { return true; }
 };
 
-// Telemetry task with dynamic interval
-struct TelemetryTask final : Task {
+class SerialPortOutTask final : public Task {
+public:
     void run() override;
     unsigned long interval_ms() const override;
+private:
+    CmdExec& cmd_exec = CmdExec::get();
 };
 
-// Declarations of task functions
-void task_exec_cmd();
-void task_remote_service();
-void task_remote_update();
-void task_telemetry_update();
+class RemoteInputTask final : public Task {
+public:
+    using Task::Task;
+    void run() override;
+private:
+    RemoteHigh& remote_high = RemoteHigh::get();
+};
+
+class RemoteOutputTask final : public Task {
+public:
+    using Task::Task;
+    void run() override;
+private:
+    RemoteHigh& remote_high = RemoteHigh::get();
+    SystemState& system_state = SystemState::get();
+};
+
+class SerialPortInTask final : public Task {
+public:
+    using Task::Task;
+    void run() override;
+private:
+    CmdExec& cmd_exec = CmdExec::get();
+};
