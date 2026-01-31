@@ -1,7 +1,7 @@
 #include "cmd_exec.h"
 #include "command.h"
 #include "measure/stack.h"
-#include "remote/remote_high.h"
+#include "remote/remote_out.h"
 
 void CmdExec::exec() {
     auto resp_buf = usb_transport.get_resp_buf();
@@ -54,7 +54,7 @@ void CmdExec::exec() {
                     identify_store->init();
                 }
                 else {
-                    RemoteHigh& menu = RemoteHigh::get();
+                    RemoteOut& menu = RemoteOut::get();
                     identify_store->put(cmd->identify);
                     menu.synchronize();
                     menu.render();

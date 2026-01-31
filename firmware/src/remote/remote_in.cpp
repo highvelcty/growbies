@@ -1,22 +1,17 @@
 #include "nvm/nvm.h"
-#include "remote_low.h"
+#include "remote_in.h"
 
-// Define the static member
-RemoteLow* RemoteLow::instance = nullptr;
+static RemoteIn remote_in_singleton;
+RemoteIn* RemoteIn::instance = &remote_in_singleton;
 
-RemoteLow::RemoteLow()
-{
-    // Makes member data accessible via ISR
-    instance = this;
-}
-
-void RemoteLow::begin() {
+void RemoteIn::begin() {
     // configure button pins for floating input
     pinMode(BUTTON_0_PIN, INPUT);
     pinMode(BUTTON_1_PIN, INPUT);
     // configure button pins for interrupt during runtime
-    attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), RemoteLow::wakeISR0, RISING);
-    attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), RemoteLow::wakeISR1, RISING);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), RemoteIn::wakeISR0, RISING);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), RemoteIn::wakeISR1, RISING);
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
     // configure button pins to wake from deep sleep
     esp_deep_sleep_enable_gpio_wakeup(1ULL << digitalPinToGPIONumber(BUTTON_0_PIN) |
                                       1ULL << digitalPinToGPIONumber(BUTTON_1_PIN),
@@ -25,7 +20,7 @@ void RemoteLow::begin() {
     instance->debounce_time = millis() + BUTTON_DEBOUNCE_MS;
 }
 
-BUTTON RemoteLow::service() {
+BUTTON RemoteIn::service() {
     auto button_pressed = BUTTON::NONE;
     const unsigned long now = millis();
 
@@ -73,7 +68,7 @@ BUTTON RemoteLow::service() {
     return button_pressed;
 }
 
-void IRAM_ATTR RemoteLow::wakeISR0() {
+void IRAM_ATTR RemoteIn::wakeISR0() {
     if (instance->arm_isr) {
         if (digitalRead(BUTTON_1_PIN)) {
             instance->last_button_pressed = EVENT::DIRECTION_1;
@@ -90,7 +85,7 @@ void IRAM_ATTR RemoteLow::wakeISR0() {
     }
 }
 
-void IRAM_ATTR RemoteLow::wakeISR1() {
+void IRAM_ATTR RemoteIn::wakeISR1() {
     if (instance->arm_isr) {
         if (digitalRead(BUTTON_0_PIN)) {
             instance->last_button_pressed = EVENT::DIRECTION_1;

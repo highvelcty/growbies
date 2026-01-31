@@ -1,52 +1,50 @@
-#include "remote_high.h"
+#include "remote_out.h"
 #include "system_state.h"
 
 // initialize static singleton pointer
-RemoteHigh* RemoteHigh::instance = nullptr;
+RemoteOut* RemoteOut::instance = nullptr;
 
-RemoteHigh& RemoteHigh::get() {
+RemoteOut& RemoteOut::get() {
     if (!instance) {
-        instance = new RemoteHigh();
+        instance = new RemoteOut();
     }
     return *instance;
 }
 
-RemoteHigh::RemoteHigh() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {
+RemoteOut::RemoteOut() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {
     menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::TARE_0));
     menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::TARE_1));
     menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::TARE_2));
     menu_root.push_back(std::make_shared<TemperatureDrawing>(display, "Temperature"));
     menu_root.push_back(std::make_shared<ConfigurationMenu>(display));
-
     menu_path = {0};  // Select first top-level item
-
 }
 
-void RemoteHigh::begin() {
+void RemoteOut::begin() {
     // Order is important, the display must be initialized before attaching interrupts.
     display.begin();
     synchronize();
     render();
 
-    RemoteLow::begin();
+    // Attaching interrupts
+    RemoteIn::begin();
 }
 
-void RemoteHigh::display_power_save(const bool on_off) {
+void RemoteOut::display_power_save(const bool on_off) {
     display.setPowerSave(on_off);
 }
 
-bool RemoteHigh::service() {
-    const BUTTON button_pressed = remote.service();
+bool RemoteOut::service(const BUTTON button_pressed) {
+    if (button_pressed == BUTTON::NONE) {
+        return false;
+    }
+
     auto& system_state = SystemState::get();
 
     // Wake
-    if (button_pressed != BUTTON::NONE) {
-        system_state.notify_activity(millis());
-        if (!system_state.is_active()) {
-            display.setPowerSave(false);
-            system_state.set_active();
-            return true;
-        }
+    if (system_state.state() != PowerState::ACTIVE) {
+        system_state.set_next_state(PowerState::ACTIVE);
+        return true;
     }
 
     // Execute
@@ -60,16 +58,15 @@ bool RemoteHigh::service() {
         select();
     }
 
-    if (button_pressed != BUTTON::NONE) {
-        system_state.notify_activity(millis());
-    }
-    return button_pressed != BUTTON::NONE;
+    system_state.notify_activity(millis());
+
+    return true;
 }
 
 // -----------------------------------------------------------------------------
 // Menu selection
 // -----------------------------------------------------------------------------
-const std::vector<std::shared_ptr<BaseMenu>>* RemoteHigh::level_from_path() const {
+const std::vector<std::shared_ptr<BaseMenu>>* RemoteOut::level_from_path() const {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
 
 
@@ -82,7 +79,7 @@ const std::vector<std::shared_ptr<BaseMenu>>* RemoteHigh::level_from_path() cons
     return level;
 }
 
-void RemoteHigh::up() {
+void RemoteOut::up() {
     if (menu_path.empty()) return;
     auto* level = level_from_path();
     if (!level) return;
@@ -103,7 +100,7 @@ void RemoteHigh::up() {
 // -----------------------------------------------------------------------------
 // Move selection down
 // -----------------------------------------------------------------------------
-void RemoteHigh::down() {
+void RemoteOut::down() {
     if (menu_path.empty()) return;
     auto* level = level_from_path();
     if (!level || level->empty()) return;
@@ -121,7 +118,7 @@ void RemoteHigh::down() {
 // -----------------------------------------------------------------------------
 // Select / descend or execute action
 // -----------------------------------------------------------------------------
-void RemoteHigh::select() {
+void RemoteOut::select() {
     if (menu_path.empty()) return;
 
     auto* level = level_from_path();
@@ -144,7 +141,7 @@ void RemoteHigh::select() {
     render();
 }
 
-void RemoteHigh::render() {
+void RemoteOut::render() {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
     display.clear();
 
@@ -159,7 +156,7 @@ void RemoteHigh::render() {
     }
 }
 
-void RemoteHigh::synchronize() const {
+void RemoteOut::synchronize() const {
     std::vector<std::shared_ptr<BaseMenu>> stack;
 
     // Start with the root nodes
@@ -179,7 +176,7 @@ void RemoteHigh::synchronize() const {
     }
 }
 
-void RemoteHigh::update() const {
+void RemoteOut::update() const {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
 
     for (const unsigned int idx : menu_path) {

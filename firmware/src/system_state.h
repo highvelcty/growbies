@@ -1,16 +1,18 @@
 #pragma once
 
+enum class PowerState : uint8_t {
+    INITIAL,                    // Initial state following reset
+    ACTIVE,                     // Display on, normal operation
+    WAKEFUL_SLEEP,              // MCU in deep sleep, sensor input polling
+    DEEP_SLEEP,                 // MCU in deep sleep
+};
+
+
 // -----------------------------------------------------------------------------
 // System power / activity state
 // -----------------------------------------------------------------------------
 class SystemState {
 public:
-    enum class PowerState : uint8_t {
-        ACTIVE,        // Display on, normal operation
-        IDLE,          // Display powered down, MCU awake
-        DEEP_SLEEP     // MCU in deep sleep
-    };
-
     // Singleton access
     static SystemState& get() {
         static SystemState instance;
@@ -21,60 +23,46 @@ public:
     SystemState(const SystemState&) = delete;
     SystemState& operator=(const SystemState&) = delete;
 
-    // -------------------------------------------------------------------------
-    // State queries
-    // -------------------------------------------------------------------------
-    PowerState power_state() const {
+    PowerState next_state() const {
+        return next_state_;
+    }
+
+    PowerState state() const {
         return state_;
     }
 
-    bool is_active() const {
-        return state_ == PowerState::ACTIVE;
+    void set_state(const PowerState new_state) {
+        state_ = new_state;
     }
 
-    bool is_idle() const {
-        return state_ == PowerState::IDLE;
+    void set_next_state(const PowerState new_state) {
+        next_state_ = new_state;
     }
 
-    bool is_deep_sleep() const {
-        return state_ == PowerState::DEEP_SLEEP;
+    bool ready_for_tasks() const {
+        return not transitioning() and state_ == PowerState::ACTIVE;
     }
 
-    // -------------------------------------------------------------------------
-    // Activity / timing
-    // -------------------------------------------------------------------------
+    bool transitioning() const {
+        return state_ != next_state_;
+    }
+
     void notify_activity(const uint32_t now_ms) {
         last_activity_ms_ = now_ms;
     }
 
     uint32_t idle_time_ms(const uint32_t now_ms) const {
-        if (last_activity_ms_ == 0) {
-            return now_ms;
-        }
         return now_ms - last_activity_ms_;
-    }
-
-    // -------------------------------------------------------------------------
-    // State transitions (called by sleep task / policy code)
-    // -------------------------------------------------------------------------
-    void set_idle() {
-        state_ = PowerState::IDLE;
-    }
-
-    void set_deep_sleep() {
-        state_ = PowerState::DEEP_SLEEP;
-    }
-
-    void set_active() {
-        state_ = PowerState::ACTIVE;
     }
 
 private:
     SystemState()
-        : state_(PowerState::ACTIVE),
+        : state_(PowerState::INITIAL),
+          next_state_(PowerState::ACTIVE),
           last_activity_ms_(0)
     {}
 
     PowerState state_;
+    PowerState next_state_;
     uint32_t last_activity_ms_;
 };

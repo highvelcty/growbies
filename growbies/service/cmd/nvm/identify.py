@@ -7,7 +7,8 @@ from growbies.cli.nvm.identify import Param
 from growbies.db.engine import get_db_engine
 from growbies.device.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,
                                  SetIdentifyDeviceCmd2, SetIdentifyDeviceCmd3,
-                                 SetIdentifyDeviceCmd4, SetIdentifyDeviceCmd5, SetIdentifyDeviceCmd6)
+                                 SetIdentifyDeviceCmd4, SetIdentifyDeviceCmd5,
+                                 SetIdentifyDeviceCmd6, SetIdentifyDeviceCmd7)
 from growbies.device.common.identify import TNvmIdentify, Identify
 from growbies.utils.types import DeviceID
 from growbies.worker.pool import get_pool
@@ -72,8 +73,10 @@ def execute(cmd: ServiceCmd) -> Optional[TNvmIdentify]:
         cmd = SetIdentifyDeviceCmd4()
     elif ident.hdr.version == SetIdentifyDeviceCmd5.VERSION:
         cmd = SetIdentifyDeviceCmd5()
-    elif ident.hdr.version >= SetIdentifyDeviceCmd6.VERSION:
+    elif ident.hdr.version == SetIdentifyDeviceCmd6.VERSION:
         cmd = SetIdentifyDeviceCmd6()
+    elif ident.hdr.version >= SetIdentifyDeviceCmd7.VERSION:
+        cmd = SetIdentifyDeviceCmd7()
     cmd.identify = ident
     _ = worker.cmd(cmd)
     return None

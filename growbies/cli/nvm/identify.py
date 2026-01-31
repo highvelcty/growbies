@@ -78,3 +78,7 @@ def make_cli(parser: ArgumentParser):
                         default=None, type=float,
                         help='The interval, in seconds, to enter low power sleep mode. 0.0 means '
                              '"do not sleep".')
+    parser.add_argument(f'--{id_mod.Identify.Field.AUTO_WAKE_INTERVAL.public_name}',
+                        default=None, type=float,
+                        help='The interval, in seconds, to poll for mass change for the auto-wake '
+                             'feature.')

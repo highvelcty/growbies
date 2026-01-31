@@ -51,7 +51,7 @@ bool AEWMABuffer::add(const float value) {
     if (!aewma_buffer_initialized) {
         aewma_buffer_last_value = value;
         aewma_buffer_initialized = true;
-        return false;
+        return true;
     }
 
     error = fabsf(value - aewma_buffer_last_value);
@@ -62,7 +62,6 @@ bool AEWMABuffer::add(const float value) {
     return error >= event_threshold;
 }
 
-// ReSharper disable once CppMemberFunctionMayBeStatic
 float AEWMABuffer::value() {
     return aewma_buffer_initialized ? aewma_buffer_last_value : 0.0f;
 }

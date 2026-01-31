@@ -196,13 +196,12 @@ struct MassUnitsMenu final : BaseCfgMenu {
 struct MassDrawing final : BaseTelemetryDrawing {
     MassUnits units{};
     TareIdx tare_idx{};
+    SystemState& system_state = SystemState::get();
 
 
     MassDrawing(
         U8X8& display_,
-        const TareIdx tare_idx_,
-        const float grams_ = 0.0f,
-        const MassUnits requested_units_ = MassUnits::GRAMS
+        const TareIdx tare_idx_
     )
         : BaseTelemetryDrawing(
               display_,
@@ -212,7 +211,6 @@ struct MassDrawing final : BaseTelemetryDrawing {
                   std::make_shared<MassUnitsMenu>(display_),
               }), tare_idx(tare_idx_)
     {
-        _convert_units(grams_, requested_units_);
     }
 
     void draw(const bool selected) override {
@@ -232,8 +230,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
         const auto new_units = identify_store->view()->payload.mass_units;
 
         if (mass_buffer().add(new_value)) {
-            auto& system_state = SystemState::get();
-            system_state.notify_activity(millis());
+        system_state.notify_activity(millis());
         }
 
         if (_convert_units(mass_buffer().value(), new_units)) {

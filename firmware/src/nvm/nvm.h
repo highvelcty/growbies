@@ -183,6 +183,10 @@ struct Identify {
     uint32_t sleep_timeout_ms() const {
         return float_to_uint32_t(sleep_timeout);
     }
+
+    uint32_t auto_wake_interval_ms() const {
+        return float_to_uint32_t(auto_wake_interval);
+    }
 };
 static_assert(sizeof(Identify) == 127, "unexpected structure size");
 

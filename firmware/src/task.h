@@ -2,7 +2,7 @@
 
 #include "protocol/cmd_exec.h"
 #include "measure/battery.h"
-#include "remote/remote_high.h"
+#include "remote/remote_out.h"
 #include "system_state.h"
 
 class Task {
@@ -14,7 +14,7 @@ public:
     virtual void run() = 0;
     virtual unsigned long interval_ms() const { return interval_ms_; }
 
-    void tick(const unsigned long now) {
+    virtual void tick(const unsigned long now) {
         if (ready_to_run(now)) {
             run();
             last_run = now;
@@ -24,8 +24,8 @@ public:
 protected:
     unsigned long interval_ms_{0};
     unsigned long last_run{0};
+    SystemState& system_state = SystemState::get();
 
-private:
     virtual bool ready_to_run(const unsigned long now) const {
         if (interval_ms() == 0) {
             return false;
@@ -37,16 +37,35 @@ private:
     };
 };
 
+class AutoWakeTask final : public Task {
+public:
+    void run() override;
+    void run_on_wake() const;
+    unsigned long interval_ms() const override;
+
+protected:
+    bool ready_to_run(const unsigned long now) const override{
+        if (system_state.next_state() == PowerState::INITIAL) {
+            return true;
+        }
+        return Task::ready_to_run(now);
+    }
+
+private:
+    MeasurementStack& measurement_stack = MeasurementStack::get();
+};
+
 class PowerTransitionTask final : public Task {
 public:
     using Task::Task;
     void run() override;
 
+protected:
+    bool ready_to_run(const unsigned long now) const override { return true; }
+
 private:
     Battery battery;
-    SystemState& system_state = SystemState::get();
-
-    bool ready_to_run(const unsigned long now) const override { return true; }
+    RemoteOut& remote_out = RemoteOut::get();
 };
 
 class SerialPortOutTask final : public Task {
@@ -54,24 +73,25 @@ public:
     void run() override;
     unsigned long interval_ms() const override;
 private:
+    Battery battery;
     CmdExec& cmd_exec = CmdExec::get();
 };
 
-class RemoteInputTask final : public Task {
+class RemoteServiceTask final : public Task {
 public:
     using Task::Task;
     void run() override;
 private:
-    RemoteHigh& remote_high = RemoteHigh::get();
+    RemoteIn& remote_in = RemoteIn::get();
+    RemoteOut& remote_out = RemoteOut::get();
 };
 
-class RemoteOutputTask final : public Task {
+class RemoteUpdateTask final : public Task {
 public:
     using Task::Task;
     void run() override;
 private:
-    RemoteHigh& remote_high = RemoteHigh::get();
-    SystemState& system_state = SystemState::get();
+    RemoteOut& remote_out = RemoteOut::get();
 };
 
 class SerialPortInTask final : public Task {
@@ -79,5 +99,6 @@ public:
     using Task::Task;
     void run() override;
 private:
+    Battery battery;
     CmdExec& cmd_exec = CmdExec::get();
 };

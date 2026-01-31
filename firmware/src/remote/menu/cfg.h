@@ -4,12 +4,12 @@
 #include <cstdio>
 #include <memory>
 #include <U8x8lib.h>
-#include "esp_sleep.h"
 
 #include "base.h"
 #include "constants.h"
 #include "measure/battery.h"
 #include "nvm/nvm.h"
+#include "system_state.h"
 
 struct ContrastMenuLeaf final : BaseIntMenuLeaf {
     static constexpr uint8_t INC = 15;
@@ -206,18 +206,15 @@ struct SleepMenuLeaf final : BaseStrMenuLeaf {
 
     void on_select() override {
         if (doit) {
-            display.setPowerSave(true);
-
-            // wait for buttons released and debounce
-            for (int i = 0; i < 10; ++i) {
-                if (digitalRead(BUTTON_0_PIN) == LOW && digitalRead(BUTTON_1_PIN) == LOW) {
-                    break;
-                }
-                delay(10);
-            }
-            delay(BUTTON_DEBOUNCE_MS);
-
-            esp_deep_sleep_start();
+            // // wait for buttons released and debounce
+            // for (int i = 0; i < 10; ++i) {
+            //     if (digitalRead(BUTTON_0_PIN) == LOW && digitalRead(BUTTON_1_PIN) == LOW) {
+            //         break;
+            //     }
+            //     delay(10);
+            // }
+            // delay(100);
+            SystemState::get().set_next_state(PowerState::DEEP_SLEEP);
         }
     }
 

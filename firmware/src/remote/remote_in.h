@@ -16,10 +16,9 @@ enum class BUTTON : uint8_t {
     SELECT = 3
 };
 
-class RemoteLow {
+class RemoteIn {
 public:
-    RemoteLow();
-
+    static RemoteIn& get() { return *instance; }
     static void begin();
 
     BUTTON service();
@@ -27,7 +26,7 @@ public:
 
 private:
     // Pointer used by ISR to touch the singleton
-    static RemoteLow* instance;
+    static RemoteIn* instance;
 
     unsigned long debounce_time = 0;
     unsigned long hold_start_time = 0;

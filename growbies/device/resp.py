@@ -6,7 +6,7 @@ import logging
 from .common import  BaseStructure, BaseUnion, PacketHdr, TBaseStructure
 from .common.calibration import NvmCalibration
 from .common.identify import (NvmIdentify1, NvmIdentify2, NvmIdentify3, NvmIdentify4,
-                              NvmIdentify5, NvmIdentify6)
+                              NvmIdentify5, NvmIdentify6, NvmIdentify7)
 from .common.log import DeviceLog
 from .common.read import DataPoint
 from .common.tare import NvmTare
@@ -54,6 +54,7 @@ class DeviceRespOp(IntEnum):
                 else:
                     _raise_version_error(hdr)
             elif hdr.type == cls.IDENTIFY:
+                print(f'emey was here {hdr.version}')
                 if hdr.version == 1:
                     resp = NvmIdentify1.from_buffer(resp)
                 elif hdr.version == 2:
@@ -64,8 +65,10 @@ class DeviceRespOp(IntEnum):
                     resp = NvmIdentify4.from_buffer(resp)
                 elif hdr.version == 5:
                     resp = NvmIdentify5.from_buffer(resp)
-                elif hdr.version >= 6:
+                elif hdr.version == 6:
                     resp = NvmIdentify6.from_buffer(resp)
+                elif hdr.version >= 7:
+                    resp = NvmIdentify7.from_buffer(resp)
                 else:
                     _raise_version_error(hdr)
             elif hdr.type == cls.LOG:

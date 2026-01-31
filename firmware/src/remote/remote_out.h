@@ -4,24 +4,24 @@
 #include <memory>
 
 #include "menu/menu.h"
-#include "remote_low.h"
+#include "remote_in.h"
 
 
-class RemoteHigh {
+class RemoteOut {
 public:
     // Delete copy/move constructors to enforce singleton
-    RemoteHigh(const RemoteHigh&) = delete;
-    RemoteHigh& operator=(const RemoteHigh&) = delete;
-    RemoteHigh(RemoteHigh&&) = delete;
-    RemoteHigh& operator=(RemoteHigh&&) = delete;
+    RemoteOut(const RemoteOut&) = delete;
+    RemoteOut& operator=(const RemoteOut&) = delete;
+    RemoteOut(RemoteOut&&) = delete;
+    RemoteOut& operator=(RemoteOut&&) = delete;
     // Access the application-wide singleton instance
-    static RemoteHigh& get();
+    static RemoteOut& get();
 
-    RemoteHigh();
+    RemoteOut();
     void begin();
 
     void display_power_save(bool on_off);
-    bool service();
+    bool service(BUTTON button_pressed);
     void up();
     void down();
     void select();
@@ -29,15 +29,13 @@ public:
     void synchronize() const;
     void update() const;
 
-
 private:
     U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
-    RemoteLow remote;
 
     std::vector<size_t> menu_path{0};  // Index path up the tree
     std::vector<std::shared_ptr<BaseMenu>> menu_root;
     const std::vector<std::shared_ptr<BaseMenu>>* level_from_path() const;
 
     // internal singleton pointer
-    static RemoteHigh* instance;
+    static RemoteOut* instance;
 };
