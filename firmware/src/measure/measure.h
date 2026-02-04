@@ -26,27 +26,27 @@ public:
         const size_t median_window_size)
         : type_(type),
           median_filter_(median_window_size),
-          last_value_(0.0f)
+          value_(0.0f)
     {}
 
 
     void reset() {
         median_filter_.reset();
-        last_value_ = 0.0f;
+        value_ = 0.0f;
     }
 
     SensorType type() const noexcept { return type_; }
 
     void update(const float raw_value) {
-        last_value_ = median_filter_.update(raw_value);
+        value_ = median_filter_.update(raw_value);
     }
 
-    float value() const noexcept { return last_value_; }
+    float value() const noexcept { return value_; }
 
 private:
     SensorType type_;
     SlidingMedianFilter median_filter_;
-    float last_value_;
+    float value_;
 };
 
 // -------------------------------

@@ -278,9 +278,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
                     converted_units = MassUnits::KILOGRAMS;
                     converted_mass /= GRAMS_PER_KG;
                 }
-                else {
-                    break;
-                }
+                break;
             }
             case MassUnits::OUNCES: {
                 precision = 2;
@@ -289,9 +287,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
                     converted_units = MassUnits::POUNDS;
                     converted_mass /= OUNCES_PER_LB;
                 }
-                else {
-                    break;
-                }
+                break;
             }
             case MassUnits::POUNDS:
             case MassUnits::KILOGRAMS: {

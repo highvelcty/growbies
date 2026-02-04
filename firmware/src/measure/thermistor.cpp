@@ -13,7 +13,11 @@ void Thermistor::begin() const {
 
 float Thermistor::read_voltage() const {
 #if defined(ARDUINO_ARCH_ESP32)
-    return static_cast<float>(analogReadMilliVolts(analog_pin_) / 1000.0);
+    const auto vout = static_cast<float>(analogReadMilliVolts(analog_pin_) / 1000.0);
+    if (vout < 0.001f || vout > (THERMISTOR_SUPPLY_VOLTAGE - 0.001f)) {
+        return NAN; // Safely bail out
+    }
+    return vout;
 #else
     const float adc_max = 1023.0f;
     const int adc_raw = analogRead(analog_pin_);
@@ -25,6 +29,9 @@ float Thermistor::read_voltage() const {
 float Thermistor::sample() const {
     // Thermistor on the top of the resistor divider
     const float vout = read_voltage();
+    if (isnan(vout)) {
+        return DEFAULT_TEMPERATURE_CELSIUS;
+    }
     const float r_therm =
         (THERMISTOR_SERIES_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
         / vout;
@@ -40,6 +47,9 @@ float Thermistor::sample() const {
 float Thermistor::sample_beta() const {
     // Thermistor on the top of the resistor divider
     const float vout = read_voltage();
+    if (isnan(vout)) {
+        return DEFAULT_TEMPERATURE_CELSIUS;
+    }
     const float r_therm =
         (THERMISTOR_SERIES_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
         / vout;
@@ -66,16 +76,7 @@ std::vector<float> MultiThermistor::sample() const {
     std::vector<float> readings;
     readings.reserve(devices_.size());
     for (const auto* therm : devices_) {
-        readings.push_back(therm ? therm->sample() : NAN);
-    }
-    return readings;
-}
-
-    std::vector<float> MultiThermistor::sample_beta() const {
-    std::vector<float> readings;
-    readings.reserve(devices_.size());
-    for (const auto* therm : devices_) {
-        readings.push_back(therm ? therm->sample_beta() : NAN);
+        readings.push_back(therm->sample());
     }
     return readings;
 }

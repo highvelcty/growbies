@@ -18,7 +18,7 @@ void MeasurementStack::update() const {
     aggregate_mass_->reset();
     aggregate_temp_->reset();
 
-    multi_hx711_.power_on();
+    HX711::power_on();
     for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
         ready = multi_hx711_.wait_ready();
 
@@ -32,7 +32,7 @@ void MeasurementStack::update() const {
             break;
         }
     }
-    multi_hx711_.power_off();
+    HX711::power_off();
     if (!ready) return;
 
     // Update temperature before mass as mass is a function of temperature.

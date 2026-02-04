@@ -25,6 +25,7 @@ constexpr float STEINHART_HART_C = 1.731869483E-7f;
 #endif
 
 class Thermistor {
+    static constexpr float DEFAULT_TEMPERATURE_CELSIUS = 22.0;
 public:
     explicit Thermistor(const uint8_t analog_pin) : analog_pin_(analog_pin) {}
 
@@ -59,9 +60,6 @@ public:
 
     // Sample all thermistors (Steinhart–Hart method)
     std::vector<float> sample() const;
-
-    // Sample all thermistors (Beta method)
-    std::vector<float> sample_beta() const;
 
 private:
     std::vector<Thermistor*> devices_;

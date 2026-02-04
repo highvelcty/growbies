@@ -7,6 +7,8 @@
 
 namespace growbies {
 
+static portMUX_TYPE hx711Mux = portMUX_INITIALIZER_UNLOCKED;
+
 // ---------------- HX711 ----------------
 void HX711::power_off() {
     digitalWrite(HX711_SCK_PIN, HIGH);
@@ -70,6 +72,8 @@ std::vector<float> MultiHX711::sample() const{
     uint32_t gpio_in_reg = 0;
 #endif
 
+    // time critical section
+    portENTER_CRITICAL(&hx711Mux);
     // Read bit by bit in parallel. Most significant bit first.
     for (uint8_t ii = 0; ii < HX711_DAC_BITS; ++ii) {
         delayMicroseconds(HX711_BIT_BANG_DELAY);
@@ -94,7 +98,6 @@ std::vector<float> MultiHX711::sample() const{
             const bool a_bit = static_cast<bool>(gpio_in_reg & get_HX711_dout_port_bit(jj));
             readings[jj] = (readings[jj] << 1) | a_bit;
         }
-
     }
 
     // Set gain for next reading (channel A, 128x gain)
@@ -104,6 +107,8 @@ std::vector<float> MultiHX711::sample() const{
         delayMicroseconds(HX711_BIT_BANG_DELAY);
         digitalWrite(HX711_SCK_PIN, LOW);
     }
+    portEXIT_CRITICAL(&hx711Mux);
+
 
     for (size_t kk = 0; kk < readings.size(); ++kk) {
         const uint32_t raw = readings[kk];

@@ -46,7 +46,10 @@ AEWMABuffer::AEWMABuffer(const float alpha_threshold,
     : alpha_threshold(alpha_threshold),
       event_threshold(event_threshold) {}
 
-bool AEWMABuffer::add(const float value) {
+bool AEWMABuffer::add(const float value) const {
+    if (isnan(value)) {
+        return false;
+    }
 
     if (!aewma_buffer_initialized) {
         aewma_buffer_last_value = value;
@@ -54,26 +57,26 @@ bool AEWMABuffer::add(const float value) {
         return true;
     }
 
-    error = fabsf(value - aewma_buffer_last_value);
-    const float alpha = compute_alpha();
-    aewma_buffer_last_value =
-        alpha * value + (1.0f - alpha) * aewma_buffer_last_value;
+    const float error = fabsf(value - aewma_buffer_last_value);
+    const float alpha = compute_alpha(error);
+    aewma_buffer_last_value = alpha * value + (1.0f - alpha) * aewma_buffer_last_value;
 
     return error >= event_threshold;
 }
 
-float AEWMABuffer::value() {
+// ReSharper disable once CppMemberFunctionMayBeStatic
+float AEWMABuffer::value() { // NOLINT(*-convert-member-functions-to-static)
     return aewma_buffer_initialized ? aewma_buffer_last_value : 0.0f;
 }
 
-void AEWMABuffer::reset() {
-    error = 0.0f;
+// ReSharper disable once CppMemberFunctionMayBeStatic
+void AEWMABuffer::reset() { // NOLINT(*-convert-member-functions-to-static)
     aewma_buffer_last_value = 0.0f;
     aewma_buffer_initialized = false;
 }
 
-float AEWMABuffer::compute_alpha() const {
-    if (error <= 0.0f) {
+float AEWMABuffer::compute_alpha(const float error) const {
+    if (error <= 0.0f or isnan(error)) {
         return ALPHA_MIN;
     }
 
