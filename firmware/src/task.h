@@ -68,16 +68,7 @@ private:
     RemoteOut& remote_out = RemoteOut::get();
 };
 
-class SerialPortOutTask final : public Task {
-public:
-    void run() override;
-    unsigned long interval_ms() const override;
-private:
-    Battery battery;
-    CmdExec& cmd_exec = CmdExec::get();
-};
-
-class RemoteServiceTask final : public Task {
+class RemoteTask final : public Task {
 public:
     using Task::Task;
     void run() override;
@@ -86,12 +77,13 @@ private:
     RemoteOut& remote_out = RemoteOut::get();
 };
 
-class RemoteUpdateTask final : public Task {
+class SerialPortOutTask final : public Task {
 public:
-    using Task::Task;
     void run() override;
+    unsigned long interval_ms() const override;
 private:
-    RemoteOut& remote_out = RemoteOut::get();
+    Battery battery;
+    CmdExec& cmd_exec = CmdExec::get();
 };
 
 class SerialPortInTask final : public Task {

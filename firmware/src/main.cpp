@@ -26,8 +26,7 @@ void loop() {
         new PowerTransitionTask(),  // Executed each loop
         new SerialPortInTask(10),   // Every 10ms
         new SerialPortOutTask(),    // Execution timing dependent upon NVM config
-        new RemoteServiceTask(50),  // Every 50ms
-        new RemoteUpdateTask(200),  // Every 200ms
+        new RemoteTask(200),        // Every 200ms
     };
 
     for (const auto task : tasks) {

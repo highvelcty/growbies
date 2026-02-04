@@ -41,7 +41,7 @@ public:
 
     bool add(float value);
 
-    float value();
+    static float value();
 
     void reset();
 

@@ -41,10 +41,10 @@ public:
     void add_device(HX711* hx);
 
     // Power off all devices
-    void power_off() const;
+    static void power_off();
 
     // Power on all devices
-    void power_on() const;
+    static void power_on();
 
     // Read all HX711s and return vector of raw values
     std::vector<float> sample() const;
