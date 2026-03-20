@@ -900,6 +900,8 @@ def plot_mass_vs_temp(session: "Session"):
 
 
 def plot_mass_cal(session: "Session"):
+    mad_k_val = 7
+
     engine = get_db_engine().session
     datapoints = engine.get_datapoints(session.id)
 
@@ -933,7 +935,40 @@ def plot_mass_cal(session: "Session"):
         sort_idx = np.argsort(ref_mass)
         ref_mass_sorted = ref_mass[sort_idx]
         adc_sorted = adc[sort_idx]
-        sensor_temp_sorted = sensor_temp[sort_idx]
+
+        # --- Group by reference mass ---
+        unique_masses = np.unique(ref_mass)
+        grouped_adc = []
+        grouped_ref = []
+        for m in unique_masses:
+            mask = ref_mass == m  # select all points with this reference mass
+            adc_group = adc[mask]  # ADC values in this group
+            ref_group = ref_mass[mask]  # all equal to m
+            grouped_adc.append(adc_group)
+            grouped_ref.append(ref_group)
+
+        # --- MAD filtering per reference mass group ---
+        adc_kept = []  # ADC points kept after MAD (for fitting / green dots)
+        ref_kept = []  # corresponding reference masses
+        adc_filtered = []  # ADC points rejected by MAD (for red X)
+        ref_filtered = []  # corresponding reference masses
+
+        for adc_group, ref_group in zip(grouped_adc, grouped_ref):
+            mask_keep = mad_filter(adc_group, k=mad_k_val)
+
+            # Keep points
+            adc_kept.append(adc_group[mask_keep])
+            ref_kept.append(ref_group[mask_keep])
+
+            # Filtered (outliers)
+            adc_filtered.append(adc_group[~mask_keep])
+            ref_filtered.append(ref_group[~mask_keep])
+
+        # Flatten lists for later plotting
+        adc_kept = np.concatenate(adc_kept)
+        ref_kept = np.concatenate(ref_kept)
+        adc_filtered = np.concatenate(adc_filtered)
+        ref_filtered = np.concatenate(ref_filtered)
 
         # ============================================================
         # CALIBRATION MODEL
@@ -943,13 +978,24 @@ def plot_mass_cal(session: "Session"):
         #
         # This matches firmware usage EXACTLY.
         # ============================================================
+        # To view the unfiltered
+        #
+        # X = np.vstack([
+        #     np.ones_like(adc_sorted),
+        #     adc_sorted,
+        #     adc_sorted ** 2
+        # ]).T
+        #
+        # coeffs, residuals, rank, s = np.linalg.lstsq(X, ref_mass_sorted, rcond=None)
+
         X = np.vstack([
-            np.ones_like(adc_sorted),
-            adc_sorted,
-            adc_sorted ** 2
+            np.ones_like(adc_kept),
+            adc_kept,
+            adc_kept ** 2
         ]).T
 
-        coeffs, residuals, rank, s = np.linalg.lstsq(X, ref_mass_sorted, rcond=None)
+        coeffs, residuals, rank, s = np.linalg.lstsq(X, ref_kept, rcond=None)
+
         a0, a1, a2 = coeffs
 
         # Predicted mass (grams) from ADC
@@ -997,6 +1043,18 @@ def plot_mass_cal(session: "Session"):
         # Residuals on secondary axis
         ax4 = ax3.twinx()
         ax4.plot(ref_mass_sorted, residuals_array, 'm.-', label='Residuals (g)')
+
+        # --- Plot MAD filtered points ---
+        if len(ref_filtered) > 0:
+            # Predicted mass of filtered points
+            mass_pred_filtered = a0 + a1 * adc_filtered + a2 * adc_filtered ** 2
+            residual_filtered = ref_filtered - mass_pred_filtered
+
+            # Red X on predicted mass and residual plot with combined legend
+            ax3.scatter(ref_filtered, mass_pred_filtered, color='red', marker='x', s=50,
+                        label=f'MAD outlier (k={mad_k_val})')
+            ax4.scatter(ref_filtered, residual_filtered, color='red', marker='x', s=50)
+
         for s, style in zip([sigma1, sigma2, sigma3], ['--', ':', '-.']):
             ax4.axhline(s, color='gray', linestyle=style, linewidth=0.8)
             ax4.axhline(-s, color='gray', linestyle=style, linewidth=0.8)
@@ -1027,6 +1085,21 @@ def plot_mass_cal(session: "Session"):
 
         fig.tight_layout()
         plt.show()
+
+def mad_filter(to_be_filtered, k=2.5):
+    """
+    Return a boolean mask of points within k*MAD of the median, where MAD means "Median Absolute
+    Deviation"
+
+    :param to_be_filtered: The data to be filtered
+    :param k: The number of sigmas beyond which data will be filtered.
+    """
+    med = np.median(to_be_filtered)
+    mad = np.median(np.abs(to_be_filtered - med))
+    if mad == 0:
+        return np.ones_like(to_be_filtered, dtype=bool)
+    sigma = 1.4826 * mad
+    return np.abs(to_be_filtered - med) <= k * sigma
 
 def plot_temperature_correction(session: "Session"):
     """
