@@ -31,9 +31,9 @@ def execute(cmd: ServiceCmd):
     # plot_residual_vs_corrected_mass(session)
     # plot_mass_vs_temp(session)
 
-    plot_mass_cal(session)
-    # plot_temperature_correction(session)
-    # plot_range_test(session)
+    # More heavily developed functions:
+    # plot_mass_cal(session)
+    plot_temperature_correction(session)
 
 def plot_mass_vs_time(session: Session):
     engine = get_db_engine().session
@@ -1267,108 +1267,6 @@ def plot_temperature_correction(session: "Session"):
 
     return all_coeffs
 
-def plot_range_test(session: 'Session'):
-    """
-    Plots the range test for an assembled scale.
-
-    Layout:
-      ┌─────────────────────────────────────────┐
-      │ Top: Mass vs Temperature                │
-      │      y1 = Mass, y2 = Residuals         │
-      ├─────────────────────────────────────────┤
-      │ Bottom: Mass & Temperature vs Time      │
-      │      y1 = Mass, y2 = Temperature       │
-      └─────────────────────────────────────────┘
-
-    Residuals = reference mass - measured mass - tare
-    Timestamps are shown in UTC with 'Z'.
-    """
-    session_engine = get_db_engine().session
-    tare_engine = get_db_engine().tare
-    datapoints = session_engine.get_datapoints(session.id)
-
-    if not datapoints:
-        raise ServiceCmdError(f"No datapoints found for session {session.id}")
-
-    timestamps, masses, ref_masses, temps, tares = [], [], [], [], []
-
-    for dp in datapoints:
-        if dp.ref_mass is not None and dp.mass < 17500:
-            tare_val = tare_engine.get(dp.tare_id).values[1]
-            timestamps.append(dp.timestamp)
-            masses.append(dp.mass - tare_val)
-            ref_masses.append(dp.ref_mass)
-            temps.append(dp.temperature)  # assembly-level temperature
-
-    timestamps = np.array(timestamps)
-    masses = np.array(masses)
-    ref_masses = np.array(ref_masses)
-    temps = np.array(temps)
-    residuals = ref_masses - masses
-
-    # ------------------------------------------------------------------
-    # Figure setup
-    # ------------------------------------------------------------------
-    fig, (ax_temp, ax_time) = plt.subplots(
-        2, 1, figsize=(14, 10), sharex=False, gridspec_kw={"height_ratios": [1, 1]}
-    )
-
-    # ------------------------------------------------------------------
-    # Top: Mass vs Temperature
-    # ------------------------------------------------------------------
-    ax_temp.plot(temps, masses, 'b.-', label='Mass (g)')
-    ax_temp.set_xlabel('Temperature (°C)')
-    ax_temp.set_ylabel('Mass (g)', color='tab:blue')
-    ax_temp.tick_params(axis='y', labelcolor='tab:blue')
-
-    ax_residual = ax_temp.twinx()
-    ax_residual.plot(temps, residuals, 'm.-', label='Residual (g)', alpha=0.6)
-    ax_residual.set_ylabel('Residual (g)', color='magenta')
-    ax_residual.tick_params(axis='y', labelcolor='magenta')
-
-    # Combine legends
-    lines1, labels1 = ax_temp.get_legend_handles_labels()
-    lines2, labels2 = ax_residual.get_legend_handles_labels()
-    ax_temp.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
-
-    ax_temp.set_title('Assembly: Mass & Residual vs Temperature')
-
-    # ------------------------------------------------------------------
-    # Bottom: Mass & Temperature vs Time
-    # ------------------------------------------------------------------
-    ax1 = ax_time
-    ax1.plot(timestamps, masses, 'b.-', label='Mass (g)')
-    ax1.set_xlabel('Time (UTC)')
-    ax1.set_ylabel('Mass (g)', color='tab:blue')
-    ax1.tick_params(axis='y', labelcolor='tab:blue')
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M:%SZ'))
-    plt.setp(ax1.get_xticklabels(), rotation=45, ha='right')
-
-    ax2 = ax1.twinx()
-    ax2.plot(timestamps, temps, 'r.-', label='Temperature (°C)')
-    ax2.set_ylabel('Temperature (°C)', color='tab:red')
-    ax2.tick_params(axis='y', labelcolor='tab:red')
-
-    # Combine legends
-    lines1, labels1 = ax1.get_legend_handles_labels()
-    lines2, labels2 = ax2.get_legend_handles_labels()
-    ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
-
-    ax1.set_title('Assembly: Mass & Temperature vs Time')
-
-    # ------------------------------------------------------------------
-    # Report tare value on figure (opposite horizontally from legends)
-    # ------------------------------------------------------------------
-    fig.text(
-        0.85, 0.95, f"Tare Value: {tare_val:.3f} g",
-        fontsize=12, bbox=dict(boxstyle='round', facecolor='white', alpha=0.8)
-    )
-
-    fig.tight_layout()
-    plt.show()
-
-
-
 def _cubic_fit(x: np.ndarray, y: np.ndarray):
     """
     Fits y = c0 + c1*x + c2*x^2 + c3*x^3
@@ -1400,3 +1298,4 @@ def _quadratic_fit(x: np.ndarray, y: np.ndarray) -> tuple[float, float, float, n
     a0, a1, a2 = coeffs
     y_pred = a0 + a1*x + a2*x**2
     residuals = y - y_pred
+    return a0, a1, a2, residuals

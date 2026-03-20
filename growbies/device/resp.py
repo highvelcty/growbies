@@ -54,7 +54,6 @@ class DeviceRespOp(IntEnum):
                 else:
                     _raise_version_error(hdr)
             elif hdr.type == cls.IDENTIFY:
-                print(f'emey was here {hdr.version}')
                 if hdr.version == 1:
                     resp = NvmIdentify1.from_buffer(resp)
                 elif hdr.version == 2:
