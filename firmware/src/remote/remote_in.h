@@ -1,12 +1,13 @@
 #pragma once
 
-#include "constants.h"
+constexpr int POWER_ON_DEBOUNCE_MS  = 50;
 
-enum class EVENT: int8_t {
-    NONE = -1,
-    SELECT = 0,
-    DIRECTION_0 = 1,
-    DIRECTION_1 = 2,
+// bitfield
+enum class EVENT: uint8_t {
+    NONE        = 0x00,
+    SELECT      = 0x01,
+    DIRECTION_0 = 0x02,
+    DIRECTION_1 = 0x03,
 };
 
 enum class BUTTON : uint8_t {
@@ -15,6 +16,10 @@ enum class BUTTON : uint8_t {
     DOWN = 2,
     SELECT = 3
 };
+// Allow bitwise OR for your enum class
+inline EVENT operator|(EVENT a, EVENT b) {
+    return static_cast<EVENT>(static_cast<uint8_t>(a) | static_cast<uint8_t>(b));
+}
 
 class RemoteIn {
 public:
@@ -28,14 +33,12 @@ private:
     // Pointer used by ISR to touch the singleton
     static RemoteIn* instance;
 
-    unsigned long debounce_time = 0;
-    unsigned long hold_start_time = 0;
-    unsigned long hold_delay = BUTTON_DEBOUNCE_MS * 10;
+    unsigned long power_on_debounce_ms = 0;
+    unsigned long hold_time_ms = 0;
+    unsigned long hold_interval_ms = 0;
 
     // volatile make this ISR-safe
-    volatile EVENT last_button_pressed = EVENT::NONE;
-    volatile EVENT hold_button = EVENT::NONE;
-    volatile bool arm_isr = true;
+    volatile EVENT button_event_bits = EVENT::NONE;
 
     static void wakeISR0();
     static void wakeISR1();

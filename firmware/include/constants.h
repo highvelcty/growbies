@@ -19,6 +19,7 @@ constexpr int MAX_SLIP_UNENCODED_PACKET_BYTES = (SLIP_OUT_BUF_ALLOC_BYTES / 2) -
 constexpr float INVALID_TEMPERATURE = 1234.5;
 constexpr float INVALID_MASS_SAMPLE_THRESHOLD_DAC = 10000;
 constexpr float INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC = 50;
+constexpr auto SMALL_DELAY_MS = 1;
 
 // Thermistor
 #if ARDUINO_ARCH_AVR
@@ -65,9 +66,6 @@ enum Pins : int {
     DOUT_2_PIN = D8,
     DOUT_1_PIN = D9,
     DOUT_0_PIN = D10,
-
-
-
 #endif
 };
 
@@ -77,15 +75,6 @@ typedef enum Unit : uint16_t {
     UNIT_MASS_DAC       = 0x0002,
     UNIT_CELSIUS        = 0x0008,
 } Units;
-
-constexpr auto DEFAULT_SAMPLES_PER_DATAPOINT = 7;
-constexpr auto WAIT_FOR_CMD_MILLIS = 100;
-constexpr uint32_t SLEEP_MS = 1000; // 1 second
-constexpr auto DELAY_INTERVAL_MS = 10;
-constexpr auto DEEP_SLEEP_USECS = SLEEP_MS * 1000;
-constexpr auto SMALL_DELAY_MS = 1;
-constexpr int BUTTON_DEBOUNCE_MS  = 50;
-constexpr int BUTTON_REREAD_COUNT =  7;
 
 inline int get_HX711_dout_pin(const SensorIdx_t sensor){
 #if HX711_PIN_CFG_0

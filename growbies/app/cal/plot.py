@@ -32,7 +32,7 @@ def execute(cmd: ServiceCmd):
     # plot_mass_vs_temp(session)
 
     # More heavily developed functions:
-    # plot_mass_cal(session)
+    plot_mass_cal(session)
     plot_temperature_correction(session)
 
 def plot_mass_vs_time(session: Session):
@@ -911,39 +911,21 @@ def plot_mass_cal(session: "Session"):
     max_sensors = len(datapoints[0].mass_sensors)
 
     for sensor_idx in range(max_sensors):
-        timestamps = []
-        adc = []
-        ref_mass = []
-        sensor_temp = []
-
-        for dp in datapoints:
-            if dp.mass_sensors[sensor_idx].ref_mass is not None:
-                timestamps.append(dp.timestamp)
-                adc.append(dp.mass_sensors[sensor_idx].mass)        # ADC reading
-                ref_mass.append(dp.mass_sensors[sensor_idx].ref_mass)  # grams
-                if len(dp.temperature_sensors) > 1:
-                    sensor_temp.append(dp.temperature_sensors[sensor_idx].temperature)
-                else:
-                    sensor_temp.append(dp.temperature_sensors[0].temperature)
-
-        timestamps = np.array(timestamps)
-        adc = np.array(adc, dtype=float)
-        ref_mass = np.array(ref_mass, dtype=float)
-        sensor_temp = np.array(sensor_temp, dtype=float)
+        timestamps, masses, ref_masses, temps = _extract_from_db(datapoints, sensor_idx)
 
         # --- Sort by reference mass (for plotting continuity only) ---
-        sort_idx = np.argsort(ref_mass)
-        ref_mass_sorted = ref_mass[sort_idx]
-        adc_sorted = adc[sort_idx]
+        sort_idx = np.argsort(ref_masses)
+        ref_mass_sorted = ref_masses[sort_idx]
+        adc_sorted = masses[sort_idx]
 
         # --- Group by reference mass ---
-        unique_masses = np.unique(ref_mass)
+        unique_masses = np.unique(ref_masses)
         grouped_adc = []
         grouped_ref = []
         for m in unique_masses:
-            mask = ref_mass == m  # select all points with this reference mass
-            adc_group = adc[mask]  # ADC values in this group
-            ref_group = ref_mass[mask]  # all equal to m
+            mask = ref_masses == m  # select all points with this reference mass
+            adc_group = masses[mask]  # ADC values in this group
+            ref_group = ref_masses[mask]  # all equal to m
             grouped_adc.append(adc_group)
             grouped_ref.append(ref_group)
 
@@ -954,7 +936,7 @@ def plot_mass_cal(session: "Session"):
         ref_filtered = []  # corresponding reference masses
 
         for adc_group, ref_group in zip(grouped_adc, grouped_ref):
-            mask_keep = mad_filter(adc_group, k=mad_k_val)
+            mask_keep = _mad_filter(adc_group, k=mad_k_val)
 
             # Keep points
             adc_kept.append(adc_group[mask_keep])
@@ -1017,13 +999,13 @@ def plot_mass_cal(session: "Session"):
 
         # --- Subplot 1: ADC & Temperature vs Time ---
         ax1 = ax_time
-        ax1.plot(timestamps, adc, 'b.-', label='ADC Reading')
+        ax1.plot(timestamps, masses, 'b.-', label='ADC Reading')
         ax1.set_xlabel('Timestamp')
         ax1.set_ylabel('ADC', color='tab:blue')
         ax1.tick_params(axis='y', labelcolor='tab:blue')
 
         ax2 = ax1.twinx()
-        ax2.plot(timestamps, sensor_temp, 'r.-', label='Temp (°C)')
+        ax2.plot(timestamps, temps, 'r.-', label='Temp (°C)')
         ax2.set_ylabel('Temperature (°C)', color='tab:red')
         ax2.tick_params(axis='y', labelcolor='tab:red')
 
@@ -1086,21 +1068,6 @@ def plot_mass_cal(session: "Session"):
         fig.tight_layout()
         plt.show()
 
-def mad_filter(to_be_filtered, k=2.5):
-    """
-    Return a boolean mask of points within k*MAD of the median, where MAD means "Median Absolute
-    Deviation"
-
-    :param to_be_filtered: The data to be filtered
-    :param k: The number of sigmas beyond which data will be filtered.
-    """
-    med = np.median(to_be_filtered)
-    mad = np.median(np.abs(to_be_filtered - med))
-    if mad == 0:
-        return np.ones_like(to_be_filtered, dtype=bool)
-    sigma = 1.4826 * mad
-    return np.abs(to_be_filtered - med) <= k * sigma
-
 def plot_temperature_correction(session: "Session"):
     """
     Plots temperature correction for all sensors in the session.
@@ -1122,21 +1089,7 @@ def plot_temperature_correction(session: "Session"):
     all_coeffs = []
 
     for sensor_idx in range(max_sensors):
-        timestamps, masses, ref_masses, temps = [], [], [], []
-
-        for dp in datapoints:
-            mass = dp.mass_sensors[sensor_idx].mass
-            ref_mass = dp.mass_sensors[sensor_idx].ref_mass
-            if ref_mass is not None and mass < 40:
-                timestamps.append(dp.timestamp)
-                masses.append(mass)
-                ref_masses.append(ref_mass)
-                temps.append(dp.temperature_sensors[sensor_idx].temperature)
-
-        timestamps = np.array(timestamps)
-        masses = np.array(masses)
-        ref_masses = np.array(ref_masses)
-        temps = np.array(temps)
+        timestamps, masses, ref_masses, temps = _extract_from_db(datapoints, sensor_idx)
 
         # ------------------------------------------------------------------
         # Layout
@@ -1266,6 +1219,36 @@ def plot_temperature_correction(session: "Session"):
         })
 
     return all_coeffs
+
+def _extract_from_db(datapoints, sensor_idx: int):
+    timestamps, masses, ref_masses, temps = [], [], [], []
+
+    for dp in datapoints:
+        if dp.mass_sensors[sensor_idx].ref_mass is not None:
+            timestamps.append(dp.timestamp)
+            masses.append(dp.mass_sensors[sensor_idx].mass)  # ADC reading
+            ref_masses.append(dp.mass_sensors[sensor_idx].ref_mass)  # grams
+            if len(dp.temperature_sensors) > 1:
+                temps.append(dp.temperature_sensors[sensor_idx].temperature)
+            else:
+                temps.append(dp.temperature_sensors[0].temperature)
+
+    return np.array(timestamps), np.array(masses), np.array(ref_masses), np.array(temps)
+
+def _mad_filter(to_be_filtered, k=2.5):
+    """
+    Return a boolean mask of points within k*MAD of the median, where MAD means "Median Absolute
+    Deviation"
+
+    :param to_be_filtered: The data to be filtered
+    :param k: The number of sigmas beyond which data will be filtered.
+    """
+    med = np.median(to_be_filtered)
+    mad = np.median(np.abs(to_be_filtered - med))
+    if mad == 0:
+        return np.ones_like(to_be_filtered, dtype=bool)
+    sigma = 1.4826 * mad
+    return np.abs(to_be_filtered - med) <= k * sigma
 
 def _cubic_fit(x: np.ndarray, y: np.ndarray):
     """
