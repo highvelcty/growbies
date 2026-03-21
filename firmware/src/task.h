@@ -40,7 +40,7 @@ protected:
 class AutoWakeTask final : public Task {
 public:
     void run() override;
-    void run_on_wake() const;
+    void run_on_wake();
     unsigned long interval_ms() const override;
 
 protected:
@@ -52,6 +52,7 @@ protected:
     }
 
 private:
+    Battery battery;
     MeasurementStack& measurement_stack = MeasurementStack::get();
 };
 

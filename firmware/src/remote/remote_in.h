@@ -1,6 +1,8 @@
 #pragma once
 
 constexpr int POWER_ON_DEBOUNCE_MS  = 50;
+constexpr int BUTTON_PRESS_POLL_COUNT = 5;
+constexpr int BUTTON_PRESS_PULL_INTERVAL_MS = 1;
 
 // bitfield
 enum class EVENT: uint8_t {

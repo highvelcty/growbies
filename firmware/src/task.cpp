@@ -15,12 +15,17 @@ void AutoWakeTask::run() {
     }
 }
 
-void AutoWakeTask::run_on_wake() const {
+void AutoWakeTask::run_on_wake() {
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
         const auto& measure_stack = MeasurementStack::get();
         measure_stack.update();
         if (!mass_buffer().add(measurement_stack.aggregate_mass().total_mass())) {
-            go_to_wakeful_sleep();
+            if (battery.is_charging ()) {
+                go_to_deep_sleep();
+            }
+            else {
+                go_to_wakeful_sleep();
+            }
         }
     }
 }
@@ -39,11 +44,12 @@ void PowerTransitionTask::run() {
         else if (system_state.next_state() == PowerState::WAKEFUL_SLEEP) {
             remote_out.display_power_save(true);
             if (not battery.is_charging()) {
-                const auto auto_wake_interval = identify_store->payload()->auto_wake_interval_ms();
-                if (auto_wake_interval == 0) {
-                    go_to_deep_sleep();
-                }
-                go_to_wakeful_sleep();
+                go_to_deep_sleep();
+                // const auto auto_wake_interval = identify_store->payload()->auto_wake_interval_ms();
+                // if (auto_wake_interval == 0) {
+                //     go_to_deep_sleep();
+                // }
+                // go_to_wakeful_sleep();
             }
         }
         else if (system_state.next_state() == PowerState::DEEP_SLEEP) {

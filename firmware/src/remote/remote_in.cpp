@@ -24,6 +24,7 @@ void RemoteIn::begin() {
 // ReSharper disable once CppMemberFunctionMayBeConst
 BUTTON RemoteIn::service() { // NOLINT(*-make-member-function-const)
     auto button = BUTTON::NONE;
+    auto pressed = false;
     const auto now = millis();
 
     // A button event has been detected
@@ -35,8 +36,18 @@ BUTTON RemoteIn::service() { // NOLINT(*-make-member-function-const)
         }
     }
 
+    // This should exceed the RC network time constant for the input pins.
+    for (int ii = 0; ii < BUTTON_PRESS_POLL_COUNT; ++ii) {
+        pressed = (digitalRead(BUTTON_0_PIN) == HIGH or digitalRead(BUTTON_1_PIN) == HIGH);
+        if (pressed) {
+            break;
+        }
+        delay(BUTTON_PRESS_PULL_INTERVAL_MS);
+    }
+
+
     // Service the button event
-    if ((digitalRead(BUTTON_0_PIN) != HIGH) and (digitalRead(BUTTON_1_PIN) != HIGH)) {
+    if (!pressed) {
         if (instance->button_event_bits == EVENT::SELECT) {
             button = BUTTON::SELECT;
         }
