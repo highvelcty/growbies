@@ -80,6 +80,9 @@ float AEWMABuffer::compute_alpha(const float error) const {
         return ALPHA_MIN;
     }
 
+    // Scaling factor for how aggressive the smoothing is. An alpha of 1 (or maximum) is less
+    // smoothing than a small value for alpha. alpha_threshold is the "knee point" between
+    // smoothing and tracking modes.
     const float alpha = sqrtf(error / alpha_threshold);
 
     if (alpha < ALPHA_MIN) return ALPHA_MIN;

@@ -230,7 +230,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
         const auto new_units = identify_store->view()->payload.mass_units;
 
         if (mass_buffer().add(new_value)) {
-        system_state.notify_activity(millis());
+            system_state.notify_activity(millis());
         }
 
         if (_convert_units(mass_buffer().value(), new_units)) {
@@ -256,8 +256,8 @@ struct MassDrawing final : BaseTelemetryDrawing {
         constexpr float MIN_SINGLE_PRECISION = -9999.9;
         constexpr float MAX_DOUBLE_PRECISION = 9999.99;
         constexpr float MIN_DOUBLE_PRECISION = -999.99;
-        constexpr float MAX_TRIPLE_PRECISION = 99999.9;
-        constexpr float MIN_TRIPLE_PRECISION = -9999.9;
+        constexpr float MAX_TRIPLE_PRECISION = 999.999;
+        constexpr float MIN_TRIPLE_PRECISION = -99.999;
         // ReSharper restore CppTooWideScope
 
         // Unit conversion
@@ -272,7 +272,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
         int precision = 0;
         switch (converted_units) {
             case MassUnits::GRAMS: {
-                precision = 1;
+                precision = 0;
                 if (converted_mass > MAX_SINGLE_PRECISION ||
                     converted_mass < MIN_SINGLE_PRECISION) {
                     converted_units = MassUnits::KILOGRAMS;

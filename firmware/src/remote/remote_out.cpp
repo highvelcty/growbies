@@ -4,6 +4,13 @@
 // initialize static singleton pointer
 RemoteOut* RemoteOut::instance = nullptr;
 
+// Initialize persistent data
+// Note: this assignment happens only once and then is persisted thereafter
+static constexpr size_t MENU_PATH_MAX_DEPTH = 4;
+RTC_DATA_ATTR bool menu_path_initialized = false;
+RTC_DATA_ATTR size_t menu_path[MENU_PATH_MAX_DEPTH];
+RTC_DATA_ATTR size_t menu_path_depth = 1;
+
 RemoteOut& RemoteOut::get() {
     if (!instance) {
         instance = new RemoteOut();
@@ -11,13 +18,24 @@ RemoteOut& RemoteOut::get() {
     return *instance;
 }
 
-RemoteOut::RemoteOut() : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN) {
+RemoteOut::RemoteOut()
+    : display(U8X8_PIN_NONE, HW_I2C_SCL_PIN, HW_I2C_SDA_PIN)
+{
     menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::TARE_0));
     menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::TARE_1));
     menu_root.push_back(std::make_shared<MassDrawing>(display, TareIdx::TARE_2));
     menu_root.push_back(std::make_shared<TemperatureDrawing>(display, "Temperature"));
     menu_root.push_back(std::make_shared<ConfigurationMenu>(display));
-    menu_path = {0};  // Select first top-level item
+
+    initialize();
+}
+
+void RemoteOut::initialize() {
+    if (!menu_path_initialized || menu_path_depth > MENU_PATH_MAX_DEPTH || menu_path_depth <= 0) {
+        menu_path_initialized = true;
+        menu_path[0] = 0;
+        menu_path_depth = 1;
+    }
 }
 
 void RemoteOut::begin() {
@@ -30,10 +48,6 @@ void RemoteOut::begin() {
     RemoteIn::begin();
 }
 
-void RemoteOut::display_power_save(const bool on_off) {
-    display.setPowerSave(on_off);
-}
-
 bool RemoteOut::service(const BUTTON button_pressed) {
     if (button_pressed == BUTTON::NONE) {
         return false;
@@ -41,13 +55,11 @@ bool RemoteOut::service(const BUTTON button_pressed) {
 
     auto& system_state = SystemState::get();
 
-    // Wake
     if (system_state.state() != PowerState::ACTIVE) {
         system_state.set_next_state(PowerState::ACTIVE);
         return true;
     }
 
-    // Execute
     if (button_pressed == BUTTON::DOWN) {
         down();
     }
@@ -63,14 +75,17 @@ bool RemoteOut::service(const BUTTON button_pressed) {
     return true;
 }
 
+void RemoteOut::display_power_save(const bool on_off) {
+    display.setPowerSave(on_off);
+}
+
 // -----------------------------------------------------------------------------
 // Menu selection
 // -----------------------------------------------------------------------------
 const std::vector<std::shared_ptr<BaseMenu>>* RemoteOut::level_from_path() const {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
 
-
-    for (size_t i = 0; i + 1 < menu_path.size(); ++i) {
+    for (size_t i = 0; i + 1 < menu_path_depth; ++i) {
         const size_t idx = menu_path[i];
         if (idx >= level->size()) return nullptr;
         level = &(*level)[idx]->children;
@@ -80,14 +95,14 @@ const std::vector<std::shared_ptr<BaseMenu>>* RemoteOut::level_from_path() const
 }
 
 void RemoteOut::up() {
-    if (menu_path.empty()) return;
     auto* level = level_from_path();
     if (!level) return;
 
-    size_t& idx = menu_path.back();
+    size_t& idx = menu_path[menu_path_depth - 1];
 
+    // Up with wrapping
     if (idx == 0) {
-        idx = level->size() - 1;  // wrap around
+        idx = level->size() - 1;
     } else {
         --idx;
     }
@@ -97,17 +112,13 @@ void RemoteOut::up() {
     render();
 }
 
-// -----------------------------------------------------------------------------
-// Move selection down
-// -----------------------------------------------------------------------------
 void RemoteOut::down() {
-    if (menu_path.empty()) return;
     auto* level = level_from_path();
-    if (!level || level->empty()) return;
+    if (!level) return;
 
-    size_t& idx = menu_path.back();
+    size_t& idx = menu_path[menu_path_depth - 1];
 
-    // Wrap around to first element if we're past the last
+    // Down with wrapping
     idx = (idx + 1) % level->size();
 
     const auto& item = (*level)[idx];
@@ -115,29 +126,25 @@ void RemoteOut::down() {
     render();
 }
 
-// -----------------------------------------------------------------------------
-// Select / descend or execute action
-// -----------------------------------------------------------------------------
 void RemoteOut::select() {
-    if (menu_path.empty()) return;
-
     auto* level = level_from_path();
     if (!level) return;
 
-    const size_t idx = menu_path.back();
+    const size_t idx = menu_path[menu_path_depth - 1];
     if (idx >= level->size()) return;
 
     const auto& item = (*level)[idx];
+
     if (item->children.empty()) {
         // Truncate path to the top-level menu that led to this leaf
-        if (!menu_path.empty()) {
-            menu_path.resize(1); // keep only first index
-        }
+        menu_path_depth = 1;
         item->on_select();
     }
     else {
-        menu_path.push_back(0);
+        menu_path[menu_path_depth] = 0;
+        ++menu_path_depth;
     }
+
     render();
 }
 
@@ -145,21 +152,20 @@ void RemoteOut::render() {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
     display.clear();
 
-    for (auto it = menu_path.begin(); it != menu_path.end(); ++it) {
-        const size_t idx = *it;
-        if (idx >= level->size()) return; // safety check
+    for (size_t i = 0; i < menu_path_depth; ++i) {
+        const size_t idx = menu_path[i];
+        if (idx >= level->size()) return;
 
         const auto& item = (*level)[idx];
 
-        item->draw((std::next(it) != menu_path.end()));
-        level = &item->children;     // descend into children
+        item->draw((i + 1 < menu_path_depth));
+        level = &item->children;
     }
 }
 
 void RemoteOut::synchronize() const {
     std::vector<std::shared_ptr<BaseMenu>> stack;
 
-    // Start with the root nodes
     for (const auto& node : menu_root) {
         if (node) stack.push_back(node);
     }
@@ -179,12 +185,13 @@ void RemoteOut::synchronize() const {
 void RemoteOut::update() const {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
 
-    for (const unsigned int idx : menu_path) {
-        if (idx >= level->size()) return; // safety check
+    for (size_t i = 0; i < menu_path_depth; ++i) {
+        const size_t idx = menu_path[i];
+        if (idx >= level->size()) return;
 
         const auto& item = (*level)[idx];
 
         item->update();
-        level = &item->children;     // descend into children
+        level = &item->children;
     }
 }

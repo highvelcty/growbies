@@ -35,6 +35,9 @@ private:
 extern bool  aewma_buffer_initialized;
 extern float aewma_buffer_last_value;
 
+//
+// Adaptive Exponentially Weighted Moving Average (AEWMA) Buffer
+//
 class AEWMABuffer {
 public:
     explicit AEWMABuffer(float alpha_threshold, float event_threshold);
