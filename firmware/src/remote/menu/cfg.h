@@ -2,11 +2,11 @@
 
 #include <Arduino.h>
 #include <cstdio>
+#include <ctime>
 #include <memory>
 #include <U8x8lib.h>
 
 #include "base.h"
-#include "constants.h"
 #include "measure/battery.h"
 #include "nvm/nvm.h"
 #include "system_state.h"
@@ -206,14 +206,6 @@ struct SleepMenuLeaf final : BaseStrMenuLeaf {
 
     void on_select() override {
         if (doit) {
-            // // wait for buttons released and debounce
-            // for (int i = 0; i < 10; ++i) {
-            //     if (digitalRead(BUTTON_0_PIN) == LOW && digitalRead(BUTTON_1_PIN) == LOW) {
-            //         break;
-            //     }
-            //     delay(10);
-            // }
-            // delay(100);
             SystemState::get().set_next_state(PowerState::DEEP_SLEEP);
         }
     }
@@ -240,11 +232,10 @@ struct SleepMenu final : BaseCfgMenu {
 };
 
 struct BatteryLeaf final : BaseStrMenuLeaf {
-    constexpr static size_t MSG_BUF_LEN = 16;
     // Space pad messages out to the maximum message length of 11 characters so that shorter lines
     // overwriting longer lines clear crufty characters.
     const char* fmt_str = "%-11s";
-    char msg_buf[MSG_BUF_LEN]{};
+
     Battery battery;
     int test_val{0};
 
@@ -292,6 +283,192 @@ struct BatteryMenu final : BaseCfgMenu {
             }) {}
 };
 
+struct FirmwareVersionMenuLeaf final : BaseStrMenuLeaf {
+    explicit FirmwareVersionMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
+        msg = msg_buf;
+        _set_msg();
+    }
+
+    void _set_msg() {
+        const char* fw = identify_store->payload()->firmware_version;
+
+        if (!fw) {
+            msg_buf[0] = '\0';
+            return;
+        }
+
+        const char* plus = strchr(fw, '+');
+
+        size_t len;
+        if (plus) {
+            len = static_cast<size_t>(plus - fw);
+        } else {
+            len = strlen(fw);
+        }
+
+        if (len >= MSG_BUF_LEN) {
+            len = MSG_BUF_LEN - 1;
+        }
+
+        snprintf(msg_buf, len + 1, "%s", fw);
+        msg_buf[len] = '\0';
+    }
+
+};
+
+struct FirmwareVersionMenu final : BaseCfgMenu {
+    FirmwareVersionMenuLeaf leaf;
+
+    explicit FirmwareVersionMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "FW Version",
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{
+            }),
+            leaf(display_)
+            {}
+
+    void draw(const bool selected) override {
+        BaseCfgMenu::draw(selected);
+        leaf.draw(false);
+    }
+
+};
+
+struct MfgDateMenuLeaf final : BaseStrMenuLeaf {
+    explicit MfgDateMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
+        msg = msg_buf;
+        _set_msg();
+    }
+
+    void _set_msg() {
+        const float ts = identify_store->payload()->manufacture_date;
+
+        if (ts < 0.0f) {
+            msg_buf[0] = '\0';
+            return;
+        }
+
+        const auto sec = static_cast<std::time_t>(ts);
+
+        std::tm tm{};
+        gmtime_r(&sec, &tm);   // UTC conversion
+
+        snprintf(
+            msg_buf,
+            MSG_BUF_LEN,
+            "%04d-%02d-%02d",
+            tm.tm_year + 1900,
+            tm.tm_mon + 1,
+            tm.tm_mday
+        );
+    }
+};
+
+struct MfgDateMenu final : BaseCfgMenu {
+    MfgDateMenuLeaf leaf;
+
+    explicit MfgDateMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Mfg Date",
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{
+            }),
+            leaf(display_)
+            {}
+
+    void draw(const bool selected) override {
+        BaseCfgMenu::draw(selected);
+        leaf.draw(false);
+    }
+
+};
+
+struct SerialNumberMenuLeaf final : BaseStrMenuLeaf {
+    explicit SerialNumberMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
+        msg = msg_buf;
+        _set_msg();
+    }
+
+    void _set_msg() {
+        snprintf(msg_buf, MSG_BUF_LEN, identify_store->payload()->serial_number);
+    }
+};
+
+struct SerialNumberMenu final : BaseCfgMenu {
+    SerialNumberMenuLeaf leaf;
+
+    explicit SerialNumberMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Serial No.",
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{
+            }),
+            leaf(display_)
+            {}
+
+    void draw(const bool selected) override {
+        BaseCfgMenu::draw(selected);
+        leaf.draw(false);
+    }
+};
+
+struct SourceHashMenuLeaf final : BaseStrMenuLeaf {
+    explicit SourceHashMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
+        msg = msg_buf;
+        _set_msg();
+    }
+
+    void _set_msg() {
+        const char* fw = identify_store->payload()->firmware_version;
+
+        if (!fw) {
+            msg_buf[0] = '\0';
+            return;
+        }
+
+        const char* plus = strchr(fw, '+');
+
+        // If no '+' exists, there's nothing "after", so empty string
+        if (!plus || !*(plus + 1)) {
+            msg_buf[0] = '\0';
+            return;
+        }
+
+        const char* src = plus + 1;
+
+        size_t len = strlen(src);
+        if (len >= MSG_BUF_LEN) {
+            len = MSG_BUF_LEN - 1;
+        }
+
+        memcpy(msg_buf, src, len);
+        msg_buf[len] = '\0';
+    }
+};
+
+struct SourceHashMenu final : BaseCfgMenu {
+    SourceHashMenuLeaf leaf;
+
+    explicit SourceHashMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Source Hash",
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{
+            }),
+            leaf(display_)
+            {}
+
+    void draw(const bool selected) override {
+        BaseCfgMenu::draw(selected);
+        leaf.draw(false);
+    }
+};
+
 struct DisplayMenu final : BaseCfgMenu {
     explicit DisplayMenu(U8X8& display_)
         : BaseCfgMenu(
@@ -301,6 +478,20 @@ struct DisplayMenu final : BaseCfgMenu {
             std::vector<std::shared_ptr<BaseMenu>>{
                 std::make_shared<FlipMenu>(display_),
                 std::make_shared<ContrastMenu>(display_),
+            }) {}
+};
+
+struct InfoMenu final : BaseCfgMenu {
+    explicit InfoMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Info",
+            1,
+            std::vector<std::shared_ptr<BaseMenu>>{
+                std::make_shared<FirmwareVersionMenu>(display_),
+                std::make_shared<SourceHashMenu>(display_),
+                std::make_shared<MfgDateMenu>(display_),
+                std::make_shared<SerialNumberMenu>(display_),
             }) {}
 };
 
@@ -326,5 +517,6 @@ struct ConfigurationMenu final : BaseCfgMenu {
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<PowerMenu>(display_),
                   std::make_shared<DisplayMenu>(display_),
+                  std::make_shared<InfoMenu>(display_),
               }) {}
 };

@@ -42,16 +42,16 @@ class AEWMABuffer {
 public:
     explicit AEWMABuffer(float alpha_threshold, float event_threshold);
 
-    bool add(float value) const;
-
+    void add(float value);
+    bool is_event_tripped() const;
     float value();
-
     void reset();
 
 private:
     // Threshold at which the buffer is purely responsive with weighting
     float alpha_threshold = 0.0f;
     float event_threshold = 0.0f;
+    float last_error = 0.0f;
 
     static constexpr float ALPHA_MIN = 0.02f;   // very stable
     static constexpr float ALPHA_MAX = 0.7f;    // very responsive
@@ -59,8 +59,8 @@ private:
     float compute_alpha(float error) const;
 };
 
-// Mass Buffer Lazy-initialized Global Singleton
-constexpr float STAY_AWAKE_THRESH_GRAMS = 5.0;
+// Mass Buffer Global Singleton
+constexpr float EVENT_THRESH_GRAMS = 50.0;
 constexpr float EWMA_ALPHA_THRESH_GRAMS = 25.0;
 AEWMABuffer& mass_buffer();
 

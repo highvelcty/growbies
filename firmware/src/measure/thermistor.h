@@ -12,6 +12,9 @@ namespace growbies {
 #error "Select exactly one thermistor hardware."
 #endif
 
+constexpr float MIN_TEMPERATURE_CELSIUS = -20.0f;
+constexpr float MAX_TEMPERATURE_CELSIUS = 70.0f;
+
 #if THERMISTOR_HW_0
 // Eaton NRNE105H4100B1H configuration (THERMISTOR_HW_0)
 constexpr float THERMISTOR_SERIES_RESISTOR = 100000.0f;

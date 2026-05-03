@@ -7,7 +7,6 @@ namespace growbies {
 
 class MeasurementStack {
 public:
-    // HX711 filter needs to settle
     static MeasurementStack& get() {
         static MeasurementStack instance;
         return instance;

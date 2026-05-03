@@ -89,12 +89,15 @@ struct BaseCfgMenu : BaseMenu {
         if (!msg) return;
         char line_buf[MAX_DISPLAY_COLUMNS + 1];
         snprintf(line_buf, sizeof(line_buf), "%c %s", get_selected_char(selected), msg);
-        display.drawString(level, level, line_buf);
+        display.drawString(0, level, line_buf);
     }
 };
 
 struct BaseStrMenuLeaf : BaseCfgMenu {
+    constexpr static size_t MSG_BUF_LEN = 16;
     static constexpr char SELECTED_CHAR = '>';
+    char msg_buf[MSG_BUF_LEN]{};
+
     explicit BaseStrMenuLeaf(U8X8& display_, const int level_) :
         BaseCfgMenu(display_, nullptr, level_) {}
     char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
@@ -115,7 +118,7 @@ struct BaseIntMenuLeaf : BaseCfgMenu {
 
         char line_buf[MAX_DISPLAY_COLUMNS + 1];
         snprintf(line_buf, sizeof(line_buf), "%c %d", get_selected_char(selected), value);
-        display.drawString(level, level, line_buf);
+        display.drawString(0, level, line_buf);
     }
 };
 

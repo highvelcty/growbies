@@ -46,23 +46,25 @@ AEWMABuffer::AEWMABuffer(const float alpha_threshold,
     : alpha_threshold(alpha_threshold),
       event_threshold(event_threshold) {}
 
-bool AEWMABuffer::add(const float value) const {
+void AEWMABuffer::add(const float value) {
     if (isnan(value)) {
-        return false;
+        return;
     }
 
     if (!aewma_buffer_initialized) {
         aewma_buffer_last_value = value;
         aewma_buffer_initialized = true;
-        return true;
+        return;
     }
 
-    const float error = fabsf(value - aewma_buffer_last_value);
-    const float alpha = compute_alpha(error);
+    last_error = fabsf(value - aewma_buffer_last_value);
+    const float alpha = compute_alpha(last_error);
     aewma_buffer_last_value = alpha * value + (1.0f - alpha) * aewma_buffer_last_value;
-
-    return error >= event_threshold;
 }
+
+bool AEWMABuffer::is_event_tripped() const {
+    return last_error >= event_threshold;
+};
 
 // ReSharper disable once CppMemberFunctionMayBeStatic
 float AEWMABuffer::value() { // NOLINT(*-convert-member-functions-to-static)
@@ -96,7 +98,7 @@ float AEWMABuffer::compute_alpha(const float error) const {
 AEWMABuffer& mass_buffer() {
     static AEWMABuffer instance(
         EWMA_ALPHA_THRESH_GRAMS,
-        STAY_AWAKE_THRESH_GRAMS
+        EVENT_THRESH_GRAMS
     );
     return instance;
 }

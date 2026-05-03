@@ -229,7 +229,8 @@ struct MassDrawing final : BaseTelemetryDrawing {
         const auto& new_value = measurement_stack.aggregate_mass().total_mass();
         const auto new_units = identify_store->view()->payload.mass_units;
 
-        if (mass_buffer().add(new_value)) {
+        mass_buffer().add(new_value);
+        if (mass_buffer().is_event_tripped()) {
             system_state.notify_activity(millis());
         }
 

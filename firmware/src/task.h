@@ -66,6 +66,7 @@ protected:
 
 private:
     Battery battery;
+    MeasurementStack& measurement_stack = MeasurementStack::get();
     RemoteOut& remote_out = RemoteOut::get();
 };
 

@@ -40,9 +40,13 @@ float Thermistor::sample() const {
                       + (STEINHART_HART_B * logf(r_therm))
                       + (STEINHART_HART_C * powf(logf(r_therm), 3));
 
-    return (1.0f / inv_T) - 273.15f;  // Celsius
-}
+    const float celsius = (1.0f / inv_T) - 273.15f;
 
+    if (MIN_TEMPERATURE_CELSIUS < celsius and celsius < MAX_TEMPERATURE_CELSIUS) {
+        return celsius;
+    }
+    return DEFAULT_TEMPERATURE_CELSIUS;
+}
 
 float Thermistor::sample_beta() const {
     // Thermistor on the top of the resistor divider
@@ -58,7 +62,12 @@ float Thermistor::sample_beta() const {
                       + (1.0f / THERMISTOR_BETA_COEFF)
                       * logf(r_therm / THERMISTOR_NOMINAL_RESISTANCE);
 
-    return (1.0f / inv_T) - 273.15f;  // Celsius
+    const float celsius = (1.0f / inv_T) - 273.15f;
+
+    if (MIN_TEMPERATURE_CELSIUS < celsius and celsius < MAX_TEMPERATURE_CELSIUS) {
+        return celsius;
+    }
+    return DEFAULT_TEMPERATURE_CELSIUS;
 }
 
 // --- MultiThermistor -------------------
