@@ -21,19 +21,6 @@ _upload-all-%:
 	done; \
 	exit $$FAIL
 
-_upload-all-parallel-%:
-	@ENV=$(lastword $(subst -, ,$*)); \
-	echo "Building $$ENV once..."; \
-	MODEL_NUMBER=$* platformio run -e $$ENV || exit 1; \
-	for PORT in /dev/ttyACM*; do \
-		if [ -e "$$PORT" ]; then \
-			echo "Starting upload to $$PORT"; \
-			( MODEL_NUMBER=$* platformio run -t upload -e $$ENV --upload-port $$PORT ) & \
-		fi \
-	done; \
-	wait; \
-	echo "All uploads complete."
-
 esp32c3: _build-esp32c3
 upload-esp32c32: _upload-esp32c3
 upload-all-circle-esp32c3: _upload-all-circle-esp32c3
