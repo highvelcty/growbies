@@ -10,12 +10,16 @@ _build-%:
 _upload-%:
 	MODEL_NUMBER=$* platformio run -t upload -e $(lastword $(subst -, ,$*))
 
+_upload-%:
+	@ENV=$(lastword $(subst -, ,$*)); \
+	PORT=$${PORT:-/dev/ttyACM0}; \
+	MODEL_NUMBER=$* platformio run -t upload -e $$ENV --upload-port $$PORT
+
 _upload-all-%:
 	@ENV=$(lastword $(subst -, ,$*)); \
 	FAIL=0; \
 	for PORT in /dev/ttyACM*; do \
 		if [ -e "$$PORT" ]; then \
-			echo "Uploading $$* to $$PORT using env $$ENV"; \
 			MODEL_NUMBER=$* platformio run -t upload -e $$ENV --upload-port $$PORT || FAIL=1; \
 		fi \
 	done; \
