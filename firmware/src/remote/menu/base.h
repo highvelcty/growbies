@@ -61,6 +61,7 @@ struct BaseMenu {
     virtual void on_down() {}
     virtual void on_up() {}
     virtual void on_select() {}
+    virtual void set_msg() {}
     virtual void synchronize() {}
     virtual void update() {}
 
@@ -99,7 +100,9 @@ struct BaseStrMenuLeaf : BaseCfgMenu {
     char msg_buf[MSG_BUF_LEN]{};
 
     explicit BaseStrMenuLeaf(U8X8& display_, const int level_) :
-        BaseCfgMenu(display_, nullptr, level_) {}
+        BaseCfgMenu(display_, nullptr, level_) {
+        msg = msg_buf;
+    }
     char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
 };
 

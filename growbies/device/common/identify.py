@@ -1,7 +1,7 @@
 from ctypes import sizeof
 from datetime import datetime
-from enum import IntEnum, StrEnum
-from typing import NewType
+from enum import IntEnum
+from typing import NewType, Optional
 import ctypes
 
 from packaging.version import InvalidVersion, Version
@@ -15,18 +15,24 @@ from growbies.utils.types import Serial_t, ModelNumber_t
 
 class BatteryType(IntEnum):
     GENERIC = 0
+    LIPO_502030_250MAH = 1
 
 class DisplayType(IntEnum):
     GENERIC = 0
+    DORHEA = 1
+    FRIENDA = 2
 
 class LedType(IntEnum):
     GENERIC = 0
+    NONE = 1
 
 class FrameType(IntEnum):
     GENERIC = 0
+    CIRCLE_10 = 1
 
 class FootType(IntEnum):
     GENERIC = 0
+    FLATTENED_SPHERE_40_x_25 = 1
 
 class MassSensorType(IntEnum):
     GENERIC = 0
@@ -110,7 +116,7 @@ class Identify(BaseStructure):
         return timestamp.get_utc_dt(getattr(self, self.Field.MANUFACTURE_DATE))
 
     @manufacture_date.setter
-    def manufacture_date(self, value: datetime):
+    def manufacture_date(self, value: Optional[timestamp.TS_t]):
         setattr(self, self.Field.MANUFACTURE_DATE, timestamp.get_unix_time(value))
 
     @property

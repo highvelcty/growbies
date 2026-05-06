@@ -41,7 +41,6 @@ class Default(Base):
             ''
         ]
 
-
         for key in self.Key.all:
             value = self.Key.value(key)
             if isinstance(value, str):

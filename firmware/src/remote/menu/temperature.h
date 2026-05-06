@@ -16,9 +16,7 @@
 struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
     TemperatureUnits units{TemperatureUnits::CELSIUS};
 
-    explicit TemperatureUnitsMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 2) {
-        _set_msg();
-    }
+    explicit TemperatureUnitsMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 2) {}
 
     void on_down() override {
         on_up();
@@ -43,11 +41,11 @@ struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
     }
 
     void draw(const bool selected) override {
-        _set_msg();
+        set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
 
-    void _set_msg() {
+    void set_msg() override {
         if (units == TemperatureUnits::FAHRENHEIT) {
             msg = "F: Fahren.";
         }

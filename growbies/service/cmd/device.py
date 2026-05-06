@@ -3,7 +3,7 @@ import logging
 
 from . import ls
 from ..common import ServiceCmd
-from growbies.cli.device import Action, Param, ModParam, ReadParam
+from growbies.cli.device import Action, Param, ModParam
 from growbies.db.engine import get_db_engine
 from growbies.db.models.device import Device, Devices
 from growbies.worker.pool import get_pool

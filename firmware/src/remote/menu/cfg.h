@@ -62,12 +62,10 @@ struct ContrastMenu final : BaseCfgMenu {
 struct FlipMenuLeaf final : BaseStrMenuLeaf {
     bool flip{false};
 
-    explicit FlipMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
-        _set_msg();
-    }
+    explicit FlipMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
     void draw(const bool selected) override {
-        _set_msg();
+        set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
 
@@ -90,7 +88,7 @@ struct FlipMenuLeaf final : BaseStrMenuLeaf {
         display.setFlipMode(flip);
     }
 
-    void _set_msg() {
+    void set_msg() override {
         if (flip) {
             msg = "True";
         }
@@ -187,12 +185,10 @@ struct SleepTimeoutMenu final : BaseCfgMenu {
 struct SleepMenuLeaf final : BaseStrMenuLeaf {
     bool doit{true};
 
-    explicit SleepMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
-        _set_msg();
-    }
+    explicit SleepMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
     void draw(const bool selected) override {
-        _set_msg();
+        set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
 
@@ -210,7 +206,7 @@ struct SleepMenuLeaf final : BaseStrMenuLeaf {
         }
     }
 
-    void _set_msg() {
+    void set_msg() override {
         if (doit) {
             msg = "True";
         }
@@ -239,13 +235,10 @@ struct BatteryLeaf final : BaseStrMenuLeaf {
     Battery battery;
     int test_val{0};
 
-    explicit BatteryLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
-        msg = msg_buf;
-        _set_msg();
-    }
+    explicit BatteryLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
     void draw(const bool selected) override {
-        _set_msg();                 // refresh each draw
+        set_msg();                 // refresh each draw
         BaseStrMenuLeaf::draw(selected);
     }
 
@@ -253,7 +246,7 @@ struct BatteryLeaf final : BaseStrMenuLeaf {
         draw(cached_selected);
     }
 
-    void _set_msg() {
+    void set_msg() override{
         if (battery.is_charging()) {
             snprintf(msg_buf, MSG_BUF_LEN, "charging");
             snprintf(msg_buf, MSG_BUF_LEN, fmt_str, msg_buf);
@@ -284,12 +277,14 @@ struct BatteryMenu final : BaseCfgMenu {
 };
 
 struct FirmwareVersionMenuLeaf final : BaseStrMenuLeaf {
-    explicit FirmwareVersionMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
-        msg = msg_buf;
-        _set_msg();
+    explicit FirmwareVersionMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
+
+    void draw(const bool selected) override {
+        set_msg();                 // refresh each draw
+        BaseStrMenuLeaf::draw(selected);
     }
 
-    void _set_msg() {
+    void set_msg() override{
         const char* fw = identify_store->payload()->firmware_version;
 
         if (!fw) {
@@ -337,12 +332,14 @@ struct FirmwareVersionMenu final : BaseCfgMenu {
 };
 
 struct MfgDateMenuLeaf final : BaseStrMenuLeaf {
-    explicit MfgDateMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
-        msg = msg_buf;
-        _set_msg();
+    explicit MfgDateMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
+
+    void draw(const bool selected) override {
+        set_msg();                 // refresh each draw
+        BaseStrMenuLeaf::draw(selected);
     }
 
-    void _set_msg() {
+    void set_msg() override {
         const float ts = identify_store->payload()->manufacture_date;
 
         if (ts < 0.0f) {
@@ -387,12 +384,14 @@ struct MfgDateMenu final : BaseCfgMenu {
 };
 
 struct SerialNumberMenuLeaf final : BaseStrMenuLeaf {
-    explicit SerialNumberMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
-        msg = msg_buf;
-        _set_msg();
+    explicit SerialNumberMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
+
+    void draw(const bool selected) override {
+        set_msg();                 // refresh each draw
+        BaseStrMenuLeaf::draw(selected);
     }
 
-    void _set_msg() {
+    void set_msg() override{
         snprintf(msg_buf, MSG_BUF_LEN, identify_store->payload()->serial_number);
     }
 };
@@ -417,12 +416,14 @@ struct SerialNumberMenu final : BaseCfgMenu {
 };
 
 struct SourceHashMenuLeaf final : BaseStrMenuLeaf {
-    explicit SourceHashMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {
-        msg = msg_buf;
-        _set_msg();
+    explicit SourceHashMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
+
+    void draw(const bool selected) override {
+        set_msg();                 // refresh each draw
+        BaseStrMenuLeaf::draw(selected);
     }
 
-    void _set_msg() {
+    void set_msg() override {
         const char* fw = identify_store->payload()->firmware_version;
 
         if (!fw) {

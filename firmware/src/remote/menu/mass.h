@@ -121,9 +121,7 @@ struct TareMenu final : BaseCfgMenu {
 struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
     MassUnits units{MassUnits::GRAMS};
 
-    explicit  MassUnitsMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 2) {
-        _set_msg();
-    }
+    explicit  MassUnitsMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 2) {}
 
     void on_down() override {
         // Convert to integer for cycling
@@ -161,11 +159,11 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
     }
 
     void draw(const bool selected) override {
-        _set_msg();
+        set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
 
-    void _set_msg() {
+    void set_msg() override {
         if (units == MassUnits::GRAMS) {
             msg = "g: grams";
         }

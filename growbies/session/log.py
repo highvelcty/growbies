@@ -5,10 +5,10 @@ import threading
 import time
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
+from growbies.constants import APPNAME
 from growbies.utils import timestamp
-from growbies.utils.paths import RepoPaths
 
 DEVICE = 25
 logging.addLevelName(DEVICE, 'DEVICE')
@@ -51,9 +51,11 @@ MAX_BYTES = 1024 * 1024 * 25  # 25 MiB
 BACKUP_COUNT = 2
 
 
-def start(path: Path, file_level: int = logging.DEBUG, stdout_level: int = logging.DEBUG) \
+def start(path: Union[str, Path],
+          file_level: int = logging.DEBUG,
+          stdout_level: int = logging.DEBUG) \
         -> logging.Logger:
-    logger = logging.getLogger(RepoPaths.REPO_ROOT.value.resolve().name)
+    logger = logging.getLogger(APPNAME.lower())
     logger.setLevel(logging.DEBUG)
 
     fmt = logging.Formatter(f'|%(asctime)s{timestamp.UTC_Z} '
@@ -62,7 +64,6 @@ def start(path: Path, file_level: int = logging.DEBUG, stdout_level: int = loggi
                             f'%(message)s',
                             timestamp.BASE_DT_FMT)
     fmt.converter = time.gmtime
-
 
     file_hdlr = RotatingFileHandler(path, maxBytes=MAX_BYTES, backupCount=BACKUP_COUNT)
     file_hdlr.setLevel(file_level)

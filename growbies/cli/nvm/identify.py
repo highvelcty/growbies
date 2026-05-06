@@ -16,6 +16,8 @@ def make_cli(parser: ArgumentParser):
                         default=None, type=str)
     parser.add_argument(f'--{id_mod.Identify.Field.MODEL_NUMBER.public_name}',
                         default=None, type=str)
+    parser.add_argument(f'--{id_mod.Identify.Field.MANUFACTURE_DATE.public_name}',
+                        default=None, type=float)
     parser.add_argument(f'--{id_mod.Identify.Field.MASS_SENSOR_TYPE.public_name}',
                         metavar='{' + ','.join(
                             [f'{x.value}={x.name}' for x in id_mod.MassSensorType]) + '}',

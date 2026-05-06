@@ -16,9 +16,6 @@ class MassUnitsType(IntEnum):
     OUNCES = 2
     POUNDS = 3
 
-    def __str__(self):
-        return self.name
-
 _PROTECTED_FIELD_NAME_DELINEATOR = '_'
 def _protected_to_public_field_name(field: str):
     return field.lstrip(_PROTECTED_FIELD_NAME_DELINEATOR)
