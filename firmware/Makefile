@@ -11,7 +11,7 @@ _upload-%: _build-%
 	PORT=$${PORT:-/dev/ttyACM0}; \
 	MODEL_NUMBER=$* platformio run -t upload -e $$ENV -t nobuild --upload-port $$PORT
 
-_upload-all-%:
+_upload-all-%: _build-%
 	@ENV=$(lastword $(subst -, ,$*)); \
 	FAIL=0; \
 	for PORT in /dev/ttyACM*; do \
