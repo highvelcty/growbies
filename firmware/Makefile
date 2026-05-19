@@ -6,19 +6,17 @@ _build-%:
 	# Extract the last token after the last hyphen
 	MODEL_NUMBER=$* platformio run -e $(lastword $(subst -, ,$*))
 
-# Generic upload rule
 _upload-%: _build-%
 	@ENV=$(lastword $(subst -, ,$*)); \
 	PORT=$${PORT:-/dev/ttyACM0}; \
-	MODEL_NUMBER=$* platformio run -t upload -e $$ENV --upload-port $$PORT
+	MODEL_NUMBER=$* platformio run -t upload -e $$ENV -t nobuild --upload-port $$PORT
 
 _upload-all-%:
 	@ENV=$(lastword $(subst -, ,$*)); \
 	FAIL=0; \
 	for PORT in /dev/ttyACM*; do \
 		if [ -e "$$PORT" ]; then \
-			MODEL_NUMBER=$* platformio run -t upload -e $$ENV --upload-port $$PORT ||
-			FAIL=1; \
+			MODEL_NUMBER=$* platformio run -t upload -e $$ENV -t nobuild --upload-port $$PORT || FAIL=1; \
 		fi \
 	done; \
 	exit $$FAIL
