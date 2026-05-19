@@ -59,7 +59,7 @@ class Queue:
 
         return contents
 
-    def get_w_timeout(self, timeout: int) -> Iterator[Pickleable_t]:
+    def get_w_timeout(self, timeout: float) -> Iterator[Pickleable_t]:
         contents = self._read_contents()
         if not contents:
             events = list()
