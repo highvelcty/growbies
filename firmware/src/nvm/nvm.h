@@ -17,12 +17,13 @@
 
 #pragma pack(1)
 
-constexpr int DEFAULT_CONTRAST = 16;
-constexpr float DEFAULT_TELEMETRY_INTERVAL_SEC = 5.0;
-constexpr float DEFAULT_SLEEP_TO_SEC = 15.0;
-constexpr float DEFAULT_AUTO_WAKE_INTERVAL_SEC = 2.0;
+constexpr int DEFAULT_CONTRAST = 128;
+constexpr float DEFAULT_TELEMETRY_INTERVAL_SEC = 0.0;
+constexpr float DEFAULT_SLEEP_TO_SEC = 60.0;
+constexpr float DEFAULT_AUTO_WAKE_INTERVAL_SEC = 0.5;
 
 constexpr int MAX_MASS_SENSOR_COUNT = 5;
+constexpr int DEFAULT_MASS_SLOPE = 1.0;
 constexpr uint8_t MAX_COEFF_COUNT = 7;
 constexpr uint8_t COEFF_COUNT = 7;
 constexpr uint8_t TARE_COUNT = 8;
@@ -96,7 +97,7 @@ static_assert(sizeof(CalibrationHdr) == 8, "unexpected structure size");
 
 struct Coeffs {
     float mass_offset{};
-    float mass_slope{};
+    float mass_slope{DEFAULT_MASS_SLOPE};
     float mass_quadratic{};
     float temperature_offset{};
     float temperature_slope{};
@@ -122,7 +123,7 @@ static_assert(sizeof(Calibration) ==
 struct NvmCalibration : NvmStructBase {
     Calibration payload{};
 
-    static constexpr Version_t VERSION = 1;
+    static constexpr Version_t VERSION = 2;
 };
 static_assert(156 == sizeof(NvmCalibration), "unexpected structure size");
 
@@ -135,9 +136,9 @@ struct Identify {
 
     // Sensor configuration
     uint8_t mass_sensor_type{};
-    SensorIdx_t mass_sensor_count{};
+    SensorIdx_t mass_sensor_count{MASS_SENSOR_COUNT};
     uint8_t temperature_sensor_type{};
-    SensorIdx_t temperature_sensor_count{};
+    SensorIdx_t temperature_sensor_count{TEMPERATURE_SENSOR_COUNT};
 
     // Hardware configuration
     uint8_t pcba{};
@@ -150,8 +151,8 @@ struct Identify {
 
     // User configuration
     bool flip{};
-    MassUnits mass_units{};
-    TemperatureUnits temperature_units{};
+    MassUnits mass_units{MassUnits::GRAMS};
+    TemperatureUnits temperature_units{TemperatureUnits::FAHRENHEIT};
     uint8_t contrast{DEFAULT_CONTRAST};
     float telemetry_interval{DEFAULT_TELEMETRY_INTERVAL_SEC};
     float sleep_timeout{DEFAULT_SLEEP_TO_SEC};
@@ -375,6 +376,15 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
 template <>
 inline void NvmStoreBase<NvmCalibration>::migrate() {
     value_storage.payload.hdr.coeff_count = COEFF_COUNT;
+
+    if (value_storage.hdr.version < 2) {
+        for (auto & ii : value_storage.payload.sensor) {
+            if (ii.coeffs.mass_slope == 0.0) {
+                ii.coeffs.mass_slope = DEFAULT_MASS_SLOPE;
+            }
+        }
+    }
+
     _migrate();
 }
 

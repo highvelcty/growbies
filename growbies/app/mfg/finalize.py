@@ -65,15 +65,7 @@ class SetIdentification:
         identify.Identify.Field.DISPLAY.public_name: identify.DisplayType.DORHEA,
         identify.Identify.Field.LED.public_name: identify.LedType.NONE,
         identify.Identify.Field.FRAME.public_name: identify.FrameType.CIRCLE_10,
-        identify.Identify.Field.FOOT.public_name: identify.FootType.FLATTENED_SPHERE_40_x_25,
-        'no-flip': '',
-        identify.Identify.Field.MASS_UNITS.public_name: identify.MassUnitsType.GRAMS,
-        identify.Identify.Field.TEMPERATURE_UNITS.public_name:
-            identify.TemperatureUnitsType.FAHRENHEIT,
-        identify.Identify.Field.CONTRAST.public_name: 128,
-        identify.Identify.Field.TELEMETRY_INTERVAL.public_name: 0,
-        identify.Identify.Field.SLEEP_TIMEOUT.public_name: 60.0,
-        identify.Identify.Field.AUTO_WAKE_INTERVAL.public_name: 0.5
+        identify.Identify.Field.FOOT.public_name: identify.FootType.FLATTENED_SPHERE_40_x_25
     }
 
     @property
