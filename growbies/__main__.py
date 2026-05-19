@@ -43,7 +43,6 @@ import logging
 import sys
 from .utils.privileges import drop_privileges
 
-from growbies.constants import DEFAULT_CMD_TIMEOUT_SECONDS
 from growbies.device.resp import DeviceError
 from growbies.service.common import (ServiceCmd, ServiceOp, ServiceCmdError, TBaseServiceCmd)
 from growbies.service.queue import IDQueue, ServiceQueue
@@ -55,12 +54,12 @@ logger = logging.getLogger(__name__)
 # Execution continues here on execution not invoked by tab.
 known, unknown = parser.parse_known_args(sys.argv[1:])
 kw = vars(known)
-cmd: ServiceOp = kw.pop(CMD)
+cmd = ServiceOp(kw.pop(CMD))
 
 if unknown:
     parsers[cmd].error(f'Unknown arguments encountered "{unknown}"')
 
-def _run_cmd(cmd_: TBaseServiceCmd, timeout = DEFAULT_CMD_TIMEOUT_SECONDS):
+def _run_cmd(cmd_: TBaseServiceCmd, timeout = cmd.timeout_s):
     with ServiceQueue() as cmd_q, IDQueue() as resp_q:
         cmd_.qid = resp_q.qid
         cmd_q.put(cmd_)

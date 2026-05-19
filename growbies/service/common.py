@@ -66,6 +66,12 @@ class ServiceOp(StrEnum):
                 f'\n'
                 f'{desc}')
 
+    @property
+    def timeout_s(self) -> float:
+        if self == self.DEVICE:
+            return 30.0
+        return 10.0
+
 class ServiceCmd:
     def __init__(self, op: ServiceOp, kw: dict, qid: Optional[int | str] = None):
         self.op = op
