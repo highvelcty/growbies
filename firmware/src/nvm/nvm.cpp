@@ -12,9 +12,9 @@ TareStore* tare_store = new TareStore("tare");
 
 const char* get_tare_name(const TareIdx idx) {
     switch (idx) {
-        case TareIdx::TARE_0: return "Tare 0";
-        case TareIdx::TARE_1: return "Tare 1";
-        case TareIdx::TARE_2: return "Tare 2";
+        case TareIdx::TARE_0: return "Tare A";
+        case TareIdx::TARE_1: return "Tare B";
+        case TareIdx::TARE_2: return "Tare C";
         default: return "Unknown";
     }
 }

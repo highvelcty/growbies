@@ -42,7 +42,7 @@ BUTTON RemoteIn::service() { // NOLINT(*-make-member-function-const)
         if (pressed) {
             break;
         }
-        delay(BUTTON_PRESS_PULL_INTERVAL_MS);
+        delay(BUTTON_PRESS_POLL_INTERVAL_MS);
     }
 
 

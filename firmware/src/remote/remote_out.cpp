@@ -158,6 +158,7 @@ void RemoteOut::render() {
 
         const auto& item = (*level)[idx];
 
+        // Draw every item as selected, except the last one.
         item->draw((i + 1 < menu_path_depth));
         level = &item->children;
     }
