@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 
 from growbies.cli.common import BaseParam
+from growbies.cli.common import Param as CommonParam
 from growbies.app.cal import DefaultCalSessionName
 
 class Param(BaseParam):
@@ -13,6 +14,8 @@ class Param(BaseParam):
                     f'highest value past this format string: "{DefaultCalSessionName.FMT}".')
 
 def make_cli(parser: ArgumentParser):
-
+    parser.add_argument(CommonParam.FUZZY_ID, nargs='?', default=None,
+                        help='The partial or full identifier of a device to create a calibration '
+                             'session for.')
     parser.add_argument(f'--{Param.SESSION_NAME.kw_cli_name}', nargs='?', default=None,
                         help=Param.SESSION_NAME.help)
