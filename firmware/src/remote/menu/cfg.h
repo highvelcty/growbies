@@ -7,6 +7,7 @@
 #include <U8x8lib.h>
 
 #include "base.h"
+#include "flags.h"
 #include "measure/battery.h"
 #include "nvm/nvm.h"
 #include "system_state.h"
@@ -505,7 +506,9 @@ struct PowerMenu final : BaseCfgMenu {
             std::vector<std::shared_ptr<BaseMenu>>{
                 std::make_shared<SleepMenu>(display_),
                 std::make_shared<SleepTimeoutMenu>(display_),
+#if BATTERY_SENSE_PIN
                 std::make_shared<BatteryMenu>(display_),
+#endif
             }) {}
 };
 

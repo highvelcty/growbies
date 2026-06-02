@@ -1,5 +1,6 @@
 #include "build_cfg.h"
 #include "thermistor.h"
+#include "remote/remote_in.h"
 
 #include "constants.h"
 #include "hx711.h"
@@ -33,7 +34,7 @@ float Thermistor::sample() const {
         return DEFAULT_TEMPERATURE_CELSIUS;
     }
     const float r_therm =
-        (THERMISTOR_SERIES_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
+        (THERMISTOR_R2_BOTTOM_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
         / vout;
 
     const float inv_T = STEINHART_HART_A
@@ -55,7 +56,7 @@ float Thermistor::sample_beta() const {
         return DEFAULT_TEMPERATURE_CELSIUS;
     }
     const float r_therm =
-        (THERMISTOR_SERIES_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
+        (THERMISTOR_R2_BOTTOM_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
         / vout;
 
     const float inv_T = (1.0f / THERMISTOR_NOMINAL_TEMPERATURE)
@@ -87,6 +88,9 @@ std::vector<float> MultiThermistor::sample() const {
     for (const auto* therm : devices_) {
         readings.push_back(therm->sample());
     }
+    // 2026_06_02 meyere: analogReadMillivolts has the side effect of disconnecting
+    // interrupts.
+    RemoteIn::attach_interrupts();
     return readings;
 }
 

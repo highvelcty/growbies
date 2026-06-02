@@ -9,8 +9,7 @@ void RemoteIn::begin() {
     pinMode(BUTTON_0_PIN, INPUT);
     pinMode(BUTTON_1_PIN, INPUT);
     // configure button pins for interrupt during runtime
-    attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), RemoteIn::wakeISR0, HIGH);
-    attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), RemoteIn::wakeISR1, HIGH);
+    attach_interrupts();
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
     // configure button pins to wake from deep sleep
     esp_deep_sleep_enable_gpio_wakeup(1ULL << digitalPinToGPIONumber(BUTTON_0_PIN) |
@@ -18,6 +17,16 @@ void RemoteIn::begin() {
                                       ESP_GPIO_WAKEUP_GPIO_HIGH);
     // to filter spurious noise during boot.
     instance->power_on_debounce_ms = millis() + POWER_ON_DEBOUNCE_MS;
+}
+
+void RemoteIn::attach_interrupts() {
+    attachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN), RemoteIn::wakeISR0, HIGH);
+    attachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN), RemoteIn::wakeISR1, HIGH);
+}
+
+void RemoteIn::detach_interrupts() {
+    detachInterrupt(digitalPinToInterrupt(BUTTON_0_PIN));
+    detachInterrupt(digitalPinToInterrupt(BUTTON_1_PIN));
 }
 
 // This is not const because it modifies the static member variables shared by the ISRs.

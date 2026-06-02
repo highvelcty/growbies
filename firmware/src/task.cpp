@@ -72,15 +72,11 @@ void RemoteTask::run() {
 }
 
 void SerialPortInTask::run() {
-    if (battery.is_charging()) {
-        cmd_exec.exec();
-    }
+    cmd_exec.exec();
 }
 
 void SerialPortOutTask::run() {
-    if (battery.is_charging()) {
-        cmd_exec.update_telemetry(true);
-    }
+    cmd_exec.update_telemetry(true);
 }
 
 uint32_t SerialPortOutTask::interval_ms() const {

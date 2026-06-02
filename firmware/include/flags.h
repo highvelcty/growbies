@@ -12,5 +12,6 @@
 #endif
 
 #define POWER_CONTROL 1
+#define BATTERY_LEVEL_INDICATOR 0
 
 #endif /* flags_h */

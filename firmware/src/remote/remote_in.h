@@ -26,6 +26,8 @@ inline EVENT operator|(EVENT a, EVENT b) {
 class RemoteIn {
 public:
     static RemoteIn& get() { return *instance; }
+    static void attach_interrupts();
+    static void detach_interrupts();
     static void begin();
 
     BUTTON service();

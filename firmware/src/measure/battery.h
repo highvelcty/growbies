@@ -1,6 +1,7 @@
 #pragma once
 
 #include "constants.h"
+#include "flags.h"
 
 class Battery {
 public:
@@ -18,6 +19,11 @@ public:
 
     // Get the measured battery voltage
     float voltage() {
+#if !BATTERY_LEVEL_INDICATOR
+        // Always return not charging
+        // Always return not charging
+        return CHARGING_VOLTAGE_THRESHOLD + 1;
+#endif
         initialize();
         // Read raw ADC value (assuming 12-bit ADC on ESP32, 0-4095)
         const auto adc_voltage =

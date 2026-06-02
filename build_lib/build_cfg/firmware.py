@@ -71,7 +71,7 @@ class CircleEsp32c3(Default):
             if key == cls.MASS_SENSOR_COUNT:
                 return 3
             elif key == cls.TEMPERATURE_SENSOR_COUNT:
-                return 1
+                return 3
             else:
                 return super().value(key)
 
