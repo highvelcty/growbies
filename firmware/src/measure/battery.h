@@ -19,10 +19,8 @@ public:
 
     // Get the measured battery voltage
     float voltage() {
-#if !BATTERY_LEVEL_INDICATOR
-        // Always return not charging
-        // Always return not charging
-        return CHARGING_VOLTAGE_THRESHOLD + 1;
+#if BATTERY_LEVEL_INDICATOR
+        return 0.0;
 #endif
         initialize();
         // Read raw ADC value (assuming 12-bit ADC on ESP32, 0-4095)
@@ -68,7 +66,11 @@ public:
     }
 
     bool is_charging() {
+#if BATTERY_LEVEL_INDICATOR
         return voltage() <= CHARGING_VOLTAGE_THRESHOLD;
+#else
+        return digitalRead(BATTERY_SENSE_PIN) == LOW;
+#endif
     }
 
 private:

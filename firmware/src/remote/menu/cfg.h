@@ -255,6 +255,7 @@ struct BatteryLeaf final : BaseStrMenuLeaf {
 
         }
         else {
+#if BATTERY_LEVEL_INDICATOR
             snprintf(
                 msg_buf,
                 MSG_BUF_LEN,
@@ -262,6 +263,9 @@ struct BatteryLeaf final : BaseStrMenuLeaf {
                 battery.percentage(),
                 battery.voltage()
             );
+#else
+            snprintf(msg_buf, MSG_BUF_LEN, "discharging");
+#endif
         }
     }
 };
@@ -506,9 +510,7 @@ struct PowerMenu final : BaseCfgMenu {
             std::vector<std::shared_ptr<BaseMenu>>{
                 std::make_shared<SleepMenu>(display_),
                 std::make_shared<SleepTimeoutMenu>(display_),
-#if BATTERY_SENSE_PIN
                 std::make_shared<BatteryMenu>(display_),
-#endif
             }) {}
 };
 
