@@ -166,7 +166,7 @@ public:
                                            + coeffs.temperature_quadratic * dT * dT;
 
                 // --- Total corrected mass ---
-                mass = calibrated_mass + delta_M_temp;
+                mass = calibrated_mass - delta_M_temp;
             }
 
             per_sensor_mass_[ii] = mass;
