@@ -16,7 +16,7 @@ void go_to_sleep() {
 }
 
 void go_to_deep_sleep() {
-    // 2026_01_30 meyere: I did not find disabling the wakeup by timer source only toc be effective.
+    // 2026_01_30 meyere: I did not find disabling the wakeup by timer source only to be effective.
     //
     // esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);

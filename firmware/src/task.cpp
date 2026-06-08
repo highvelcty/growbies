@@ -4,8 +4,7 @@
 void AutoWakeTask::run() {
     if (not system_state.ready_for_tasks()) {
         measurement_stack.update();
-        mass_buffer().add(measurement_stack.aggregate_mass().total_mass());
-        if (mass_buffer().is_event_tripped()) {
+        if (measurement_stack.aggregate_mass().is_event_tripped()) {
             system_state.set_next_state(PowerState::ACTIVE);
         }
         else {
@@ -19,8 +18,7 @@ void AutoWakeTask::run() {
 void AutoWakeTask::run_on_wake() {
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
         measurement_stack.update();
-        mass_buffer().add(measurement_stack.aggregate_mass().total_mass());
-        if (!mass_buffer().is_event_tripped()) {
+        if (!measurement_stack.aggregate_mass().is_event_tripped()) {
             if (battery.is_charging ()) {
                 go_to_deep_sleep();
             }
@@ -47,7 +45,6 @@ void PowerTransitionTask::run() {
             remote_out.display_power_save(true);
             if (battery.is_charging ()) {
                 measurement_stack.update();
-                mass_buffer().add(measurement_stack.aggregate_mass().total_mass());
             }
             else {
                 go_to_deep_sleep();

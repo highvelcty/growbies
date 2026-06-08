@@ -64,6 +64,7 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
         const auto& stack = growbies::MeasurementStack::get();
         constexpr size_t dots_len = sizeof(dots) / sizeof(dots[0]);
 
+        stack.aggregate_mass().reset();
 
         for (const char* s : dots) {
             msg = s;
@@ -71,13 +72,12 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
             delay(TARE_SAMPLE_DELAY / dots_len);
         }
 
-
         std::vector<float> samples;
         samples.reserve(dots_len);
 
         for (const char* s : back_dots) {
             stack.update();
-            samples.push_back(stack.aggregate_mass().total_mass());
+            samples.push_back(stack.aggregate_mass().conditioned_total_mass());
             msg = s;
             draw(true);
         }
@@ -89,7 +89,6 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
         avg = sum / static_cast<float>(samples.size());
         tare_store->edit().payload.tares[tare_idx].value = avg;
         tare_store->commit();
-        mass_buffer().reset();
 
         msg = "zero";
     }
@@ -224,15 +223,15 @@ struct MassDrawing final : BaseTelemetryDrawing {
     void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
-        const auto& new_value = measurement_stack.aggregate_mass().total_mass();
         const auto new_units = identify_store->view()->payload.mass_units;
 
-        mass_buffer().add(new_value);
-        if (mass_buffer().is_event_tripped()) {
+        if (measurement_stack.aggregate_mass().is_event_tripped()) {
             system_state.notify_activity(millis());
         }
 
-        if (_convert_units(mass_buffer().value(), new_units)) {
+        const bool needs_redraw =
+            _convert_units(measurement_stack.aggregate_mass().conditioned_total_mass(), new_units);
+        if (needs_redraw) {
             redraw();
         }
         else {

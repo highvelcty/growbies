@@ -38,48 +38,34 @@ void SlidingMedianFilter::reset() {
 // -----------------------------------------------------------------------------
 // AEWMABuffer implementation
 // -----------------------------------------------------------------------------
-RTC_DATA_ATTR bool  aewma_buffer_initialized = false;
-RTC_DATA_ATTR float aewma_buffer_last_value = 0.0f;
+RTC_DATA_ATTR bool  aewma_mass_buffer_initialized = false;
+RTC_DATA_ATTR float aewma_mass_buffer_last_value = 0.0f;
 
-AEWMABuffer::AEWMABuffer(const float alpha_threshold,
-                         const float event_threshold)
-    : alpha_threshold(alpha_threshold),
-      event_threshold(event_threshold) {}
+AEWMABuffer::AEWMABuffer(const float alpha_min, const float alpha_max, const float alpha_threshold,
+                         const bool initialized, const float last_value)
+    : alpha_min(alpha_min), alpha_max(alpha_max), alpha_threshold(alpha_threshold),
+      initialized(initialized),
+      last_value(last_value) {}
 
 void AEWMABuffer::add(const float value) {
     if (isnan(value)) {
         return;
     }
 
-    if (!aewma_buffer_initialized) {
-        aewma_buffer_last_value = value;
-        aewma_buffer_initialized = true;
+    if (!initialized) {
+        last_value = value;
+        initialized = true;
         return;
     }
 
-    last_error = fabsf(value - aewma_buffer_last_value);
+    last_error = fabsf(value - last_value);
     const float alpha = compute_alpha(last_error);
-    aewma_buffer_last_value = alpha * value + (1.0f - alpha) * aewma_buffer_last_value;
-}
-
-bool AEWMABuffer::is_event_tripped() const {
-    return last_error >= event_threshold;
-};
-
-// ReSharper disable once CppMemberFunctionMayBeStatic
-float AEWMABuffer::value() { // NOLINT(*-convert-member-functions-to-static)
-    return aewma_buffer_initialized ? aewma_buffer_last_value : 0.0f;
-}
-
-// ReSharper disable once CppMemberFunctionMayBeStatic
-void AEWMABuffer::reset() { // NOLINT(*-convert-member-functions-to-static)
-    aewma_buffer_last_value = 0.0f;
-    aewma_buffer_initialized = false;
+    last_value = alpha * value + (1.0f - alpha) * last_value;
 }
 
 float AEWMABuffer::compute_alpha(const float error) const {
     if (error <= 0.0f or isnan(error)) {
-        return ALPHA_MIN;
+        return alpha_min;
     }
 
     // Scaling factor for how aggressive the smoothing is. An alpha of 1 (or maximum) is less
@@ -87,20 +73,24 @@ float AEWMABuffer::compute_alpha(const float error) const {
     // smoothing and tracking modes.
     const float alpha = sqrtf(error / alpha_threshold);
 
-    if (alpha < ALPHA_MIN) return ALPHA_MIN;
-    if (alpha > ALPHA_MAX) return ALPHA_MAX;
+    if (alpha < alpha_min) return alpha_min;
+    if (alpha > alpha_max) return alpha_max;
     return alpha;
 }
 
-// -----------------------------------------------------------------------------
-// Singleton
-// -----------------------------------------------------------------------------
-AEWMABuffer& mass_buffer() {
-    static AEWMABuffer instance(
-        EWMA_ALPHA_THRESH_GRAMS,
-        EVENT_THRESH_GRAMS
-    );
-    return instance;
+float AEWMABuffer::error() const {
+    return last_error;
+}
+
+// ReSharper disable once CppMemberFunctionMayBeStatic
+void AEWMABuffer::reset() { // NOLINT(*-convert-member-functions-to-static)
+    last_value = 0.0f;
+    initialized = false;
+}
+
+// ReSharper disable once CppMemberFunctionMayBeStatic
+float AEWMABuffer::value() const { // NOLINT(*-convert-member-functions-to-static)
+    return initialized ? last_value : 0.0f;
 }
 
 }

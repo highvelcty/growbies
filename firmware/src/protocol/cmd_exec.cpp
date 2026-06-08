@@ -84,8 +84,6 @@ void CmdExec::exec() {
         else if (in_packet_hdr->cmd == Cmd::READ) {
             error = usb_transport.validate_cmd(sizeof(CmdRead));
             if (!error) {
-                const auto& measurement_stack = growbies::MeasurementStack::get();
-                measurement_stack.update();
                 update_telemetry(false);
             }
         }
@@ -133,7 +131,7 @@ void CmdExec::update_telemetry(const bool async) const {
         datapoint.add<float>(EP_TARE, tare.value);
     }
 
-    datapoint.add<float>(EP_MASS, stack.aggregate_mass().total_mass());
+    datapoint.add<float>(EP_MASS, stack.aggregate_mass().conditioned_total_mass());
     datapoint.add<float>(EP_TEMPERATURE, stack.aggregate_temp().average());
 
     for (auto sensor_mass : stack.aggregate_mass().sensor_masses()) {

@@ -49,15 +49,18 @@ private:
     float value_;
 };
 
-// -------------------------------
-// Aggregate TEMPERATURE channels
-// -------------------------------
+constexpr float EWMA_TEMPERATURE_ALPHA_MIN = 0.002;
+constexpr float EWMA_TEMPERATURE_ALPHA_MAX = 0.02;
+constexpr float EWMA_TEMPERATURE_ALPHA_THRESH_CELSIUS = 2;
 class AggregateTemperature {
 
 public:
     explicit AggregateTemperature(const size_t num_sensors)
-        : channels_(num_sensors,
-            MeasurementChannel(SensorType::TEMPERATURE, MEDIAN_FILTER_BUF_SIZE))
+        :
+    aewma_(num_sensors, AEWMABuffer(EWMA_TEMPERATURE_ALPHA_MIN,
+        EWMA_TEMPERATURE_ALPHA_MAX, EWMA_TEMPERATURE_ALPHA_THRESH_CELSIUS)),
+    channels_(num_sensors,
+              MeasurementChannel(SensorType::TEMPERATURE, MEDIAN_FILTER_BUF_SIZE))
     {}
 
     MeasurementChannel& channel(const size_t idx) { return channels_[idx]; }
@@ -73,7 +76,21 @@ public:
         return sum / static_cast<float>(temps.size());
     }
 
-    void reset() {
+    void update() {
+        const auto* nvm_cal = calibration_store->payload();
+        const auto& sensors = nvm_cal->sensor;
+
+        for (size_t ii = 0; ii < channels_.size(); ++ii) {
+            const auto& ch = channels_[ii];
+            const auto& coeffs = sensors[ii].coeffs;
+
+            const float raw_temp = ch.value() - coeffs.thermistor_offset;
+
+            aewma_[ii].add(raw_temp);
+        }
+    }
+
+    void reset_channels() {
         for (auto& ch : channels_) {
             ch.reset();
         }
@@ -82,38 +99,43 @@ public:
     std::vector<float> sensor_temperatures() const {
         std::vector<float> temps;
         temps.reserve(channels_.size());
-        const auto* nvm_cal = calibration_store->payload();
-        const auto& sensors = nvm_cal->sensor;
+
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
-            auto& ch = channels_[ii];
-            const auto& coeffs = sensors[ii].coeffs;
-            temps.push_back(ch.value() - coeffs.thermistor_offset);
+            temps.push_back(aewma_[ii].value());
         }
+
         return temps;
     }
 
-
 private:
+    std::vector<AEWMABuffer> aewma_;
     std::vector<MeasurementChannel> channels_;
 };
 
 // -------------------------------
 // Aggregate MASS channels
 // -------------------------------
+constexpr float EVENT_THRESH_GRAMS = 50.0;
+constexpr float EWMA_MASS_ALPHA_MIN = 0.02;
+constexpr float EWMA_MASS_ALPHA_MAX = 0.7;
+constexpr float EWMA_MASS_ALPHA_THRESH_GRAMS = 25.0;
 class AggregateMass {
 public:
     explicit AggregateMass(const size_t num_sensors, AggregateTemperature& temperature)
-        : channels_(
-              num_sensors,
-              MeasurementChannel(SensorType::MASS, MEDIAN_FILTER_BUF_SIZE)),
-          temperature_(temperature),
-          per_sensor_mass_(num_sensors, 0.0f),
-          total_mass_(0.0f)
+        :
+          aewma_buffer_(EWMA_MASS_ALPHA_MIN, EWMA_MASS_ALPHA_MAX, EWMA_MASS_ALPHA_THRESH_GRAMS,
+            aewma_mass_buffer_initialized, aewma_mass_buffer_last_value),
+        channels_(
+            num_sensors,
+            MeasurementChannel(SensorType::MASS, MEDIAN_FILTER_BUF_SIZE)),
+        temperature_(temperature),
+        per_sensor_mass_(num_sensors, 0.0f),
+        total_mass_(0.0f)
     {}
 
     MeasurementChannel& channel(const size_t idx) { return channels_[idx]; }
     const MeasurementChannel& channel(const size_t idx) const { return channels_[idx]; }
-    void reset() {
+    void reset_channels() {
         for (auto& ch : channels_) {
             ch.reset();
         }
@@ -121,9 +143,11 @@ public:
         std::fill(per_sensor_mass_.begin(), per_sensor_mass_.end(), 0.0f);
         total_mass_ = 0.0f;
     }
+    void reset() { aewma_buffer_.reset(); reset_channels(); }
     const std::vector<float>& sensor_masses() const { return per_sensor_mass_; }
     size_t size() const { return channels_.size(); }
-    float total_mass() const { return total_mass_; }
+    float conditioned_total_mass() const { return aewma_buffer_.value(); }
+    bool is_event_tripped() const { return aewma_buffer_.error() >= EVENT_THRESH_GRAMS; }
 
     void update() {
         total_mass_ = 0.0f;
@@ -172,9 +196,11 @@ public:
             per_sensor_mass_[ii] = mass;
             total_mass_ += mass;
         }
+        aewma_buffer_.add(total_mass_);
     }
 
 private:
+    AEWMABuffer aewma_buffer_;
     std::vector<MeasurementChannel> channels_;
     AggregateTemperature& temperature_;
     std::vector<float> per_sensor_mass_{};

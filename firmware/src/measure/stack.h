@@ -1,6 +1,7 @@
 #pragma once
-#include "measure.h"
+
 #include "hx711.h"
+#include "measure.h"
 #include "thermistor.h"
 
 namespace growbies {
@@ -21,8 +22,8 @@ public:
     void power_off() const { multi_hx711_.power_off(); }
     void power_on() const { multi_hx711_.power_on(); }
 
-    const AggregateMass& aggregate_mass() const noexcept { return *aggregate_mass_; }
-    const AggregateTemperature& aggregate_temp() const noexcept { return *aggregate_temp_; }
+    AggregateMass& aggregate_mass() const noexcept { return *aggregate_mass_; }
+    AggregateTemperature& aggregate_temp() const noexcept { return *aggregate_temp_; }
 
 private:
     MeasurementStack() = default;
