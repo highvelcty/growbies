@@ -43,6 +43,7 @@ class PcbaType(IntEnum):
 
 class TemperatureSensorType(IntEnum):
     GENERIC = 0
+    EATON_NRNE105H4100B1H = 1
 
 class TemperatureUnitsType(IntEnum):
     FAHRENHEIT = 0

@@ -59,6 +59,8 @@ class SetIdentification:
         self._returncode = 0
     _defaults = {
         identify.Identify.Field.MODEL_NUMBER.public_name: 'circle_10',
+        identify.Identify.Field.TEMPERATURE_SENSOR_TYPE.public_name:
+            identify.TemperatureSensorType.EATON_NRNE105H4100B1H,
         identify.Identify.Field.PCBA.public_name: identify.PcbaType.ESP32C3,
         identify.Identify.Field.WIRELESS.public_name: identify.WirelessType.BLE,
         identify.Identify.Field.BATTERY.public_name: identify.BatteryType.LIPO_502030_250MAH,
@@ -72,8 +74,14 @@ class SetIdentification:
     def returncode(self) -> int:
         return self._returncode
 
+    @staticmethod
+    def _format_serial_number(serial_number: str) -> str:
+        return serial_number.replace(':', '')
+
+
     def serial_number(self):
-        rc, _, _ = run_cmd(f'growbies nvm id {self._fuzzy_id} --serial_number {self._dev.serial}')
+        rc, _, _ = run_cmd(f'growbies nvm id {self._fuzzy_id} '
+                           f'--serial_number {self._format_serial_number(self._dev.serial)}')
         self._returncode |= rc
 
     def manufacture_date(self):

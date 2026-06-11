@@ -26,7 +26,7 @@ def make_cli(parser: ArgumentParser):
         f'--{id_mod.Identify.Field.TEMPERATURE_SENSOR_TYPE.public_name}',
         metavar='{' + ','.join(
             [f'{x.value}={x.name}' for x in id_mod.TemperatureSensorType]) + '}',
-        choices=tuple(id_mod.MassSensorType), default=None, type=int)
+        choices=tuple(id_mod.TemperatureSensorType), default=None, type=int)
     parser.add_argument(f'--{id_mod.Identify.Field.PCBA.public_name}',
                         metavar='{' + ','.join(
                             [f'{x.value}={x.name}' for x in id_mod.PcbaType]) + '}',
