@@ -1,39 +1,42 @@
+from argparse import Namespace
 from matplotlib.dates import DateFormatter
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-import math
+import logging
 import numpy as np
-import matplotlib.dates as mdates
-from datetime import datetime
+import sys
 
 
+from .cli import Action, PlotAction
 from growbies.cli.common import Param as CommonParam
 from growbies.db.engine import get_db_engine
-from growbies.db.models.common import BuiltinTagName
 from growbies.db.models.session import Session
 from growbies.device.common.calibration import REF_TEMPERATURE_C
-from growbies.service.common import ServiceCmd, ServiceCmdError
+from growbies.service.common import ServiceCmdError
+from growbies.utils.report import short_uuid
 from growbies.utils.timestamp import FMT_DT_INT
 
+logger = logging.getLogger(__name__)
 
-def execute(cmd: ServiceCmd):
+def execute(args: Namespace):
+    returncode = 0
+
+    fuzzy_id = getattr(args, CommonParam.FUZZY_ID)
+    plot_type = getattr(args, Action.PLOT)
+
     engine = get_db_engine().session
-
-    fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID)
     session = engine.get(fuzzy_id)
 
-    # plot_mass_vs_time(session)
-    # plot_ref_mass_vs_temperature(session)
-    # plot_error_plane_per_sensor(session)
-    # plot_error_plane_per_sensor_interaction_separated(session)
-    # plot_error_plane_per_sensor_quadratic(session)
-    # plot_error_heatmap_mass_per_sensor(session)
-    # plot_residual_vs_corrected_mass(session)
-    # plot_mass_vs_temp(session)
+    if plot_type == PlotAction.MASS:
+        plot_mass_cal(session)
+    elif plot_type == PlotAction.TEMP:
+        plot_temp_cal(session)
 
-    # More heavily developed functions:
-    plot_mass_cal(session)
-    plot_temperature_correction(session)
+    if returncode == 0:
+        logger.info('*** PASS ***')
+    else:
+        logger.error('*** FAIL ***')
+
+    sys.exit(returncode)
 
 def plot_mass_vs_time(session: Session):
     engine = get_db_engine().session
@@ -97,7 +100,6 @@ def plot_mass_vs_time(session: Session):
     fig.autofmt_xdate()
     plt.tight_layout()
     plt.show()
-
 
 def plot_ref_mass_vs_temperature(session: Session):
     engine = get_db_engine().session
@@ -165,676 +167,6 @@ def plot_ref_mass_vs_temperature(session: Session):
     ax_mass.add_artist(legend_mass)  # Ensure both legends show
 
     plt.tight_layout()
-    plt.show()
-
-def plot_error_plane_per_sensor(session: Session):
-    engine = get_db_engine().session
-    datapoints = engine.get_datapoints(session.id)
-
-    if not datapoints:
-        raise ServiceCmdError(f"No datapoints found for session {session.id}")
-
-    max_sensors = len(datapoints[0].mass_sensors)
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-    # Use a colormap for different sensors
-    colors = plt.cm.tab10(np.linspace(0, 1, max_sensors))
-
-    for sensor_idx in range(max_sensors):
-        temp_list = []
-        ref_list = []
-        error_list = []
-
-        for dp in datapoints:
-            if sensor_idx < len(dp.mass_sensors):
-                sensor = dp.mass_sensors[sensor_idx]
-                if sensor.ref_mass is not None:
-                    temp_list.append(dp.temperature)
-                    ref_list.append(sensor.ref_mass)
-                    error_list.append(sensor.mass - sensor.ref_mass)
-
-        if not temp_list:
-            continue  # Skip sensors with no reference mass
-
-        X = np.array(temp_list)
-        Y = np.array(ref_list)
-        Z = np.array(error_list)
-
-        # ---- Fit plane: Z = a*X + b*Y + c ----
-        A = np.c_[X, Y, np.ones_like(X)]
-        coeff, *_ = np.linalg.lstsq(A, Z, rcond=None)
-        a, b, c = coeff
-
-        # ---- Create grid for plotting plane ----
-        xi = np.linspace(X.min(), X.max(), 20)
-        yi = np.linspace(Y.min(), Y.max(), 20)
-        XI, YI = np.meshgrid(xi, yi)
-        ZI = a * XI + b * YI + c
-
-        # ---- Plot plane ----
-        ax.plot_surface(XI, YI, ZI, alpha=0.3, color=colors[sensor_idx], edgecolor='k')
-
-        # ---- Plot scatter points ----
-        ax.scatter(X, Y, Z, color=colors[sensor_idx], label=f"Sensor {sensor_idx}", s=30)
-
-    ax.set_xlabel("Temperature (°C)")
-    ax.set_ylabel("Reference Mass (g)")
-    ax.set_zlabel("Error (Measured - Reference, g)")
-    ax.set_title(f"Error Planes per Sensor for Session {session.name}")
-    ax.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_error_plane_per_sensor_interaction(session: Session, ref_temp: float = REF_TEMPERATURE_C):
-    engine = get_db_engine().session
-    datapoints = engine.get_datapoints(session.id)
-
-    if not datapoints:
-        raise ServiceCmdError(f"No datapoints found for session {session.id}")
-
-    max_sensors = len(datapoints[0].mass_sensors)
-
-    for sensor_idx in range(max_sensors):
-        temp_list = []
-        ref_list = []
-        mass_list = []
-
-        for dp in datapoints:
-            if sensor_idx < len(dp.mass_sensors):
-                sensor = dp.mass_sensors[sensor_idx]
-                if sensor.ref_mass is not None:
-                    if sensor_idx == 1:
-                        print(sensor.mass)
-                    temp_list.append(dp.temperature)
-                    ref_list.append(sensor.ref_mass)
-                    mass_list.append(sensor.mass)
-
-        if not temp_list:
-            continue  # Skip sensors with no reference mass
-
-        X_ref = np.array(ref_list)
-        dT = np.array(temp_list) - ref_temp   # reference temperature
-        M_measured = np.array(mass_list)
-
-        # ---- Design matrix: intercept, ref_mass, dT, ref_mass*dT ----
-        A = np.c_[np.ones_like(X_ref), X_ref, dT, X_ref * dT]
-
-        # Solve least squares
-        coeff, *_ = np.linalg.lstsq(A, M_measured, rcond=None)
-        c0, c1, c2, c3 = coeff
-
-        # ---- Create grid for plotting plane ----
-        xi = np.linspace(X_ref.min(), X_ref.max(), 20)
-        yi = np.linspace(dT.min(), dT.max(), 20)
-        XI, YI = np.meshgrid(xi, yi)
-        ZI = c0 + c1*XI + c2*YI + c3*(XI*YI)
-
-        # ---- Create figure for this sensor ----
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plot plane
-        ax.plot_surface(XI, YI + ref_temp, ZI, alpha=0.3, color='tab:blue', edgecolor='k')
-
-        # Plot scatter points
-        ax.scatter(X_ref, dT + ref_temp, M_measured, color='tab:red', label=f"Sensor {sensor_idx}", s=30)
-
-        ax.set_xlabel("Reference Mass (g)")
-        ax.set_ylabel("Temperature (°C)")
-        ax.set_zlabel("Measured Mass (g)")
-        ax.set_title(f"Sensor {sensor_idx} Mass Plane - Session {session.name}")
-        ax.legend()
-        plt.tight_layout()
-        plt.show()
-
-def plot_error_plane_per_sensor_interaction_separated(session: Session,
-                                                      ref_temp: float = REF_TEMPERATURE_C):
-    engine = get_db_engine().session
-    datapoints = engine.get_datapoints(session.id)
-
-    if not datapoints:
-        raise ServiceCmdError(f"No datapoints found for session {session.id}")
-
-    max_sensors = len(datapoints[0].mass_sensors)
-
-    # Determine subplot grid size
-    ncols = 2
-    nrows = math.ceil(max_sensors / ncols)
-
-    fig = plt.figure(figsize=(6 * ncols, 5 * nrows))
-
-    for sensor_idx in range(max_sensors):
-        temp_list = []
-        ref_list = []
-        mass_list = []
-
-        for dp in datapoints:
-            if sensor_idx < len(dp.mass_sensors):
-                sensor = dp.mass_sensors[sensor_idx]
-                if sensor.ref_mass is not None:
-                    temp_list.append(dp.temperature)
-                    ref_list.append(sensor.ref_mass)
-                    mass_list.append(sensor.mass)
-
-        if not temp_list:
-            continue  # Skip sensors with no reference mass
-
-        X_ref = np.array(ref_list)
-        dT = np.array(temp_list) - ref_temp
-        M_measured = np.array(mass_list)
-
-        # Design matrix for interaction model
-        A = np.c_[np.ones_like(X_ref), X_ref, dT, X_ref * dT]
-        coeff, *_ = np.linalg.lstsq(A, M_measured, rcond=None)
-        c0, c1, c2, c3 = coeff
-
-        # Grid for plane
-        xi = np.linspace(X_ref.min(), X_ref.max(), 20)
-        yi = np.linspace(dT.min(), dT.max(), 20)
-        XI, YI = np.meshgrid(xi, yi)
-        ZI = c0 + c1*XI + c2*YI + c3*(XI*YI)
-
-        # Add subplot for this sensor
-        ax = fig.add_subplot(nrows, ncols, sensor_idx + 1, projection='3d')
-
-        # Plot plane and scatter
-        ax.plot_surface(XI, YI + ref_temp, ZI, alpha=0.3, color='tab:blue', edgecolor='k')
-        ax.scatter(X_ref, dT + ref_temp, M_measured, color='tab:red', s=30)
-
-        ax.set_xlabel("Reference Mass (g)")
-        ax.set_ylabel("Temperature (°C)")
-        ax.set_zlabel("Measured Mass (g)")
-        ax.set_title(f"Sensor {sensor_idx}")
-
-    plt.tight_layout()
-    plt.show()
-
-
-# def plot_error_plane_per_sensor_quadratic(session: Session, ref_temp: float = REF_TEMPERATURE_C):
-#     engine = get_db_engine().session
-#     datapoints = engine.get_datapoints(session.id)
-#
-#     if not datapoints:
-#         raise ServiceCmdError(f"No datapoints found for session {session.id}")
-#
-#     max_sensors = len(datapoints[0].mass_sensors)
-#
-#     # Determine subplot grid size
-#     ncols = 2
-#     nrows = math.ceil(max_sensors / ncols)
-#     fig = plt.figure(figsize=(6 * ncols, 5 * nrows))
-#
-#     for sensor_idx in range(max_sensors):
-#         temp_list = []
-#         ref_list = []
-#         mass_list = []
-#
-#         for dp in datapoints:
-#             if sensor_idx < len(dp.mass_sensors):
-#                 sensor = dp.mass_sensors[sensor_idx]
-#                 if sensor.ref_mass is not None:
-#                     temp_list.append(dp.temperature)
-#                     ref_list.append(sensor.ref_mass)
-#                     mass_list.append(sensor.mass)
-#
-#         if not temp_list:
-#             continue  # Skip sensors with no reference mass
-#
-#         X_ref = np.array(ref_list)
-#         dT = np.array(temp_list) - ref_temp
-#         M_measured = np.array(mass_list)
-#
-#         # ---- Design matrix: intercept, M_ref, dT, M*dT, dT^2, M^2 ----
-#         A = np.c_[np.ones_like(X_ref), X_ref, dT, X_ref*dT, dT**2, X_ref**2]
-#
-#         # Solve least squares
-#         coeff, *_ = np.linalg.lstsq(A, M_measured, rcond=None)
-#         c0, c1, c2, c3, c4, c5 = coeff
-#
-#         # ---- Create grid for plotting surface ----
-#         xi = np.linspace(X_ref.min(), X_ref.max(), 20)
-#         yi = np.linspace(dT.min(), dT.max(), 20)
-#         XI, YI = np.meshgrid(xi, yi)
-#         ZI = c0 + c1*XI + c2*YI + c3*(XI*YI) + c4*(YI**2) + c5*(XI**2)
-#
-#         # ---- Subplot for this sensor ----
-#         ax = fig.add_subplot(nrows, ncols, sensor_idx + 1, projection='3d')
-#
-#         # Plot surface and scatter points
-#         ax.plot_surface(XI, YI + ref_temp, ZI, alpha=0.3, color='tab:blue', edgecolor='k')
-#         ax.scatter(X_ref, dT + ref_temp, M_measured, color='tab:red', s=30)
-#
-#         ax.set_xlabel("Reference Mass (g)")
-#         ax.set_ylabel("Temperature (°C)")
-#         ax.set_zlabel("Measured Mass (g)")
-#         ax.set_title(f"Sensor {sensor_idx}")
-#
-#     plt.tight_layout()
-#     plt.show()
-
-# def plot_error_plane_per_sensor_quadratic(session: Session, ref_temp: float = REF_TEMPERATURE_C):
-#     engine = get_db_engine().session
-#     datapoints = engine.get_datapoints(session.id)
-#
-#     if not datapoints:
-#         raise ServiceCmdError(f"No datapoints found for session {session.id}")
-#
-#     max_sensors = len(datapoints[0].mass_sensors)
-#
-#     # Determine subplot grid size
-#     ncols = 2
-#     nrows = math.ceil(max_sensors / ncols)
-#     fig = plt.figure(figsize=(6 * ncols, 5 * nrows))
-#
-#     for sensor_idx in range(max_sensors):
-#         temp_list = []
-#         ref_list = []
-#         mass_list = []
-#
-#         for dp in datapoints:
-#             if sensor_idx < len(dp.mass_sensors):
-#                 sensor = dp.mass_sensors[sensor_idx]
-#                 if sensor.ref_mass is not None:
-#                     temp_list.append(dp.temperature)
-#                     ref_list.append(sensor.ref_mass)
-#                     mass_list.append(sensor.mass)
-#
-#         if not temp_list:
-#             continue  # Skip sensors with no reference mass
-#
-#         X_ref = np.array(ref_list)
-#         dT = np.array(temp_list) - ref_temp
-#         M_measured = np.array(mass_list)
-#
-#         # ---- Design matrix: intercept, M_ref, dT, M*dT, dT^2, M^2 ----
-#         A = np.c_[
-#             np.ones_like(X_ref),
-#             X_ref,
-#             dT,
-#             X_ref * dT,
-#             dT**2,
-#             X_ref**2,
-#         ]
-#
-#         # Solve least squares
-#         coeff, *_ = np.linalg.lstsq(A, M_measured, rcond=None)
-#         c0, c1, c2, c3, c4, c5 = coeff
-#
-#         # ---- Create grid for plotting surface ----
-#         xi = np.linspace(X_ref.min(), X_ref.max(), 20)
-#         yi = np.linspace(dT.min(), dT.max(), 20)
-#         XI, YI = np.meshgrid(xi, yi)
-#         ZI = (
-#             c0
-#             + c1 * XI
-#             + c2 * YI
-#             + c3 * (XI * YI)
-#             + c4 * (YI**2)
-#             + c5 * (XI**2)
-#         )
-#
-#         # ---- Subplot for this sensor ----
-#         ax = fig.add_subplot(nrows, ncols, sensor_idx + 1, projection="3d")
-#
-#         ax.plot_surface(
-#             XI,
-#             YI + ref_temp,
-#             ZI,
-#             alpha=0.3,
-#             edgecolor="k",
-#         )
-#         ax.scatter(
-#             X_ref,
-#             dT + ref_temp,
-#             M_measured,
-#             s=30,
-#         )
-#
-#         ax.set_xlabel("Reference Mass (g)")
-#         ax.set_ylabel("Temperature (°C)")
-#         ax.set_zlabel("Measured Mass (g)")
-#         ax.set_title(f"Sensor {sensor_idx}")
-#
-#         # ---- Coefficient text block ----
-#         coeff_text = (
-#             "Model coefficients:\n"
-#             f"c0 = {c0:.4e}\n"
-#             f"c1 = {c1:.4e}\n"
-#             f"c2 = {c2:.4e}\n"
-#             f"c3 = {c3:.4e}\n"
-#             f"c4 = {c4:.4e}\n"
-#             f"c5 = {c5:.4e}"
-#         )
-#
-#         ax.text2D(
-#             0.02,
-#             0.98,
-#             coeff_text,
-#             transform=ax.transAxes,
-#             fontsize=9,
-#             verticalalignment="top",
-#             bbox=dict(boxstyle="round", alpha=0.8),
-#         )
-#
-#     plt.tight_layout()
-#     plt.show()
-
-def plot_error_plane_per_sensor_quadratic(session: "Session", ref_temp: float = REF_TEMPERATURE_C):
-    """
-    Plot 3D reference mass vs raw ADC & temperature for each sensor in a session,
-    showing both raw RMSE and corrected RMSE per sensor.
-    """
-    engine = get_db_engine().session
-    datapoints = engine.get_datapoints(session.id)
-
-    if not datapoints:
-        raise ServiceCmdError(f"No datapoints found for session {session.id}")
-
-    max_sensors = len(datapoints[0].mass_sensors)
-    ncols = 2
-    nrows = math.ceil(max_sensors / ncols)
-    fig = plt.figure(figsize=(6 * ncols, 5 * nrows))
-
-    # ---- Figure-level model title ----
-    model_str = "M_ref = c0 + c1·r + c2·dT + c3·(r·dT) + c4·(dT²) + c5·(r²)"
-    fig.suptitle(model_str, fontsize=12, y=0.98)
-
-    for sensor_idx in range(max_sensors):
-        temp_list = []
-        ref_list = []
-        r_list = []
-
-        for dp in datapoints:
-            if sensor_idx < len(dp.mass_sensors):
-                sensor = dp.mass_sensors[sensor_idx]
-                if sensor.ref_mass is not None:
-                    temp_list.append(dp.temperature)
-                    ref_list.append(sensor.ref_mass)
-                    r_list.append(sensor.mass)  # raw ADC reading
-
-        if not temp_list:
-            continue  # Skip sensors with no reference mass
-
-        r = np.array(r_list)
-        dT = np.array(temp_list) - ref_temp
-        M_ref = np.array(ref_list)
-
-        # ---- Raw RMSE (before correction) ----
-        raw_rmse = np.sqrt(np.mean((r - M_ref)**2))
-
-        # ---- Design matrix for polynomial correction ----
-        A = np.c_[
-            np.ones_like(r),
-            r,
-            dT,
-            r * dT,
-            dT**2,
-            r**2,
-        ]
-
-        # ---- Solve least squares for corrected mass ----
-        coeff, *_ = np.linalg.lstsq(A, M_ref, rcond=None)
-        c0, c1, c2, c3, c4, c5 = coeff
-
-        # ---- Corrected RMSE (residual after correction) ----
-        M_fit = A @ coeff
-        residuals = M_fit - M_ref
-        corrected_rmse = np.sqrt(np.mean(residuals**2))
-
-        # ---- Surface grid ----
-        r_grid = np.linspace(r.min(), r.max(), 20)
-        dT_grid = np.linspace(dT.min(), dT.max(), 20)
-        R, DT = np.meshgrid(r_grid, dT_grid)
-        ZI = c0 + c1*R + c2*DT + c3*(R*DT) + c4*(DT**2) + c5*(R**2)
-
-        # ---- 3D plot ----
-        ax = fig.add_subplot(nrows, ncols, sensor_idx + 1, projection="3d")
-        ax.plot_surface(R, DT + ref_temp, ZI, alpha=0.3, edgecolor="k")
-        ax.scatter(r, dT + ref_temp, M_ref, s=30)
-
-        ax.set_xlabel("Raw ADC r")
-        ax.set_ylabel("Temperature (°C)")
-        ax.set_zlabel("Reference Mass (g)")
-        ax.set_title(f"Sensor {sensor_idx}")
-
-        # ---- Coefficients + RMSE block ----
-        coeff_text = (
-            "Coefficients:\n"
-            f"c0 = {c0:.6f}\n"
-            f"c1 = {c1:.6f}\n"
-            f"c2 = {c2:.6f}\n"
-            f"c3 = {c3:.6f}\n"
-            f"c4 = {c4:.6f}\n"
-            f"c5 = {c5:.6f}\n\n"
-            f"Raw RMSE = {raw_rmse:.3f} g\n"
-            f"Corrected RMSE = {corrected_rmse:.3f} g"
-        )
-
-        ax.text2D(
-            0.02,
-            0.98,
-            coeff_text,
-            transform=ax.transAxes,
-            fontsize=9,
-            verticalalignment="top",
-            bbox=dict(boxstyle="round", alpha=0.8),
-        )
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
-
-def plot_error_heatmap_mass_per_sensor(session: "Session", ref_temp: float = REF_TEMPERATURE_C,
-                                       grid_size: int = 100):
-    """
-    Plot a smooth 2D heatmap of residuals vs corrected mass & temperature per sensor.
-    Corrected mass is computed from the polynomial model.
-    """
-    engine = get_db_engine().session
-    datapoints = engine.get_datapoints(session.id)
-
-    if not datapoints:
-        raise ServiceCmdError(f"No datapoints found for session {session.id}")
-
-    max_sensors = len(datapoints[0].mass_sensors)
-    ncols = 2
-    nrows = (max_sensors + 1) // ncols
-    fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 5 * nrows), squeeze=False)
-    fig.suptitle("Residuals Heatmap per Sensor (Corrected Mass)", fontsize=14, y=0.98)
-
-    for sensor_idx in range(max_sensors):
-        temp_list = []
-        ref_list = []
-        r_list = []
-
-        for dp in datapoints:
-            if sensor_idx < len(dp.mass_sensors):
-                sensor = dp.mass_sensors[sensor_idx]
-                if sensor.ref_mass is not None:
-                    temp_list.append(dp.temperature)
-                    ref_list.append(sensor.ref_mass)
-                    r_list.append(sensor.mass)
-
-        if not temp_list:
-            continue
-
-        r = np.array(r_list)
-        dT = np.array(temp_list) - ref_temp
-        M_ref = np.array(ref_list)
-
-        # Polynomial fit
-        A = np.c_[
-            np.ones_like(r),
-            r,
-            dT,
-            r * dT,
-            dT**2,
-            r**2,
-        ]
-        coeff, *_ = np.linalg.lstsq(A, M_ref, rcond=None)
-        M_fit = A @ coeff
-        residuals = M_fit - M_ref
-
-        # Grid for smooth heatmap
-        M_lin = np.linspace(M_fit.min(), M_fit.max(), grid_size)
-        dT_lin = np.linspace(dT.min(), dT.max(), grid_size)
-        M_grid, DT_grid = np.meshgrid(M_lin, dT_lin)
-
-        # Inverse-distance weighting interpolation
-        Z_grid = np.zeros_like(M_grid)
-        for i in range(grid_size):
-            for j in range(grid_size):
-                distances = np.sqrt((M_fit - M_grid[i, j])**2 + (dT - DT_grid[i, j])**2)
-                distances[distances == 0] = 1e-10
-                weights = 1 / distances
-                Z_grid[i, j] = np.sum(weights * residuals) / np.sum(weights)
-
-        # Plot heatmap
-        ax = axes[sensor_idx // ncols, sensor_idx % ncols]
-        c = ax.pcolormesh(M_grid, DT_grid + ref_temp, Z_grid, shading='auto', cmap='RdBu_r')
-        ax.set_xlabel("Corrected Mass (g)")
-        ax.set_ylabel("Temperature (°C)")
-        ax.set_title(f"Sensor {sensor_idx}")
-        fig.colorbar(c, ax=ax, label="Residual (g)")
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
-
-
-def plot_relative_error_vs_corrected_mass(session: "Session", ref_temp: float = REF_TEMPERATURE_C):
-    """
-    Plot relative error (%) vs corrected mass for each sensor in a session.
-    Corrected mass is computed from the polynomial model:
-    M_corrected = c0 + c1*M + c2*dT + c3*(M*dT) + c4*(dT^2) + c5*(M^2)
-    Relative error = (M_corrected - ref_mass) / ref_mass * 100
-    """
-    engine = get_db_engine().session
-    datapoints = engine.get_datapoints(session.id)
-
-    if not datapoints:
-        raise ServiceCmdError(f"No datapoints found for session {session.id}")
-
-    max_sensors = len(datapoints[0].mass_sensors)
-    ncols = 2
-    nrows = (max_sensors + 1) // ncols
-    fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 5 * nrows), squeeze=False)
-    fig.suptitle("Relative Error vs Corrected Mass per Sensor", fontsize=14, y=0.98)
-
-    for sensor_idx in range(max_sensors):
-        temp_list = []
-        ref_list = []
-        raw_mass_list = []
-
-        for dp in datapoints:
-            if sensor_idx < len(dp.mass_sensors):
-                sensor = dp.mass_sensors[sensor_idx]
-                if sensor.ref_mass is not None:
-                    temp_list.append(dp.temperature)
-                    ref_list.append(sensor.ref_mass)
-                    raw_mass_list.append(sensor.mass)
-
-        if not temp_list:
-            continue
-
-        r = np.array(raw_mass_list)
-        dT = np.array(temp_list) - ref_temp
-        M_ref = np.array(ref_list)
-
-        # Polynomial fit for correction
-        A = np.c_[
-            np.ones_like(r),
-            r,
-            dT,
-            r * dT,
-            dT**2,
-            r**2,
-        ]
-        coeff, *_ = np.linalg.lstsq(A, M_ref, rcond=None)
-        M_corrected = A @ coeff
-
-        # Relative error
-        rel_error = (M_corrected - M_ref) / M_ref * 100
-
-        # Plot
-        ax = axes[sensor_idx // ncols, sensor_idx % ncols]
-        ax.scatter(M_corrected, rel_error, alpha=0.7)
-        ax.axhline(0, color='black', linestyle='--', linewidth=1)
-        ax.set_xlabel("Corrected Mass (g)")
-        ax.set_ylabel("Relative Error (%)")
-        ax.set_title(f"Sensor {sensor_idx}")
-        ax.grid(True)
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
-    plt.show()
-
-import numpy as np
-import matplotlib.pyplot as plt
-
-def plot_residual_vs_corrected_mass(session: "Session", ref_temp: float = REF_TEMPERATURE_C):
-    """
-    Plot residuals (corrected mass - reference mass) in grams vs corrected mass for each sensor.
-    Corrected mass is computed from the polynomial model:
-    M_corrected = c0 + c1*M + c2*dT + c3*(M*dT) + c4*(dT^2) + c5*(M^2)
-    """
-    engine = get_db_engine().session
-    datapoints = engine.get_datapoints(session.id)
-
-    if not datapoints:
-        raise ServiceCmdError(f"No datapoints found for session {session.id}")
-
-    max_sensors = len(datapoints[0].mass_sensors)
-    ncols = 2
-    nrows = (max_sensors + 1) // ncols
-    fig, axes = plt.subplots(nrows, ncols, figsize=(6 * ncols, 5 * nrows), squeeze=False)
-    fig.suptitle("Residual vs Corrected Mass per Sensor", fontsize=14, y=0.98)
-
-    for sensor_idx in range(max_sensors):
-        temp_list = []
-        ref_list = []
-        raw_mass_list = []
-
-        for dp in datapoints:
-            if sensor_idx < len(dp.mass_sensors):
-                sensor = dp.mass_sensors[sensor_idx]
-                if sensor.ref_mass is not None:
-                    temp_list.append(dp.temperature)
-                    ref_list.append(sensor.ref_mass)
-                    raw_mass_list.append(sensor.mass)
-
-        if not temp_list:
-            continue
-
-        r = np.array(raw_mass_list)
-        dT = np.array(temp_list) - ref_temp
-        M_ref = np.array(ref_list)
-
-        # Polynomial fit for correction
-        A = np.c_[
-            np.ones_like(r),
-            r,
-            dT,
-            r * dT,
-            dT**2,
-            r**2,
-        ]
-        coeff, *_ = np.linalg.lstsq(A, M_ref, rcond=None)
-        M_corrected = A @ coeff
-
-        # Residual in grams
-        residual = M_corrected - M_ref
-
-        # Plot
-        ax = axes[sensor_idx // ncols, sensor_idx % ncols]
-        ax.scatter(M_corrected, residual, alpha=0.7)
-        ax.axhline(0, color='black', linestyle='--', linewidth=1)
-        ax.set_xlabel("Corrected Mass (g)")
-        ax.set_ylabel("Residual (g)")
-        ax.set_title(f"Sensor {sensor_idx}")
-        ax.grid(True)
-
-    plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
 
 def plot_mass_vs_temp(session: "Session"):
@@ -1068,7 +400,7 @@ def plot_mass_cal(session: "Session"):
         fig.tight_layout()
         plt.show()
 
-def plot_temperature_correction(session: "Session"):
+def plot_temp_cal(session: "Session"):
     """
     Plots temperature correction for all sensors in the session.
 
@@ -1079,6 +411,8 @@ def plot_temperature_correction(session: "Session"):
         "cubic": (c0, c1, c2, c3)
       }
     """
+    filter_threshold_grams = 500.0
+
     engine = get_db_engine().session
     datapoints = engine.get_datapoints(session.id)
 
@@ -1102,14 +436,39 @@ def plot_temperature_correction(session: "Session"):
         ax_stats = fig.add_subplot(gs[1, 1])
 
         # ------------------------------------------------------------------
+        # Filter datapoints
+        # ------------------------------------------------------------------
+        residual = masses - ref_masses
+
+        positive_outlier_mask = residual > filter_threshold_grams
+        negative_outlier_mask = residual < -filter_threshold_grams
+
+        bad_mask = positive_outlier_mask | negative_outlier_mask
+        good_mask = ~bad_mask
+
+        filtered_count = np.count_nonzero(bad_mask)
+        total_count = len(masses)
+        used_count = total_count - filtered_count
+
+        if used_count < 4:
+            raise ServiceCmdError(
+                f"Sensor {sensor_idx}: insufficient valid datapoints "
+                f"after filtering ({used_count} remaining)"
+            )
+
+        # ------------------------------------------------------------------
         # Mass vs ΔT
         # ------------------------------------------------------------------
         delta_T = temps - REF_TEMPERATURE_C
-        idx = np.argsort(delta_T)
 
-        x = delta_T[idx]
-        y = masses[idx]
-        ref_sorted = ref_masses[idx]
+        # Only fit good points
+        delta_T_good = delta_T[good_mask]
+        masses_good = masses[good_mask]
+        ref_good = ref_masses[good_mask]
+        idx = np.argsort(delta_T_good)
+        x = delta_T_good[idx]
+        y = masses_good[idx]
+        ref_sorted = ref_good[idx]
 
         # Fits
         b0, b1, res_l = _linear_fit(x, y)
@@ -1120,8 +479,28 @@ def plot_temperature_correction(session: "Session"):
         y_q = a0 + a1 * x + a2 * x**2
         y_c = c0 + c1 * x + c2 * x**2 + c3 * x**3
 
+        # ------------------------------------------------------------------
         # Plot
-        ax_mass_temp.plot(x, y, 'b.-', label='Mass (g)')
+        # ------------------------------------------------------------------
+        # Good datapoints used for fitting
+        ax_mass_temp.plot(x, y, 'b.', alpha=0.5, label='Mass (g)')
+        # Show accepted/rejected samples at y=0 so they don't affect scaling
+        ax_mass_temp.plot(
+            delta_T[positive_outlier_mask],
+            np.zeros(np.count_nonzero(positive_outlier_mask)),
+            'rx',
+            markersize=8,
+            label='Positive outlier'
+        )
+
+        ax_mass_temp.plot(
+            delta_T[negative_outlier_mask],
+            np.zeros(np.count_nonzero(negative_outlier_mask)),
+            'bx',
+            markersize=8,
+            label='Negative outlier'
+        )
+
         ax_mass_temp.plot(x, y_l, 'k:', label='Linear fit')
         ax_mass_temp.plot(x, y_q, 'g--', label='Quadratic fit')
         ax_mass_temp.plot(x, y_c, 'c-.', label='Cubic fit')
@@ -1139,7 +518,7 @@ def plot_temperature_correction(session: "Session"):
 
         # Residuals
         ax_res = ax_mass_temp.twinx()
-        ax_res.plot(x, res_q, 'm.-', alpha=0.5, label='Quadratic residuals')
+        ax_res.plot(x, res_q, 'm.', alpha=0.5, label='Quadratic residuals')
         ax_res.set_ylabel('Residuals (g)', color='magenta')
         ax_res.tick_params(axis='y', labelcolor='magenta')
 
@@ -1148,12 +527,38 @@ def plot_temperature_correction(session: "Session"):
         h2, l2 = ax_res.get_legend_handles_labels()
         ax_mass_temp.legend(h1 + h2, l1 + l2, loc='best')
 
-        ax_mass_temp.set_title(f'Sensor {sensor_idx}: Mass vs Temperature Δ')
+        ax_mass_temp.set_title(f'S/N: {session.devices[0].serial}, '
+                               f'ID: {short_uuid(session.devices[0].id)}, '
+                               f'Session:'
+                               f' {session.name}\n'
+                               f'Sensor {sensor_idx}: Mass vs Temperature Δ')
 
         # ------------------------------------------------------------------
         # Time series
         # ------------------------------------------------------------------
-        ax_time.plot(timestamps, masses, 'b.-', label='Mass (g)')
+        ax_time.plot(
+            timestamps,
+            masses,
+            'b.-',
+            label='Mass (g)',
+        )
+
+        timestamps_np = np.asarray(timestamps)
+        ax_time.plot(
+            timestamps_np[positive_outlier_mask],
+            np.zeros(np.count_nonzero(positive_outlier_mask)),
+            'rx',
+            markersize=8,
+            label='Positive outlier'
+        )
+
+        ax_time.plot(
+            timestamps_np[negative_outlier_mask],
+            np.zeros(np.count_nonzero(negative_outlier_mask)),
+            'bx',
+            markersize=8,
+            label='Negative outlier'
+        )
         ax_t2 = ax_time.twinx()
         ax_t2.plot(timestamps, temps, 'r.-', label='Temperature (°C)')
 
@@ -1178,13 +583,20 @@ def plot_temperature_correction(session: "Session"):
             s1 = np.std(res, ddof=1)
             return rmse, s1, 2*s1, 3*s1
 
-        rmse_raw, s1r, s2r, s3r = stats(y - ref_sorted)
+        raw_residuals = y - ref_sorted
+        rmse_raw, s1r, s2r, s3r = stats(raw_residuals)
         rmse_l, s1l, s2l, s3l = stats(res_l)
         rmse_q, s1q, s2q, s3q = stats(res_q)
         rmse_c, s1c, s2c, s3c = stats(res_c)
 
         text = (
             f"Reference temperature: {REF_TEMPERATURE_C} °C\n\n"
+
+            "Datapoints:\n"
+            f"  Total={total_count}\n"
+            f"  Filtered={filtered_count} ({filtered_count / total_count:.4f}%)\n"
+            f"  Threshold={filter_threshold_grams}\n"
+            f"  Used={used_count}\n\n"
 
             "Raw (measured vs reference):\n"
             f"  RMSE={rmse_raw:.3f} g | 1σ={s1r:.3f} | 2σ={s2r:.3f} | 3σ={s3r:.3f}\n\n"
@@ -1282,3 +694,4 @@ def _quadratic_fit(x: np.ndarray, y: np.ndarray) -> tuple[float, float, float, n
     y_pred = a0 + a1*x + a2*x**2
     residuals = y - y_pred
     return a0, a1, a2, residuals
+

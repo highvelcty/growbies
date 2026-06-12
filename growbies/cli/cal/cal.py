@@ -2,7 +2,7 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from enum import StrEnum
 
-from . import new, resume, stop, mon, ls, evaluate, plot
+from . import new, resume, stop, mon, ls, evaluate
 from growbies.cli.common import SUBCMD
 
 __all__ = ['SubCmd', 'make_cli']
@@ -12,7 +12,6 @@ class SubCmd(StrEnum):
     LS = 'ls'
     MON = 'mon'
     NEW = 'new'
-    PLOT = 'plot'
     RESUME = 'resume'
     STOP = 'stop'
 
@@ -27,8 +26,6 @@ class SubCmd(StrEnum):
             desc = 'Monitor a calibration session.'
         elif self == self.NEW:
             desc = 'Create a new calibration session.'
-        elif self == self.PLOT:
-            desc = 'Plot a calibration session.'
         elif self == self.RESUME:
             desc = ('Resume an existing session. An error will be raised if the requested session '
                     'does not exist.')
@@ -45,8 +42,6 @@ class SubCmd(StrEnum):
             return 'Monitor a calibration session.'
         elif self == self.NEW:
             return 'Create a new calibration session.'
-        elif self == self.PLOT:
-            return 'Plot a calibration session.'
         elif self == self.RESUME:
             return 'Resume a calibration session'
         elif self == self.STOP:
@@ -66,6 +61,5 @@ def make_cli(parser: ArgumentParser):
     ls.make_cli(parsers[SubCmd.LS])
     mon.make_cli(parsers[SubCmd.MON])
     new.make_cli(parsers[SubCmd.NEW])
-    plot.make_cli(parsers[SubCmd.PLOT])
     resume.make_cli(parsers[SubCmd.RESUME])
     stop.make_cli(parsers[SubCmd.STOP])

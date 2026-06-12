@@ -36,7 +36,7 @@ class Device(BaseTable, table=True):
         PATH = 'path'
         STATE = 'state'
 
-    id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     name: str = Field(default='')
     gateway: uuid.UUID = Field(
         sa_column=Column(

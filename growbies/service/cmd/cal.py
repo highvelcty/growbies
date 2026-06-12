@@ -1,6 +1,6 @@
 import logging
 
-from growbies.app.cal import evaluate, ls, mon, new, plot, resume, stop
+from growbies.app.cal import evaluate, ls, mon, new, resume, stop
 from growbies.cli.common import SUBCMD
 from growbies.cli.cal import SubCmd
 from growbies.service.common import ServiceOp, ServiceCmd, ServiceCmdError
@@ -20,8 +20,6 @@ def execute(cmd: ServiceCmd):
         return mon.execute(cmd)
     elif subcmd == SubCmd.NEW:
         return new.execute(cmd)
-    elif subcmd == SubCmd.PLOT:
-        return plot.execute(cmd)
     elif subcmd == SubCmd.RESUME:
         return resume.execute(cmd)
     elif subcmd == SubCmd.STOP:
