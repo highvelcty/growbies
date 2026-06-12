@@ -50,7 +50,7 @@ private:
 };
 
 constexpr float EWMA_TEMPERATURE_ALPHA_MIN = 0.002;
-constexpr float EWMA_TEMPERATURE_ALPHA_MAX = 0.02;
+constexpr float EWMA_TEMPERATURE_ALPHA_MAX = 0.7;
 constexpr float EWMA_TEMPERATURE_ALPHA_THRESH_CELSIUS = 2;
 class AggregateTemperature {
 
@@ -84,7 +84,7 @@ public:
             const auto& ch = channels_[ii];
             const auto& coeffs = sensors[ii].coeffs;
 
-            const float raw_temp = ch.value() - coeffs.thermistor_offset;
+            const float raw_temp = ch.value() + coeffs.thermistor_offset;
 
             aewma_[ii].add(raw_temp);
         }
