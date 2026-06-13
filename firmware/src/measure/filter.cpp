@@ -1,10 +1,16 @@
 #include <Arduino.h>
+#include "build_cfg.h"
 #include "filter.h"
 
 namespace growbies {
 
+RTC_DATA_ATTR bool  aewma_mass_buffer_initialized = false;
+RTC_DATA_ATTR float aewma_mass_buffer_last_value = 0.0f;
+RTC_DATA_ATTR bool  aewma_temp_buffer_initialized[TEMPERATURE_SENSOR_COUNT] = {false};
+RTC_DATA_ATTR float aewma_temp_buffer_last_value[TEMPERATURE_SENSOR_COUNT] = {0.0f};
+
 // -----------------------------------------------------------------------------
-// SlidingMedianFilter implementation
+// SlidingMedianFilter
 // -----------------------------------------------------------------------------
 SlidingMedianFilter::SlidingMedianFilter(const size_t window_size)
     : window_size_(window_size),
@@ -36,21 +42,10 @@ void SlidingMedianFilter::reset() {
 }
 
 // -----------------------------------------------------------------------------
-// AEWMABuffer implementation
+// Base AEWMA
 // -----------------------------------------------------------------------------
-RTC_DATA_ATTR bool  aewma_mass_buffer_initialized = false;
-RTC_DATA_ATTR float aewma_mass_buffer_last_value = 0.0f;
-
-AEWMABuffer::AEWMABuffer(const float alpha_min, const float alpha_max, const float alpha_threshold,
-                         const bool initialized, const float last_value)
-    : alpha_min(alpha_min), alpha_max(alpha_max), alpha_threshold(alpha_threshold),
-      initialized(initialized),
-      last_value(last_value) {}
-
-void AEWMABuffer::add(const float value) {
-    if (isnan(value)) {
-        return;
-    }
+void AEWMABuffer::add(float value) {
+    if (isnan(value)) return;
 
     if (!initialized) {
         last_value = value;
@@ -60,37 +55,88 @@ void AEWMABuffer::add(const float value) {
 
     last_error = fabsf(value - last_value);
     const float alpha = compute_alpha(last_error);
+
     last_value = alpha * value + (1.0f - alpha) * last_value;
 }
 
-float AEWMABuffer::compute_alpha(const float error) const {
-    if (error <= 0.0f or isnan(error)) {
-        return alpha_min;
-    }
-
-    // Scaling factor for how aggressive the smoothing is. An alpha of 1 (or maximum) is less
-    // smoothing than a small value for alpha. alpha_threshold is the "knee point" between
-    // smoothing and tracking modes.
-    const float alpha = sqrtf(error / alpha_threshold);
-
-    if (alpha < alpha_min) return alpha_min;
-    if (alpha > alpha_max) return alpha_max;
-    return alpha;
+void AEWMABuffer::reset() {
+    last_value = 0.0f;
+    initialized = false;
 }
 
 float AEWMABuffer::error() const {
     return last_error;
 }
 
-// ReSharper disable once CppMemberFunctionMayBeStatic
-void AEWMABuffer::reset() { // NOLINT(*-convert-member-functions-to-static)
-    last_value = 0.0f;
-    initialized = false;
+float AEWMABuffer::value() const {
+    return initialized ? last_value : 0.0f;
+}
+// -----------------------------------------------------------------------------
+// LOGISTIC AEWMA
+// -----------------------------------------------------------------------------
+LogisticAEWMABuffer::LogisticAEWMABuffer(
+    float alpha_min,
+    float alpha_max,
+    float midpoint,
+    float steepness,
+    bool initialized,
+    float last_value
+)
+    : alpha_min(alpha_min),
+      alpha_max(alpha_max),
+      midpoint(midpoint),
+      steepness(steepness)
+{
+    this->initialized = initialized;
+    this->last_value = last_value;
 }
 
-// ReSharper disable once CppMemberFunctionMayBeStatic
-float AEWMABuffer::value() const { // NOLINT(*-convert-member-functions-to-static)
-    return initialized ? last_value : 0.0f;
+float LogisticAEWMABuffer::compute_alpha(float error) const {
+    if (error <= 0.0f || isnan(error)) {
+        return alpha_min;
+    }
+
+    const float x = -steepness * (error - midpoint);
+    const float denom = 1.0f + expf(x);
+
+    float alpha = alpha_min +
+        (alpha_max - alpha_min) / denom;
+
+    if (alpha < alpha_min) return alpha_min;
+    if (alpha > alpha_max) return alpha_max;
+
+    return alpha;
+}
+
+// -----------------------------------------------------------------------------
+// LINEAR AEWMA
+// -----------------------------------------------------------------------------
+LinearAEWMABuffer::LinearAEWMABuffer(
+    float alpha_min,
+    float alpha_max,
+    float threshold,
+    bool initialized,
+    float last_value
+)
+    : alpha_min(alpha_min),
+      alpha_max(alpha_max),
+      threshold(threshold)
+{
+    this->initialized = initialized;
+    this->last_value = last_value;
+}
+
+float LinearAEWMABuffer::compute_alpha(float error) const {
+    if (error <= 0.0f || isnan(error)) {
+        return alpha_min;
+    }
+
+    float alpha = error / threshold;
+
+    if (alpha < alpha_min) return alpha_min;
+    if (alpha > alpha_max) return alpha_max;
+
+    return alpha;
 }
 
 }

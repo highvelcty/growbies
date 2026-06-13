@@ -49,19 +49,24 @@ private:
     float value_;
 };
 
-constexpr float EWMA_TEMPERATURE_ALPHA_MIN = 0.002;
+constexpr float EWMA_TEMPERATURE_ALPHA_MIN = 0.05;
 constexpr float EWMA_TEMPERATURE_ALPHA_MAX = 0.7;
 constexpr float EWMA_TEMPERATURE_ALPHA_THRESH_CELSIUS = 2;
 class AggregateTemperature {
 
 public:
-    explicit AggregateTemperature(const size_t num_sensors)
-        :
-    aewma_(num_sensors, AEWMABuffer(EWMA_TEMPERATURE_ALPHA_MIN,
-        EWMA_TEMPERATURE_ALPHA_MAX, EWMA_TEMPERATURE_ALPHA_THRESH_CELSIUS)),
-    channels_(num_sensors,
-              MeasurementChannel(SensorType::TEMPERATURE, MEDIAN_FILTER_BUF_SIZE))
-    {}
+    explicit AggregateTemperature(const size_t num_sensors) {
+        aewma_.reserve(num_sensors);
+        channels_.reserve(num_sensors);
+
+        for (size_t ii = 0; ii < num_sensors; ++ii) {
+            aewma_.emplace_back(EWMA_TEMPERATURE_ALPHA_MIN, EWMA_TEMPERATURE_ALPHA_MAX,
+                EWMA_TEMPERATURE_ALPHA_THRESH_CELSIUS,
+                aewma_temp_buffer_initialized[ii], aewma_temp_buffer_last_value[ii]);
+
+            channels_.emplace_back(SensorType::TEMPERATURE, MEDIAN_FILTER_BUF_SIZE);
+        }
+    }
 
     MeasurementChannel& channel(const size_t idx) { return channels_[idx]; }
     const MeasurementChannel& channel(const size_t idx) const { return channels_[idx]; }
@@ -95,6 +100,14 @@ public:
             ch.reset();
         }
     }
+    void reset() {
+
+        for (auto& buf : aewma_) {
+            buf.reset();
+        }
+
+        reset_channels();
+    }
 
     std::vector<float> sensor_temperatures() const {
         std::vector<float> temps;
@@ -108,7 +121,7 @@ public:
     }
 
 private:
-    std::vector<AEWMABuffer> aewma_;
+    std::vector<LinearAEWMABuffer> aewma_;
     std::vector<MeasurementChannel> channels_;
 };
 
@@ -116,15 +129,17 @@ private:
 // Aggregate MASS channels
 // -------------------------------
 constexpr float EVENT_THRESH_GRAMS = 50.0;
-constexpr float EWMA_MASS_ALPHA_MIN = 0.02;
+constexpr float EWMA_MASS_ALPHA_MIN = 0.1;
 constexpr float EWMA_MASS_ALPHA_MAX = 0.7;
-constexpr float EWMA_MASS_ALPHA_THRESH_GRAMS = 25.0;
+constexpr float EWMA_MASS_ALPHA_MID = 25;
+constexpr float EWMA_MASS_STEEPNESS = 0.25;
 class AggregateMass {
 public:
     explicit AggregateMass(const size_t num_sensors, AggregateTemperature& temperature)
         :
-          aewma_buffer_(EWMA_MASS_ALPHA_MIN, EWMA_MASS_ALPHA_MAX, EWMA_MASS_ALPHA_THRESH_GRAMS,
-            aewma_mass_buffer_initialized, aewma_mass_buffer_last_value),
+          aewma_buffer_(EWMA_MASS_ALPHA_MIN, EWMA_MASS_ALPHA_MAX,
+              EWMA_MASS_ALPHA_MID, EWMA_MASS_STEEPNESS,
+              aewma_mass_buffer_initialized, aewma_mass_buffer_last_value),
         channels_(
             num_sensors,
             MeasurementChannel(SensorType::MASS, MEDIAN_FILTER_BUF_SIZE)),
@@ -200,7 +215,7 @@ public:
     }
 
 private:
-    AEWMABuffer aewma_buffer_;
+    LogisticAEWMABuffer aewma_buffer_;
     std::vector<MeasurementChannel> channels_;
     AggregateTemperature& temperature_;
     std::vector<float> per_sensor_mass_{};

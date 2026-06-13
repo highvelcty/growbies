@@ -1,8 +1,9 @@
 #pragma once
 
-#include <algorithm>
 #include <cstddef>
 #include <vector>
+
+#include "build_cfg.h"
 
 namespace growbies {
 
@@ -34,33 +35,68 @@ private:
 // RTC variables (defined in .cpp per requirement)
 extern bool  aewma_mass_buffer_initialized;
 extern float aewma_mass_buffer_last_value;
+extern bool aewma_temp_buffer_initialized[TEMPERATURE_SENSOR_COUNT];
+extern float aewma_temp_buffer_last_value[TEMPERATURE_SENSOR_COUNT];
 
-// Adaptive Exponentially Weighted Moving Average (AEWMA) Buffer
+// -----------------------------------------------------------------------------
+// Base AEWMA Buffer (shared state + interface)
+// -----------------------------------------------------------------------------
 class AEWMABuffer {
+public:
+    virtual ~AEWMABuffer() = default;
 
-    public:
-        explicit AEWMABuffer(
-            float alpha_min, float alpha_max, float alpha_threshold,
-            bool initialized = false, float last_value = 0.0f);
+    void add(float value);
+    float error() const;
+    void reset();
+    float value() const;
 
-        void add(float value);
-        float error() const;
-        void reset();
-        float value() const;
+protected:
+    bool initialized = false;
+    float last_value = 0.0f;
+    float last_error = 0.0f;
 
-    private:
-        float alpha_min = 0.0f;
-        float alpha_max = 0.0f;
-        // Threshold at which the buffer is purely responsive with weighting
-        float alpha_threshold = 0.0f;
-        bool initialized = false;
-        float last_error = 0.0f;
-        float last_value = 0.0f;
+private:
+    virtual float compute_alpha(float error) const = 0;
+};
 
+// -----------------------------------------------------------------------------
+// Linear AEWMA (proportional response)
+// -----------------------------------------------------------------------------
+class LinearAEWMABuffer : public AEWMABuffer {
+public:
+    LinearAEWMABuffer(float alpha_min,
+                      float alpha_max,
+                      float threshold,
+                      bool initialized = false,
+                      float last_value = 0.0f);
 
-    static constexpr float ALPHA_MIN = 0.02f;   // very stable
-    static constexpr float ALPHA_MAX = 0.7f;    // very responsive
+private:
+    float alpha_min;
+    float alpha_max;
+    float threshold;
 
-        float compute_alpha(float error) const;
-    };
+    float compute_alpha(float error) const override;
+};
+
+// -----------------------------------------------------------------------------
+// Logistic AEWMA (S-curve response)
+// -----------------------------------------------------------------------------
+class LogisticAEWMABuffer : public AEWMABuffer {
+public:
+    LogisticAEWMABuffer(float alpha_min,
+                        float alpha_max,
+                        float midpoint,
+                        float steepness,
+                        bool initialized = false,
+                        float last_value = 0.0f);
+
+private:
+    float alpha_min;
+    float alpha_max;
+    float midpoint;
+    float steepness;
+
+    float compute_alpha(float error) const override;
+};
+
 }

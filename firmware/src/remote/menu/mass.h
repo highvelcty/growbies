@@ -64,7 +64,7 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
         const auto& stack = growbies::MeasurementStack::get();
         constexpr size_t dots_len = sizeof(dots) / sizeof(dots[0]);
 
-        stack.aggregate_mass().reset();
+        stack.reset();
 
         for (const char* s : dots) {
             msg = s;
@@ -72,22 +72,14 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
             delay(TARE_SAMPLE_DELAY / dots_len);
         }
 
-        std::vector<float> samples;
-        samples.reserve(dots_len);
-
         for (const char* s : back_dots) {
             stack.update();
-            samples.push_back(stack.aggregate_mass().conditioned_total_mass());
             msg = s;
             draw(true);
         }
 
-        float avg = 0.0f;
-        float sum = 0.0f;
-
-        for (const float v : samples) sum += v;
-        avg = sum / static_cast<float>(samples.size());
-        tare_store->edit().payload.tares[tare_idx].value = avg;
+        tare_store->edit().payload.tares[tare_idx].value = \
+            stack.aggregate_mass().conditioned_total_mass();
         tare_store->commit();
 
         msg = "zero";

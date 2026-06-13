@@ -17,6 +17,7 @@ public:
     MeasurementStack& operator=(const MeasurementStack&) = delete;
 
     void begin();
+    void reset() const;
     void update() const;
 
     void power_off() const { multi_hx711_.power_off(); }

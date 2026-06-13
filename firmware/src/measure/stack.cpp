@@ -11,12 +11,14 @@ void MeasurementStack::begin() {
     aggregate_mass_ = new AggregateMass(MASS_SENSOR_COUNT, *aggregate_temp_);
 }
 
+void MeasurementStack::reset() const {
+    aggregate_temp_->reset();
+    aggregate_mass_->reset();
+}
+
 void MeasurementStack::update() const {
     std::vector<float> mass_vals, temp_vals;
     bool ready = true;
-
-    aggregate_mass_->reset_channels();
-    aggregate_temp_->reset_channels();
 
     HX711::power_on();
     for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
