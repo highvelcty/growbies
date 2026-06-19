@@ -1,11 +1,12 @@
 from argparse import Namespace
 from matplotlib.dates import DateFormatter
+from typing import Optional
 import matplotlib.pyplot as plt
 import logging
 import numpy as np
 import sys
 
-
+from growbies.db.models.datapoint import DataPoints
 from .cli import Action, PlotAction
 from growbies.cli.common import Param as CommonParam
 from growbies.db.engine import get_db_engine
@@ -400,6 +401,231 @@ def plot_mass_cal(session: "Session"):
         fig.tight_layout()
         plt.show()
 
+def _plot_temp_cal(session: "Session", datapoints: DataPoints, sensor_idx: Optional[int] = None):
+    filter_threshold_grams = 100
+    timestamps, masses, ref_masses, temps = _extract_from_db(datapoints, sensor_idx)
+
+    # ------------------------------------------------------------------
+    # DC offset removal (AGGREGATE ONLY, BEFORE EVERYTHING)
+    # ------------------------------------------------------------------
+    median_offset = 0.0
+
+    if sensor_idx is None:
+        # global aggregate bias estimate
+        median_offset = np.median(masses - ref_masses)
+
+        # apply correction immediately (this is now the "true" signal forward)
+        masses = masses - median_offset
+
+    # ------------------------------------------------------------------
+    # Layout
+    # ------------------------------------------------------------------
+    fig = plt.figure(figsize=(14, 10))
+    gs = fig.add_gridspec(2, 2, height_ratios=[1.4, 1.0], width_ratios=[2.5, 1.5])
+
+    ax_mass_temp = fig.add_subplot(gs[0, :])
+    ax_time = fig.add_subplot(gs[1, 0])
+    ax_stats = fig.add_subplot(gs[1, 1])
+
+    # ------------------------------------------------------------------
+    # Filter datapoints using quadratic residuals
+    # ------------------------------------------------------------------
+    delta_T = temps - REF_TEMPERATURE_C
+
+    if len(delta_T) < 4:
+        raise ServiceCmdError(
+            f"Sensor {sensor_idx}: insufficient datapoints for fitting"
+        )
+
+    # Initial quadratic fit on all points
+    a0_init, a1_init, a2_init, residual_q_initial = _quadratic_fit(delta_T,masses)
+
+    positive_outlier_mask = residual_q_initial > filter_threshold_grams
+    negative_outlier_mask = residual_q_initial < -filter_threshold_grams
+
+    bad_mask = positive_outlier_mask | negative_outlier_mask
+    good_mask = ~bad_mask
+
+    filtered_count = np.count_nonzero(bad_mask)
+    total_count = len(masses)
+    used_count = total_count - filtered_count
+
+    if used_count < 4:
+        raise ServiceCmdError(
+            f"Sensor {sensor_idx}: insufficient valid datapoints "
+            f"after filtering ({used_count} remaining)"
+        )
+
+    # ------------------------------------------------------------------
+    # Mass vs ΔT
+    # ------------------------------------------------------------------
+    delta_T_good = delta_T[good_mask]
+    masses_good = masses[good_mask]
+    ref_good = ref_masses[good_mask]
+
+    idx = np.argsort(delta_T_good)
+    x = delta_T_good[idx]
+    y = masses_good[idx]
+    ref_sorted = ref_good[idx]
+
+    # Fits
+    b0, b1, res_l = _linear_fit(x, y)
+    a0, a1, a2, res_q = _quadratic_fit(x, y)
+    c0, c1, c2, c3, res_c = _cubic_fit(x, y)
+
+    y_l = b0 + b1 * x
+    y_q = a0 + a1 * x + a2 * x ** 2
+    y_c = c0 + c1 * x + c2 * x ** 2 + c3 * x ** 3
+
+    # ------------------------------------------------------------------
+    # Plot
+    # ------------------------------------------------------------------
+    # Good datapoints used for fitting
+    ax_mass_temp.plot(x, y, 'b.', alpha=0.5, label='Mass (g)')
+    # Show accepted/rejected samples at y=0 so they don't affect scaling
+    ax_mass_temp.plot(
+        delta_T[positive_outlier_mask],
+        np.zeros(np.count_nonzero(positive_outlier_mask)),
+        'rx',
+        markersize=8,
+        label='Positive outlier'
+    )
+
+    ax_mass_temp.plot(
+        delta_T[negative_outlier_mask],
+        np.zeros(np.count_nonzero(negative_outlier_mask)),
+        'bx',
+        markersize=8,
+        label='Negative outlier'
+    )
+
+    ax_mass_temp.plot(x, y_l, 'k:', label='Linear fit')
+    ax_mass_temp.plot(x, y_q, 'g--', label='Quadratic fit')
+    ax_mass_temp.plot(x, y_c, 'c-.', label='Cubic fit')
+
+    ax_mass_temp.set_xlabel('Temperature Δ (°C)')
+    ax_mass_temp.set_ylabel('Mass (g)')
+
+    # Absolute temperature axis
+    ax_top = ax_mass_temp.twiny()
+    ticks = ax_mass_temp.get_xticks()
+    ax_top.set_xticks(ticks + REF_TEMPERATURE_C)
+    ax_top.set_xlim(ax_mass_temp.get_xlim()[0] + REF_TEMPERATURE_C,
+                    ax_mass_temp.get_xlim()[1] + REF_TEMPERATURE_C)
+    ax_top.set_xlabel('Absolute Temperature (°C)')
+
+    # Residuals
+    ax_res = ax_mass_temp.twinx()
+    ax_res.plot(x, res_q, 'm.', alpha=0.5, label='Quadratic residuals')
+    ax_res.set_ylabel('Residuals (g)', color='magenta')
+    ax_res.tick_params(axis='y', labelcolor='magenta')
+
+    # Legend (explicitly include residuals)
+    h1, l1 = ax_mass_temp.get_legend_handles_labels()
+    h2, l2 = ax_res.get_legend_handles_labels()
+    ax_mass_temp.legend(h1 + h2, l1 + l2, loc='best')
+
+    if sensor_idx is None:
+        sensor_name = 'Aggregate'
+    else:
+        sensor_name = f'{sensor_idx}'
+    ax_mass_temp.set_title(f'S/N: {session.devices[0].serial}, '
+                           f'ID: {short_uuid(session.devices[0].id)}, '
+                           f'Session: {session.name},'
+                           f'Sensor: {sensor_name}')
+
+    # ------------------------------------------------------------------
+    # Time series
+    # ------------------------------------------------------------------
+    ax_time.plot(timestamps, masses, 'b.-', label='Mass (g)')
+
+    timestamps_np = np.asarray(timestamps)
+    ax_time.plot(
+        timestamps_np[positive_outlier_mask],
+        np.zeros(np.count_nonzero(positive_outlier_mask)),
+        'rx',
+        markersize=8,
+        label='Positive outlier'
+    )
+
+    ax_time.plot(
+        timestamps_np[negative_outlier_mask],
+        np.zeros(np.count_nonzero(negative_outlier_mask)),
+        'bx',
+        markersize=8,
+        label='Negative outlier'
+    )
+    ax_t2 = ax_time.twinx()
+    ax_t2.plot(timestamps, temps, 'r.-', label='Temperature (°C)')
+
+    ax_time.set_xlabel('Time')
+    ax_time.set_ylabel('Mass (g)', color='tab:blue')
+    ax_t2.set_ylabel('Temperature (°C)', color='tab:red')
+
+    # Combine legends (fixes missing temperature)
+    h1, l1 = ax_time.get_legend_handles_labels()
+    h2, l2 = ax_t2.get_legend_handles_labels()
+    ax_time.legend(h1 + h2, l1 + l2, loc='best')
+
+    ax_time.set_title('Mass & Temperature vs Time')
+
+    # ------------------------------------------------------------------
+    # Stats box
+    # ------------------------------------------------------------------
+    ax_stats.axis('off')
+
+    def stats(res):
+        rmse = np.sqrt(np.mean(res ** 2))
+        s1 = np.std(res, ddof=1)
+        return rmse, s1, 2 * s1, 3 * s1
+
+    def _dc_offset_stat_str() -> str:
+        if sensor_idx is None:
+            return f"  Median Offset (applied): {median_offset:.2f} g\n"
+        return ""
+
+    raw_residuals = y - ref_sorted
+    rmse_raw, s1r, s2r, s3r = stats(raw_residuals)
+    rmse_l, s1l, s2l, s3l = stats(res_l)
+    rmse_q, s1q, s2q, s3q = stats(res_q)
+    rmse_c, s1c, s2c, s3c = stats(res_c)
+
+    text =  (
+        f"Reference temperature: {REF_TEMPERATURE_C} °C\n\n"
+
+        "Datapoints:\n"
+        f"  Total={total_count}\n"
+        f"  Filtered={filtered_count} ({filtered_count / total_count:.4f}%)\n"
+        f"  Threshold={filter_threshold_grams}\n"
+        f"{_dc_offset_stat_str()}"
+        f"\n"
+        
+        "Raw (measured vs reference):\n"
+        f"  RMSE={rmse_raw:.3f} g | 1σ={s1r:.3f} | 2σ={s2r:.3f} | 3σ={s3r:.3f}\n\n"
+
+        "Linear:\n"
+        f"  Mass = {b0:.3f} + {b1:.3f}·ΔT\n"
+        f"  RMSE={rmse_l:.3f} g | 1σ={s1l:.3f} | 2σ={s2l:.3f} | 3σ={s3l:.3f}\n\n"
+
+        "Quadratic:\n"
+        f"  Mass = {a0:.3f} + {a1:.3f}·ΔT + {a2:.6f}·ΔT²\n"
+        f"  RMSE={rmse_q:.3f} g | 1σ={s1q:.3f} | 2σ={s2q:.3f} | 3σ={s3q:.3f}\n\n"
+
+        "Cubic:\n"
+        f"  Mass = {c0:.3f} + {c1:.3f}·ΔT + {c2:.6f}·ΔT² + {c3:.6f}·ΔT³\n"
+        f"  RMSE={rmse_c:.3f} g | 1σ={s1c:.3f} | 2σ={s2c:.3f} | 3σ={s3c:.3f}"
+    )
+
+    ax_stats.text(
+        0, 1, text,
+        va='top', ha='left',
+        fontsize=10,
+        bbox=dict(boxstyle='round', facecolor='white', alpha=0.9),
+    )
+
+    fig.tight_layout()
+    plt.show()
+
 def plot_temp_cal(session: "Session"):
     """
     Plots temperature correction for all sensors in the session.
@@ -411,7 +637,6 @@ def plot_temp_cal(session: "Session"):
         "cubic": (c0, c1, c2, c3)
       }
     """
-    filter_threshold_grams = 500.0
 
     engine = get_db_engine().session
     datapoints = engine.get_datapoints(session.id)
@@ -420,230 +645,30 @@ def plot_temp_cal(session: "Session"):
         raise ServiceCmdError(f"No datapoints found for session {session.id}")
 
     max_sensors = len(datapoints[0].mass_sensors)
-    all_coeffs = []
 
-    for sensor_idx in range(max_sensors):
-        timestamps, masses, ref_masses, temps = _extract_from_db(datapoints, sensor_idx)
+    # Passing None for the sensor index means "for the aggregate".
+    for sensor_idx in (None,) + tuple(range( max_sensors)):
+        _plot_temp_cal(session, datapoints, sensor_idx)
 
-        # ------------------------------------------------------------------
-        # Layout
-        # ------------------------------------------------------------------
-        fig = plt.figure(figsize=(14, 10))
-        gs = fig.add_gridspec(2, 2, height_ratios=[1.4, 1.0], width_ratios=[2.5, 1.5])
-
-        ax_mass_temp = fig.add_subplot(gs[0, :])
-        ax_time = fig.add_subplot(gs[1, 0])
-        ax_stats = fig.add_subplot(gs[1, 1])
-
-        # ------------------------------------------------------------------
-        # Filter datapoints
-        # ------------------------------------------------------------------
-        residual = masses - ref_masses
-
-        positive_outlier_mask = residual > filter_threshold_grams
-        negative_outlier_mask = residual < -filter_threshold_grams
-
-        bad_mask = positive_outlier_mask | negative_outlier_mask
-        good_mask = ~bad_mask
-
-        filtered_count = np.count_nonzero(bad_mask)
-        total_count = len(masses)
-        used_count = total_count - filtered_count
-
-        if used_count < 4:
-            raise ServiceCmdError(
-                f"Sensor {sensor_idx}: insufficient valid datapoints "
-                f"after filtering ({used_count} remaining)"
-            )
-
-        # ------------------------------------------------------------------
-        # Mass vs ΔT
-        # ------------------------------------------------------------------
-        delta_T = temps - REF_TEMPERATURE_C
-
-        # Only fit good points
-        delta_T_good = delta_T[good_mask]
-        masses_good = masses[good_mask]
-        ref_good = ref_masses[good_mask]
-        idx = np.argsort(delta_T_good)
-        x = delta_T_good[idx]
-        y = masses_good[idx]
-        ref_sorted = ref_good[idx]
-
-        # Fits
-        b0, b1, res_l = _linear_fit(x, y)
-        a0, a1, a2, res_q = _quadratic_fit(x, y)
-        c0, c1, c2, c3, res_c = _cubic_fit(x, y)
-
-        y_l = b0 + b1 * x
-        y_q = a0 + a1 * x + a2 * x**2
-        y_c = c0 + c1 * x + c2 * x**2 + c3 * x**3
-
-        # ------------------------------------------------------------------
-        # Plot
-        # ------------------------------------------------------------------
-        # Good datapoints used for fitting
-        ax_mass_temp.plot(x, y, 'b.', alpha=0.5, label='Mass (g)')
-        # Show accepted/rejected samples at y=0 so they don't affect scaling
-        ax_mass_temp.plot(
-            delta_T[positive_outlier_mask],
-            np.zeros(np.count_nonzero(positive_outlier_mask)),
-            'rx',
-            markersize=8,
-            label='Positive outlier'
-        )
-
-        ax_mass_temp.plot(
-            delta_T[negative_outlier_mask],
-            np.zeros(np.count_nonzero(negative_outlier_mask)),
-            'bx',
-            markersize=8,
-            label='Negative outlier'
-        )
-
-        ax_mass_temp.plot(x, y_l, 'k:', label='Linear fit')
-        ax_mass_temp.plot(x, y_q, 'g--', label='Quadratic fit')
-        ax_mass_temp.plot(x, y_c, 'c-.', label='Cubic fit')
-
-        ax_mass_temp.set_xlabel('Temperature Δ (°C)')
-        ax_mass_temp.set_ylabel('Mass (g)')
-
-        # Absolute temperature axis
-        ax_top = ax_mass_temp.twiny()
-        ticks = ax_mass_temp.get_xticks()
-        ax_top.set_xticks(ticks + REF_TEMPERATURE_C)
-        ax_top.set_xlim(ax_mass_temp.get_xlim()[0] + REF_TEMPERATURE_C,
-                         ax_mass_temp.get_xlim()[1] + REF_TEMPERATURE_C)
-        ax_top.set_xlabel('Absolute Temperature (°C)')
-
-        # Residuals
-        ax_res = ax_mass_temp.twinx()
-        ax_res.plot(x, res_q, 'm.', alpha=0.5, label='Quadratic residuals')
-        ax_res.set_ylabel('Residuals (g)', color='magenta')
-        ax_res.tick_params(axis='y', labelcolor='magenta')
-
-        # Legend (explicitly include residuals)
-        h1, l1 = ax_mass_temp.get_legend_handles_labels()
-        h2, l2 = ax_res.get_legend_handles_labels()
-        ax_mass_temp.legend(h1 + h2, l1 + l2, loc='best')
-
-        ax_mass_temp.set_title(f'S/N: {session.devices[0].serial}, '
-                               f'ID: {short_uuid(session.devices[0].id)}, '
-                               f'Session:'
-                               f' {session.name}\n'
-                               f'Sensor {sensor_idx}: Mass vs Temperature Δ')
-
-        # ------------------------------------------------------------------
-        # Time series
-        # ------------------------------------------------------------------
-        ax_time.plot(
-            timestamps,
-            masses,
-            'b.-',
-            label='Mass (g)',
-        )
-
-        timestamps_np = np.asarray(timestamps)
-        ax_time.plot(
-            timestamps_np[positive_outlier_mask],
-            np.zeros(np.count_nonzero(positive_outlier_mask)),
-            'rx',
-            markersize=8,
-            label='Positive outlier'
-        )
-
-        ax_time.plot(
-            timestamps_np[negative_outlier_mask],
-            np.zeros(np.count_nonzero(negative_outlier_mask)),
-            'bx',
-            markersize=8,
-            label='Negative outlier'
-        )
-        ax_t2 = ax_time.twinx()
-        ax_t2.plot(timestamps, temps, 'r.-', label='Temperature (°C)')
-
-        ax_time.set_xlabel('Time')
-        ax_time.set_ylabel('Mass (g)', color='tab:blue')
-        ax_t2.set_ylabel('Temperature (°C)', color='tab:red')
-
-        # Combine legends (fixes missing temperature)
-        h1, l1 = ax_time.get_legend_handles_labels()
-        h2, l2 = ax_t2.get_legend_handles_labels()
-        ax_time.legend(h1 + h2, l1 + l2, loc='best')
-
-        ax_time.set_title('Mass & Temperature vs Time')
-
-        # ------------------------------------------------------------------
-        # Stats box
-        # ------------------------------------------------------------------
-        ax_stats.axis('off')
-
-        def stats(res):
-            rmse = np.sqrt(np.mean(res**2))
-            s1 = np.std(res, ddof=1)
-            return rmse, s1, 2*s1, 3*s1
-
-        raw_residuals = y - ref_sorted
-        rmse_raw, s1r, s2r, s3r = stats(raw_residuals)
-        rmse_l, s1l, s2l, s3l = stats(res_l)
-        rmse_q, s1q, s2q, s3q = stats(res_q)
-        rmse_c, s1c, s2c, s3c = stats(res_c)
-
-        text = (
-            f"Reference temperature: {REF_TEMPERATURE_C} °C\n\n"
-
-            "Datapoints:\n"
-            f"  Total={total_count}\n"
-            f"  Filtered={filtered_count} ({filtered_count / total_count:.4f}%)\n"
-            f"  Threshold={filter_threshold_grams}\n"
-            f"  Used={used_count}\n\n"
-
-            "Raw (measured vs reference):\n"
-            f"  RMSE={rmse_raw:.3f} g | 1σ={s1r:.3f} | 2σ={s2r:.3f} | 3σ={s3r:.3f}\n\n"
-
-            "Linear:\n"
-            f"  Mass = {b0:.3f} + {b1:.3f}·ΔT\n"
-            f"  RMSE={rmse_l:.3f} g | 1σ={s1l:.3f} | 2σ={s2l:.3f} | 3σ={s3l:.3f}\n\n"
-
-            "Quadratic:\n"
-            f"  Mass = {a0:.3f} + {a1:.3f}·ΔT + {a2:.6f}·ΔT²\n"
-            f"  RMSE={rmse_q:.3f} g | 1σ={s1q:.3f} | 2σ={s2q:.3f} | 3σ={s3q:.3f}\n\n"
-
-            "Cubic:\n"
-            f"  Mass = {c0:.3f} + {c1:.3f}·ΔT + {c2:.6f}·ΔT² + {c3:.6f}·ΔT³\n"
-            f"  RMSE={rmse_c:.3f} g | 1σ={s1c:.3f} | 2σ={s2c:.3f} | 3σ={s3c:.3f}"
-        )
-
-        ax_stats.text(
-            0, 1, text,
-            va='top', ha='left',
-            fontsize=10,
-            bbox=dict(boxstyle='round', facecolor='white', alpha=0.9),
-        )
-
-        fig.tight_layout()
-        plt.show()
-
-        all_coeffs.append({
-            "linear": (b0, b1),
-            "quadratic": (a0, a1, a2),
-            "cubic": (c0, c1, c2, c3),
-        })
-
-    return all_coeffs
-
-def _extract_from_db(datapoints, sensor_idx: int):
+def _extract_from_db(datapoints, sensor_idx: Optional[int]):
     timestamps, masses, ref_masses, temps = [], [], [], []
 
     for dp in datapoints:
-        if dp.mass_sensors[sensor_idx].ref_mass is not None:
-            timestamps.append(dp.timestamp)
-            masses.append(dp.mass_sensors[sensor_idx].mass)  # ADC reading
-            ref_masses.append(dp.mass_sensors[sensor_idx].ref_mass)  # grams
-            if len(dp.temperature_sensors) > 1:
-                temps.append(dp.temperature_sensors[sensor_idx].temperature)
-            else:
-                temps.append(dp.temperature_sensors[0].temperature)
+        if sensor_idx is None:
+            if dp.ref_mass is not None:
+                timestamps.append(dp.timestamp)
+                masses.append(dp.mass)
+                ref_masses.append(dp.ref_mass)
+                temps.append(dp.temperature)
+        else:
+            if dp.mass_sensors[sensor_idx].ref_mass is not None:
+                timestamps.append(dp.timestamp)
+                masses.append(dp.mass_sensors[sensor_idx].mass)  # ADC reading
+                ref_masses.append(dp.mass_sensors[sensor_idx].ref_mass)  # grams
+                if len(dp.temperature_sensors) > 1:
+                    temps.append(dp.temperature_sensors[sensor_idx].temperature)
+                else:
+                    temps.append(dp.temperature_sensors[0].temperature)
 
     return np.array(timestamps), np.array(masses), np.array(ref_masses), np.array(temps)
 
