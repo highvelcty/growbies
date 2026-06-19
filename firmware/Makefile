@@ -14,8 +14,7 @@ _upload-all-%: _build-%
 	FAIL=0; \
 	for PORT in /dev/ttyACM*; do \
 		if [ -e "$$PORT" ]; then \
-			MODEL_NUMBER=$* platformio run -t upload -e esp32c3 -t nobuild --upload-port $$PORT ||
-			FAIL=1; \
+			MODEL_NUMBER=$* platformio run -t upload -e esp32c3 -t nobuild --upload-port $$PORT || FAIL=1; \
 		fi \
 	done; \
 	exit $$FAIL
