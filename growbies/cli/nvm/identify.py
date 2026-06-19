@@ -14,8 +14,6 @@ def make_cli(parser: ArgumentParser):
                         help='Set to initialize to default values.')
     parser.add_argument(f'--{id_mod.Identify.Field.SERIAL_NUMBER.public_name}',
                         default=None, type=str)
-    parser.add_argument(f'--{id_mod.Identify.Field.MODEL_NUMBER.public_name}',
-                        default=None, type=str)
     parser.add_argument(f'--{id_mod.Identify.Field.MANUFACTURE_DATE.public_name}',
                         default=None, type=float)
     parser.add_argument(f'--{id_mod.Identify.Field.MASS_SENSOR_TYPE.public_name}',

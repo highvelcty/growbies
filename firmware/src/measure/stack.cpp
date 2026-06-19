@@ -17,33 +17,32 @@ void MeasurementStack::reset() const {
 }
 
 void MeasurementStack::update() const {
-    std::vector<float> mass_vals, temp_vals;
-    bool ready = true;
+    aggregate_temp_->reset_channels();
+    aggregate_mass_->reset_channels();
 
     HX711::power_on();
     for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
-        ready = multi_hx711_.wait_ready();
+        const bool ready = multi_hx711_.wait_ready();
 
         if (ready) {
-            mass_vals = multi_hx711_.sample();
             // There is some settling with the thermistor, and it is typically longer than mass,
             // hence this ordering.
-            temp_vals = multi_thermistor_.sample();
+            std::vector<float> mass_vals = multi_hx711_.sample();
+            std::vector<float> temp_vals = multi_thermistor_.sample();
+
+            for (size_t i = 0; i < temp_vals.size() && i < aggregate_temp_->size(); ++i)
+                aggregate_temp_->channel(i).update(temp_vals[i]);
+            for (size_t i = 0; i < mass_vals.size() && i < aggregate_mass_->size(); ++i)
+                aggregate_mass_->channel(i).update(mass_vals[i]);
         }
         else {
             break;
         }
     }
     HX711::power_off();
-    if (!ready) return;
 
-    // Update temperature before mass as mass is a function of temperature.
-    for (size_t i = 0; i < temp_vals.size() && i < aggregate_temp_->size(); ++i)
-        aggregate_temp_->channel(i).update(temp_vals[i]);
+    // Temperature before mass because mass is a function of temperature.
     aggregate_temp_->update();
-
-    for (size_t i = 0; i < mass_vals.size() && i < aggregate_mass_->size(); ++i)
-        aggregate_mass_->channel(i).update(mass_vals[i]);
     aggregate_mass_->update();
 }
 

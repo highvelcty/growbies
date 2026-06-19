@@ -161,6 +161,7 @@ struct Identify {
     // Constructor with version parameter
     explicit Identify() {
         snprintf(this->firmware_version, sizeof(this->firmware_version), "%s", FIRMWARE_VERSION);
+        snprintf(this->model_number, sizeof(this->model_number), "%s", MODEL_NUMBER);
         this->mass_sensor_count = MASS_SENSOR_COUNT;
         this->temperature_sensor_count = TEMPERATURE_SENSOR_COUNT;
     }
@@ -345,6 +346,14 @@ inline void NvmStoreBase<NvmIdentify>::migrate() {
                  "%s",
                  FIRMWARE_VERSION);
     }
+
+    if (strncmp(value_storage.payload.model_number, MODEL_NUMBER,
+            sizeof(value_storage.payload.model_number)) != 0) {
+        snprintf(value_storage.payload.model_number,
+                 sizeof(value_storage.payload.model_number),
+                 "%s",
+                 MODEL_NUMBER);
+            }
 
     value_storage.payload.mass_sensor_count = MASS_SENSOR_COUNT;
     value_storage.payload.temperature_sensor_count = TEMPERATURE_SENSOR_COUNT;

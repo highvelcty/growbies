@@ -29,18 +29,8 @@ constexpr int ADC_RESOLUTION = 1024;
 constexpr int ADC_RESOLUTION = 4096;
 #endif
 
+#if PIN_CFG == 1
 enum Pins : int {
-#if HX711_PIN_CFG_0
-    DOUT_0_PIN = 8,
-    DOUT_1_PIN = 9,
-    DOUT_2_PIN = 10,
-    DOUT_3_PIN = 11,
-    HX711_SCK_PIN = 12,
-    LED_PIN = 13,
-    TEMPERATURE_PIN_0 = A3,
-    HW_I2C_SDA_PIN = 0xA4,
-    HW_I2C_SCL_PIN = 0xA5,
-#elif HX711_PIN_CFG_1
     THERMISTOR_PIN_0 = A0,
     THERMISTOR_PIN_1 = A1,
     THERMISTOR_PIN_2 = A2,
@@ -53,8 +43,25 @@ enum Pins : int {
     DOUT_2_PIN = D8,
     DOUT_1_PIN = D9,
     DOUT_0_PIN = D10,
-#endif
 };
+#elif PIN_CFG == 2
+enum Pins : int {
+    THERMISTOR_PIN_0 = A0,
+    THERMISTOR_PIN_1 = A1,
+    THERMISTOR_PIN_2 = A2,
+    BATTERY_SENSE_PIN = A3,
+    BUTTON_0_PIN = D1,
+    BUTTON_1_PIN = D2,
+    HW_I2C_SDA_PIN = D4,
+    HW_I2C_SCL_PIN = D5,
+    HX711_SCK_PIN = D10,
+    DOUT_2_PIN = D7,
+    DOUT_1_PIN = D8,
+    DOUT_0_PIN = D9,
+};
+#else
+static_assert(always_false<int>::value, "Invalid PIN_CFG value");
+#endif
 
 typedef enum Unit : uint16_t {
     // Bitfield

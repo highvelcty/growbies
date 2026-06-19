@@ -58,7 +58,6 @@ class SetIdentification:
         self._dev = self._db_engine.device.get(self._fuzzy_id)
         self._returncode = 0
     _defaults = {
-        identify.Identify.Field.MODEL_NUMBER.public_name: 'circle_10',
         identify.Identify.Field.TEMPERATURE_SENSOR_TYPE.public_name:
             identify.TemperatureSensorType.EATON_NRNE105H4100B1H,
         identify.Identify.Field.PCBA.public_name: identify.PcbaType.ESP32C3,

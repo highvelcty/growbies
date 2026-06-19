@@ -1,6 +1,7 @@
+from typing import cast
 import os
 
-from .common import Base, BASE_FILENAME, get_git_hash
+from .common import Base, BASE_FILENAME, get_git_hash, EnvironVars
 
 from growbies.utils.paths import FirmwarePaths
 
@@ -12,15 +13,22 @@ class Default(Base):
 
     class Key(Base.Key):
         FIRMWARE_VERSION: Base.Key.type_ = 'FIRMWARE_VERSION'
+        PIN_CFG: Base.Key.type_ = 'PIN_CFG'
         MASS_SENSOR_COUNT: Base.Key.type_ = 'MASS_SENSOR_COUNT'
+        MODEL_NUMBER: Base.Key.type_ = 'MODEL_NUMBER'
         TEMPERATURE_SENSOR_COUNT: Base.Key.type_ = 'TEMPERATURE_SENSOR_COUNT'
-        all = (FIRMWARE_VERSION, MASS_SENSOR_COUNT, TEMPERATURE_SENSOR_COUNT)
+        all = (FIRMWARE_VERSION, MASS_SENSOR_COUNT, MODEL_NUMBER, PIN_CFG,
+               TEMPERATURE_SENSOR_COUNT)
 
         @classmethod
-        def value(cls, key: 'Default.Key.type_'):
+        def value(cls, key: 'Default.Key.type_') -> str | int:
             if key == cls.FIRMWARE_VERSION:
                 return f'{Default._FIRMWARE_VERSION}+{get_git_hash()}'
             elif key == cls.MASS_SENSOR_COUNT:
+                return 1
+            elif key == cls.MODEL_NUMBER:
+                return EnvironVars.MODEL_NUMBER.value
+            elif key == cls.PIN_CFG:
                 return 1
             elif key == cls.TEMPERATURE_SENSOR_COUNT:
                 return 1
@@ -56,12 +64,6 @@ class Default(Base):
 class Esp32c3(Default):
     MODEL_NUMBER = 'esp32c3'
 
-class Mini(Default):
-    MODEL_NUMBER = 'mini'
-
-class Uno(Default):
-    MODEL_NUMBER = 'uno'
-
 class CircleEsp32c3(Default):
     MODEL_NUMBER = 'circle-esp32c3'
 
@@ -75,15 +77,19 @@ class CircleEsp32c3(Default):
             else:
                 return super().value(key)
 
-class SquareEsp32c3(Default):
-    MODEL_NUMBER = 'square-esp32c3'
 
-    class Key(Default.Key):
+# noinspection PyPep8Naming
+class Circle1(CircleEsp32c3):
+    MODEL_NUMBER = 'circle-1'
+
+# noinspection PyPep8Naming
+class Circle2(Circle1):
+    MODEL_NUMBER = 'circle-2'
+
+    class Key(CircleEsp32c3.Key):
         @classmethod
         def value(cls, key: 'Default.Key.type_'):
-            if key == cls.MASS_SENSOR_COUNT:
-                return 4
-            elif key == cls.TEMPERATURE_SENSOR_COUNT:
-                return 1
+            if key == cls.PIN_CFG:
+                return 2
             else:
                 return super().value(key)
