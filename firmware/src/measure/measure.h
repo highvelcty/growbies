@@ -211,6 +211,10 @@ public:
             per_sensor_mass_[ii] = mass;
             total_mass_ += mass;
         }
+
+        // Subtract global tare
+        total_mass_ -= tare_store->payload()->tares[TareIdx::GLOBAL].value;
+
         aewma_buffer_.add(total_mass_);
     }
 
