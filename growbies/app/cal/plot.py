@@ -244,7 +244,7 @@ def plot_mass_cal(session: "Session"):
     max_sensors = len(datapoints[0].mass_sensors)
 
     for sensor_idx in range(max_sensors):
-        timestamps, masses, ref_masses, temps = _extract_from_db(datapoints, sensor_idx)
+        timestamps, masses, ref_masses, temps = _extract_from_datapoints(datapoints, sensor_idx)
 
         # --- Sort by reference mass (for plotting continuity only) ---
         sort_idx = np.argsort(ref_masses)
@@ -403,7 +403,18 @@ def plot_mass_cal(session: "Session"):
 
 def _plot_temp_cal(session: "Session", datapoints: DataPoints, sensor_idx: Optional[int] = None):
     filter_threshold_grams = 100
-    timestamps, masses, ref_masses, temps = _extract_from_db(datapoints, sensor_idx)
+    timestamps, masses, ref_masses, temps = _extract_from_datapoints(datapoints, sensor_idx)
+    #
+    # outf = open('/home/meyer/tmp/data.csv', 'w')
+    # outf.write(f'timestamp,temperature,ref_mass,mass,sensor_0_ref,sensor_0,sensor_1_ref,sensor_1,'
+    #            f'sensor_2_ref,sensor_2\n')
+    # for datapoint in datapoints:
+    #     outf.write(f'{datapoint.timestamp},'
+    #                f'{datapoint.temperature},{datapoint.ref_mass},{datapoint.mass},'
+    #                f'{datapoint.mass_sensors[0].ref_mass},{datapoint.mass_sensors[0].mass},'
+    #                f'{datapoint.mass_sensors[1].ref_mass},{datapoint.mass_sensors[1].mass},'
+    #                f'{datapoint.mass_sensors[2].ref_mass},{datapoint.mass_sensors[2].mass}\n')
+    # outf.close()
 
     # ------------------------------------------------------------------
     # DC offset removal (AGGREGATE ONLY, BEFORE EVERYTHING)
@@ -427,24 +438,34 @@ def _plot_temp_cal(session: "Session", datapoints: DataPoints, sensor_idx: Optio
     ax_time = fig.add_subplot(gs[1, 0])
     ax_stats = fig.add_subplot(gs[1, 1])
 
-    # ------------------------------------------------------------------
-    # Filter datapoints using quadratic residuals
-    # ------------------------------------------------------------------
     delta_T = temps - REF_TEMPERATURE_C
-
     if len(delta_T) < 4:
         raise ServiceCmdError(
             f"Sensor {sensor_idx}: insufficient datapoints for fitting"
         )
 
-    # Initial quadratic fit on all points
-    a0_init, a1_init, a2_init, residual_q_initial = _quadratic_fit(delta_T,masses)
+    # ------------------------------------------------------------------
+    # Filter datapoints using MAD
+    # ------------------------------------------------------------------
+    raw_error = masses - ref_masses
 
-    positive_outlier_mask = residual_q_initial > filter_threshold_grams
-    negative_outlier_mask = residual_q_initial < -filter_threshold_grams
+    median_error = np.median(raw_error)
+    mad = np.median(np.abs(raw_error - median_error))
 
-    bad_mask = positive_outlier_mask | negative_outlier_mask
+    if mad == 0:
+        modified_z = np.zeros_like(raw_error)
+    else:
+        # A scaling constant that makes the MAD-based z-score comparable to a staandard z-score,
+        # when the underlying data is normally distributed.
+        modified_z = 0.6745 * (raw_error - median_error) / mad
+
+    mad_threshold = 50
+
+    bad_mask = np.abs(modified_z) > mad_threshold
     good_mask = ~bad_mask
+
+    positive_outlier_mask = bad_mask & (raw_error > median_error)
+    negative_outlier_mask = bad_mask & (raw_error < median_error)
 
     filtered_count = np.count_nonzero(bad_mask)
     total_count = len(masses)
@@ -596,7 +617,8 @@ def _plot_temp_cal(session: "Session", datapoints: DataPoints, sensor_idx: Optio
         "Datapoints:\n"
         f"  Total={total_count}\n"
         f"  Filtered={filtered_count} ({filtered_count / total_count:.4f}%)\n"
-        f"  Threshold={filter_threshold_grams}\n"
+        f"  MAD={mad:.3f} g\n"
+        f"  MAD Threshold={mad_threshold:.1f}\n"
         f"{_dc_offset_stat_str()}"
         f"\n"
         
@@ -650,7 +672,7 @@ def plot_temp_cal(session: "Session"):
     for sensor_idx in (None,) + tuple(range( max_sensors)):
         _plot_temp_cal(session, datapoints, sensor_idx)
 
-def _extract_from_db(datapoints, sensor_idx: Optional[int]):
+def _extract_from_datapoints(datapoints, sensor_idx: Optional[int]):
     timestamps, masses, ref_masses, temps = [], [], [], []
 
     for dp in datapoints:
