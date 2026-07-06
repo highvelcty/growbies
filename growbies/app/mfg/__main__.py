@@ -2,6 +2,9 @@ import sys
 
 from .cli import Action, make_cli
 from growbies.cli.common import Param
+from growbies.session import log
+
+log.start()
 
 # Must import after initializing logging
 from . import finalize
