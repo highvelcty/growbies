@@ -21,7 +21,8 @@ def run_cmd(cmd, check=False) -> tuple[int, str, str]:
             for line in err.stderr.splitlines():
                 logger.log(log.STDERR_LEVEL, line)
 
-        raise
+        if check:
+            raise
     else:
         if proc.stdout:
             for line in proc.stdout.splitlines():
