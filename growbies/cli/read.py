@@ -4,7 +4,11 @@ from growbies.cli.common import Param as CommonParam, BaseParam
 
 class Param(BaseParam):
     REF_MASS = 'ref_mass'
+    RESET = 'reset'
     SENSOR_REF_MASS = 'sensor_ref_mass'
+
+def add_only(expr: str) -> float:
+    return sum(float(val) for val in expr.split('+'))
 
 def make_cli(parser: ArgumentParser):
     parser.add_argument(CommonParam.FUZZY_ID, nargs='?', default=None,
@@ -18,10 +22,14 @@ def make_cli(parser: ArgumentParser):
         help='Reference mass in grams applied to the entire scale during calibration.'
     )
 
+    parser.add_argument(f'--{Param.RESET.kw_cli_name}', dest=Param.RESET.kw_cli_name,
+                        action='store_true',
+                        help='Reset the filters prior to reading.')
+
     # --- Per-sensor reference mass (comma-separated list) ---
     parser.add_argument(
         f'--{Param.SENSOR_REF_MASS.kw_cli_name}',
-        type=float,
+        type=add_only,
         nargs='*',
         default=None,
         help=(

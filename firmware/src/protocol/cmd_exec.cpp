@@ -84,6 +84,11 @@ void CmdExec::exec() {
         else if (in_packet_hdr->cmd == Cmd::READ) {
             error = usb_transport.validate_cmd(sizeof(CmdRead));
             if (!error) {
+                const auto* cmd = reinterpret_cast<CmdRead*>(usb_transport.get_cmd_buf());
+                if (cmd->reset) {
+                    const auto& measurement_stack = growbies::MeasurementStack::get();
+                    measurement_stack.reset();
+                }
                 update_telemetry(false);
             }
         }

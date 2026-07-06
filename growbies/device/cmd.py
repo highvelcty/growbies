@@ -73,16 +73,29 @@ class GetCalibrationDeviceCmd(BaseDeviceCmd):
 
 class ReadDeviceCmd(BaseDeviceCmd):
     OP = DeviceCmdOp.READ
-    VERSION = 1
+    VERSION = 2
 
-    def __init__(self, ref_mass: float | None, sensor_ref_mass: list[float] | None):
+    class Field(BaseDeviceCmd.Field):
+        RESET = '_reset'
+
+    _fields_ = [
+        (Field.RESET, ctypes.c_bool)
+    ]
+
+    def __init__(self, ref_mass: float | None, sensor_ref_mass: list[float] | None,
+                 reset: bool = False):
         super().__init__()
         self._ref_mass = ref_mass
+        self._reset = reset
         self._sensor_ref_mass = sensor_ref_mass
 
     @property
     def ref_mass(self) -> float | None:
         return self._ref_mass
+
+    @property
+    def reset(self) -> bool:
+        return self._reset
 
     @property
     def sensor_ref_mass(self) -> list[float] | None:

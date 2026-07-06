@@ -3,32 +3,12 @@ import sys
 import time
 
 from argparse import Namespace
-import shlex, subprocess
-
-from .cli import STDIN_LEVEL, STDOUT_LEVEL, STDERR_LEVEL
+from growbies.app.common.run_cmd import run_cmd
 from growbies.cli.common import Param
 from growbies.device.common import identify
 from growbies.db.engine import get_db_engine
 
 logger = logging.getLogger(__name__)
-
-def run_cmd(cmd, check=False) -> tuple[int, str, str]:
-    for line in cmd.splitlines():
-        logger.log(STDIN_LEVEL, line)
-    try:
-        proc = subprocess.run(shlex.split(cmd), stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE, check=check, encoding='utf-8')
-    except (subprocess.CalledProcessError, FileNotFoundError) as err:
-        logger.exception(err)
-        return 1, '', ''
-    else:
-        if proc.stdout:
-            for line in proc.stdout.splitlines():
-                logger.log(STDOUT_LEVEL, line)
-        if proc.stderr:
-            for line in proc.stderr.splitlines():
-                logger.log(STDERR_LEVEL, line)
-        return proc.returncode, proc.stdout, proc.stderr
 
 class DeviceSession:
     def __init__(self, fuzzy_id):

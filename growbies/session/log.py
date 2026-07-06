@@ -9,9 +9,16 @@ from typing import Optional, Union
 
 from growbies.constants import APPNAME
 from growbies.utils import timestamp
+from growbies.utils.paths import InstallPaths
 
-DEVICE = 25
-logging.addLevelName(DEVICE, 'DEVICE')
+STDIN_LEVEL = logging.INFO + 1
+STDOUT_LEVEL = logging.INFO + 2
+STDERR_LEVEL = logging.ERROR + 1
+DEVICE_LEVEL = 25
+logging.addLevelName(DEVICE_LEVEL, 'DEVICE')
+logging.addLevelName(STDIN_LEVEL, "STDIN")
+logging.addLevelName(STDOUT_LEVEL, "STDOUT")
+logging.addLevelName(STDERR_LEVEL, "STDERR")
 
 class ThreadLocal(threading.local):
     def __init__(self, /, **kw):
@@ -50,8 +57,10 @@ MAX_BYTES = 1024 * 1024 * 25  # 25 MiB
 #: would result in three log files: sdu.log, sdu.log.1 sdu.log.2
 BACKUP_COUNT = 2
 
+def get_logger(name):
+    return logging.getLogger(name)
 
-def start(path: Union[str, Path],
+def start(path: Union[str, Path] = InstallPaths.VAR_LOG_GROWBIES_LOG.value,
           file_level: int = logging.DEBUG,
           stdout_level: int = logging.DEBUG) \
         -> logging.Logger:
@@ -92,4 +101,3 @@ def start(path: Union[str, Path],
     atexit.register(logging.shutdown)
 
     return logger
-

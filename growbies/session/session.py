@@ -6,15 +6,13 @@ from growbies.cfg.cfg import get_cfg
 from growbies.db.engine import get_db_engine
 from growbies.db.models.account import Account
 from growbies.db.models.gateway import Gateway
-from growbies.utils.paths import InstallPaths
 
 logger = logging.getLogger(__name__)
 
 class Session(object):
     def __init__(self):
         # Initialize logging
-        log.start(InstallPaths.VAR_LOG_GROWBIES_LOG.value, file_level=logging.DEBUG,
-                  stdout_level=logging.DEBUG)
+        log.start()
         logger.info(f'Session start')
 
         # Load configuration from file.
