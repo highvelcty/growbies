@@ -8,16 +8,16 @@ from growbies.utils import timestamp
 
 logger = log.get_logger(__name__)
 
-def _sample(count: int, forward_args: str):
+def _sample(count: int, forward_args: str, check):
     cmd = f'growbies read {forward_args}'
-    run_cmd(f'{cmd} --reset', check=True)
+    run_cmd(f'{cmd} --reset', check=check)
     for ii in range(count - 1):
-        run_cmd(cmd, check=True)
+        run_cmd(cmd, check=check)
 
 
 def sample_for_mass_cal(args: Namespace, forward_args: str):
     count = getattr(args, MassSampleParam.COUNT)
-    _sample(count, forward_args)
+    _sample(count, forward_args, check=True)
 
 def sample_for_thermal_cal(args: Namespace, forward_args: str):
     count = getattr(args, MassSampleParam.COUNT)
@@ -31,7 +31,7 @@ def sample_for_thermal_cal(args: Namespace, forward_args: str):
         iterations = 0
         startt = time.time()
         while True:
-            _sample(count, forward_args)
+            _sample(count, forward_args, check=False)
             samples += count
             iterations += 1
             logger.log(log.STDOUT_LEVEL,
