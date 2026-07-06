@@ -25,7 +25,7 @@ constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 15000.0f;
 #if THERMISTOR_HW_0 | THERMISTOR_HW_1
 constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0f;
 constexpr float THERMISTOR_NOMINAL_TEMPERATURE = 298.15f;  // Kelvin (25°C)
-constexpr float THERMISTOR_SUPPLY_VOLTAGE = 2.7f;
+constexpr float THERMISTOR_SUPPLY_VOLTAGE = 3.3f;
 constexpr float THERMISTOR_BETA_COEFF = 4100.0f;
 constexpr float STEINHART_HART_A = 1.003702421E-3f;
 constexpr float STEINHART_HART_B = 1.811901925E-4f;
@@ -39,6 +39,9 @@ public:
 
     // Initialize ADC pin
     void begin() const;
+
+    static void power_off();
+    static void power_on();
 
     // Measure temperature in °C (default Steinhart-Hart)
     float sample() const;
@@ -65,6 +68,9 @@ public:
     void add_device(Thermistor* therm) {
         if (therm) devices_.push_back(therm);
     }
+
+    static void power_off();
+    static void power_on();
 
     // Sample all thermistors (Steinhart–Hart method)
     std::vector<float> sample() const;

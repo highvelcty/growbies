@@ -42,6 +42,12 @@ void MultiHX711::begin() {
         gpio_config(&io_conf);
 #endif
     }
+
+#if POWER_CONTROL
+    HX711::power_off();
+#else
+    HX711::power_on();
+#endif
 }
 
 void MultiHX711::add_device(HX711* hx) {

@@ -13,8 +13,8 @@ void setup() {
     AutoWakeTask().run_on_wake();
 
     // 2025_04_01: Observed skipped characters at 115200 with mini pro 3v3. Suspect this is due
-    //   to the 8MHz clock providing nearest baudrates of 115942 or 114285, whereas the closest
-    //   baudrates for 8MHz for 57600 baud is 57554 or 57971.
+    // to the 8MHz clock providing nearest baudrates of 115942 or 114285, whereas the closest
+    // baudrates for 8MHz for 57600 baud is 57554 or 57971.
     Serial.begin(57600);
 
     RemoteOut::get().begin();

@@ -22,13 +22,11 @@ class HX711 {
 public:
     explicit HX711(const int dout_pin) : dout_pin(dout_pin) {}
 
-    // Power down the HX711
-    static void power_off();
+    int dout_pin;
 
-    // Power up the HX711
+    static void power_off();
     static void power_on();
 
-    int dout_pin;
 };
 
 

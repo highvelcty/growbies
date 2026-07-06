@@ -12,6 +12,15 @@ void Thermistor::begin() const {
     pinMode(analog_pin_, INPUT);
 }
 
+void Thermistor::power_off() {
+    digitalWrite(HX711_VCC_PIN, LOW);
+}
+
+void Thermistor::power_on() {
+    digitalWrite(HX711_VCC_PIN, HIGH);
+}
+
+
 float Thermistor::read_voltage() const {
 #if defined(ARDUINO_ARCH_ESP32)
     const auto vout = static_cast<float>(analogReadMilliVolts(analog_pin_) / 1000.0);
@@ -72,7 +81,7 @@ float Thermistor::sample_beta() const {
 }
 
 // --- MultiThermistor -------------------
-    void MultiThermistor::begin() {
+void MultiThermistor::begin() {
     for (auto ii = 0; ii < TEMPERATURE_SENSOR_COUNT; ++ii) {
         add_device(new Thermistor(get_temperature_pin(ii)));
     }
@@ -80,6 +89,25 @@ float Thermistor::sample_beta() const {
     for (const auto* device : devices_) {
         if (device) device->begin();
     }
+
+    pinMode(HX711_VCC_PIN, OUTPUT);
+#if POWER_CONTROL
+    Thermistor::power_off();
+#else
+    Thermistor::power_on();
+#endif
+}
+
+void MultiThermistor::power_off() {
+#if POWER_CONTROL
+    Thermistor::power_off();
+#endif
+}
+
+void MultiThermistor::power_on() {
+#if POWER_CONTROL
+    Thermistor::power_on();
+#endif
 }
 
 std::vector<float> MultiThermistor::sample() const {
