@@ -1,10 +1,12 @@
 from argparse import Namespace
-from matplotlib.dates import DateFormatter
 from typing import Optional
-import matplotlib.pyplot as plt
 import logging
 import numpy as np
 import sys
+
+from matplotlib.dates import AutoDateLocator, DateFormatter, num2date
+from sqlalchemy.engine.row import Row
+import matplotlib.pyplot as plt
 
 from growbies.db.models.datapoint import DataPoints
 from .cli import Action, PlotAction
@@ -14,7 +16,7 @@ from growbies.db.models.session import Session
 from growbies.device.common.calibration import REF_TEMPERATURE_C
 from growbies.service.common import ServiceCmdError
 from growbies.utils.report import short_uuid
-from growbies.utils.timestamp import FMT_DT_INT
+from growbies.utils.timestamp import FMT_DT_INT, get_elapsed_str
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +26,12 @@ def execute(args: Namespace):
     fuzzy_id = getattr(args, CommonParam.FUZZY_ID)
     plot_type = getattr(args, Action.PLOT)
 
-    engine = get_db_engine().session
-    session = engine.get(fuzzy_id)
-
     if plot_type == PlotAction.MASS:
-        plot_mass_cal(session)
+        plot_mass_cal(fuzzy_id)
     elif plot_type == PlotAction.TEMP:
-        plot_temp_cal(session)
+        plot_temp_cal(fuzzy_id)
+    elif plot_type == PlotAction.TIME:
+        plot_time(fuzzy_id)
 
     if returncode == 0:
         logger.info('*** PASS ***')
@@ -232,7 +233,8 @@ def plot_mass_vs_temp(session: "Session"):
     plt.show()
 
 
-def plot_mass_cal(session: "Session"):
+def plot_mass_cal(fuzzy_id: str):
+    session = get_db_engine().session.get(fuzzy_id)
     mad_k_val = 7
 
     engine = get_db_engine().session
@@ -648,7 +650,7 @@ def _plot_temp_cal(session: "Session", datapoints: DataPoints, sensor_idx: Optio
     fig.tight_layout()
     plt.show()
 
-def plot_temp_cal(session: "Session"):
+def plot_temp_cal(fuzzy_id: str):
     """
     Plots temperature correction for all sensors in the session.
 
@@ -661,6 +663,7 @@ def plot_temp_cal(session: "Session"):
     """
 
     engine = get_db_engine().session
+    session = engine.get(fuzzy_id)
     datapoints = engine.get_datapoints(session.id)
 
     if not datapoints:
@@ -671,6 +674,429 @@ def plot_temp_cal(session: "Session"):
     # Passing None for the sensor index means "for the aggregate".
     for sensor_idx in (None,) + tuple(range( max_sensors)):
         _plot_temp_cal(session, datapoints, sensor_idx)
+
+
+def _plot_time(datapoints: list[Row],
+               mass_sensor_datapoints: list[Row],
+               temp_sensor_datapoints: list[Row]):
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import datetime
+    from collections import defaultdict
+    from matplotlib.dates import DateFormatter, AutoDateLocator, num2date
+
+    timestamps = np.array(
+        [dp.timestamp for dp in datapoints],
+        dtype="datetime64[ms]",
+    )
+
+    mass = np.array(
+        [dp.mass for dp in datapoints],
+        dtype=float,
+    )
+
+    temperature = np.array(
+        [dp.temperature for dp in datapoints],
+        dtype=float,
+    )
+
+    # -------------------------
+    # Create plots
+    # -------------------------
+
+    fig, (
+        (ax_mass, ax_sensor_mass),
+        (ax_temp, ax_sensor_temp),
+    ) = plt.subplots(
+        2,
+        2,
+        figsize=(16, 10),
+        sharex=True,
+    )
+
+
+    # -------------------------
+    # Aggregate plots
+    # -------------------------
+
+    ax_mass.plot(
+        timestamps,
+        mass,
+        color="blue",
+    )
+
+    ax_mass.set_ylabel("Mass (g)")
+    ax_mass.set_title("Aggregate Mass")
+
+
+    ax_temp.plot(
+        timestamps,
+        temperature,
+        color="red",
+    )
+
+    ax_temp.set_ylabel("Temperature (°C)")
+    ax_temp.set_title("Aggregate Temperature")
+
+
+    # -------------------------
+    # Sensor plots
+    # -------------------------
+
+    sensor_colors = [
+        "green",
+        "magenta",
+        "black",
+    ]
+
+    sensor_mass_data = defaultdict(list)
+
+    for row in mass_sensor_datapoints:
+        sensor_mass_data[row.idx].append(
+            (
+                row.timestamp,
+                row.mass,
+            )
+        )
+
+
+    sensor_temp_data = defaultdict(list)
+
+    for row in temp_sensor_datapoints:
+        sensor_temp_data[row.idx].append(
+            (
+                row.timestamp,
+                row.temperature,
+            )
+        )
+
+
+    sensor_mass_arrays = {}
+    sensor_temp_arrays = {}
+
+
+    for idx, values in sorted(sensor_mass_data.items()):
+
+        times = np.array(
+            [v[0] for v in values],
+            dtype="datetime64[ms]",
+        )
+
+        vals = np.array(
+            [v[1] for v in values],
+            dtype=float,
+        )
+
+        sensor_mass_arrays[idx] = (
+            times,
+            vals,
+        )
+
+        ax_sensor_mass.plot(
+            times,
+            vals,
+            color=sensor_colors[idx % len(sensor_colors)],
+            label=f"Sensor {idx}",
+        )
+
+
+    for idx, values in sorted(sensor_temp_data.items()):
+
+        times = np.array(
+            [v[0] for v in values],
+            dtype="datetime64[ms]",
+        )
+
+        vals = np.array(
+            [v[1] for v in values],
+            dtype=float,
+        )
+
+        sensor_temp_arrays[idx] = (
+            times,
+            vals,
+        )
+
+        ax_sensor_temp.plot(
+            times,
+            vals,
+            color=sensor_colors[idx % len(sensor_colors)],
+            label=f"Sensor {idx}",
+        )
+
+
+    ax_sensor_mass.set_ylabel("Mass (g)")
+    ax_sensor_mass.set_title("Individual Sensor Mass")
+    ax_sensor_mass.legend()
+
+
+    ax_sensor_temp.set_ylabel("Temperature (°C)")
+    ax_sensor_temp.set_title("Individual Sensor Temperature")
+    ax_sensor_temp.legend()
+
+
+    # -------------------------
+    # X axis formatting
+    # -------------------------
+
+    utc_formatter = DateFormatter(
+        "%Y-%m-%dT%H:%M:%SZ",
+        tz=datetime.timezone.utc,
+    )
+
+    locator = AutoDateLocator(
+        minticks=10,
+        maxticks=20,
+    )
+
+    for ax in [
+        ax_mass,
+        ax_sensor_mass,
+        ax_temp,
+        ax_sensor_temp,
+    ]:
+        ax.xaxis.set_major_formatter(utc_formatter)
+        ax.xaxis.set_major_locator(locator)
+
+
+    ax_temp.set_xlabel("Time")
+    ax_sensor_temp.set_xlabel("Time")
+
+
+    # -------------------------
+    # Plot data registry
+    # -------------------------
+
+    plot_series = []
+
+    def add_series(name, axis, times, values):
+
+        plot_series.append(
+            {
+                "name": name,
+                "axis": axis,
+                "times": times,
+                "values": values,
+            }
+        )
+
+
+    add_series(
+        "Aggregate Mass",
+        ax_mass,
+        timestamps,
+        mass,
+    )
+
+    add_series(
+        "Aggregate Temperature",
+        ax_temp,
+        timestamps,
+        temperature,
+    )
+
+
+    for idx, (times, values) in sensor_mass_arrays.items():
+
+        add_series(
+            f"Mass Sensor {idx}",
+            ax_sensor_mass,
+            times,
+            values,
+        )
+
+
+    for idx, (times, values) in sensor_temp_arrays.items():
+
+        add_series(
+            f"Temperature Sensor {idx}",
+            ax_sensor_temp,
+            times,
+            values,
+        )
+
+
+    # -------------------------
+    # Statistics
+    # -------------------------
+
+    def format_stats(values, elapsed):
+
+        mean = np.mean(values)
+        median = np.median(values)
+        std = np.std(values)
+
+        return (
+            f"range: {elapsed}\n"
+            f"min/max/med/mean: "
+            f"{np.min(values):.3f}, "
+            f"{np.max(values):.3f}, "
+            f"{median:.3f}, "
+            f"{mean:.3f}\n"
+            f"1sigma/2sigma/3sigma = "
+            f"{std:.3f}, "
+            f"{2 * std:.3f}, "
+            f"{3 * std:.3f}"
+        )
+
+
+    stats_text = {}
+
+    axis_counts = defaultdict(int)
+
+    for item in plot_series:
+
+        key = item["name"]
+        axis = item["axis"]
+
+        # # Compact sensor statistics, larger spacing for separate plots
+        # if axis in [ax_sensor_mass, ax_sensor_temp]:
+        #     spacing = 0.05
+        # else:
+        #     spacing = 0.18
+        spacing = 0.10
+
+        y = 0.98 - axis_counts[axis] * spacing
+
+        axis_counts[axis] += 1
+
+        stats_text[key] = axis.text(
+            0.02,
+            y,
+            "",
+            transform=axis.transAxes,
+            verticalalignment="top",
+            fontsize=8,
+        )
+
+
+    # -------------------------
+    # Helpers
+    # -------------------------
+
+    def visible_range(ax):
+
+        x_min, x_max = ax.get_xlim()
+
+        start = np.datetime64(
+            num2date(
+                x_min,
+                tz=datetime.timezone.utc,
+            ).replace(tzinfo=None)
+        )
+
+        end = np.datetime64(
+            num2date(
+                x_max,
+                tz=datetime.timezone.utc,
+            ).replace(tzinfo=None)
+        )
+
+        return start, end
+
+
+    busy = False
+
+
+    def update_view(ax):
+
+        nonlocal busy
+
+        if busy:
+            return
+
+        busy = True
+
+        try:
+
+            start, end = visible_range(ax)
+
+            elapsed_str = get_elapsed_str(int((end-start) / np.timedelta64(1, "s")))
+
+            axis_values = defaultdict(list)
+
+
+            for item in plot_series:
+
+                times = item["times"]
+                values = item["values"]
+
+                mask = (
+                    (times >= start) &
+                    (times <= end)
+                )
+
+                if not np.any(mask):
+                    continue
+
+
+                visible = values[mask]
+
+                stats_text[item["name"]].set_text(
+                    format_stats(visible, elapsed_str)
+                )
+
+
+                axis_values[item["axis"]].append(
+                    visible
+                )
+
+
+            # -------------------------
+            # Autoscale y
+            # -------------------------
+
+            for axis, values in axis_values.items():
+
+                merged = np.concatenate(values)
+
+                ymin = np.min(merged)
+                ymax = np.max(merged)
+
+                span = ymax - ymin
+
+                if span == 0:
+                    span = abs(ymin) if ymin else 1
+
+                padding = span * 0.05
+
+                axis.set_ylim(
+                    ymin - padding,
+                    ymax + padding,
+                )
+
+
+            fig.canvas.draw_idle()
+
+
+        finally:
+            busy = False
+
+
+    ax_mass.callbacks.connect(
+        "xlim_changed",
+        update_view,
+    )
+
+    update_view(ax_mass)
+
+
+    fig.autofmt_xdate()
+    plt.tight_layout()
+    plt.show()
+
+def plot_time(fuzzy_id: str):
+    start_time = None
+    end_time = None
+
+    db_engine = get_db_engine()
+    device_id = db_engine.device.get(fuzzy_id).id
+
+    datapoints, mass_sensor_datapoints, temp_sensor_datapoints = \
+        db_engine.datapoint.get_device_datapoints(device_id, start_time, end_time)
+
+    _plot_time(datapoints, mass_sensor_datapoints, temp_sensor_datapoints)
 
 def _extract_from_datapoints(datapoints, sensor_idx: Optional[int]):
     timestamps, masses, ref_masses, temps = [], [], [], []

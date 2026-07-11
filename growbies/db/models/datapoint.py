@@ -2,9 +2,10 @@ from datetime import datetime
 from enum import StrEnum
 from sqlalchemy import Column, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
-from sqlmodel import Field, Relationship
+from sqlmodel import Field, Relationship, text
 from typing import List, Optional, TYPE_CHECKING
 import logging
+import time
 import uuid
 
 from .common import BaseTable, BaseTableEngine, SortedTable
@@ -14,6 +15,7 @@ if TYPE_CHECKING:
 from growbies.device.common.read import DataPoint as DeviceDataPoint
 from growbies.device.cmd import ReadDeviceCmd
 from growbies.utils.types import (DeviceID, TareID)
+from growbies.utils import timestamp
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +90,110 @@ class DataPoints(SortedTable[DataPoint]):
 class DataPointEngine(BaseTableEngine):
     model_class = DataPoint
 
+    def get_device_datapoints(
+            self,
+            device_id,
+            start_time: Optional[datetime],
+            end_time: Optional[datetime],
+    ):
+        """
+        Retrieve datapoint history optimized for plotting.
+
+        Returns:
+            (
+                datapoint_rows,
+                mass_sensor_rows,
+                temperature_sensor_rows
+            )
+
+        Rows are lightweight SQL result rows, not ORM objects.
+        """
+
+        if start_time is None:
+            start_time = timestamp.get_utc_dt(0)
+
+        if end_time is None:
+            end_time = timestamp.get_utc_dt()
+
+        with self._engine.new_session() as session:
+
+            datapoint_sql = text("""
+                SELECT
+                    id,
+                    timestamp,
+                    mass,
+                    temperature,
+                    ref_mass
+                FROM datapoint
+                WHERE device_id = :device_id
+                  AND timestamp >= :start_time
+                  AND timestamp <= :end_time
+                ORDER BY timestamp
+            """)
+
+            datapoint_rows = session.exec(
+                datapoint_sql,
+                params={
+                    "device_id": device_id,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                },
+            ).all()
+
+            if not datapoint_rows:
+                return [], [], []
+
+            datapoint_ids = [row.id for row in datapoint_rows]
+
+            mass_sensor_sql = text("""
+                SELECT
+                    ms.datapoint_id,
+                    dp.timestamp,
+                    ms.idx,
+                    ms.mass,
+                    ms.error,
+                    ms.ref_mass
+                FROM datapointmasssensor ms
+                JOIN datapoint dp
+                    ON dp.id = ms.datapoint_id
+                WHERE ms.datapoint_id = ANY(:datapoint_ids)
+                ORDER BY dp.timestamp, ms.idx
+            """)
+
+            mass_sensor_rows = session.exec(
+                mass_sensor_sql,
+                params={
+                    "datapoint_ids": datapoint_ids,
+                },
+            ).all()
+
+            temperature_sensor_sql = text("""
+                SELECT
+                    ts.datapoint_id,
+                    dp.timestamp,
+                    ts.idx,
+                    ts.temperature,
+                    ts.error
+                FROM datapointtemperaturesensor ts
+                JOIN datapoint dp
+                    ON dp.id = ts.datapoint_id
+                WHERE ts.datapoint_id = ANY(:datapoint_ids)
+                ORDER BY dp.timestamp, ts.idx
+            """)
+
+            temperature_sensor_rows = session.exec(
+                temperature_sensor_sql,
+                params={
+                    "datapoint_ids": datapoint_ids,
+                },
+            ).all()
+
+            return (
+                datapoint_rows,
+                mass_sensor_rows,
+                temperature_sensor_rows,
+            )
+
     def insert(self, device_id: DeviceID, tare_id: TareID, device_dp: DeviceDataPoint,
                cmd: ReadDeviceCmd | None) -> DataPoint:
         with self._engine.new_session() as session:
@@ -141,3 +247,5 @@ class DataPointEngine(BaseTableEngine):
             session.commit()
             session.refresh(dp_row)
             return dp_row
+
+
