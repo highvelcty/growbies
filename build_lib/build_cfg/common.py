@@ -67,12 +67,16 @@ def dispatch(cmd: Cmd):
             raise ValueError(f'Invalid gateway model number: {model_number}.')
     elif cmd == Cmd.FIRMWARE:
         from . import firmware
-        if model_number == firmware.Circle1.MODEL_NUMBER:
+        if model_number == firmware.Default.MODEL_NUMBER:
+            firmware.Default().save()
+        elif model_number == firmware.Circle1.MODEL_NUMBER:
             firmware.Circle1().save()
         elif model_number == firmware.Circle2.MODEL_NUMBER:
             firmware.Circle2().save()
         elif model_number == firmware.CircleEsp32c3.MODEL_NUMBER:
             firmware.CircleEsp32c3().save()
+        elif model_number == firmware.ThermalChamber1.MODEL_NUMBER:
+            firmware.ThermalChamber1().save()
         else:
             raise ValueError(f'Invalid model number: {model_number}.')
     else:

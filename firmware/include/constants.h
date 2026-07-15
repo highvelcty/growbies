@@ -3,11 +3,11 @@
 #include <pins_arduino.h>
 
 #include "build_cfg.h"
-#include "flags.h"
 #include "types.h"
 
 constexpr auto APPNAME = "growbies";
 
+constexpr int DEFAULT_BAUD_RATE = 57600;
 constexpr int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
 constexpr int WAIT_READY_RETRIES = 100;
 constexpr int WAIT_READY_RETRY_DELAY_MS = 10;
@@ -21,13 +21,7 @@ constexpr float INVALID_MASS_SAMPLE_THRESHOLD_DAC = 10000;
 constexpr float INVALID_TEMPERATURE_SAMPLE_THRESHOLD_DAC = 50;
 constexpr auto SMALL_DELAY_MS = 1;
 
-// Thermistor
-#if ARDUINO_ARCH_AVR
-constexpr float ADC_V_REF = 3.3; // Measured ADC reference voltage
-constexpr int ADC_RESOLUTION = 1024;
-#elif ARDUINO_ARCH_ESP32
 constexpr int ADC_RESOLUTION = 4096;
-#endif
 
 #if PIN_CFG == 1
 enum Pins : int {
@@ -61,6 +55,14 @@ enum Pins : int {
     DOUT_1_PIN = D8,
     DOUT_0_PIN = D9,
 };
+#elif PIN_CFG == 3
+enum Pins : int {
+    HEATER_ACTIVE = D6,
+    FAN_ACTIVE = D5,
+    ACTIVATE_BUTTON = D4,
+    GROUNDED_PIN = D3,
+    THERMISTOR_PIN_0 = A2,
+};
 #else
 static_assert(always_false<int>::value, "Invalid PIN_CFG value");
 #endif
@@ -72,10 +74,11 @@ typedef enum Unit : uint16_t {
     UNIT_CELSIUS        = 0x0008,
 } Units;
 
+
 inline int get_HX711_dout_pin(const SensorIdx_t sensor){
-#if HX711_PIN_CFG_0
-    return DOUT_0_PIN + sensor;
-#elif HX711_PIN_CFG_1
+#if PIN_CFG == 3
+    assert(false && "Invalid for pin configuration.");
+#else
     int ret = DOUT_0_PIN;
     if (sensor == 1) {
         ret = DOUT_1_PIN;
@@ -84,26 +87,20 @@ inline int get_HX711_dout_pin(const SensorIdx_t sensor){
         ret = DOUT_2_PIN;
     }
     return ret;
-#else
-    assert(false && "Invalid pin configuration.");
 #endif
 }
 
 inline int get_HX711_dout_port_bit(const SensorIdx_t sensor) {
-#if HX711_PIN_CFG_0
-    return (1 << (get_HX711_dout_pin(sensor) - DOUT_0_PIN));
-#elif HX711_PIN_CFG_1
     return (1 << get_HX711_dout_pin(sensor));
-#endif
 }
 
 inline int get_temperature_pin(const int mass_sensor_idx) {
-    if (MASS_SENSOR_COUNT == 1) {
+    if (MASS_SENSOR_COUNT <= 1) {
         return THERMISTOR_PIN_0;
     }
-#if HX711_PIN_CFG_0
-    assert(false && "Unimplemented temperature pin mapping.");
-#elif HX711_PIN_CFG_1
+#if PIN_CFG == 3
+    return THERMISTOR_PIN_0;
+#else
     switch (mass_sensor_idx) {
         case 0:
             return THERMISTOR_PIN_0;
