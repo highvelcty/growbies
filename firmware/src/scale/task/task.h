@@ -6,7 +6,9 @@
 #include "scale/remote/remote_out.h"
 #include "common/system_state.h"
 
-class AutoWakeTask final : public Task {
+namespace scale {
+
+class AutoWakeTask final : public common::Task {
 public:
     void run() override;
     void run_on_wake();
@@ -25,7 +27,7 @@ private:
     MeasurementStack& measurement_stack = MeasurementStack::get();
 };
 
-class PowerTransitionTask final : public Task {
+class PowerTransitionTask final : public common::Task {
 public:
     using Task::Task;
     void run() override;
@@ -39,7 +41,7 @@ private:
     RemoteOut& remote_out = RemoteOut::get();
 };
 
-class RemoteTask final : public Task {
+class RemoteTask final : public common::Task {
 public:
     using Task::Task;
     void run() override;
@@ -48,7 +50,7 @@ private:
     RemoteOut& remote_out = RemoteOut::get();
 };
 
-class SerialPortOutTask final : public Task {
+class SerialPortOutTask final : public common::SerialPortOutTask {
 public:
     void run() override;
     unsigned long interval_ms() const override;
@@ -57,4 +59,4 @@ private:
     CmdExec& cmd_exec = CmdExec::get();
 };
 
-
+}

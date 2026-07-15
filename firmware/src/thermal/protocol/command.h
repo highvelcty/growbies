@@ -4,8 +4,4 @@
 
 #pragma pack(1)
 
-struct CmdRead : BaseCmd {
-    static constexpr auto VERSION = 1;
-};
-
 #pragma pack()

@@ -1,11 +1,8 @@
 #pragma once
 
-#include <cstddef>
 #include <vector>
 
 #include "build_cfg.h"
-
-namespace growbies {
 
 // -----------------------------------------------------------------------------
 // Sliding median filter
@@ -98,5 +95,3 @@ private:
 
     float compute_alpha(float error) const override;
 };
-
-}

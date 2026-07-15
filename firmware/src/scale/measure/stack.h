@@ -1,10 +1,10 @@
 #pragma once
 
+#include "constants.h"
 #include "hx711.h"
-#include "measure.h"
-#include "thermistor.h"
-
-namespace growbies {
+#include "common/measure/aggregate_temperature.h"
+#include "common/measure/thermistor.h"
+#include "scale/measure/aggregate_mass.h"
 
 class MeasurementStack {
 public:
@@ -30,9 +30,7 @@ private:
     MeasurementStack() = default;
 
     MultiHX711 multi_hx711_{};
-    MultiThermistor multi_thermistor_{};
+    MultiThermistor multi_thermistor_{SWITCHED_PWR_PIN};
     AggregateTemperature* aggregate_temp_ = nullptr;
     AggregateMass* aggregate_mass_ = nullptr;
 };
-
-}

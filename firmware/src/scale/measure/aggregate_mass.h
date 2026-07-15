@@ -1,129 +1,10 @@
 #pragma once
 
 #include <vector>
-#include "filter.h"
+#include "common/measure/filter.h"
+#include "common/measure/aggregate.h"
+#include "common/measure/aggregate_temperature.h"
 #include "scale/nvm/nvm.h"
-
-namespace growbies {
-
-static constexpr size_t MEDIAN_FILTER_BUF_SIZE = 3;
-
-enum class SensorType : uint8_t {
-    MASS,
-    TEMPERATURE,
-    HUMIDITY,
-    LIGHT,
-    UNKNOWN,
-};
-
-// -------------------------------
-// Single measurement channel
-// -------------------------------
-class MeasurementChannel {
-public:
-    explicit MeasurementChannel(
-        const SensorType type,
-        const size_t median_window_size)
-        : type_(type),
-          median_filter_(median_window_size),
-          value_(0.0f)
-    {}
-
-
-    void reset() {
-        median_filter_.reset();
-        value_ = 0.0f;
-    }
-
-    SensorType type() const noexcept { return type_; }
-
-    void update(const float raw_value) {
-        value_ = median_filter_.update(raw_value);
-    }
-
-    float value() const noexcept { return value_; }
-
-private:
-    SensorType type_;
-    SlidingMedianFilter median_filter_;
-    float value_;
-};
-
-constexpr float EWMA_TEMPERATURE_ALPHA_MIN = 0.05;
-constexpr float EWMA_TEMPERATURE_ALPHA_MAX = 0.7;
-constexpr float EWMA_TEMPERATURE_ALPHA_THRESH_CELSIUS = 2;
-class AggregateTemperature {
-
-public:
-    explicit AggregateTemperature(const size_t num_sensors) {
-        aewma_.reserve(num_sensors);
-        channels_.reserve(num_sensors);
-
-        for (size_t ii = 0; ii < num_sensors; ++ii) {
-            aewma_.emplace_back(EWMA_TEMPERATURE_ALPHA_MIN, EWMA_TEMPERATURE_ALPHA_MAX,
-                EWMA_TEMPERATURE_ALPHA_THRESH_CELSIUS,
-                aewma_temp_buffer_initialized[ii], aewma_temp_buffer_last_value[ii]);
-
-            channels_.emplace_back(SensorType::TEMPERATURE, MEDIAN_FILTER_BUF_SIZE);
-        }
-    }
-
-    MeasurementChannel& channel(const size_t idx) { return channels_[idx]; }
-    const MeasurementChannel& channel(const size_t idx) const { return channels_[idx]; }
-    size_t size() const { return channels_.size(); }
-
-    float average() const {
-        const auto temps = sensor_temperatures();
-        if (temps.empty()) return 0.0f;
-
-        float sum = 0.0f;
-        for (const float t : temps) sum += t;
-        return sum / static_cast<float>(temps.size());
-    }
-
-    void update() {
-        const auto* nvm_cal = calibration_store->payload();
-        const auto& sensors = nvm_cal->sensor;
-
-        for (size_t ii = 0; ii < channels_.size(); ++ii) {
-            const auto& ch = channels_[ii];
-            const auto& coeffs = sensors[ii].coeffs;
-
-            const float raw_temp = ch.value() + coeffs.thermistor_offset;
-
-            aewma_[ii].add(raw_temp);
-        }
-    }
-
-    void reset_channels() {
-        for (auto& ch : channels_) {
-            ch.reset();
-        }
-    }
-    void reset() {
-
-        for (auto& buf : aewma_) {
-            buf.reset();
-        }
-
-        reset_channels();
-    }
-
-    std::vector<float> sensor_temperatures() const {
-        std::vector<float> temps;
-        temps.reserve(channels_.size());
-
-        for (size_t ii = 0; ii < channels_.size(); ++ii) {
-            temps.push_back(aewma_[ii].value());
-        }
-
-        return temps;
-    }
-
-private:
-    std::vector<LinearAEWMABuffer> aewma_;
-    std::vector<MeasurementChannel> channels_;
-};
 
 // -------------------------------
 // Aggregate MASS channels
@@ -161,7 +42,7 @@ public:
     void reset() { aewma_buffer_.reset(); reset_channels(); }
     const std::vector<float>& sensor_masses() const { return per_sensor_mass_; }
     size_t size() const { return channels_.size(); }
-    float conditioned_total_mass() const { return aewma_buffer_.value(); }
+    float conditioned_total() const { return aewma_buffer_.value(); }
     bool is_event_tripped() const { return aewma_buffer_.error() >= EVENT_THRESH_GRAMS; }
 
     void update() {
@@ -188,7 +69,7 @@ public:
                 }
                 // Fallback to aggregate average
                 else {
-                    sensor_temp_value = temperature_.average();
+                    sensor_temp_value = temperature_.conditioned_total();
                 }
 
                 const float dT = sensor_temp_value - Tref;
@@ -225,5 +106,3 @@ private:
     std::vector<float> per_sensor_mass_{};
     float total_mass_;
 };
-
-}

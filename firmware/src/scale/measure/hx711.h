@@ -3,8 +3,6 @@
 #include <Arduino.h>
 #include <vector>
 
-namespace growbies {
-
 constexpr int HX711_DAC_BITS = 24;
 static constexpr uint32_t SIGN_MASK = ~((1UL << HX711_DAC_BITS) - 1);
 constexpr int HX711_BIT_BANG_DELAY = 3;
@@ -52,5 +50,3 @@ public:
     // Internal method to wait until DOUT goes low
     bool wait_ready() const;
 };
-
-}

@@ -2,8 +2,6 @@
 #include "build_cfg.h"
 #include "filter.h"
 
-namespace growbies {
-
 RTC_DATA_ATTR bool  aewma_mass_buffer_initialized = false;
 RTC_DATA_ATTR float aewma_mass_buffer_last_value = 0.0f;
 RTC_DATA_ATTR bool  aewma_temp_buffer_initialized[TEMPERATURE_SENSOR_COUNT] = {false};
@@ -137,6 +135,4 @@ float LinearAEWMABuffer::compute_alpha(float error) const {
     if (alpha > alpha_max) return alpha_max;
 
     return alpha;
-}
-
 }

@@ -11,8 +11,6 @@
 #include "common/system_state.h"
 #include "scale/nvm/nvm.h"
 
-using namespace growbies;
-
 // -----------------------------------------------------------------------------
 // MassDrawing
 // -----------------------------------------------------------------------------
@@ -60,7 +58,7 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
             ".       ",
             "        "
         };
-        const auto& stack = growbies::MeasurementStack::get();
+        const auto& stack = MeasurementStack::get();
         constexpr size_t dots_len = sizeof(dots) / sizeof(dots[0]);
 
         stack.reset();
@@ -78,7 +76,7 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
         }
 
         tare_store->edit().payload.tares[tare_idx].value = \
-            stack.aggregate_mass().conditioned_total_mass();
+            stack.aggregate_mass().conditioned_total();
         tare_store->commit();
 
         msg = "zero";
@@ -221,7 +219,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
         }
 
         const bool needs_redraw =
-            _convert_units(measurement_stack.aggregate_mass().conditioned_total_mass(), new_units);
+            _convert_units(measurement_stack.aggregate_mass().conditioned_total(), new_units);
         if (needs_redraw) {
             redraw();
         }

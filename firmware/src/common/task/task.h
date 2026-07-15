@@ -3,6 +3,8 @@
 #include "common/protocol/cmd_exec.h"
 #include "common/system_state.h"
 
+namespace common {
+
 class Task {
 public:
     explicit Task(const unsigned long interval = 0)
@@ -42,3 +44,13 @@ public:
 private:
     CmdExec& cmd_exec = CmdExec::get();
 };
+
+class SerialPortOutTask : public Task {
+public:
+    using Task::Task;
+    void run() override;
+private:
+    CmdExec& cmd_exec = CmdExec::get();
+};
+
+}

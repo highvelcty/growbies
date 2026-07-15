@@ -17,8 +17,9 @@ class Default(Base):
         MASS_SENSOR_COUNT: Base.Key.type_ = 'MASS_SENSOR_COUNT'
         MODEL_NUMBER: Base.Key.type_ = 'MODEL_NUMBER'
         TEMPERATURE_SENSOR_COUNT: Base.Key.type_ = 'TEMPERATURE_SENSOR_COUNT'
+        THERMISTOR_HW: Base.Key.type_ = 'THERMISTOR_HW'
         all = (FIRMWARE_VERSION, MASS_SENSOR_COUNT, MODEL_NUMBER, PIN_CFG,
-               TEMPERATURE_SENSOR_COUNT)
+               TEMPERATURE_SENSOR_COUNT, THERMISTOR_HW)
 
         @classmethod
         def value(cls, key: 'Default.Key.type_') -> str | int:
@@ -31,6 +32,8 @@ class Default(Base):
             elif key == cls.PIN_CFG:
                 return 1
             elif key == cls.TEMPERATURE_SENSOR_COUNT:
+                return 1
+            elif key == cls.THERMISTOR_HW:
                 return 1
             else:
                 raise ValueError(key)
@@ -108,5 +111,7 @@ class ThermalChamber1(ThermalChamber):
                 return 0
             elif key == cls.TEMPERATURE_SENSOR_COUNT:
                 return 1
+            elif key == cls.THERMISTOR_HW:
+                return 2
             else:
                 return super().value(key)

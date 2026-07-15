@@ -1,7 +1,7 @@
 #include "scale/task/task.h"
 #include "scale/utils/sleep.h"
 
-void AutoWakeTask::run() {
+void scale::AutoWakeTask::run() {
     if (not system_state.ready_for_tasks()) {
         measurement_stack.update();
         if (measurement_stack.aggregate_mass().is_event_tripped()) {
@@ -15,7 +15,7 @@ void AutoWakeTask::run() {
     }
 }
 
-void AutoWakeTask::run_on_wake() {
+void scale::AutoWakeTask::run_on_wake() {
     if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_TIMER) {
         measurement_stack.update();
         if (!measurement_stack.aggregate_mass().is_event_tripped()) {
@@ -29,11 +29,11 @@ void AutoWakeTask::run_on_wake() {
     }
 }
 
-unsigned long AutoWakeTask::interval_ms() const {
+unsigned long scale::AutoWakeTask::interval_ms() const {
     return identify_store->payload()->auto_wake_interval_ms();
 }
 
-void PowerTransitionTask::run() {
+void scale::PowerTransitionTask::run() {
     if (system_state.transitioning()) {
         system_state.set_state(system_state.next_state());
         if (system_state.next_state() == PowerState::ACTIVE) {
@@ -61,19 +61,19 @@ void PowerTransitionTask::run() {
     }
 }
 
-void RemoteTask::run() {
+void scale::RemoteTask::run() {
     remote_out.service(remote_in.service());
     if (system_state.ready_for_tasks()) {
         remote_out.update();
     }
 }
 
-void SerialPortOutTask::run() {
+void scale::SerialPortOutTask::run() {
     if (battery.is_charging()) {
-        cmd_exec.update_telemetry(true);
+        common::SerialPortOutTask::run();
     }
 }
 
-uint32_t SerialPortOutTask::interval_ms() const {
+uint32_t scale::SerialPortOutTask::interval_ms() const {
     return identify_store->payload()->telemetry_interval_ms();
 }

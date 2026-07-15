@@ -65,7 +65,7 @@ void CmdExec::exec() {
         else if (in_packet_hdr->cmd == Cmd::POWER_ON_HX711) {
             error = usb_transport.validate_cmd(sizeof(CmdPowerOnHx711));
             if (!error) {
-                const auto& measurement_stack = growbies::MeasurementStack::get();
+                const auto& measurement_stack = MeasurementStack::get();
                 measurement_stack.power_on();
                 const auto* resp = new (resp_buf) RespVoid;
 
@@ -75,7 +75,7 @@ void CmdExec::exec() {
         else if (in_packet_hdr->cmd == Cmd::POWER_OFF_HX711) {
             error = usb_transport.validate_cmd(sizeof(CmdPowerOffHx711));
             if (!error) {
-                const auto& measurement_stack = growbies::MeasurementStack::get();
+                const auto& measurement_stack = MeasurementStack::get();
                 measurement_stack.power_off();
                 const auto* resp = new (resp_buf) RespVoid;
                 usb_transport.send_resp(resp, sizeof(*resp));
@@ -86,7 +86,7 @@ void CmdExec::exec() {
             if (!error) {
                 const auto* cmd = reinterpret_cast<CmdRead*>(usb_transport.get_cmd_buf());
                 if (cmd->reset) {
-                    const auto& measurement_stack = growbies::MeasurementStack::get();
+                    const auto& measurement_stack = MeasurementStack::get();
                     measurement_stack.reset();
                 }
                 update_telemetry(false);
@@ -136,8 +136,8 @@ void CmdExec::update_telemetry(const bool async) const {
         datapoint.add<float>(EP_TARE, tare.value);
     }
 
-    datapoint.add<float>(EP_MASS, stack.aggregate_mass().conditioned_total_mass());
-    datapoint.add<float>(EP_TEMPERATURE, stack.aggregate_temp().average());
+    datapoint.add<float>(EP_MASS, stack.aggregate_mass().conditioned_total());
+    datapoint.add<float>(EP_TEMPERATURE, stack.aggregate_temp().conditioned_total());
 
     for (auto sensor_mass : stack.aggregate_mass().sensor_masses()) {
         datapoint.add<float>(EP_MASS_SENSOR, sensor_mass);

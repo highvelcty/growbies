@@ -1,44 +1,40 @@
 #include "build_cfg.h"
-#include "thermistor.h"
-#include "scale/remote/remote_in.h"
-
 #include "constants.h"
-#include "hx711.h"
-
-namespace growbies {
+#include "thermistor.h"
 
 // --- Thermistor ------------------------
 void Thermistor::begin() const {
     pinMode(analog_pin_, INPUT);
+
+    if (power_pin_ != NO_PIN) {
+        pinMode(power_pin_, OUTPUT);
+    }
 }
 
-void Thermistor::power_off() {
-    digitalWrite(HX711_VCC_PIN, LOW);
+void Thermistor::power_off() const {
+    if (power_pin_ != NO_PIN) {
+        digitalWrite(power_pin_, LOW);
+    }
 }
 
-void Thermistor::power_on() {
-    digitalWrite(HX711_VCC_PIN, HIGH);
+void Thermistor::power_on() const {
+    if (power_pin_ != NO_PIN) {
+        digitalWrite(power_pin_, HIGH);
+    }
 }
-
 
 float Thermistor::read_voltage() const {
-#if defined(ARDUINO_ARCH_ESP32)
     const auto vout = static_cast<float>(analogReadMilliVolts(analog_pin_) / 1000.0);
     if (vout < 0.001f || vout > (THERMISTOR_SUPPLY_VOLTAGE - 0.001f)) {
         return NAN; // Safely bail out
     }
     return vout;
-#else
-    const float adc_max = 1023.0f;
-    const int adc_raw = analogRead(analog_pin_);
-    return (adc_raw / adc_max) * THERMISTOR_SUPPLY_VOLTAGE;
-#endif
-
 }
 
 float Thermistor::sample() const {
     // Thermistor on the top of the resistor divider
     const float vout = read_voltage();
+    return vout; // meyere
     if (isnan(vout)) {
         return DEFAULT_TEMPERATURE_CELSIUS;
     }
@@ -83,30 +79,33 @@ float Thermistor::sample_beta() const {
 // --- MultiThermistor -------------------
 void MultiThermistor::begin() {
     for (auto ii = 0; ii < TEMPERATURE_SENSOR_COUNT; ++ii) {
-        add_device(new Thermistor(get_temperature_pin(ii)));
+        add_device(new Thermistor(get_temperature_pin(ii), power_pin_));
     }
 
     for (const auto* device : devices_) {
         if (device) device->begin();
     }
 
-    pinMode(HX711_VCC_PIN, OUTPUT);
 #if POWER_CONTROL
-    Thermistor::power_off();
+    power_off();
 #else
-    Thermistor::power_on();
+    power_on();
 #endif
 }
 
-void MultiThermistor::power_off() {
+void MultiThermistor::power_off() const {
 #if POWER_CONTROL
-    Thermistor::power_off();
+    for (const auto* device : devices_) {
+        device->power_off();
+    }
 #endif
 }
 
-void MultiThermistor::power_on() {
+void MultiThermistor::power_on() const {
 #if POWER_CONTROL
-    Thermistor::power_on();
+    for (const auto* device : devices_) {
+        device->power_on();
+    }
 #endif
 }
 
@@ -116,11 +115,6 @@ std::vector<float> MultiThermistor::sample() const {
     for (const auto* therm : devices_) {
         readings.push_back(therm->sample());
     }
-    // 2026_06_02 meyere: analogReadMillivolts has the side effect of disconnecting
-    // interrupts.
-    RemoteIn::attach_interrupts();
     return readings;
-}
-
 }
 

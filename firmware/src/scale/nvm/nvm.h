@@ -1,18 +1,14 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Preferences.h>
 
 #include "build_cfg.h"
 #include "constants.h"
 #include "types.h"
 #include "common/utils/crc.h"
 
-#if ARDUINO_ARCH_AVR
-#include <stdio.h>
-#include <EEPROM.h>
-#elif ARDUINO_ARCH_ESP32
-#include <Preferences.h>
-#endif
+
 
 
 #pragma pack(1)
@@ -199,15 +195,6 @@ struct NvmIdentify : NvmStructBase {
 };
 static_assert(sizeof(NvmIdentify) == 135, "unexpected structure size");
 
-#if ARDUINO_ARCH_AVR
-constexpr int PARTITION_A_OFFSET = 0;
-constexpr int PARTITION_B_OFFSET = 512;
-constexpr int PARTITION_C_OFFSET = 640;
-constexpr int PARTITION_D_OFFSET = 768;
-constexpr int PARTITION_E_OFFSET = 896;
-#endif
-
-
 // Templated Base classes
 template <typename T>
 class NvmStoreBase {
@@ -265,38 +252,6 @@ protected:
 };
 
 // Templated concrete classes
-#if ARDUINO_ARCH_AVR
-
-template <typename T>
-class AvrNvmStore final : public NvmStoreBase<T> {
-public:
-    explicit AvrNvmStore(const int offset) : partition_offset(offset) {}
-
-    void begin() override {
-        EEPROM.get(partition_offset, this->value_storage);
-        NvmStoreBase<T>::begin();
-    }
-
-    void put(const T& value) override {
-        NvmStoreBase<T>::put(value);
-        EEPROM.put(partition_offset, value);
-    }
-
-protected:
-    void _get() override {
-        EEPROM.get(partition_offset, this->value_storage);
-    }
-
-    void _put(const T& value) override {
-        EEPROM.put(partition_offset, value);
-    }
-
-private:
-    int partition_offset;
-};
-
-#elif ARDUINO_ARCH_ESP32
-
 template <typename T>
 class Esp32NvmStore final : public NvmStoreBase<T> {
 public:
@@ -313,16 +268,12 @@ public:
 protected:
     void _get() override {
         this->prefs.begin(this->ns, false);
-        // Ignoring the return value which is the number of bytes read.
-        // meyere, fix this.
         this->prefs.getBytes(this->ns_key, &this->value_storage, sizeof(this->value_storage));
         this->prefs.end();
     }
 
     void _put(const T& value) override {
         this->prefs.begin(this->ns, false);
-        // Ignoring the boolean return indicating success.
-        // meyere, fix this
         this->prefs.putBytes(this->ns_key, &value, sizeof(value));
         this->prefs.end();
     }
@@ -332,9 +283,6 @@ private:
     const char* ns_key;
     const char* ns = APPNAME;
 };
-
-#endif
-
 
 // Type specializations
 template <>
@@ -397,16 +345,9 @@ inline void NvmStoreBase<NvmCalibration>::migrate() {
     _migrate();
 }
 
-#if ARDUINO_ARCH_AVR
-using CalibrationStore = AvrNvmStore<NvmCalibration>;
-using IdentifyStore    = AvrNvmStore<NvmIdentify>;
-using TareStore        = AvrNvmStore<NvmTare>;
-#elif ARDUINO_ARCH_ESP32
 using CalibrationStore = Esp32NvmStore<NvmCalibration>;
 using IdentifyStore = Esp32NvmStore<NvmIdentify>;
 using TareStore = Esp32NvmStore<NvmTare>;
-#endif
-
 extern CalibrationStore* calibration_store;
 extern IdentifyStore* identify_store;
 extern TareStore* tare_store;

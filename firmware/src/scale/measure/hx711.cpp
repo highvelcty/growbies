@@ -5,8 +5,6 @@
 #include "constants.h"
 #include "flags.h"
 
-namespace growbies {
-
 static portMUX_TYPE hx711Mux = portMUX_INITIALIZER_UNLOCKED;
 
 // ---------------- HX711 ----------------
@@ -163,6 +161,4 @@ bool MultiHX711::wait_ready() const {
     } while ((retry_count <= WAIT_READY_RETRIES) && (!all_ready));
 
     return all_ready;
-}
-
 }

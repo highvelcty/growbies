@@ -6,8 +6,9 @@ void setup() {
 }
 
 void loop() {
-    static Task* tasks[] = {
-        new SerialPortInTask(10),   // Every 10ms
+    static common::Task* tasks[] = {
+        new common::SerialPortInTask(10),   // Every 10ms
+        // new common::SerialPortOutTask(10000),
     };
 
     for (const auto task : tasks) {

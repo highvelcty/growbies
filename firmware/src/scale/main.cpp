@@ -11,7 +11,7 @@ void setup() {
     tare_store->begin();
 
     MeasurementStack::get().begin();
-    AutoWakeTask().run_on_wake();
+    scale::AutoWakeTask().run_on_wake();
 
     // 2025_04_01: Observed skipped characters at 115200 with mini pro 3v3. Suspect this is due
     // to the 8MHz clock providing nearest baudrates of 115942 or 114285, whereas the closest
@@ -23,12 +23,12 @@ void setup() {
 
 
 void loop() {
-    static Task* tasks[] = {
-        new AutoWakeTask(),         // Execution timing dependent upon NVM config and logic
-        new PowerTransitionTask(),  // Executed each loop
-        new SerialPortInTask(10),   // Every 10ms
-        new SerialPortOutTask(),    // Execution timing dependent upon NVM config
-        new RemoteTask(50),        // Every 50ms
+    static common::Task* tasks[] = {
+        new scale::AutoWakeTask(),         // Execution timing dependent upon NVM config and logic
+        new scale::PowerTransitionTask(),  // Executed each loop
+        new common::SerialPortInTask(10),   // Every 10ms
+        new scale::SerialPortOutTask(),    // Execution timing dependent upon NVM config
+        new scale::RemoteTask(50),        // Every 50ms
     };
 
     for (const auto task : tasks) {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <Arduino.h>
 #include <vector>
 
-namespace growbies {
+#include "build_cfg.h"
+#include "constants.h"
 
 // Select thermistor hardware version
 #define THERMISTOR_HW_0 false
@@ -15,33 +15,51 @@ namespace growbies {
 constexpr float MIN_TEMPERATURE_CELSIUS = -20.0f;
 constexpr float MAX_TEMPERATURE_CELSIUS = 70.0f;
 
-#if THERMISTOR_HW_0
-// Eaton NRNE105H4100B1H configuration (THERMISTOR_HW_0 & THERMISTOR_HW_1)
-constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 100000.0f;
-#elif THERMISTOR_HW_1
-constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 15000.0f;
-#endif
-
-#if THERMISTOR_HW_0 | THERMISTOR_HW_1
-constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0f;
 constexpr float THERMISTOR_NOMINAL_TEMPERATURE = 298.15f;  // Kelvin (25°C)
-constexpr float THERMISTOR_SUPPLY_VOLTAGE = 3.3f;
 constexpr float THERMISTOR_BETA_COEFF = 4100.0f;
+
+#if THERMISTOR_HW == 0
+// Eaton NRNE105H4100B1H
+constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0f;
+constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 100000.0f;
+constexpr float THERMISTOR_SUPPLY_VOLTAGE = 2.7f;
 constexpr float STEINHART_HART_A = 1.003702421E-3f;
 constexpr float STEINHART_HART_B = 1.811901925E-4f;
 constexpr float STEINHART_HART_C = 1.731869483E-7f;
+#elif THERMISTOR_HW == 1
+// Eaton NRNE105H4100B1H
+constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0f;
+constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 15000.0f;
+constexpr float THERMISTOR_SUPPLY_VOLTAGE = 3.3f;
+constexpr float STEINHART_HART_A = 1.003702421E-3f;
+constexpr float STEINHART_HART_B = 1.811901925E-4f;
+constexpr float STEINHART_HART_C = 1.731869483E-7f;
+#elif THERMISTOR_HW == 2
+// Unknown - found in Crealty HM-01 chamber heater
+constexpr float THERMISTOR_NOMINAL_RESISTANCE = 50000.0f;
+constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 15000.0f;
+constexpr float THERMISTOR_SUPPLY_VOLTAGE = 3.3f;
+constexpr float STEINHART_HART_A = 1.0f;
+constexpr float STEINHART_HART_B = 0.0f;
+constexpr float STEINHART_HART_C = 0.0f;
 #endif
+
 
 class Thermistor {
     static constexpr float DEFAULT_TEMPERATURE_CELSIUS = 22.0;
 public:
-    explicit Thermistor(const uint8_t analog_pin) : analog_pin_(analog_pin) {}
+
+    explicit Thermistor(
+        const uint8_t analog_pin,
+        const uint8_t power_pin = NO_PIN)
+        : analog_pin_(analog_pin),
+          power_pin_(power_pin) {}
 
     // Initialize ADC pin
     void begin() const;
 
-    static void power_off();
-    static void power_on();
+    void power_off() const;
+    void power_on() const;
 
     // Measure temperature in °C (default Steinhart-Hart)
     float sample() const;
@@ -54,12 +72,15 @@ private:
     float read_voltage() const;
 
     uint8_t analog_pin_;
+    uint8_t power_pin_;
 };
 
 // Multiple thermistors, analogous to MultiHX711
 class MultiThermistor {
 public:
-    explicit MultiThermistor() = default;
+    explicit MultiThermistor(uint8_t power_pin = NO_PIN)
+        : power_pin_(power_pin) {}
+
 
     // Initialize all thermistors
     void begin();
@@ -69,14 +90,13 @@ public:
         if (therm) devices_.push_back(therm);
     }
 
-    static void power_off();
-    static void power_on();
+    void power_off() const;
+    void power_on() const;
 
     // Sample all thermistors (Steinhart–Hart method)
     std::vector<float> sample() const;
 
 private:
+    uint8_t power_pin_;
     std::vector<Thermistor*> devices_;
 };
-
-}

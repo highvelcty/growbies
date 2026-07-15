@@ -9,8 +9,6 @@ constexpr auto APPNAME = "growbies";
 
 constexpr int DEFAULT_BAUD_RATE = 57600;
 constexpr int MAIN_POLLING_LOOP_INTERVAL_MS = 1;
-constexpr int WAIT_READY_RETRIES = 100;
-constexpr int WAIT_READY_RETRY_DELAY_MS = 10;
 
 constexpr int SLIP_IN_BUF_ALLOC_BYTES = 256;
 constexpr int SLIP_OUT_BUF_ALLOC_BYTES = 512;
@@ -23,6 +21,7 @@ constexpr auto SMALL_DELAY_MS = 1;
 
 constexpr int ADC_RESOLUTION = 4096;
 
+static constexpr uint8_t NO_PIN = UINT8_MAX;
 #if PIN_CFG == 1
 enum Pins : int {
     THERMISTOR_PIN_0 = A0,
@@ -34,7 +33,7 @@ enum Pins : int {
     HW_I2C_SDA_PIN = D4,
     HW_I2C_SCL_PIN = D5,
     HX711_SCK_PIN = D6,
-    HX711_VCC_PIN = D7,
+    SWITCHED_PWR_PIN = D7,
     DOUT_2_PIN = D8,
     DOUT_1_PIN = D9,
     DOUT_0_PIN = D10,
@@ -49,7 +48,7 @@ enum Pins : int {
     BUTTON_1_PIN = D2,
     HW_I2C_SDA_PIN = D4,
     HW_I2C_SCL_PIN = D5,
-    HX711_VCC_PIN = D6,
+    SWITCHED_PWR_PIN = D6,
     HX711_SCK_PIN = D10,
     DOUT_2_PIN = D7,
     DOUT_1_PIN = D8,
@@ -62,6 +61,7 @@ enum Pins : int {
     ACTIVATE_BUTTON = D4,
     GROUNDED_PIN = D3,
     THERMISTOR_PIN_0 = A2,
+    SWITCHED_PWR_PIN = NO_PIN
 };
 #else
 static_assert(always_false<int>::value, "Invalid PIN_CFG value");
