@@ -6,8 +6,7 @@
 enum class ThermalError : uint32_t
 {
     NO_ERROR = 0,
-    TIMEOUT_ACTIVATING_HEATER = 1,
-    TIMEOUT_DEACTIVATING_HEATER = 2,
+    TIMEOUT_ACTIVATING_DEACTIVATING_HEATER = 1,
 };
 
 struct ThermalChamberCfg {
@@ -23,10 +22,13 @@ struct ThermalChamberState {
 };
 static_assert(sizeof(ThermalChamberState) == 8, "ThermalChamberCfg must be exactly 8 bytes");
 
-constexpr int ACTIVATE_TRANSITION_TIMEOUT_MS = 3000;
+constexpr int READ_STATE_MS = 1000;
+constexpr int IS_HEATER_ON_SAMPLES = 10;
+constexpr int IS_HEATER_ON_SAMPLE_INTERVAL = 5;
 
 class ThermalChamber
 {
+    static constexpr uint8_t ACTIVATE_RETRIES = 3;
 public:
 
     static ThermalChamber& get();
@@ -48,6 +50,8 @@ public:
     static bool is_fan_on();
     static bool is_heater_on();
 
+    static bool wait_for_heater_state(bool on);
+
     void update() const;
 
     AggregateTemperature& aggregate_temp() const noexcept { return *_aggregate_temp; }
@@ -63,8 +67,10 @@ private:
     MultiThermistor _multi_thermistor{SWITCHED_PWR_PIN};
     AggregateTemperature* _aggregate_temp = nullptr;
 
+    bool _set_heater_state(bool state);
     void _set_heater_on();
     void _set_heater_off();
+
 
     ThermalChamber() = default;
     ~ThermalChamber() = default;

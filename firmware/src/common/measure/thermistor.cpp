@@ -54,28 +54,6 @@ float Thermistor::sample() const {
     return DEFAULT_TEMPERATURE_CELSIUS;
 }
 
-float Thermistor::sample_beta() const {
-    // Thermistor on the top of the resistor divider
-    const float vout = read_voltage();
-    if (isnan(vout)) {
-        return DEFAULT_TEMPERATURE_CELSIUS;
-    }
-    const float r_therm =
-        (THERMISTOR_R2_BOTTOM_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
-        / vout;
-
-    const float inv_T = (1.0f / THERMISTOR_NOMINAL_TEMPERATURE)
-                      + (1.0f / THERMISTOR_BETA_COEFF)
-                      * logf(r_therm / THERMISTOR_NOMINAL_RESISTANCE);
-
-    const float celsius = (1.0f / inv_T) - 273.15f;
-
-    if (MIN_TEMPERATURE_CELSIUS < celsius and celsius < MAX_TEMPERATURE_CELSIUS) {
-        return celsius;
-    }
-    return DEFAULT_TEMPERATURE_CELSIUS;
-}
-
 // --- MultiThermistor -------------------
 void MultiThermistor::begin() {
     for (auto ii = 0; ii < TEMPERATURE_SENSOR_COUNT; ++ii) {

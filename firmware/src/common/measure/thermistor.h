@@ -20,7 +20,6 @@ constexpr float THERMISTOR_BETA_COEFF = 4100.0f;
 
 #if THERMISTOR_HW == 0
 // Eaton NRNE105H4100B1H
-constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0f;
 constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 100000.0f;
 constexpr float THERMISTOR_SUPPLY_VOLTAGE = 2.7f;
 constexpr float STEINHART_HART_A = 1.003702421E-3f;
@@ -28,7 +27,6 @@ constexpr float STEINHART_HART_B = 1.811901925E-4f;
 constexpr float STEINHART_HART_C = 1.731869483E-7f;
 #elif THERMISTOR_HW == 1
 // Eaton NRNE105H4100B1H
-constexpr float THERMISTOR_NOMINAL_RESISTANCE = 100000.0f;
 constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 15000.0f;
 constexpr float THERMISTOR_SUPPLY_VOLTAGE = 3.3f;
 constexpr float STEINHART_HART_A = 1.003702421E-3f;
@@ -36,7 +34,6 @@ constexpr float STEINHART_HART_B = 1.811901925E-4f;
 constexpr float STEINHART_HART_C = 1.731869483E-7f;
 #elif THERMISTOR_HW == 2
 // Unknown - found in Crealty HM-01 chamber heater
-constexpr float THERMISTOR_NOMINAL_RESISTANCE = 50000.0f;
 constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 15000.0f;
 constexpr float THERMISTOR_SUPPLY_VOLTAGE = 3.3f;
 constexpr float STEINHART_HART_A = 1.0f;
@@ -63,9 +60,6 @@ public:
 
     // Measure temperature in °C (default Steinhart-Hart)
     float sample() const;
-
-    // Optionally measure using Beta method
-    float sample_beta() const;
 
 private:
     // Convert raw ADC value to output voltage

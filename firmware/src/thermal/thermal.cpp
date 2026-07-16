@@ -17,16 +17,15 @@ ThermalChamber& ThermalChamber::get()
 
 void ThermalChamber::begin()
 {
-    pinMode(Pins::HEATER_ACTIVE, INPUT_PULLDOWN);
-    pinMode(Pins::FAN_ACTIVE, INPUT_PULLDOWN);
-
+    pinMode(Pins::HEATER_ACTIVE, INPUT);
+    pinMode(Pins::FAN_ACTIVE, INPUT);
+    digitalWrite(Pins::ACTIVATE_BUTTON, LOW);
     pinMode(Pins::ACTIVATE_BUTTON, OUTPUT);
     digitalWrite(Pins::ACTIVATE_BUTTON, LOW);
-
     pinMode(Pins::GROUNDED_PIN, INPUT);
-
     pinMode(Pins::THERMISTOR_PIN_0, INPUT);
 
+    _set_heater_off();
     _multi_thermistor.begin();
     _aggregate_temp = new AggregateTemperature(TEMPERATURE_SENSOR_COUNT);
 }
@@ -51,7 +50,22 @@ bool ThermalChamber::is_fan_on() {
 }
 
 bool ThermalChamber::is_heater_on() {
-    return static_cast<bool>(digitalRead(Pins::HEATER_ACTIVE));
+    int is_on = 0;
+    for (auto ii = 0; ii < IS_HEATER_ON_SAMPLES; ++ii) {
+        is_on += digitalRead(Pins::HEATER_ACTIVE);
+        delay(IS_HEATER_ON_SAMPLE_INTERVAL);
+    }
+    return is_on > IS_HEATER_ON_SAMPLES / 2;
+}
+
+bool ThermalChamber::wait_for_heater_state(const bool on) {
+    const auto start = millis();
+    while (millis() - start < READ_STATE_MS) {
+        if (is_heater_on() == on) {
+            return true;
+        }
+    }
+    return false;
 }
 
 void ThermalChamber::update() const {
@@ -86,43 +100,31 @@ void ThermalChamber::set_set_point(const float set_point) {
     _cfg.set_point = set_point;
 }
 
-void ThermalChamber::_set_heater_on() {
-    if (is_heater_on()) {
-        return;
+bool ThermalChamber::_set_heater_state(const bool state) {
+    if (is_heater_on() == state) {
+        return true;
     }
-    digitalWrite(Pins::ACTIVATE_BUTTON, HIGH);
-    delay(100);
-    digitalWrite(Pins::ACTIVATE_BUTTON, LOW);
+    for (uint8_t attempt = 0; attempt < ACTIVATE_RETRIES; ++attempt) {
 
-    const uint32_t start = millis();
+        // Pulse the activate button.
+        digitalWrite(Pins::ACTIVATE_BUTTON, HIGH);
+        delay(100);
+        digitalWrite(Pins::ACTIVATE_BUTTON, LOW);
 
-    while (!is_heater_on()) {
-        if (millis() - start >= ACTIVATE_TRANSITION_TIMEOUT_MS) {
-            _state.error = ThermalError::TIMEOUT_ACTIVATING_HEATER;
-            return;
+        if (wait_for_heater_state(state)) {
+            return true;
         }
-
-        delay(10);
     }
+
+    _state.error = ThermalError::TIMEOUT_ACTIVATING_DEACTIVATING_HEATER;
+    return false;
+}
+
+void ThermalChamber::_set_heater_on() {
+    _set_heater_state(true);
 }
 
 void ThermalChamber::_set_heater_off() {
-    if (!is_heater_on()) {
-        return;
-    }
-    digitalWrite(Pins::ACTIVATE_BUTTON, LOW);
-    delay(100);
-    digitalWrite(Pins::ACTIVATE_BUTTON, HIGH);
-
-    const uint32_t start = millis();
-
-    while (is_heater_on()) {
-        if (millis() - start >= ACTIVATE_TRANSITION_TIMEOUT_MS) {
-            _state.error = ThermalError::TIMEOUT_ACTIVATING_HEATER;
-            return;
-        }
-
-        delay(10);
-    }
+    _set_heater_state(false);
 }
 
