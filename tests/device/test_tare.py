@@ -1,7 +1,7 @@
 from ctypes import sizeof
 from unittest import TestCase
 
-from growbies.device.common.tare import NvmTare
+from growbies.protocol.common.tare import NvmTare
 
 class Test(TestCase):
     def test_size(self):

@@ -18,6 +18,7 @@ class ServiceOp(StrEnum):
     READ = 'read'
     SESSION = 'session'
     TAG = 'tag'
+    THERMAL = 'thermal'
     USER = 'user'
 
     @property
@@ -36,6 +37,8 @@ class ServiceOp(StrEnum):
             return f'Session management.'
         elif self == self.TAG:
             return f'Interface to session tagging.'
+        elif self == self.THERMAL:
+            return f'Interface to a thermal device.'
         elif self == self.USER:
             return f'Get/set user accounts.'
         else:
@@ -59,6 +62,8 @@ class ServiceOp(StrEnum):
             desc = f'List/add/modify/remove sessions.'
         elif self == self.TAG:
             desc = f'List/add/modify/remove tags.'
+        elif self == self.THERMAL:
+            desc = f'List/modify thermal device configuration.'
         elif self == self.USER:
             desc = f'List/add/modify/remove users.'
 

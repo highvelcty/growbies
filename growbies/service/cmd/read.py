@@ -4,8 +4,8 @@ from ..common import ServiceCmd, ServiceCmdError
 from growbies.cli.common import Param as CommonParam
 from growbies.cli.read import Param
 from growbies.db.engine import get_db_engine
-from growbies.device.common.read import DataPoint
-from growbies.device.cmd import ReadDeviceCmd
+from growbies.protocol.common.read import DataPoint
+from growbies.protocol.cmd import ReadDeviceCmd
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)

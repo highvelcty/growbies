@@ -10,6 +10,7 @@ from .common.identify import (NvmIdentify1, NvmIdentify2, NvmIdentify3, NvmIdent
 from .common.log import DeviceLog
 from .common.read import DataPoint
 from .common.tare import NvmTare
+from .common.thermal import ThermalCfg
 from growbies.service.common import ServiceCmdError
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class DeviceRespOp(IntEnum):
     IDENTIFY = 3
     TARE = 4
     LOG = 5
+    THERMAL_CONFIGURATION = 6
     ERROR = 0xFFFF
 
     def __str__(self):
@@ -35,59 +37,47 @@ class DeviceRespOp(IntEnum):
         try:
             if hdr.type == cls.VOID:
                 if hdr.version >= 1:
-                    resp = VoidDeviceResp.from_buffer(resp)
-                else:
-                    _raise_version_error(hdr)
+                    return VoidDeviceResp.from_buffer(resp)
             elif hdr.type == cls.ERROR:
                 if hdr.version >= 1:
-                    resp = ErrorDeviceResp.from_buffer(resp)
-                else:
-                    _raise_version_error(hdr)
+                    return ErrorDeviceResp.from_buffer(resp)
             elif hdr.type == cls.CALIBRATION:
                 if hdr.version >= 1:
-                    resp = NvmCalibration.from_buffer(resp)
-                else:
-                    _raise_version_error(hdr)
+                    return NvmCalibration.from_buffer(resp)
             elif hdr.type == cls.DATAPOINT:
                 if hdr.version >= 1:
-                    resp = DataPoint(resp)
-                else:
-                    _raise_version_error(hdr)
+                    return DataPoint(resp)
             elif hdr.type == cls.IDENTIFY:
                 if hdr.version == 1:
-                    resp = NvmIdentify1.from_buffer(resp)
+                    return NvmIdentify1.from_buffer(resp)
                 elif hdr.version == 2:
-                    resp = NvmIdentify2.from_buffer(resp)
+                    return NvmIdentify2.from_buffer(resp)
                 elif hdr.version == 3:
-                    resp = NvmIdentify3.from_buffer(resp)
+                    return NvmIdentify3.from_buffer(resp)
                 elif hdr.version == 4:
-                    resp = NvmIdentify4.from_buffer(resp)
+                    return NvmIdentify4.from_buffer(resp)
                 elif hdr.version == 5:
-                    resp = NvmIdentify5.from_buffer(resp)
+                    return NvmIdentify5.from_buffer(resp)
                 elif hdr.version == 6:
-                    resp = NvmIdentify6.from_buffer(resp)
+                    return NvmIdentify6.from_buffer(resp)
                 elif hdr.version >= 7:
-                    resp = NvmIdentify7.from_buffer(resp)
-                else:
-                    _raise_version_error(hdr)
+                    return NvmIdentify7.from_buffer(resp)
             elif hdr.type == cls.LOG:
                 if hdr.version >= 1:
-                    resp = DeviceLog.from_buffer(resp)
-                else:
-                    _raise_version_error(hdr)
+                    return DeviceLog.from_buffer(resp)
             elif hdr.type == cls.TARE:
                 if hdr.version >= 1:
-                    resp = NvmTare.from_buffer(resp)
-                else:
-                    _raise_version_error(hdr)
+                    return NvmTare.from_buffer(resp)
+            elif hdr.type == cls.THERMAL_CONFIGURATION:
+                if hdr.version >= 1:
+                    return ThermalCfg.from_buffer(resp)
             else:
                 raise ServiceCmdError(f'Unrecognized response type: {hdr.type}')
+            _raise_version_error(hdr)
         except ValueError as err:
             logger.exception(err, exc_info=True)
             raise ServiceCmdError(f'Packet deserialization exception for type "{hdr.type}". '
                                   f'{err}') from err
-
-        return resp
 
 class DeviceErrorCode(IntEnum):
     # bitfield

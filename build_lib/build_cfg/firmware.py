@@ -97,12 +97,12 @@ class Circle2(Circle1):
             else:
                 return super().value(key)
 
-class ThermalChamber(Esp32c3):
-    MODEL_NUMBER = 'thermal-chamber'
+class ThermalDevice(Esp32c3):
+    MODEL_NUMBER = 'thermal-device'
 
-class ThermalChamber1(ThermalChamber):
-    MODEL_NUMBER = 'thermal-chamber-1'
-    class Key(ThermalChamber.Key):
+class ThermalDevice1(ThermalDevice):
+    MODEL_NUMBER = 'thermal-device-1'
+    class Key(ThermalDevice.Key):
         @classmethod
         def value(cls, key: 'Default.Key.type_'):
             if key == cls.PIN_CFG:

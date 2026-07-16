@@ -2,9 +2,9 @@
 #include "constants.h"
 #include "thermal.h"
 
-ThermalChamber& ThermalChamber::get()
+ThermalDevice& ThermalDevice::get()
 {
-    static ThermalChamber instance;
+    static ThermalDevice instance;
     static bool initialized = false;
 
     if (!initialized) {
@@ -15,7 +15,7 @@ ThermalChamber& ThermalChamber::get()
     return instance;
 }
 
-void ThermalChamber::begin()
+void ThermalDevice::begin()
 {
     pinMode(Pins::HEATER_ACTIVE, INPUT);
     pinMode(Pins::FAN_ACTIVE, INPUT);
@@ -25,50 +25,33 @@ void ThermalChamber::begin()
     pinMode(Pins::GROUNDED_PIN, INPUT);
     pinMode(Pins::THERMISTOR_PIN_0, INPUT);
 
-    _set_heater_off();
+    if (_wait_for_heater_state(true)) {
+        _set_heater_off();
+    }
+
     _multi_thermistor.begin();
     _aggregate_temp = new AggregateTemperature(TEMPERATURE_SENSOR_COUNT);
 }
 
-bool ThermalChamber::is_on() const
+ThermalDeviceState ThermalDevice::get_state() {
+    _state.temperature = get_temperature();
+    _state.heater_on = _is_heater_on();
+    _state.fan_on = _is_fan_on();
+
+    return _state;
+}
+
+void ThermalDevice::set_state(const ThermalDeviceState &state) {
+    _state = state;
+}
+
+void ThermalDevice::reset_filters() const {
+    _aggregate_temp->reset();
+}
+
+
+void ThermalDevice::update() const
 {
-    return _cfg.is_on;
-}
-
-void ThermalChamber::on()
-{
-    _cfg.is_on = true;
-}
-
-void ThermalChamber::off()
-{
-    _cfg.is_on = false;
-}
-
-bool ThermalChamber::is_fan_on() {
-    return static_cast<bool>(digitalRead(Pins::FAN_ACTIVE));
-}
-
-bool ThermalChamber::is_heater_on() {
-    int is_on = 0;
-    for (auto ii = 0; ii < IS_HEATER_ON_SAMPLES; ++ii) {
-        is_on += digitalRead(Pins::HEATER_ACTIVE);
-        delay(IS_HEATER_ON_SAMPLE_INTERVAL);
-    }
-    return is_on > IS_HEATER_ON_SAMPLES / 2;
-}
-
-bool ThermalChamber::wait_for_heater_state(const bool on) {
-    const auto start = millis();
-    while (millis() - start < READ_STATE_MS) {
-        if (is_heater_on() == on) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void ThermalChamber::update() const {
     _aggregate_temp->reset_channels();
     for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
         std::vector<float> temp_vals = _multi_thermistor.sample();
@@ -78,32 +61,39 @@ void ThermalChamber::update() const {
     _aggregate_temp->update();
 }
 
-float ThermalChamber::get_temperature() const {
+float ThermalDevice::get_temperature() const
+{
     update();
     return _aggregate_temp->conditioned_total();
 }
 
-float ThermalChamber::get_duty_cycle() const
+std::vector<float> ThermalDevice::get_sensor_temperatures() const
 {
-    return _state.duty_cycle;
+    std::vector<float> sensor_temperatures;
+
+    for (auto sensor_temp : _aggregate_temp->sensor_temperatures()) {
+        sensor_temperatures.push_back(sensor_temp);
+    }
+
+    return sensor_temperatures;
 }
 
-void ThermalChamber::set_duty_cycle(const float duty_cycle)
+bool ThermalDevice::_is_fan_on()
 {
-    _state.duty_cycle = duty_cycle;
+    return static_cast<bool>(digitalRead(Pins::FAN_ACTIVE));
 }
 
-float ThermalChamber::get_set_point() const {
-    return _cfg.set_point;
-}
-void ThermalChamber::set_set_point(const float set_point) {
-    _cfg.set_point = set_point;
+bool ThermalDevice::_is_heater_on()
+{
+    return not digitalRead(Pins::HEATER_ACTIVE);
 }
 
-bool ThermalChamber::_set_heater_state(const bool state) {
-    if (is_heater_on() == state) {
+bool ThermalDevice::_set_heater_state(const bool state)
+{
+    if (_is_heater_on() == state) {
         return true;
     }
+
     for (uint8_t attempt = 0; attempt < ACTIVATE_RETRIES; ++attempt) {
 
         // Pulse the activate button.
@@ -111,20 +101,33 @@ bool ThermalChamber::_set_heater_state(const bool state) {
         delay(100);
         digitalWrite(Pins::ACTIVATE_BUTTON, LOW);
 
-        if (wait_for_heater_state(state)) {
+        if (_wait_for_heater_state(state)) {
             return true;
         }
     }
 
-    _state.error = ThermalError::TIMEOUT_ACTIVATING_DEACTIVATING_HEATER;
+    _state.error = ThermalError::HEATER_STATE_TRANSITION_TIMEOUT;
     return false;
 }
 
-void ThermalChamber::_set_heater_on() {
+void ThermalDevice::_set_heater_on()
+{
     _set_heater_state(true);
 }
 
-void ThermalChamber::_set_heater_off() {
+void ThermalDevice::_set_heater_off()
+{
     _set_heater_state(false);
 }
 
+bool ThermalDevice::_wait_for_heater_state(const bool on)
+{
+    const auto start = millis();
+    while (_is_heater_on() != on) {
+        if (millis() - start > HEATER_STATE_TRANSITION_TIMEOUT_MS) {
+            return false;
+        }
+        delay(IS_HEATER_ON_SAMPLE_INTERVAL);
+    }
+    return true;
+}

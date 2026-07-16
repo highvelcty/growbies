@@ -5,15 +5,14 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlmodel import Field, Relationship, text
 from typing import List, Optional, TYPE_CHECKING
 import logging
-import time
 import uuid
 
 from .common import BaseTable, BaseTableEngine, SortedTable
 from .link import SessionDataPointLink
 if TYPE_CHECKING:
     from .session import Session
-from growbies.device.common.read import DataPoint as DeviceDataPoint
-from growbies.device.cmd import ReadDeviceCmd
+from growbies.protocol.common.read import DataPoint as DeviceDataPoint
+from growbies.protocol.cmd import ReadDeviceCmd
 from growbies.utils.types import (DeviceID, TareID)
 from growbies.utils import timestamp
 

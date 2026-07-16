@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, SUPPRESS
 
 from growbies.cli.common import Param as CommonParam
-from growbies.device.common import calibration as cal_mod
+from growbies.protocol.common import calibration as cal_mod
 
 class Param:
     INIT = 'init'

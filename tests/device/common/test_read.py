@@ -1,5 +1,5 @@
 from unittest import TestCase
-from growbies.device.common.read import DataPoint
+from growbies.protocol.common.read import DataPoint
 
 class Test(TestCase):
     def test_unknown_endpoint(self):

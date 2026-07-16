@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from growbies.device.common import MassUnitsType
+from growbies.protocol.common import MassUnitsType
 from growbies.cli.common import Param as CommonParam
 
 class Param:

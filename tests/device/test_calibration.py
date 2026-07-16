@@ -1,9 +1,9 @@
 from unittest import TestCase
 import ctypes
 
-from growbies.device.common.calibration import (Calibration, CalibrationHdr, NvmCalibration,
-                                                SensorCalibration)
-from growbies.device.common.nvm import NvmHdr
+from growbies.protocol.common.calibration import (Calibration, CalibrationHdr, NvmCalibration,
+                                                  SensorCalibration)
+from growbies.protocol.common.nvm import NvmHdr
 
 class Test(TestCase):
     def test_calibration_hdr(self):

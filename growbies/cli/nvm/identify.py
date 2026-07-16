@@ -1,8 +1,8 @@
 from argparse import ArgumentParser
 
 from growbies.cli.common import Param as CommonParam
-from growbies.device.common import identify as id_mod
-from growbies.device.common import MassUnitsType
+from growbies.protocol.common import identify as id_mod
+from growbies.protocol.common import MassUnitsType
 
 class Param:
     INIT = 'init'

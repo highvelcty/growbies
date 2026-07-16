@@ -2,8 +2,8 @@ import logging
 
 from .common import ServiceOp, ServiceCmdError
 from .queue import ServiceQueue, IDQueue
-from growbies.device.resp import DeviceError
-from growbies.service.cmd import cal, device, ls, project, read, session, tag, user
+from growbies.protocol.resp import DeviceError
+from growbies.service.cmd import cal, device, ls, project, read, session, tag, thermal, user
 from growbies.service.cmd import nvm
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
@@ -49,6 +49,8 @@ class Service:
                                 resp = session.execute(cmd)
                             elif cmd.op == ServiceOp.TAG:
                                 resp = tag.execute(cmd)
+                            elif cmd.op == ServiceOp.THERMAL:
+                                resp = thermal.execute(cmd)
                             elif cmd.op == ServiceOp.USER:
                                 resp = user.execute(cmd)
                             else:

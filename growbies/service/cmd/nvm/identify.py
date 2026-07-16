@@ -5,11 +5,11 @@ from growbies.service.common import ServiceCmd, ServiceCmdError, ServiceOp
 from growbies.cli.common import Param as CommonParam
 from growbies.cli.nvm.identify import Param
 from growbies.db.engine import get_db_engine
-from growbies.device.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,
-                                 SetIdentifyDeviceCmd2, SetIdentifyDeviceCmd3,
-                                 SetIdentifyDeviceCmd4, SetIdentifyDeviceCmd5,
-                                 SetIdentifyDeviceCmd6, SetIdentifyDeviceCmd7)
-from growbies.device.common.identify import TNvmIdentify, Identify
+from growbies.protocol.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,
+                                   SetIdentifyDeviceCmd2, SetIdentifyDeviceCmd3,
+                                   SetIdentifyDeviceCmd4, SetIdentifyDeviceCmd5,
+                                   SetIdentifyDeviceCmd6, SetIdentifyDeviceCmd7)
+from growbies.protocol.common.identify import TNvmIdentify, Identify
 from growbies.utils.types import DeviceID
 from growbies.worker.pool import get_pool
 

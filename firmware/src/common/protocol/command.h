@@ -14,8 +14,8 @@ enum class Cmd: uint16_t {
     GET_TARE = 8,
     SET_TARE = 9,
     READ = 10,
-    GET_THERMAL_CONFIGURATION = 11,
-    SET_THERMAL_CONFIGURATION = 12,
+    GET_THERMAL_STATE = 11,
+    SET_THERMAL_STATE = 12,
 };
 
 enum class Resp: uint16_t {
@@ -25,6 +25,7 @@ enum class Resp: uint16_t {
     IDENTIFY = 3,
     TARE = 4,
     LOG = 5,
+    THERMAL_STATE = 6,
     ERROR = 0xFFFF,
 };
 

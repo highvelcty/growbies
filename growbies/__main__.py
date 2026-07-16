@@ -1,6 +1,7 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from growbies.cli import device, project, read, session, tag, user
 from growbies.cli import cal
+from growbies.cli import thermal
 from growbies.cli import nvm
 from growbies.cli.common import CMD
 from growbies.service.common import ServiceOp
@@ -33,6 +34,7 @@ project.make_cli(parsers[ServiceOp.PROJECT])
 read.make_cli(parsers[ServiceOp.READ])
 session.make_cli(parsers[ServiceOp.SESSION])
 tag.make_cli(parsers[ServiceOp.TAG])
+thermal.make_cli(parsers[ServiceOp.THERMAL])
 user.make_cli(parsers[ServiceOp.USER])
 
 # Execution exits on tab completion with the following line.
@@ -43,7 +45,7 @@ import logging
 import sys
 from .utils.privileges import drop_privileges
 
-from growbies.device.resp import DeviceError
+from growbies.protocol.resp import DeviceError
 from growbies.service.common import (ServiceCmd, ServiceOp, ServiceCmdError, TBaseServiceCmd)
 from growbies.service.queue import IDQueue, ServiceQueue
 

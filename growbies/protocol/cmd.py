@@ -8,6 +8,7 @@ from .common.calibration import NvmCalibration
 from .common.identify import (NvmIdentify1, NvmIdentify2, NvmIdentify3, NvmIdentify4,
                               NvmIdentify5, NvmIdentify6, NvmIdentify7)
 from .common.tare import NvmTare
+from .common.thermal import ThermalCfg
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,8 @@ class DeviceCmdOp(IntEnum):
     GET_TARE = 8
     SET_TARE = 9
     READ = 10
+    GET_THERMAL_CONFIGURATION = 11
+    SET_THERMAL_CONFIGURATION = 12
 
     def __str__(self):
         return self.name
@@ -331,4 +334,12 @@ class PowerOffHx711DeviceCmd(BaseDeviceCmd):
 
 class PowerOnHx711DeviceCmd(BaseDeviceCmd):
     OP = DeviceCmdOp.POWER_ON_HX711
+    VERSION = 1
+
+class GetThermalCfgCmd(BaseDeviceCmd):
+    OP = DeviceCmdOp.GET_THERMAL_CONFIGURATION
+    VERSION = 1
+
+class SetThermalCfgCmd(BaseDeviceCmd, ThermalCfg):
+    OP = DeviceCmdOp.SET_THERMAL_CONFIGURATION
     VERSION = 1

@@ -3,8 +3,8 @@ from unittest import TestCase
 
 from packaging.version import Version
 
-from growbies.device.common.identify import Identify1, NvmIdentify1
-from growbies.device.cmd import SetIdentifyDeviceCmd1
+from growbies.protocol.common.identify import Identify1, NvmIdentify1
+from growbies.protocol.cmd import SetIdentifyDeviceCmd1
 
 class TestSetIdentifyDeviceCmd(TestCase):
     def test(self):

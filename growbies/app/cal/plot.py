@@ -13,7 +13,7 @@ from .cli import Action, PlotAction
 from growbies.cli.common import Param as CommonParam
 from growbies.db.engine import get_db_engine
 from growbies.db.models.session import Session
-from growbies.device.common.calibration import REF_TEMPERATURE_C
+from growbies.protocol.common.calibration import REF_TEMPERATURE_C
 from growbies.service.common import ServiceCmdError
 from growbies.utils.report import short_uuid
 from growbies.utils.timestamp import FMT_DT_INT, get_elapsed_str

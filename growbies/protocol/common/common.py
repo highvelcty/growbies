@@ -113,7 +113,7 @@ class PacketHdr(BaseStructure):
         return getattr(self, self.Field.TYPE)
 
     @type.setter
-    def type(self, value: ['DeviceCmdOp', 'DeviceRespOp']):
+    def type(self, value: Union['DeviceCmdOp', 'DeviceRespOp']):
         setattr(self, self.Field.TYPE, value)
 
     @property

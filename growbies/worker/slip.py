@@ -13,8 +13,8 @@ import queue
 
 import serial
 
-from growbies.device.cmd import TDeviceCmd, CmdPacketHdr
-from growbies.device.resp import TDeviceResp, DeviceRespOp, RespPacketHdr
+from growbies.protocol.cmd import TDeviceCmd, CmdPacketHdr
+from growbies.protocol.resp import TDeviceResp, DeviceRespOp, RespPacketHdr
 from growbies.session import log
 from growbies.utils.bufstr import BufStr
 from growbies.utils.crc import crc_ccitt16

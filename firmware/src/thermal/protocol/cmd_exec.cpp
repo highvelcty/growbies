@@ -18,11 +18,17 @@ void CmdExec::exec() {
             const auto* cmd = reinterpret_cast<CmdRead*>(usb_transport.get_cmd_buf());
             if (!error) {
                 if (cmd->reset) {
-                    const auto& thermal_chamber = ThermalChamber::get();
-                    thermal_chamber.aggregate_temp().reset();
+                    const auto& thermal_device = ThermalDevice::get();
+                    thermal_device.reset_filters();
                 }
                 update_telemetry(false);
             }
+        }
+        else if (in_packet_hdr->cmd == Cmd::GET_THERMAL_STATE) {
+            auto& thermal_device = ThermalDevice::get();
+            auto* resp = new (resp_buf) RespGetThermalState();
+            static_cast<ThermalDeviceState&>(*resp) = thermal_device.get_state();
+            usb_transport.send_resp(resp, sizeof(*resp));
         }
         else{
             error = ERROR_UNRECOGNIZED_COMMAND;
@@ -39,13 +45,12 @@ void CmdExec::exec() {
 void CmdExec::update_telemetry(const bool async) const {
     auto datapoint = DataPoint(usb_transport.get_resp_buf(), MAX_RESP_BYTES);
 
-    const auto& thermal_chamber = ThermalChamber::get();
+    const auto& thermal_device = ThermalDevice::get();
 
-    thermal_chamber.update();
+    thermal_device.update();
 
-    datapoint.add<float>(EP_TEMPERATURE, thermal_chamber.aggregate_temp().conditioned_total());
-
-    for (auto sensor_temp : thermal_chamber.aggregate_temp().sensor_temperatures()) {
+    datapoint.add<float>(EP_TEMPERATURE, thermal_device.get_temperature());
+    for (auto sensor_temp : thermal_device.get_sensor_temperatures()) {
         datapoint.add<float>(EP_TEMPERATURE_SENSORS, sensor_temp);
     }
 

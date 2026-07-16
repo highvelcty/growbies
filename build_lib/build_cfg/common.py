@@ -75,8 +75,8 @@ def dispatch(cmd: Cmd):
             firmware.Circle2().save()
         elif model_number == firmware.CircleEsp32c3.MODEL_NUMBER:
             firmware.CircleEsp32c3().save()
-        elif model_number == firmware.ThermalChamber1.MODEL_NUMBER:
-            firmware.ThermalChamber1().save()
+        elif model_number == firmware.ThermalDevice1.MODEL_NUMBER:
+            firmware.ThermalDevice1().save()
         else:
             raise ValueError(f'Invalid model number: {model_number}.')
     else:

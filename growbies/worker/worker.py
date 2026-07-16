@@ -10,11 +10,11 @@ from serial.serialutil import SerialException
 
 from growbies.constants import UINT8_MAX
 from growbies.db.engine import get_db_engine
-from growbies.device.cmd import TDeviceCmd, ReadDeviceCmd
-from growbies.device.resp import (DeviceRespOp, DeviceError, ErrorDeviceResp,
-                                  RespPacketHdr, TDeviceResp)
-from growbies.device.common.log import DeviceLog
-from growbies.device.common.read import DataPoint
+from growbies.protocol.cmd import TDeviceCmd, ReadDeviceCmd
+from growbies.protocol.resp import (DeviceRespOp, DeviceError, ErrorDeviceResp,
+                                    RespPacketHdr, TDeviceResp)
+from growbies.protocol.common.log import DeviceLog
+from growbies.protocol.common.read import DataPoint
 
 from growbies.service.common import ServiceCmdError
 from growbies.session import log

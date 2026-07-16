@@ -5,7 +5,7 @@ import time
 from argparse import Namespace
 from growbies.app.common.run_cmd import run_cmd
 from growbies.cli.common import Param
-from growbies.device.common import identify
+from growbies.protocol.common import identify
 from growbies.db.engine import get_db_engine
 
 logger = logging.getLogger(__name__)

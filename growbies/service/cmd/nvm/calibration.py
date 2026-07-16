@@ -3,8 +3,8 @@ import logging
 
 from growbies.cli.common import Param as CommonParam
 from growbies.db.engine import get_db_engine
-from growbies.device.common import calibration as cal_mod
-from growbies.device.cmd import GetCalibrationDeviceCmd, SetCalibrationDeviceCmd
+from growbies.protocol.common import calibration as cal_mod
+from growbies.protocol.cmd import GetCalibrationDeviceCmd, SetCalibrationDeviceCmd
 from growbies.service.common import ServiceCmd, ServiceCmdError
 from growbies.worker.pool import get_pool
 

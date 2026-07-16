@@ -61,17 +61,17 @@ upload-all-circle-2: _upload-all
 
 
 # ============================================================================
-# Thermal chamber products
+# Thermal device products
 # ============================================================================
 
-thermal-chamber-1: ENV=thermal
-thermal-chamber-1: MODEL=thermal-chamber-1
-thermal-chamber-1: _build
+thermal-device-1: ENV=thermal
+thermal-device-1: MODEL=thermal-device-1
+thermal-device-1: _build
 
-upload-thermal-chamber-1: ENV=thermal
-upload-thermal-chamber-1: MODEL=thermal-chamber-1
-upload-thermal-chamber-1: _upload
+upload-thermal-device-1: ENV=thermal
+upload-thermal-device-1: MODEL=thermal-device-1
+upload-thermal-device-1: _upload
 
-upload-all-thermal-chamber-1: ENV=thermal
-upload-all-thermal-chamber-1: MODEL=thermal-chamber-1
-upload-all-thermal-chamber-1: _upload-all
+upload-all-thermal-device-1: ENV=thermal
+upload-all-thermal-device-1: MODEL=thermal-device-1
+upload-all-thermal-device-1: _upload-all

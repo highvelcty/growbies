@@ -5,8 +5,8 @@ from growbies.service.common import ServiceCmd, ServiceCmdError
 from growbies.cli.common import Param as CommonParam
 from growbies.cli.nvm.tare import Param
 from growbies.db.engine import get_db_engine
-from growbies.device.common import tare as tare_mod
-from growbies.device.cmd import GetTareDeviceCmd, SetTareDeviceCmd
+from growbies.protocol.common import tare as tare_mod
+from growbies.protocol.cmd import GetTareDeviceCmd, SetTareDeviceCmd
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
