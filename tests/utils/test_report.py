@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from growbies.utils import report
+from growbies.common.utils import report
 
 class Test(TestCase):
     def test_float_list_str_wrap(self):

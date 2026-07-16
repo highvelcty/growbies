@@ -13,8 +13,8 @@ from .gateway import Gateway
 from .link import SessionDeviceLink
 if TYPE_CHECKING:
     from .session import Session
-from growbies.utils.report import format_8bit_binary, short_uuid
-from growbies.utils.types import Serial_t
+from growbies.common.utils.report import format_8bit_binary, short_uuid
+from growbies.common.utils.types import Serial_t
 
 logger = logging.getLogger(__name__)
 

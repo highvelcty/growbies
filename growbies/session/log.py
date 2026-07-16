@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Optional, Union
 
 from growbies.constants import APPNAME
-from growbies.utils import timestamp
-from growbies.utils.paths import InstallPaths
+from growbies.common.utils import timestamp
+from growbies.common.utils.paths import InstallPaths
 
 STDIN_LEVEL = logging.INFO + 1
 STDOUT_LEVEL = logging.INFO + 2

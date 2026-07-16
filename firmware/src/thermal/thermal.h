@@ -4,27 +4,28 @@
 
 #include "common/measure/aggregate_temperature.h"
 #include "common/measure/thermistor.h"
+#include "common/protocol/command.h"
 
 constexpr int HEATER_STATE_TRANSITION_TIMEOUT_MS = 1000;
 constexpr int IS_HEATER_ON_SAMPLES = 10;
 constexpr int IS_HEATER_ON_SAMPLE_INTERVAL = 10;
 constexpr int START_UP_DELAY_MS = 1000;
 
-enum class ThermalError : uint32_t
-{
-    NO_ERROR = 0,
-    HEATER_STATE_TRANSITION_TIMEOUT = 1,
+
+enum class ThermalDeviceMode : uint8_t {
+    AUTO = 0,
+    MANUAL = 1,
 };
 
 struct ThermalDeviceState {
     bool active = false;
     bool heater_on = false;
     bool fan_on = false;
-    uint8_t reserved;
+    ThermalDeviceMode mode;
     float temperature = 0.0f;
     float duty_cycle = 0.0f;
     float set_point = 0.0f;
-    ThermalError error = ThermalError::NO_ERROR;
+    ErrorCode error = ErrorCode::ERROR_NONE;
 
 
     static constexpr Version_t VERSION = 1;

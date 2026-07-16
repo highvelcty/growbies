@@ -10,8 +10,9 @@ from .common.identify import (NvmIdentify1, NvmIdentify2, NvmIdentify3, NvmIdent
 from .common.log import DeviceLog
 from .common.read import DataPoint
 from .common.tare import NvmTare
-from .common.thermal import ThermalCfg
+from .common.thermal import ThermalDeviceState
 from growbies.service.common import ServiceCmdError
+from growbies.common.enum import DeviceErrorCode
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ class DeviceRespOp(IntEnum):
     IDENTIFY = 3
     TARE = 4
     LOG = 5
-    THERMAL_CONFIGURATION = 6
+    THERMAL_STATE = 6
     ERROR = 0xFFFF
 
     def __str__(self):
@@ -68,9 +69,9 @@ class DeviceRespOp(IntEnum):
             elif hdr.type == cls.TARE:
                 if hdr.version >= 1:
                     return NvmTare.from_buffer(resp)
-            elif hdr.type == cls.THERMAL_CONFIGURATION:
+            elif hdr.type == cls.THERMAL_STATE:
                 if hdr.version >= 1:
-                    return ThermalCfg.from_buffer(resp)
+                    return ThermalDeviceState.from_buffer(resp)
             else:
                 raise ServiceCmdError(f'Unrecognized response type: {hdr.type}')
             _raise_version_error(hdr)
@@ -78,22 +79,6 @@ class DeviceRespOp(IntEnum):
             logger.exception(err, exc_info=True)
             raise ServiceCmdError(f'Packet deserialization exception for type "{hdr.type}". '
                                   f'{err}') from err
-
-class DeviceErrorCode(IntEnum):
-    # bitfield
-    NONE                                  = 0x00000000
-    CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 0x00000001
-    UNRECOGNIZED_COMMAND                  = 0x00000002
-    OUT_OF_THRESHOLD_SAMPLE               = 0x00000004
-    HX711_NOT_READY                       = 0x00000008
-    INTERNAL                              = 0x00000010
-    INVALID_PARAMETER                     = 0x00000020
-    INCOMPLETE_SLIP_FRAME                 = 0x00000040
-    INVALID_SLIP_CRC                      = 0x00000080
-    CMD_HDR_DESERIALIZATION_UNDERFLOW     = 0x00000100
-
-    def __str__(self):
-        return self.name
 
 class RespPacketHdr(PacketHdr):
     @property
@@ -108,21 +93,11 @@ TDeviceResp = BaseStructure | BaseUnion
 
 class ErrorDeviceResp(BaseStructure):
     class Field(BaseStructure.Field):
-        HDR = '_hdr'
         ERROR = '_error'
 
     _fields_ = [
-        (Field.HDR, PacketHdr),
         (Field.ERROR, ctypes.c_uint32)
     ]
-
-    @property
-    def hdr(self) -> PacketHdr:
-        return getattr(self, self.Field.HDR)
-
-    @hdr.setter
-    def hdr(self, value: PacketHdr):
-        setattr(self, self.Field.HDR, value)
 
     @property
     def error(self) -> DeviceErrorCode | int:
@@ -141,7 +116,7 @@ class VoidDeviceResp(BaseStructure): pass
 class DeviceError(Exception):
     def __init__(self, error: DeviceErrorCode):
         try:
-            error_msg = f'DeviceError 0x{error:08X} "{error}".'
+            error_msg = f'DeviceError {error}"'
         except ValueError:
             error_msg = error
         super().__init__(error_msg)

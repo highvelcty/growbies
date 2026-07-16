@@ -12,7 +12,7 @@ if TYPE_CHECKING:
     from growbies.db.engine import DBEngine
 from growbies.service.common import (ServiceCmdError, MultipleResultsServiceCmdError,
     NoResultsServiceCmdError)
-from growbies.utils.report import short_uuid, TABLE_COLUMN_WIDTH
+from growbies.common.utils.report import short_uuid, TABLE_COLUMN_WIDTH
 
 class BuiltinTagName(StrEnum):
     CALIBRATION = 'calibration'

@@ -5,7 +5,7 @@ from typing import Any, TypeVar, NewType
 import shlex
 import subprocess
 
-from growbies.utils.types import ModelNumber_t
+from growbies.common.utils.types import ModelNumber_t
 
 BASE_FILENAME = 'build_cfg'
 CMD = 'cmd'

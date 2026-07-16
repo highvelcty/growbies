@@ -2,8 +2,8 @@ import ctypes
 
 from . import nvm
 from .common import BaseStructure, MassUnitsType
-from growbies.utils.report import PRECISION
-from growbies.utils.timestamp import get_elapsed_str
+from growbies.common.utils.report import PRECISION
+from growbies.common.utils.timestamp import get_elapsed_str
 
 class Tare(BaseStructure):
     class Field(BaseStructure.Field):

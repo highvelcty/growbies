@@ -10,7 +10,7 @@ from growbies.protocol.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,
                                    SetIdentifyDeviceCmd4, SetIdentifyDeviceCmd5,
                                    SetIdentifyDeviceCmd6, SetIdentifyDeviceCmd7)
 from growbies.protocol.common.identify import TNvmIdentify, Identify
-from growbies.utils.types import DeviceID
+from growbies.common.utils.types import DeviceID
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)

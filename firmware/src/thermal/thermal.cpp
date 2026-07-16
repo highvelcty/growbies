@@ -1,5 +1,4 @@
 #include "Arduino.h"
-#include "constants.h"
 #include "thermal.h"
 
 ThermalDevice& ThermalDevice::get()
@@ -106,7 +105,7 @@ bool ThermalDevice::_set_heater_state(const bool state)
         }
     }
 
-    _state.error = ThermalError::HEATER_STATE_TRANSITION_TIMEOUT;
+    _state.error = ErrorCode::ERROR_HEATER_STATE_TRANSITION_TIMEOUT;
     return false;
 }
 

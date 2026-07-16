@@ -1,23 +1,26 @@
-from argparse import ArgumentParser, SUPPRESS
+from argparse import ArgumentParser, SUPPRESS, ArgumentTypeError
 from enum import StrEnum
 
-from growbies.cli.common import Param
+from growbies.cli.common import BaseParam, Param
+from growbies.common.enum import ThermalDeviceMode
 
-__all__ = ['make_cli', 'Action', 'ModParam']
+__all__ = ['make_cli', 'Action', 'ModParam',]
 
-class Action(StrEnum):
-    CFG = 'cfg'
+class Action(BaseParam):
+    STATE = 'state'
 
     @property
     def help(self) -> str:
-        if self == self.CFG:
-            return 'Get the thermal device configuration.'
+        if self == self.STATE:
+            return 'Get the thermal device state.'
         else:
             return ''
 
-class ModParam(StrEnum):
+class ModParam(BaseParam):
     ACTIVATE = 'activate'
     DEACTIVATE = 'deactivate'
+    MODE = 'mode'
+    DUTY_CYCLE = 'duty_cycle'
     SET_POINT = 'set_point'
 
     @property
@@ -28,20 +31,16 @@ class ModParam(StrEnum):
             return 'Deactivate the thermal device; turn it off'
         elif self == self.SET_POINT:
             return 'The temperature set point, in Celsius, of the thermal device.'
+        elif self == self.MODE:
+            return (f'The control mode. In {ThermalDeviceMode.AUTO.name} mode, the device will '
+                    f'attempt to reach the temperature set point. '
+                    f'In {ThermalDeviceMode.MANUAL.name} mode, the device will output at the set '
+                    f'duty-cycle.')
+        elif self == self.DUTY_CYCLE:
+            return 'The percentage of time the thermal device is on.'
+
         return ''
 
-
-# def make_cli(parser: ArgumentParser):
-#     subparsers = parser.add_subparsers(dest=Param.ACTION, required=False, help=Param.ACTION.help,)
-#     for act in Action:
-#         act_parser = subparsers.add_parser(act, help=act.help)
-#         act_parser.add_argument(Param.FUZZY_ID, nargs='?', default=None, help=Param.FUZZY_ID.help)
-#         if act == Action.CFG:
-#             act_parser.add_argument(ModParam.ACTIVATE, help=ModParam.ACTIVATE.help)
-#             act_parser.add_argument(ModParam.DEACTIVATE, help=ModParam.DEACTIVATE.help)
-#             act_parser.add_argument(f'--{ModParam.SET_POINT}', type=str,
-#                                     help=ModParam.SET_POINT.help, default=SUPPRESS)
-#
 
 def make_cli(parser: ArgumentParser):
     subparsers = parser.add_subparsers(
@@ -59,28 +58,55 @@ def make_cli(parser: ArgumentParser):
             help=Param.FUZZY_ID.help,
         )
 
-        if act == Action.CFG:
+        if act == Action.STATE:
             activate_group = act_parser.add_mutually_exclusive_group()
 
             activate_group.add_argument(
                 f'--{ModParam.ACTIVATE}',
                 dest=ModParam.ACTIVATE,
                 action='store_true',
-                default=SUPPRESS,
                 help=f'{ModParam.ACTIVATE.help} (mutually exclusive with --{ModParam.DEACTIVATE}).',
+                default=SUPPRESS,
             )
 
             activate_group.add_argument(
                 f'--{ModParam.DEACTIVATE}',
                 dest=ModParam.ACTIVATE,
                 action='store_false',
-                default=SUPPRESS,
                 help=f'{ModParam.DEACTIVATE.help} (mutually exclusive with --{ModParam.ACTIVATE}).',
+                default=SUPPRESS,
             )
 
             act_parser.add_argument(
-                f'--{ModParam.SET_POINT}',
-                type=str,
+                f'--{ModParam.MODE}',
+                type=int,
+                choices=list(ThermalDeviceMode),
+                help=ModParam.MODE.help,
+                default=SUPPRESS,
+            )
+
+            act_parser.add_argument(
+                f'--{ModParam.DUTY_CYCLE.kw_cli_name}',
+                type=_duty_cycle_type,
+                help=ModParam.DUTY_CYCLE.help,
+                default=SUPPRESS,
+            )
+
+            act_parser.add_argument(
+                f'--{ModParam.SET_POINT.kw_cli_name}',
+                type=float,
                 help=ModParam.SET_POINT.help,
                 default=SUPPRESS,
             )
+
+
+def _duty_cycle_type(value: str) -> float:
+    try:
+        value = float(value)
+    except ValueError:
+        raise ArgumentTypeError('Duty cycle must be a number.')
+
+    if not (0.0 <= value <= 100.0):
+        raise ArgumentTypeError('Duty cycle must be between 0 and 100 percent, inclusive.')
+
+    return value

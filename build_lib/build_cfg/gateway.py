@@ -1,6 +1,6 @@
 from typing import Any
 
-from growbies.utils.paths import DebianPaths, RepoPaths
+from growbies.common.utils.paths import DebianPaths, RepoPaths
 from .common import Base, BASE_FILENAME, get_git_hash
 
 FILENAME = BASE_FILENAME + '.py'

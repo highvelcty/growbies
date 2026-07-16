@@ -18,7 +18,7 @@ from growbies.protocol.common.read import DataPoint
 
 from growbies.service.common import ServiceCmdError
 from growbies.session import log
-from growbies.utils.types import DeviceID, WorkerID
+from growbies.common.utils.types import DeviceID, WorkerID
 from growbies.worker.slip import SerialIntf
 
 logger = logging.getLogger(__name__)

@@ -8,7 +8,7 @@ from .common.calibration import NvmCalibration
 from .common.identify import (NvmIdentify1, NvmIdentify2, NvmIdentify3, NvmIdentify4,
                               NvmIdentify5, NvmIdentify6, NvmIdentify7)
 from .common.tare import NvmTare
-from .common.thermal import ThermalCfg
+from .common.thermal import ThermalDeviceState
 
 logger = logging.getLogger(__name__)
 
@@ -336,10 +336,25 @@ class PowerOnHx711DeviceCmd(BaseDeviceCmd):
     OP = DeviceCmdOp.POWER_ON_HX711
     VERSION = 1
 
-class GetThermalCfgCmd(BaseDeviceCmd):
+class GetThermalDeviceStateCmd(BaseDeviceCmd):
     OP = DeviceCmdOp.GET_THERMAL_CONFIGURATION
     VERSION = 1
 
-class SetThermalCfgCmd(BaseDeviceCmd, ThermalCfg):
+class SetThermalDeviceStateCmd(BaseDeviceCmd):
     OP = DeviceCmdOp.SET_THERMAL_CONFIGURATION
     VERSION = 1
+
+    class Field(BaseStructure.Field):
+        STATE = '_state'
+
+    _fields_ = [
+        ('state', ThermalDeviceState),
+    ]
+
+    @property
+    def state(self) -> ThermalDeviceState:
+        return getattr(self, self.Field.STATE)
+
+    @state.setter
+    def state(self, value: ThermalDeviceState):
+        setattr(self, self.Field.STATE, value)

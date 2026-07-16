@@ -8,9 +8,9 @@ from packaging.version import InvalidVersion, Version
 
 from . import nvm
 from .common import BaseStructure, MassUnitsType
-from growbies.utils import timestamp
-from growbies.utils.ctypes_utils import cstring_to_str
-from growbies.utils.types import Serial_t, ModelNumber_t
+from growbies.common.utils import timestamp
+from growbies.common.utils.ctypes_utils import cstring_to_str
+from growbies.common.utils.types import Serial_t, ModelNumber_t
 
 
 class BatteryType(IntEnum):

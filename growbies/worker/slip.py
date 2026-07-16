@@ -16,9 +16,9 @@ import serial
 from growbies.protocol.cmd import TDeviceCmd, CmdPacketHdr
 from growbies.protocol.resp import TDeviceResp, DeviceRespOp, RespPacketHdr
 from growbies.session import log
-from growbies.utils.bufstr import BufStr
-from growbies.utils.crc import crc_ccitt16
-from growbies.utils.report import format_dropped_bytes
+from growbies.common.utils.bufstr import BufStr
+from growbies.common.utils.crc import crc_ccitt16
+from growbies.common.utils.report import format_dropped_bytes
 
 logger = logging.getLogger(__name__)
 

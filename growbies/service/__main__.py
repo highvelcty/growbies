@@ -1,8 +1,8 @@
 import errno
 import logging
 from .service import Service
-from growbies.utils.filelock import PidFileLock
-from growbies.utils.paths import InstallPaths
+from growbies.common.utils.filelock import PidFileLock
+from growbies.common.utils.paths import InstallPaths
 
 logger = logging.getLogger(__name__)
 try:

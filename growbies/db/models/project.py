@@ -11,8 +11,8 @@ from sqlmodel import Field, Relationship
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
 from .link import SessionProjectLink
 from growbies.constants import TABLE_COLUMN_WIDTH
-from growbies.utils.report import short_uuid
-from growbies.utils.timestamp import get_utc_dt
+from growbies.common.utils.report import short_uuid
+from growbies.common.utils.timestamp import get_utc_dt
 
 if TYPE_CHECKING:
     from .session import Session

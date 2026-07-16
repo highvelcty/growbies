@@ -1,7 +1,7 @@
 import logging
 from .worker import Worker
 from growbies.service.common import ServiceCmdError
-from growbies.utils.types import DeviceID, WorkerID
+from growbies.common.utils.types import DeviceID, WorkerID
 
 
 logger = logging.getLogger(__name__)

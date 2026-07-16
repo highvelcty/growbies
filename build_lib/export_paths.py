@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from growbies.utils import paths
+from growbies.common.utils import paths
 
 path_to_output = paths.RepoPaths.BUILD_PATHS_ENV.value
 path_to_output.parent.mkdir(parents=True, exist_ok=True)

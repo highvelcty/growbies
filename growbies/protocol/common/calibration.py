@@ -3,7 +3,7 @@ import logging
 
 from . import nvm
 from .common import BaseStructure, BaseUnion
-from growbies.utils.report import make_table
+from growbies.common.utils.report import make_table
 
 logger = logging.getLogger(__name__)
 

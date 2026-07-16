@@ -6,7 +6,10 @@
 #pragma pack(1)
 
 // Commands
-struct CmdGetThermalConfiguration : BaseCmd {};
+struct CmdGetThermalState : BaseCmd {};
+struct CmdSetThermalState : BaseCmd {
+    ThermalDeviceState state;
+};
 
 // Responses
 struct RespGetThermalState : BaseResp, ThermalDeviceState {

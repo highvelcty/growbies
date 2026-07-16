@@ -30,17 +30,13 @@ enum class Resp: uint16_t {
 };
 
 typedef enum ErrorCode: uint32_t {
-    // bitfield
-    ERROR_NONE                                  = 0x00000000,
-    ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 0x00000001,
-    ERROR_UNRECOGNIZED_COMMAND                  = 0x00000002,
-    ERROR_OUT_OF_THRESHOLD_SAMPLE               = 0x00000004,
-    ERROR_HX711_NOT_READY                       = 0x00000008,
-    ERROR_INTERNAL                              = 0x00000010,
-    ERROR_INVALID_PARAMETER                     = 0x00000020,
-    ERROR_INCOMPLETE_SLIP_FRAME                 = 0x00000040,
-    ERROR_INVALID_SLIP_CRC                      = 0x00000080,
-    ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW     = 0x00000100,
+    ERROR_NONE                                  = 0,
+    ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 1,
+    ERROR_UNRECOGNIZED_COMMAND                  = 2,
+    ERROR_INCOMPLETE_SLIP_FRAME                 = 3,
+    ERROR_INVALID_SLIP_CRC                      = 4,
+    ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW     = 5,
+    ERROR_HEATER_STATE_TRANSITION_TIMEOUT       = 6,
 } ErrorCode;
 
 typedef enum EndpointType: uint8_t {

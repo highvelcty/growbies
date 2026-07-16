@@ -6,7 +6,7 @@ import subprocess
 
 from growbies.db.models.device import Device, Devices, ConnectionState
 from growbies.db.engine import get_db_engine
-from growbies.utils.paths import InstallPaths
+from growbies.common.utils.paths import InstallPaths
 from growbies.session import get_session
 
 logger = logging.getLogger(__name__)

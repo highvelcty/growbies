@@ -30,6 +30,16 @@ void CmdExec::exec() {
             static_cast<ThermalDeviceState&>(*resp) = thermal_device.get_state();
             usb_transport.send_resp(resp, sizeof(*resp));
         }
+        else if (in_packet_hdr->cmd == Cmd::SET_THERMAL_STATE) {
+            const auto* cmd = reinterpret_cast<CmdSetThermalState*>(usb_transport.get_cmd_buf());
+            error = usb_transport.validate_cmd(sizeof(*cmd));
+            if (!error) {
+                auto& thermal_device = ThermalDevice::get();
+                thermal_device.set_state(cmd->state);
+                const auto resp = new (resp_buf) RespVoid;
+                usb_transport.send_resp(resp, sizeof(*resp));
+            }
+        }
         else{
             error = ERROR_UNRECOGNIZED_COMMAND;
         }

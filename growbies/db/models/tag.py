@@ -11,7 +11,7 @@ from .link import SessionTagLink
 from .session import Session
 from growbies.constants import TABLE_COLUMN_WIDTH
 from growbies.service.common import ServiceCmdError
-from growbies.utils.report import short_uuid
+from growbies.common.utils.report import short_uuid
 
 class Tag(BaseTable, table=True):
     class Key(StrEnum):

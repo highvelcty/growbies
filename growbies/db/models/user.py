@@ -7,8 +7,8 @@ from sqlmodel import Field, Relationship
 
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
 from .link import SessionUserLink
-from growbies.utils.report import short_uuid
-from growbies.utils.types import FuzzyID
+from growbies.common.utils.report import short_uuid
+from growbies.common.utils.types import FuzzyID
 
 if TYPE_CHECKING:
     from .session import Session

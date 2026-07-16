@@ -13,8 +13,8 @@ if TYPE_CHECKING:
     from .session import Session
 from growbies.protocol.common.read import DataPoint as DeviceDataPoint
 from growbies.protocol.cmd import ReadDeviceCmd
-from growbies.utils.types import (DeviceID, TareID)
-from growbies.utils import timestamp
+from growbies.common.utils.types import (DeviceID, TareID)
+from growbies.common.utils import timestamp
 
 logger = logging.getLogger(__name__)
 

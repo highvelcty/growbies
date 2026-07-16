@@ -43,7 +43,7 @@ argcomplete.autocomplete(parser)
 # Delayed import for CLI responsiveness
 import logging
 import sys
-from .utils.privileges import drop_privileges
+from .common.utils.privileges import drop_privileges
 
 from growbies.protocol.resp import DeviceError
 from growbies.service.common import (ServiceCmd, ServiceOp, ServiceCmdError, TBaseServiceCmd)

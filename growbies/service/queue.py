@@ -10,9 +10,9 @@ import time
 from inotify_simple import INotify, flags
 
 from growbies.service.common import TBaseServiceCmd
-from growbies.utils.filelock import FileLock
-from growbies.utils.paths import InstallPaths
-from growbies.utils.types import Pickleable_t
+from growbies.common.utils.filelock import FileLock
+from growbies.common.utils.paths import InstallPaths
+from growbies.common.utils.types import Pickleable_t
 
 logger = logging.getLogger(__name__)
 

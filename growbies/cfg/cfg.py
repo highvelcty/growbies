@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import ClassVar
 
 from growbies.constants import APPNAME
-from growbies.utils.paths import InstallPaths
+from growbies.common.utils.paths import InstallPaths
 
 
 @dataclass

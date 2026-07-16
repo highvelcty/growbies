@@ -4,7 +4,7 @@ import time
 from .cli import Action, SampleAction, MassSampleParam, TempSSampleParam
 from growbies.app.common.run_cmd import run_cmd
 from growbies.session import log
-from growbies.utils import timestamp
+from growbies.common.utils import timestamp
 
 logger = log.get_logger(__name__)
 

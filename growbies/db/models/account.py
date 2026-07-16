@@ -7,7 +7,7 @@ from sqlmodel import Field, Relationship
 from .common import BaseTable, BaseNamedTableEngine, SortedTable
 if TYPE_CHECKING:
     from . import Gateway
-from growbies.utils.types import FuzzyID
+from growbies.common.utils.types import FuzzyID
 
 class Account(BaseTable, table=True):
     class Key:

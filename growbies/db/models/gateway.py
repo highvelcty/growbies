@@ -10,7 +10,7 @@ from .common import BaseTable, BaseNamedTableEngine, SortedTable
 if TYPE_CHECKING:
     from .account import Account
     from .device import Device
-from growbies.utils.types import FuzzyID
+from growbies.common.utils.types import FuzzyID
 
 class Gateway(BaseTable, table=True):
     class Key:

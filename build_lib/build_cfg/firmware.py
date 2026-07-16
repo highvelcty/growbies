@@ -3,7 +3,7 @@ import os
 
 from .common import Base, BASE_FILENAME, get_git_hash, EnvironVars
 
-from growbies.utils.paths import FirmwarePaths
+from growbies.common.utils.paths import FirmwarePaths
 
 PIOENV = 'PIOENV'
 FILENAME = BASE_FILENAME + '.h'
