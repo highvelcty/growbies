@@ -29,15 +29,15 @@ enum class Resp: uint16_t {
     ERROR = 0xFFFF,
 };
 
-typedef enum ErrorCode: uint32_t {
+
+enum class ErrorCode: uint32_t {
     ERROR_NONE                                  = 0,
     ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 1,
     ERROR_UNRECOGNIZED_COMMAND                  = 2,
     ERROR_INCOMPLETE_SLIP_FRAME                 = 3,
     ERROR_INVALID_SLIP_CRC                      = 4,
     ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW     = 5,
-    ERROR_HEATER_STATE_TRANSITION_TIMEOUT       = 6,
-} ErrorCode;
+};
 
 typedef enum EndpointType: uint8_t {
     EP_MASS_SENSOR = 0,
@@ -125,9 +125,9 @@ struct RespError : BaseResp {
     static constexpr auto VERSION = 1;
     static constexpr auto TYPE = Resp::ERROR;
 
-    ErrorCode error = ERROR_NONE;
+    ErrorCode error = ErrorCode::ERROR_NONE;
 
-    explicit RespError(const ErrorCode ec = ERROR_NONE)
+    explicit RespError(const ErrorCode ec = ErrorCode::ERROR_NONE)
         : error(ec) {}
 };
 

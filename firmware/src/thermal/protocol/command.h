@@ -8,7 +8,7 @@
 // Commands
 struct CmdGetThermalState : BaseCmd {};
 struct CmdSetThermalState : BaseCmd {
-    ThermalDeviceState state;
+    ThermalDeviceControl control;
 };
 
 // Responses

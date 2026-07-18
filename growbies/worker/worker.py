@@ -66,6 +66,7 @@ class Worker(Thread):
         if not self._intf:
             raise ServiceCmdError(f'Worker thread for {self.name} is not ready.')
 
+        logger.info(f'Sending {cmd.OP}')
         self._intf.send_cmd(cmd, self._next_cmd_id())
 
         startt = time.time()

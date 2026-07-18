@@ -2,6 +2,7 @@
 #include <cstring>
 #include "usb.h"
 #include "common/utils/crc.h"
+#include "thermal/thermal.h"
 
 namespace transport {
 
@@ -18,7 +19,7 @@ ErrorCode UsbDatalink::recv_slip() {
     while (Serial.available()) {
         const uint8_t a_byte = Serial.read();
         if (a_byte == SLIP_END){
-            return ERROR_NONE;
+            return ErrorCode::ERROR_NONE;
         }
         else if (a_byte == SLIP_ESC){
             in_buf.within_escape = true;
@@ -38,7 +39,7 @@ ErrorCode UsbDatalink::recv_slip() {
             }
         }
     }
-    return ERROR_INCOMPLETE_SLIP_FRAME;
+    return ErrorCode::ERROR_INCOMPLETE_SLIP_FRAME;
 }
 
 
@@ -67,7 +68,7 @@ void UsbDatalink::send_slip_end(){
     ErrorCode UsbNetwork::recv_packet() {
     auto error = datalink.recv_slip();
 
-    if (!error) {
+    if (error == ErrorCode::ERROR_NONE) {
         auto& in_buf = datalink.get_in_buf();
         const uint16_t buf_len = in_buf.len();
 
@@ -78,12 +79,12 @@ void UsbDatalink::send_slip_end(){
             const uint16_t calc_crc = crc_ccitt16(in_buf.buf, buf_len - PACKET_CRC_BYTES);
 
             if (calc_crc == crc) {
-                error = ERROR_NONE;
+                error = ErrorCode::ERROR_NONE;
             } else {
-                error = ERROR_INVALID_SLIP_CRC;
+                error = ErrorCode::ERROR_INVALID_SLIP_CRC;
             }
         } else {
-            error = ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW;
+            error = ErrorCode::ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW;
         }
     }
 
@@ -104,25 +105,19 @@ void UsbNetwork::send_packet(const void* ptr, const size_t packet_size) {
 
 
 ErrorCode UsbTransport::recv_cmd() {
-    auto error = network.recv_packet();
+    const auto error = network.recv_packet();
 
-    if (!error) {
-        // Execute command
-        error = ERROR_NONE;
-    }
-
-    if (error != ERROR_INCOMPLETE_SLIP_FRAME) {
+    if (error != ErrorCode::ERROR_INCOMPLETE_SLIP_FRAME) {
         reset();
     }
-
     return error;
 }
 
 ErrorCode UsbTransport::validate_cmd(const int exp_num_bytes) {
     if (exp_num_bytes > network.get_in_buf().len() - sizeof(PacketHdr)) {
-        return ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
+        return ErrorCode::ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW;
     }
-    return ERROR_NONE;
+    return ErrorCode::ERROR_NONE;
     }
 
 } // transport

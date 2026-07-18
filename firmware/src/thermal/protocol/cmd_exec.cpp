@@ -6,20 +6,20 @@ void CmdExec::exec() {
     auto resp_buf = usb_transport.get_resp_buf();
     auto error = usb_transport.recv_cmd();
 
-    if (error == ERROR_INCOMPLETE_SLIP_FRAME) {
+    if (error == ErrorCode::ERROR_INCOMPLETE_SLIP_FRAME) {
         return;
     }
 
-    if (!error) {
+    if (error == ErrorCode::ERROR_NONE) {
         const auto in_packet_hdr = usb_transport.get_cmd_hdr();
 
         if (in_packet_hdr->cmd == Cmd::READ) {
             error = usb_transport.validate_cmd(sizeof(CmdRead));
             const auto* cmd = reinterpret_cast<CmdRead*>(usb_transport.get_cmd_buf());
-            if (!error) {
+            if (error == ErrorCode::ERROR_NONE) {
                 if (cmd->reset) {
-                    const auto& thermal_device = ThermalDevice::get();
-                    thermal_device.reset_filters();
+                    auto& thermal_device = ThermalDevice::get();
+                    thermal_device.reset_sensing_memory();
                 }
                 update_telemetry(false);
             }
@@ -33,19 +33,19 @@ void CmdExec::exec() {
         else if (in_packet_hdr->cmd == Cmd::SET_THERMAL_STATE) {
             const auto* cmd = reinterpret_cast<CmdSetThermalState*>(usb_transport.get_cmd_buf());
             error = usb_transport.validate_cmd(sizeof(*cmd));
-            if (!error) {
+            if (error == ErrorCode::ERROR_NONE) {
                 auto& thermal_device = ThermalDevice::get();
-                thermal_device.set_state(cmd->state);
+                thermal_device.set_controls(cmd->control);
                 const auto resp = new (resp_buf) RespVoid;
                 usb_transport.send_resp(resp, sizeof(*resp));
             }
         }
         else{
-            error = ERROR_UNRECOGNIZED_COMMAND;
+            error = ErrorCode::ERROR_UNRECOGNIZED_COMMAND;
         }
     }
 
-    if (error) {
+    if (error != ErrorCode::ERROR_NONE) {
         auto* resp = new (resp_buf) RespError;
         resp->error = error;
         usb_transport.send_resp(resp, sizeof(*resp));
@@ -55,7 +55,7 @@ void CmdExec::exec() {
 void CmdExec::update_telemetry(const bool async) const {
     auto datapoint = DataPoint(usb_transport.get_resp_buf(), MAX_RESP_BYTES);
 
-    const auto& thermal_device = ThermalDevice::get();
+    auto& thermal_device = ThermalDevice::get();
 
     thermal_device.update();
 

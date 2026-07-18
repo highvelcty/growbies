@@ -5,32 +5,25 @@ import logging
 from prettytable import PrettyTable
 
 from .common import BaseStructure
-from growbies.common.enum import ThermalDeviceMode, DeviceErrorCode
+from growbies.common.enum import ThermalDeviceMode, ThermalDeviceErrorCode
 from growbies.common.utils.temperature import celsius_to_fahrenheit
 
 logger = logging.getLogger(__name__)
 
-
-class ThermalDeviceState(BaseStructure):
+class ThermalDeviceControl(BaseStructure):
     class Field(BaseStructure.Field):
         ACTIVE = '_active'
-        HEATER_ON = '_heater_on'
-        FAN_ON = '_fan_on'
         MODE = '_mode'
-        TEMPERATURE = '_temperature'
+        RESERVED = '_reserved'
         DUTY_CYCLE = '_duty_cycle'
         SET_POINT = '_set_point'
-        ERROR = '_error'
 
     _fields_ = [
         (Field.ACTIVE, ctypes.c_bool),
-        (Field.HEATER_ON, ctypes.c_bool),
-        (Field.FAN_ON, ctypes.c_bool),
         (Field.MODE, ctypes.c_uint8),
-        (Field.TEMPERATURE, ctypes.c_float),
+        (Field.RESERVED, ctypes.c_uint8 * 2),
         (Field.DUTY_CYCLE, ctypes.c_float),
         (Field.SET_POINT, ctypes.c_float),
-        (Field.ERROR, ctypes.c_float)
     ]
 
     @property
@@ -39,8 +32,87 @@ class ThermalDeviceState(BaseStructure):
 
     @active.setter
     def active(self, value: Optional[bool]):
-        if value is not None:
-            setattr(self, self.Field.ACTIVE, value)
+        setattr(self, self.Field.ACTIVE, value)
+
+    @property
+    def mode(self) -> int:
+        return getattr(self, self.Field.MODE)
+
+    @mode.setter
+    def mode(self, value: Optional[int]):
+        setattr(self, self.Field.MODE, value)
+
+    @property
+    def reserved(self) -> list[int]:
+        return getattr(self, self.Field.RESERVED)
+
+    @property
+    def duty_cycle(self) -> float:
+        return getattr(self, self.Field.DUTY_CYCLE)
+
+    @duty_cycle.setter
+    def duty_cycle(self, value: Optional[float]):
+        setattr(self, self.Field.DUTY_CYCLE, value)
+
+    @property
+    def set_point(self) -> float:
+        return getattr(self, self.Field.SET_POINT)
+
+    @set_point.setter
+    def set_point(self, value: Optional[float]):
+        setattr(self, self.Field.SET_POINT, value)
+
+    def __str__(self):
+        table = PrettyTable(title="Thermal Device Control")
+        table.field_names = ["Field", "Value"]
+
+        for field in table.field_names:
+            table.align[field] = "l"
+
+        table.add_row([
+            self.Field.ACTIVE.public_name,
+            self.active
+        ])
+
+        table.add_row([
+            self.Field.MODE.public_name,
+            ThermalDeviceMode(self.mode)
+        ])
+
+        table.add_row([
+            self.Field.DUTY_CYCLE.public_name,
+            f"{self.duty_cycle:.1f} %"
+        ])
+
+        table.add_row([
+            self.Field.SET_POINT.public_name,
+            f"{self.set_point:.2f} °C "
+            f"({celsius_to_fahrenheit(self.set_point):.2f} °F)"
+        ])
+
+        return str(table)
+
+class ThermalDeviceSense(BaseStructure):
+    class Field(BaseStructure.Field):
+        HEATER_ON = '_heater_on'
+        FAN_ON = '_fan_on'
+        RESERVED = '_reserved'
+        ERROR = '_error'
+        TEMPERATURE = '_temperature'
+        DUTY_CYCLE = '_duty_cycle'
+        SET_POINT = '_set_point'
+        CONTROLLER_PROPORTIONAL_TERM = '_controller_proportional_term'
+        CONTROLLER_INTEGRAL_TERM = '_controller_integral_term'
+
+    _fields_ = [
+        (Field.HEATER_ON, ctypes.c_bool),
+        (Field.RESERVED, ctypes.c_uint8 * 2),
+        (Field.FAN_ON, ctypes.c_bool),
+        (Field.ERROR, ctypes.c_uint32),
+        (Field.TEMPERATURE, ctypes.c_float),
+        (Field.CONTROLLER_PROPORTIONAL_TERM, ctypes.c_float),
+        (Field.CONTROLLER_INTEGRAL_TERM, ctypes.c_float)
+    ]
 
     @property
     def heater_on(self) -> bool:
@@ -59,13 +131,16 @@ class ThermalDeviceState(BaseStructure):
         setattr(self, self.Field.FAN_ON, value)
 
     @property
-    def mode(self) -> int:
-        return getattr(self, self.Field.MODE)
+    def reserved(self) -> list[int]:
+        return getattr(self, self.Field.RESERVED)
 
-    @mode.setter
-    def mode(self, value: Optional[int]):
-        if value is not None:
-            setattr(self, self.Field.MODE, value)
+    @property
+    def error(self) -> int:
+        return getattr(self, self.Field.ERROR)
+
+    @error.setter
+    def error(self, value: int):
+        setattr(self, self.Field.ERROR, value)
 
     @property
     def temperature(self) -> float:
@@ -76,64 +151,89 @@ class ThermalDeviceState(BaseStructure):
         setattr(self, self.Field.TEMPERATURE, value)
 
     @property
-    def duty_cycle(self) -> float:
-        return getattr(self, self.Field.DUTY_CYCLE)
+    def controller_proportional_term(self) -> float:
+        return getattr(self, self.Field.CONTROLLER_PROPORTIONAL_TERM)
 
-    @duty_cycle.setter
-    def duty_cycle(self, value: Optional[float]):
-        if value is not None:
-            setattr(self, self.Field.DUTY_CYCLE, value)
-
-    @property
-    def set_point(self) -> float:
-        return getattr(self, self.Field.SET_POINT)
-
-    @set_point.setter
-    def set_point(self, value: Optional[float]):
-        if value is not None:
-            setattr(self, self.Field.SET_POINT, value)
+    @controller_proportional_term.setter
+    def controller_proportional_term(self, value: float):
+        setattr(self, self.Field.CONTROLLER_PROPORTIONAL_TERM, value)
 
     @property
-    def error(self) -> int:
-        return getattr(self, self.Field.ERROR)
+    def controller_integral_term(self) -> float:
+        return getattr(self, self.Field.CONTROLLER_INTEGRAL_TERM)
 
-    @error.setter
-    def error(self, value: int):
-        setattr(self, self.Field.ERROR, value)
+    @controller_integral_term.setter
+    def controller_integral_term(self, value: float):
+        setattr(self, self.Field.CONTROLLER_INTEGRAL_TERM, value)
 
     def __str__(self):
-        table = PrettyTable(title='Thermal Device State')
-        table.field_names = ['Field', 'Value']
+        table = PrettyTable(title="Thermal Device Sense")
+        table.field_names = ["Field", "Value"]
 
         for field in table.field_names:
-            table.align[field] = 'l'
+            table.align[field] = "l"
 
-        table.add_row([
-            self.Field.ACTIVE.public_name,
-            self.active
-        ])
         table.add_row([
             self.Field.HEATER_ON.public_name,
             self.heater_on
         ])
+
         table.add_row([
             self.Field.FAN_ON.public_name,
             self.fan_on
         ])
-        table.add_row([
-            self.Field.MODE.public_name, ThermalDeviceMode(self.mode)])
+
         table.add_row([
             self.Field.TEMPERATURE.public_name,
-            f'{self.temperature:.2f} °C ({celsius_to_fahrenheit(self.temperature):.2f} °F)'
+            f"{self.temperature:.2f} °C "
+            f"({celsius_to_fahrenheit(self.temperature):.2f} °F)"
         ])
+
         table.add_row([
-            self.Field.DUTY_CYCLE.public_name,
-            f'{self.duty_cycle:.2f}'
+            self.Field.CONTROLLER_PROPORTIONAL_TERM.public_name,
+            f"{self.controller_proportional_term:.2f}"
         ])
+
         table.add_row([
-            self.Field.SET_POINT.public_name,
-            f'{self.set_point:.2f} °C ({celsius_to_fahrenheit(self.set_point):.2f} °F)'
+            self.Field.CONTROLLER_INTEGRAL_TERM.public_name,
+            f"{self.controller_integral_term:.2f}"
         ])
-        table.add_row([self.Field.ERROR.public_name, DeviceErrorCode(self.error)])
+
+        table.add_row([
+            self.Field.ERROR.public_name,
+            ThermalDeviceErrorCode(self.error)
+        ])
 
         return str(table)
+
+class ThermalDeviceState(BaseStructure):
+    class Field(BaseStructure.Field):
+        SENSE = '_sense'
+        CONTROL = '_control'
+
+    _fields_ = [
+        (Field.SENSE, ThermalDeviceSense),
+        (Field.CONTROL, ThermalDeviceControl),
+    ]
+
+    @property
+    def sense(self) -> ThermalDeviceSense:
+        return getattr(self, self.Field.SENSE)
+
+    @sense.setter
+    def sense(self, value: ThermalDeviceSense):
+        setattr(self, self.Field.SENSE, value)
+
+    @property
+    def control(self) -> ThermalDeviceControl:
+        return getattr(self, self.Field.CONTROL)
+
+    @control.setter
+    def control(self, value: ThermalDeviceControl):
+        setattr(self, self.Field.CONTROL, value)
+
+    def __str__(self):
+        return "\n\n".join((
+            str(self.control),
+            str(self.sense),
+        ))

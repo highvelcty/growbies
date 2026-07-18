@@ -23,6 +23,11 @@ class DeviceErrorCode(DynamicIntEnum):
     CMD_HDR_DESERIALIZATION_UNDERFLOW     = 5
     ERROR_HEATER_STATE_TRANSITION_TIMEOUT = 6,
 
+class ThermalDeviceErrorCode(DynamicIntEnum):
+    NONE = 0
+    ERROR_HEATER_STATE_TRANSITION_TIMEOUT = 1
+    ERROR_TEMPERATURE_TOO_HIGH = 2
+
 class ThermalDeviceMode(DynamicIntEnum):
     AUTO = 0
     MANUAL = 1
