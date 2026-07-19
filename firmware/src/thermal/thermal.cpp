@@ -135,7 +135,7 @@ std::vector<float> ThermalDevice::get_sensor_temperatures() const
 
 bool ThermalDevice::_is_fan_on()
 {
-    return static_cast<bool>(digitalRead(Pins::FAN_ACTIVE));
+    return digitalRead(Pins::FAN_ACTIVE);
 }
 
 bool ThermalDevice::_is_heater_on()
