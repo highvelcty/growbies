@@ -17,7 +17,7 @@ ThermalDevice& ThermalDevice::get()
 void ThermalDevice::begin()
 {
     pinMode(Pins::HEATER_ACTIVE, INPUT);
-    pinMode(Pins::FAN_ACTIVE, INPUT);
+    pinMode(Pins::FAN_ACTIVE, INPUT_PULLUP);
     digitalWrite(Pins::ACTIVATE_BUTTON, LOW);
     pinMode(Pins::ACTIVATE_BUTTON, OUTPUT);
     digitalWrite(Pins::ACTIVATE_BUTTON, LOW);
