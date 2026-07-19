@@ -33,9 +33,21 @@ void ThermalDevice::begin()
 }
 
 ThermalDeviceState ThermalDevice::get_state() {
-    _state.sense.temperature = get_temperature();
+    _aggregate_temp->reset_channels();
+    for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
+        std::vector<float> temp_vals = _multi_thermistor.sample();
+        for (size_t i = 0; i < temp_vals.size() && i < _aggregate_temp->size(); ++i)
+            _aggregate_temp->channel(i).update(temp_vals[i]);
+    }
+    _aggregate_temp->update();
+
+    _state.sense.temperature = _aggregate_temp->conditioned_total();
     _state.sense.heater_on = _is_heater_on();
     _state.sense.fan_on = _is_fan_on();
+
+    if (_state.sense.temperature > MAX_TEMP_C) {
+        _state.sense.error = ThermalDeviceErrorCode::ERROR_TEMPERATURE_TOO_HIGH;
+    }
 
     return _state;
 }
@@ -66,28 +78,10 @@ void ThermalDevice::reset_sensing_memory() {
     _state.sense.temperature = NAN;
 }
 
-void ThermalDevice::_update_sensed_state() {
-    _aggregate_temp->reset_channels();
-    for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
-        std::vector<float> temp_vals = _multi_thermistor.sample();
-        for (size_t i = 0; i < temp_vals.size() && i < _aggregate_temp->size(); ++i)
-            _aggregate_temp->channel(i).update(temp_vals[i]);
-    }
-    _aggregate_temp->update();
-
-    _state.sense.temperature = _aggregate_temp->conditioned_total();
-    _state.sense.heater_on = _is_heater_on();
-    _state.sense.fan_on = _is_fan_on();
-
-    if (_state.sense.temperature > MAX_TEMP_C) {
-        _state.sense.error = ThermalDeviceErrorCode::ERROR_TEMPERATURE_TOO_HIGH;
-    }
-}
-
 void ThermalDevice::update() {
     const uint32_t now_ms = millis();
 
-    _update_sensed_state();
+    get_state();
 
     if (_state.sense.error != ThermalDeviceErrorCode::ERROR_NONE or not _state.control.active) {
         _state.control.active = false;
