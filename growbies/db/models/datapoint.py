@@ -1,3 +1,5 @@
+from sqlalchemy import Index
+
 from datetime import datetime
 from enum import StrEnum
 from sqlalchemy import Column, ForeignKey
@@ -31,6 +33,11 @@ class DataPoint(BaseTable, table=True):
         TEMPERATURE_SENSORS = 'temperature_sensors'
         SESSIONS = 'sessions'
 
+    # Composite index
+    __table_args__ = (
+        Index("ix_datapoint_device_timestamp", Key.DEVICE_ID, Key.TIMESTAMP),
+    )
+
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     # Foreign keys
     device_id: uuid.UUID = Field(
@@ -41,7 +48,7 @@ class DataPoint(BaseTable, table=True):
         sa_column=Column(UUID(as_uuid=True), ForeignKey('tare.id', ondelete='CASCADE'),
                          nullable=False))
 
-    timestamp: datetime = Field(nullable=False, index=True)
+    timestamp: datetime = Field(nullable=False)
     mass: float = Field(nullable=False)
     temperature: float = Field(nullable=False)
     ref_mass: float | None = Field(nullable=True)
@@ -57,6 +64,23 @@ class DataPoint(BaseTable, table=True):
                                              link_model=SessionDataPointLink)
 
 class DataPointMassSensor(BaseTable, table=True):
+    class Key(StrEnum):
+        ID = 'id'
+        DATAPOINT_ID = 'datapoint_id'
+        IDX = 'idx'
+        TEMPERATURE = 'temperature'
+        ERROR = 'error'
+        DATAPOINT = 'datapoint'
+
+    # Composite index
+    __table_args__ = (
+        Index(
+            "ix_masssensor_datapoint_idx",
+            Key.DATAPOINT_ID,
+            Key.IDX,
+        ),
+    )
+
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     datapoint_id: Optional[uuid.UUID] = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('datapoint.id', ondelete='CASCADE'),
@@ -70,6 +94,22 @@ class DataPointMassSensor(BaseTable, table=True):
     datapoint: DataPoint | None = Relationship(back_populates='mass_sensors')
 
 class DataPointTemperatureSensor(BaseTable, table=True):
+    class Key(StrEnum):
+        ID = 'id'
+        DATAPOINT_ID = 'datapoint_id'
+        IDX = 'idx'
+        TEMPERATURE = 'temperature'
+        ERROR = 'error'
+        DATAPOINT = 'datapoint'
+
+    __table_args__ = (
+        Index(
+            "ix_tempsensor_datapoint_idx",
+            Key.DATAPOINT_ID,
+            Key.IDX,
+        ),
+    )
+
     id: uuid.UUID | None = Field(default_factory=uuid.uuid4, primary_key=True)
     datapoint_id: uuid.UUID = Field(
         sa_column=Column(UUID(as_uuid=True), ForeignKey('datapoint.id', ondelete='CASCADE'),
@@ -118,7 +158,6 @@ class DataPointEngine(BaseTableEngine):
 
             datapoint_sql = text("""
                 SELECT
-                    id,
                     timestamp,
                     mass,
                     temperature,
@@ -142,11 +181,8 @@ class DataPointEngine(BaseTableEngine):
             if not datapoint_rows:
                 return [], [], []
 
-            datapoint_ids = [row.id for row in datapoint_rows]
-
             mass_sensor_sql = text("""
                 SELECT
-                    ms.datapoint_id,
                     dp.timestamp,
                     ms.idx,
                     ms.mass,
@@ -155,20 +191,23 @@ class DataPointEngine(BaseTableEngine):
                 FROM datapointmasssensor ms
                 JOIN datapoint dp
                     ON dp.id = ms.datapoint_id
-                WHERE ms.datapoint_id = ANY(:datapoint_ids)
+                WHERE dp.device_id = :device_id
+                  AND dp.timestamp >= :start_time
+                  AND dp.timestamp <= :end_time
                 ORDER BY dp.timestamp, ms.idx
             """)
 
             mass_sensor_rows = session.exec(
                 mass_sensor_sql,
                 params={
-                    "datapoint_ids": datapoint_ids,
+                    "device_id": device_id,
+                    "start_time": start_time,
+                    "end_time": end_time,
                 },
             ).all()
 
             temperature_sensor_sql = text("""
                 SELECT
-                    ts.datapoint_id,
                     dp.timestamp,
                     ts.idx,
                     ts.temperature,
@@ -176,14 +215,18 @@ class DataPointEngine(BaseTableEngine):
                 FROM datapointtemperaturesensor ts
                 JOIN datapoint dp
                     ON dp.id = ts.datapoint_id
-                WHERE ts.datapoint_id = ANY(:datapoint_ids)
+                WHERE dp.device_id = :device_id
+                  AND dp.timestamp >= :start_time
+                  AND dp.timestamp <= :end_time
                 ORDER BY dp.timestamp, ts.idx
             """)
 
             temperature_sensor_rows = session.exec(
                 temperature_sensor_sql,
                 params={
-                    "datapoint_ids": datapoint_ids,
+                    "device_id": device_id,
+                    "start_time": start_time,
+                    "end_time": end_time,
                 },
             ).all()
 

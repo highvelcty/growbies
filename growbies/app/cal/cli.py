@@ -27,7 +27,6 @@ class Action(StrEnum):
 class PlotAction(StrEnum):
     MASS = "mass"
     TEMP = "temp"
-    TIME = 'time'
 
 
     @property
@@ -35,7 +34,6 @@ class PlotAction(StrEnum):
         return {
             self.MASS: "Plot mass calibration.",
             self.TEMP: "Plot temperature calibration.",
-            self.TIME: "Plot mass & temperature over time"
         }[self]
 
     @property
