@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 from collections import defaultdict
 
 import numpy as np
@@ -10,10 +10,7 @@ from growbies.db.engine import get_db_engine
 from growbies.common.utils.timestamp import get_elapsed_str
 
 
-def plot_time_series(fuzzy_id: str):
-    start_time = None
-    end_time = None
-
+def plot_time_series(fuzzy_id: str, start_time: datetime, end_time: datetime):
     db_engine = get_db_engine()
     device_id = db_engine.device.get(fuzzy_id).id
 
@@ -101,9 +98,9 @@ def _plot_time_series(
     # -------------------------
 
     sensor_colors = [
-        "green",
+        "cyan",
         "magenta",
-        "black",
+        "gray",
     ]
 
     sensor_mass_arrays = {}
@@ -187,7 +184,7 @@ def _plot_time_series(
 
     utc_formatter = DateFormatter(
         "%Y-%m-%dT%H:%M:%SZ",
-        tz=datetime.timezone.utc,
+        tz=timezone.utc,
     )
 
     locator = AutoDateLocator(
@@ -262,16 +259,29 @@ def _plot_time_series(
 
     def format_stats(values, elapsed):
 
-        mean = np.mean(values)
-        median = np.median(values)
-        std = np.std(values)
+        values = finite_values(values)
+
+
+        if len(values):
+            mean = np.mean(values)
+            median = np.median(values)
+            std = np.std(values)
+            min_value = np.min(values)
+            max_value = np.max(values)
+        else:
+            mean = 'invalid'
+            median = 'invalid'
+            std = 'invalid'
+            min_value = 'invalid'
+            max_value = 'invalid'
 
         return (
-            f"range: {elapsed}\n"
-            f"min:  {np.min(values):10.3f}\n"
-            f"max:  {np.max(values):10.3f}\n"
-            f"med:  {median:10.3f}\n"
-            f"mean: {mean:10.3f}\n"
+            f"range: {elapsed}, samples: {len(values):10.2f}\n"
+            f"min: {min_value:10.2f}, "
+            f"max: {max_value:10.2f}, "
+            f"delta: {max_value - min_value:10.2f}, "
+            f"med: {median:10.2f}, "
+            f"mean: {mean:10.2f}\n"
             f"1/2/3σ: "
             f"{std:8.3f}, "
             f"{2*std:8.3f}, "
@@ -297,6 +307,9 @@ def _plot_time_series(
     # Helpers
     # -------------------------
 
+    def finite_values(values):
+        return values[np.isfinite(values)]
+
     def visible_range(ax):
 
         x_min, x_max = ax.get_xlim()
@@ -304,14 +317,14 @@ def _plot_time_series(
         start = np.datetime64(
             num2date(
                 x_min,
-                tz=datetime.timezone.utc,
+                tz=timezone.utc,
             ).replace(tzinfo=None)
         )
 
         end = np.datetime64(
             num2date(
                 x_max,
-                tz=datetime.timezone.utc,
+                tz=timezone.utc,
             ).replace(tzinfo=None)
         )
 
@@ -362,15 +375,16 @@ def _plot_time_series(
                     continue
 
                 visible = values[start_idx:end_idx]
+                finite = finite_values(visible)
+                if not len(finite):
+                    continue
 
                 axis_text[axis].append(
                     f"{name}\n"
-                    f"{format_stats(visible, elapsed_str)}"
+                    f"{format_stats(finite, elapsed_str)}"
                 )
 
-                axis_values[axis].append(
-                    visible
-                )
+                axis_values[axis].append(finite)
 
 
             for axis, texts in axis_text.items():
@@ -427,4 +441,4 @@ def _plot_time_series(
         wspace=0.15,
     )
 
-    # plt.show()
+    plt.show()

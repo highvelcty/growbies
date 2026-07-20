@@ -1,5 +1,6 @@
+import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional, Union
 
 UTC_Z = 'Z'
@@ -142,3 +143,35 @@ class ContextElapsedTime(object):
         microseconds = elapsed_time.microseconds
 
         return f'{days} days, {hours:02d}:{minutes:02d}:{seconds:02d}.{microseconds:06d}'
+
+def parse_relative_time(value: str | list[str]) -> datetime:
+    if isinstance(value, list):
+        value = ''.join(value)
+    value = value.strip().lower()
+    now = datetime.now(timezone.utc)
+    if value == "now":
+        return now
+
+    sign = -1 if value.startswith("-") else 1
+    value = value.lstrip("+- ")
+    total = timedelta()
+    pattern = (
+        r"(\d+(?:\.\d+)?)\s*"
+        r"(seconds?|minutes?|hours?|days?|years?)"
+    )
+
+    for amount, unit in re.findall(pattern, value):
+        amount = float(amount)
+        match unit:
+            case "second" | "seconds":
+                total += timedelta(seconds=amount)
+            case "minute" | "minutes":
+                total += timedelta(minutes=amount)
+            case "hour" | "hours":
+                total += timedelta(hours=amount)
+            case "day" | "days":
+                total += timedelta(days=amount)
+            case "year" | "years":
+                total += timedelta(days=365 * amount)
+
+    return now + sign * total

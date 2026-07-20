@@ -14,9 +14,11 @@ def main(argv=None):
     args, forward_args = parser.parse_known_args(argv)
     plot_type = getattr(args, PlotParam.TYPE)
     fuzzy_id = getattr(args, Param.FUZZY_ID)
+    start_time = getattr(args, PlotParam.START_TIME)
+    end_time = getattr(args, PlotParam.END_TIME)
 
     if plot_type == PlotType.TIME:
-        time_series.plot_time_series(fuzzy_id)
+        time_series.plot_time_series(fuzzy_id, start_time, end_time)
     else:
         raise TypeError(f'Invalid plotting type: "{plot_type}"')
 
