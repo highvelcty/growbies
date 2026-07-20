@@ -101,7 +101,6 @@ private:
     bool _set_heater_state(bool state);
     void _set_heater_on();
     void _set_heater_off();
-    void _update_sensed_state();
     static bool _wait_for_heater_state(bool on);
 };
 

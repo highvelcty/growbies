@@ -15,8 +15,8 @@ PIController::PIController(
     _output_max(output_max)
 {
     assert(_output_max > _output_min);
-    assert(_kp >= 0.0f);
-    assert(_ki >= 0.0f);
+    assert(_kp > 0.0f);
+    assert(_ki > 0.0f);
 }
 
 
