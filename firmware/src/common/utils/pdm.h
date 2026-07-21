@@ -12,6 +12,5 @@ public:
 
 private:
     float _accumulator = 0.0f;
-    uint32_t _last_pulse_time = 0;
     bool _output = false;
 };

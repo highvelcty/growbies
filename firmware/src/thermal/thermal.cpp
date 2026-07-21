@@ -153,7 +153,7 @@ bool ThermalDevice::_set_heater_state(const bool state)
 
         // Pulse the activate button.
         digitalWrite(Pins::ACTIVATE_BUTTON, HIGH);
-        delay(100);
+        delay(BUTTON_PRESS_MS);
         digitalWrite(Pins::ACTIVATE_BUTTON, LOW);
 
         if (_wait_for_heater_state(state)) {

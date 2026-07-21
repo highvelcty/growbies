@@ -58,13 +58,14 @@ static_assert(sizeof(ThermalDeviceState) == 32, "incorrect structure size");
 class ThermalDevice
 {
     static constexpr uint8_t ACTIVATE_RETRIES = 3;
+    static constexpr uint8_t BUTTON_PRESS_MS = 50;
     static constexpr int MAX_TEMP_C = 70;
     static constexpr float MIN_DUTY_CYCLE = 0.0f;
     static constexpr float MAX_DUTY_CYCLE = 100.0f;
     static constexpr float PI_KP = 3.0f;
     static constexpr float PI_KI = 0.02f;
 public:
-    static constexpr float UPDATE_INTERVAL_MS = 1000.0f;
+    static constexpr float UPDATE_INTERVAL_MS = 100.0f;
 
     static ThermalDevice& get();
 

@@ -25,21 +25,14 @@ bool PulseDensityModulator::update(float duty_cycle)
         return _output;
     }
 
+    _accumulator += duty_cycle;
 
-    // Only make a new pulse decision every PULSE_WIDTH_MS.
-    if (millis() - _last_pulse_time >= PULSE_WIDTH_MS) {
-
-        _last_pulse_time += PULSE_WIDTH_MS;
-
-        _accumulator += duty_cycle;
-
-        if (_accumulator >= 100.0f) {
-            _output = true;
-            _accumulator -= 100.0f;
-        }
-        else {
-            _output = false;
-        }
+    if (_accumulator >= 100.0f) {
+        _output = true;
+        _accumulator -= 100.0f;
+    }
+    else {
+        _output = false;
     }
 
     return _output;
@@ -48,6 +41,5 @@ bool PulseDensityModulator::update(float duty_cycle)
 void PulseDensityModulator::reset() {
     _accumulator = 0.0f;
     _output = false;
-    _last_pulse_time = millis();
 }
 
