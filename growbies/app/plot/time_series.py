@@ -12,7 +12,9 @@ from growbies.common.utils.timestamp import get_elapsed_str
 
 def plot_time_series(fuzzy_id: str, start_time: datetime, end_time: datetime):
     db_engine = get_db_engine()
-    device_id = db_engine.device.get(fuzzy_id).id
+    device = db_engine.device.get(fuzzy_id)
+    device_id = device.id
+
 
     datapoints, mass_sensor_datapoints, temp_sensor_datapoints = \
         db_engine.datapoint.get_device_datapoints(
@@ -25,6 +27,8 @@ def plot_time_series(fuzzy_id: str, start_time: datetime, end_time: datetime):
         datapoints,
         mass_sensor_datapoints,
         temp_sensor_datapoints,
+        device.name,
+        device.serial
     )
 
 
@@ -32,6 +36,8 @@ def _plot_time_series(
         datapoints: list[Row],
         mass_sensor_datapoints: list[Row],
         temp_sensor_datapoints: list[Row],
+        device_name: str,
+        device_serial: str,
 ):
 
     timestamps = np.fromiter(
@@ -61,6 +67,9 @@ def _plot_time_series(
         figsize=(16, 10),
         sharex=True,
     )
+
+    fig.suptitle(f'Name: {device_name}\n'
+                 f'Serial: {device_serial}\n')
 
     axes = [
         ax_mass,
@@ -276,16 +285,13 @@ def _plot_time_series(
             max_value = 'invalid'
 
         return (
-            f"range: {elapsed}, samples: {len(values):8.3f}\n"
-            f"min: {min_value:8.3f}, "
-            f"max: {max_value:8.3f}, "
-            f"delta: {max_value - min_value:10.3f}, "
+            f"range: {elapsed}\n"
+            f"samples: {len(values):8.3f}\n"
+            f"min,max: [{min_value:8.3f},{max_value:8.3f}], "
+            f"Δ: {max_value - min_value:10.3f}, "
+            f"μ: {mean:8.3f}\n"
             f"med: {median:8.3f}, "
-            f"mean: {mean:8.3f}\n"
-            f"1/2/3σ: "
-            f"{std:8.3f}, "
-            f"{2*std:8.3f}, "
-            f"{3*std:8.3f}"
+            f"1σ/2σ/3σ: {std:8.3f} / {2*std:8.3f} / {3*std:8.3f}"
         )
 
 
@@ -435,7 +441,7 @@ def _plot_time_series(
     fig.subplots_adjust(
         left=0.08,
         right=0.98,
-        top=0.95,
+        top=0.88,
         bottom=0.08,
         hspace=0.25,
         wspace=0.15,
