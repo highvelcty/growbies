@@ -39,9 +39,9 @@ constexpr bool THERMISTOR_ON_TOP_OF_DIVIDER = false;
 constexpr float THERMISTOR_DIVIDER_RESISTOR = 50000.0f;
 constexpr float THERMISTOR_SUPPLY_VOLTAGE = 5.0f;
 
-constexpr float STEINHART_HART_A = 2.97101274E-2f;
-constexpr float STEINHART_HART_B = -3.03089079E-3f;
-constexpr float STEINHART_HART_C = 5.82424377E-6f;
+constexpr float STEINHART_HART_A = 1.17745599E-2f;
+constexpr float STEINHART_HART_B = -1.55698289E-3f;
+constexpr float STEINHART_HART_C = 7.41006996E-6f;
 #endif
 
 
