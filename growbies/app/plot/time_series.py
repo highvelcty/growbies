@@ -276,12 +276,12 @@ def _plot_time_series(
             max_value = 'invalid'
 
         return (
-            f"range: {elapsed}, samples: {len(values):10.2f}\n"
-            f"min: {min_value:10.2f}, "
-            f"max: {max_value:10.2f}, "
-            f"delta: {max_value - min_value:10.2f}, "
-            f"med: {median:10.2f}, "
-            f"mean: {mean:10.2f}\n"
+            f"range: {elapsed}, samples: {len(values):8.3f}\n"
+            f"min: {min_value:8.3f}, "
+            f"max: {max_value:8.3f}, "
+            f"delta: {max_value - min_value:10.3f}, "
+            f"med: {median:8.3f}, "
+            f"mean: {mean:8.3f}\n"
             f"1/2/3σ: "
             f"{std:8.3f}, "
             f"{2*std:8.3f}, "

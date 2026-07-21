@@ -16,29 +16,32 @@ constexpr float MIN_TEMPERATURE_CELSIUS = -20.0f;
 constexpr float MAX_TEMPERATURE_CELSIUS = 70.0f;
 
 constexpr float THERMISTOR_NOMINAL_TEMPERATURE = 298.15f;  // Kelvin (25°C)
-constexpr float THERMISTOR_BETA_COEFF = 4100.0f;
 
 #if THERMISTOR_HW == 0
 // Eaton NRNE105H4100B1H
-constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 100000.0f;
+constexpr bool THERMISTOR_ON_TOP = true;
+constexpr float THERMISTOR_DIVIDER_RESISTOR = 100000.0f;
 constexpr float THERMISTOR_SUPPLY_VOLTAGE = 2.7f;
 constexpr float STEINHART_HART_A = 1.003702421E-3f;
 constexpr float STEINHART_HART_B = 1.811901925E-4f;
 constexpr float STEINHART_HART_C = 1.731869483E-7f;
 #elif THERMISTOR_HW == 1
 // Eaton NRNE105H4100B1H
-constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 15000.0f;
+constexpr bool THERMISTOR_ON_TOP = true;
+constexpr float THERMISTOR_DIVIDER_RESISTOR = 15000.0f;
 constexpr float THERMISTOR_SUPPLY_VOLTAGE = 3.3f;
 constexpr float STEINHART_HART_A = 1.003702421E-3f;
 constexpr float STEINHART_HART_B = 1.811901925E-4f;
 constexpr float STEINHART_HART_C = 1.731869483E-7f;
 #elif THERMISTOR_HW == 2
-// Unknown - found in Crealty HM-01 chamber heater
-constexpr float THERMISTOR_R2_BOTTOM_RESISTOR = 15000.0f;
-constexpr float THERMISTOR_SUPPLY_VOLTAGE = 3.3f;
-constexpr float STEINHART_HART_A = 1.0f;
-constexpr float STEINHART_HART_B = 0.0f;
-constexpr float STEINHART_HART_C = 0.0f;
+// Unknown - found in Creality HM-01 chamber heater
+constexpr bool THERMISTOR_ON_TOP_OF_DIVIDER = false;
+constexpr float THERMISTOR_DIVIDER_RESISTOR = 50000.0f;
+constexpr float THERMISTOR_SUPPLY_VOLTAGE = 5.0f;
+
+constexpr float STEINHART_HART_A = 2.97101274E-2f;
+constexpr float STEINHART_HART_B = -3.03089079E-3f;
+constexpr float STEINHART_HART_C = 5.82424377E-6f;
 #endif
 
 

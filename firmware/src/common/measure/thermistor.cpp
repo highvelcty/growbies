@@ -34,13 +34,18 @@ float Thermistor::read_voltage() const {
 float Thermistor::sample() const {
     // Thermistor on the top of the resistor divider
     const float vout = read_voltage();
-    return vout; // meyere
     if (isnan(vout)) {
         return DEFAULT_TEMPERATURE_CELSIUS;
     }
-    const float r_therm =
-        (THERMISTOR_R2_BOTTOM_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout))
-        / vout;
+
+    float r_therm;
+
+    if (THERMISTOR_ON_TOP_OF_DIVIDER) {
+        r_therm = (THERMISTOR_DIVIDER_RESISTOR * (THERMISTOR_SUPPLY_VOLTAGE - vout)) / vout;
+    }
+    else {
+        r_therm = THERMISTOR_DIVIDER_RESISTOR * vout / (THERMISTOR_SUPPLY_VOLTAGE - vout);
+    }
 
     const float inv_T = STEINHART_HART_A
                       + (STEINHART_HART_B * logf(r_therm))
