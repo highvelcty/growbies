@@ -29,10 +29,6 @@ def execute(args: Namespace):
         plot_mass_cal(fuzzy_id)
     elif plot_type == PlotAction.TEMP:
         plot_temp_cal(fuzzy_id)
-    if returncode == 0:
-        logger.info('*** PASS ***')
-    else:
-        logger.error('*** FAIL ***')
 
     sys.exit(returncode)
 

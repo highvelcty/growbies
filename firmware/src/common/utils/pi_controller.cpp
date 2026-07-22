@@ -1,4 +1,4 @@
-#include <assert.h>
+#include <cassert>
 #include "pi_controller.h"
 
 

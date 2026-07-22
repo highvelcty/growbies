@@ -13,7 +13,6 @@
 constexpr int HEATER_STATE_TRANSITION_TIMEOUT_MS = 1000;
 constexpr int IS_HEATER_ON_SAMPLES = 10;
 constexpr int IS_HEATER_ON_SAMPLE_INTERVAL = 10;
-constexpr int START_UP_DELAY_MS = 1000;
 
 
 enum class ThermalDeviceErrorCode: uint32_t {
@@ -60,7 +59,7 @@ class ThermalDevice
     static constexpr uint8_t ACTIVATE_RETRIES = 3;
     static constexpr uint8_t BUTTON_PRESS_MS = 50;
     static constexpr int MAX_TEMP_C = 70;
-    static constexpr float MIN_DUTY_CYCLE = 0.0f;
+    static constexpr float MIN_DUTY_CYCLE = 2.0f;
     static constexpr float MAX_DUTY_CYCLE = 100.0f;
     static constexpr float PI_KP = 3.0f;
     static constexpr float PI_KI = 0.02f;
@@ -103,6 +102,7 @@ private:
     void _set_heater_on();
     void _set_heater_off();
     static bool _wait_for_heater_state(bool on);
+    void _ensure_minimum_duty_cycle_for_continuous_fan();
 };
 
 #pragma pack()

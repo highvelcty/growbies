@@ -267,9 +267,7 @@ def _plot_time_series(
     # -------------------------
 
     def format_stats(values, elapsed):
-
         values = finite_values(values)
-
 
         if len(values):
             mean = np.mean(values)
@@ -278,20 +276,19 @@ def _plot_time_series(
             min_value = np.min(values)
             max_value = np.max(values)
         else:
-            mean = 'invalid'
-            median = 'invalid'
-            std = 'invalid'
-            min_value = 'invalid'
-            max_value = 'invalid'
+            mean = median = std = min_value = max_value = np.nan
+
+        delta = max_value - min_value
 
         return (
-            f"range: {elapsed}\n"
-            f"samples: {len(values):8.3f}\n"
-            f"min,max: [{min_value:8.3f},{max_value:8.3f}], "
-            f"Δ: {max_value - min_value:10.3f}, "
-            f"μ: {mean:8.3f}\n"
-            f"med: {median:8.3f}, "
-            f"1σ/2σ/3σ: {std:8.3f} / {2*std:8.3f} / {3*std:8.3f}"
+            f"{'samples':<10} {'range':<20}\n"
+            f"{len(values):<10d} {elapsed:<20}\n"
+            f"\n"
+            f"{'min':<10} {'max':<10} {'Δ':<10} {'μ':<10} {'med':<10} "
+            f"{'1σ':<10} {'2σ':<10} {'3σ':<10}\n"
+            f"{min_value:<10.3f} {max_value:<10.3f} "
+            f"{delta:<10.3f} {mean:<10.3f} {median:<10.3f} "
+            f"{std:<10.3f} {2 * std:<10.3f} {3 * std:<10.3f}"
         )
 
 

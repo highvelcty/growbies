@@ -30,6 +30,7 @@ void ThermalDevice::begin()
 
     _multi_thermistor.begin();
     _aggregate_temp = new AggregateTemperature(TEMPERATURE_SENSOR_COUNT);
+
 }
 
 ThermalDeviceState ThermalDevice::get_state() {
@@ -88,6 +89,8 @@ void ThermalDevice::update() {
         _set_heater_off();
         return;
     }
+
+    _ensure_minimum_duty_cycle_for_continuous_fan();
 
     if (_state.control.mode == ThermalDeviceMode::AUTO) {
 
@@ -185,4 +188,14 @@ bool ThermalDevice::_wait_for_heater_state(const bool on)
         delay(IS_HEATER_ON_SAMPLE_INTERVAL);
     }
     return true;
+}
+
+void ThermalDevice::_ensure_minimum_duty_cycle_for_continuous_fan() {
+    // this function ensures that a minimum duty cycle is maintained while the device is active
+    // so that the fan stays on.
+    if (_state.control.duty_cycle < MIN_DUTY_CYCLE) {
+        _state.control.duty_cycle = MIN_DUTY_CYCLE;
+    }
+
+    assert(UPDATE_INTERVAL_MS == 100);
 }
