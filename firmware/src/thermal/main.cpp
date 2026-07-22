@@ -11,7 +11,7 @@ void loop() {
     static common::Task* tasks[] = {
         new common::SerialPortInTask(10),   // Every 10ms
         new thermal::ThermalDeviceTask(ThermalDevice::UPDATE_INTERVAL_MS),
-        new common::SerialPortOutTask(10000), // Every 10 seconds
+        new common::TelemetryTask(10000), // Every 10 seconds
     };
 
     for (const auto task : tasks) {

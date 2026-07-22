@@ -45,7 +45,7 @@ private:
     CmdExec& cmd_exec = CmdExec::get();
 };
 
-class SerialPortOutTask : public Task {
+class TelemetryTask : public Task {
 public:
     using Task::Task;
     void run() override;

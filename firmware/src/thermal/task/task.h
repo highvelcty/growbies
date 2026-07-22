@@ -10,4 +10,11 @@ public:
     void run() override;
 };
 
+class TelemetryTask final : public common::TelemetryTask {
+public:
+    void run() override;
+private:
+    CmdExec& cmd_exec = CmdExec::get();
+};
+
 }

@@ -50,7 +50,7 @@ private:
     RemoteOut& remote_out = RemoteOut::get();
 };
 
-class SerialPortOutTask final : public common::SerialPortOutTask {
+class TelemetryTask final : public common::TelemetryTask {
 public:
     void run() override;
     unsigned long interval_ms() const override;

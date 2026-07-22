@@ -70,7 +70,7 @@ void scale::RemoteTask::run() {
 
 void scale::SerialPortOutTask::run() {
     if (battery.is_charging()) {
-        common::SerialPortOutTask::run();
+        common::TelemetryTask::run();
     }
 }
 
