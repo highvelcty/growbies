@@ -15,8 +15,8 @@ public:
         unsigned long dt_milliseconds
     );
 
-    float get_integral() const;
-    float get_proportional() const;
+    float get_integral_state() const;
+    float get_proportional_state() const;
     void reset();
 
 private:
@@ -26,7 +26,7 @@ private:
     float _output_min;
     float _output_max;
 
-    float _integral = 0.0f;
-    float _proportional = 0.0f;
+    float _integral_state = 0.0f;
+    float _proportional_state = 0.0f;
 };
 

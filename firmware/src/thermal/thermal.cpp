@@ -107,8 +107,8 @@ void ThermalDevice::update() {
             _state.sense.temperature,
             delta_ms
         );
-        _state.sense.controller_proportional_term = _pi_controller.get_proportional();
-        _state.sense.controller_integral_term = _pi_controller.get_integral();
+        _state.sense.controller_proportional_term = _pi_controller.get_proportional_state();
+        _state.sense.controller_integral_term = _pi_controller.get_integral_state();
 
         _last_update_ms = now_ms;
     }

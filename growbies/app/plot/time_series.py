@@ -283,11 +283,10 @@ def _plot_time_series(
         return (
             f"{'samples':<10} {'range':<20}\n"
             f"{len(values):<10d} {elapsed:<20}\n"
-            f"\n"
-            f"{'min':<10} {'max':<10} {'Δ':<10} {'μ':<10} {'med':<10} "
-            f"{'1σ':<10} {'2σ':<10} {'3σ':<10}\n"
+            f"{'min':<10} {'max':<10} {'Δ':<10} {'μ':<10} {'med':<10}\n"
             f"{min_value:<10.3f} {max_value:<10.3f} "
-            f"{delta:<10.3f} {mean:<10.3f} {median:<10.3f} "
+            f"{delta:<10.3f} {mean:<10.3f} {median:<10.3f}\n"
+            f"{'1σ':<10} {'2σ':<10} {'3σ':<10}\n"
             f"{std:<10.3f} {2 * std:<10.3f} {3 * std:<10.3f}"
         )
 
@@ -439,7 +438,7 @@ def _plot_time_series(
         left=0.08,
         right=0.98,
         top=0.88,
-        bottom=0.08,
+        bottom=0.13,
         hspace=0.25,
         wspace=0.15,
     )

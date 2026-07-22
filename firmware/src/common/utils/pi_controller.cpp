@@ -31,12 +31,12 @@ float PIController::update(
     const float error = set_point - measurement;
 
     // Proportional term
-    _proportional = _kp * error;
+    _proportional_state = _kp * error;
 
     // Integral term
-    _integral += error * dt_seconds;
+    _integral_state += error * dt_seconds;
 
-    float output = _proportional + (_ki * _integral);
+    float output = _proportional_state + (_ki * _integral_state);
 
     // Anti-windup.
     // If output saturates, prevent integral from continuing to grow without bound.
@@ -47,26 +47,26 @@ float PIController::update(
     /// integral = output - proportional
     if (output > _output_max) {
         output = _output_max;
-        _integral = (_output_max - _proportional) / _ki;
+        _integral_state = (_output_max - _proportional_state) / _ki;
     }
     else if (output < _output_min) {
         output = _output_min;
-        _integral = (_output_min - _proportional) / _ki;
+        _integral_state = (_output_min - _proportional_state) / _ki;
     }
 
     return output;
 }
 
 
-float PIController::get_integral() const {
-    return _integral;
+float PIController::get_integral_state() const {
+    return _integral_state;
 }
 
-float PIController::get_proportional() const {
-    return _proportional;
+float PIController::get_proportional_state() const {
+    return _proportional_state;
 }
 
 void PIController::reset()
 {
-    _integral = 0.0f;
+    _integral_state = 0.0f;
 }
