@@ -62,7 +62,7 @@ class ThermalDevice
     static constexpr float MIN_DUTY_CYCLE = 2.0f;
     static constexpr float MAX_DUTY_CYCLE = 100.0f;
     static constexpr float PI_KP = 10.0f;
-    static constexpr float PI_KI = 0.001f;
+    static constexpr float PI_KI = 0.1f;
 public:
     static constexpr float UPDATE_INTERVAL_MS = 100.0f;
 

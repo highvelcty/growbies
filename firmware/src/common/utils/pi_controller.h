@@ -2,7 +2,7 @@
 
 class PIController
 {
-    static constexpr float INTEGRAL_ACCUMULATE_RANGE_GRAMS = 3.0f;
+    static constexpr float INTEGRAL_ACCUMULATE_RANGE_GRAMS = 5.0f;
 public:
     PIController(
         float kp,
