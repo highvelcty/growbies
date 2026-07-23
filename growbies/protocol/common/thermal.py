@@ -101,8 +101,8 @@ class ThermalDeviceSense(BaseStructure):
         TEMPERATURE = '_temperature'
         DUTY_CYCLE = '_duty_cycle'
         SET_POINT = '_set_point'
-        CONTROLLER_PROPORTIONAL_TERM = '_controller_proportional_term'
-        CONTROLLER_INTEGRAL_TERM = '_controller_integral_term'
+        PROPORTIONAL_DUTY_CYCLE = '_proportional_duty_cycle'
+        INTEGRAL_DUTY_CYCLE = '_integral_duty_cycle'
 
     _fields_ = [
         (Field.HEATER_ON, ctypes.c_bool),
@@ -110,8 +110,8 @@ class ThermalDeviceSense(BaseStructure):
         (Field.FAN_ON, ctypes.c_bool),
         (Field.ERROR, ctypes.c_uint32),
         (Field.TEMPERATURE, ctypes.c_float),
-        (Field.CONTROLLER_PROPORTIONAL_TERM, ctypes.c_float),
-        (Field.CONTROLLER_INTEGRAL_TERM, ctypes.c_float)
+        (Field.PROPORTIONAL_DUTY_CYCLE, ctypes.c_float),
+        (Field.INTEGRAL_DUTY_CYCLE, ctypes.c_float)
     ]
 
     @property
@@ -151,20 +151,12 @@ class ThermalDeviceSense(BaseStructure):
         setattr(self, self.Field.TEMPERATURE, value)
 
     @property
-    def controller_proportional_term(self) -> float:
-        return getattr(self, self.Field.CONTROLLER_PROPORTIONAL_TERM)
-
-    @controller_proportional_term.setter
-    def controller_proportional_term(self, value: float):
-        setattr(self, self.Field.CONTROLLER_PROPORTIONAL_TERM, value)
+    def proportional_duty_cycle(self) -> float:
+        return getattr(self, self.Field.PROPORTIONAL_DUTY_CYCLE)
 
     @property
-    def controller_integral_term(self) -> float:
-        return getattr(self, self.Field.CONTROLLER_INTEGRAL_TERM)
-
-    @controller_integral_term.setter
-    def controller_integral_term(self, value: float):
-        setattr(self, self.Field.CONTROLLER_INTEGRAL_TERM, value)
+    def integral_duty_cycle(self) -> float:
+        return getattr(self, self.Field.INTEGRAL_DUTY_CYCLE)
 
     def __str__(self):
         table = PrettyTable(title="Thermal Device Sense")
@@ -190,13 +182,13 @@ class ThermalDeviceSense(BaseStructure):
         ])
 
         table.add_row([
-            self.Field.CONTROLLER_PROPORTIONAL_TERM.public_name,
-            f"{self.controller_proportional_term:.2f}"
+            self.Field.PROPORTIONAL_DUTY_CYCLE.public_name,
+            f"{self.proportional_duty_cycle:.2f} %"
         ])
 
         table.add_row([
-            self.Field.CONTROLLER_INTEGRAL_TERM.public_name,
-            f"{self.controller_integral_term:.2f}"
+            self.Field.INTEGRAL_DUTY_CYCLE.public_name,
+            f"{self.integral_duty_cycle:.2f} %"
         ])
 
         table.add_row([

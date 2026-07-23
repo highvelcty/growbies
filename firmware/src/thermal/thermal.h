@@ -41,8 +41,8 @@ struct ThermalDeviceSense {
     uint8_t reserved[2];
     ThermalDeviceErrorCode error = ThermalDeviceErrorCode::ERROR_NONE;
     float temperature = NAN;
-    float controller_proportional_term = 0.0f;
-    float controller_integral_term = 0.0f;
+    float proportional_duty_cycle = 0.0f;
+    float integral_duty_cycle = 0.0f;
 };
 static_assert(sizeof(ThermalDeviceSense) == 20, "incorrect structure size");
 

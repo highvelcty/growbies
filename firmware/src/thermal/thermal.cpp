@@ -102,13 +102,14 @@ void ThermalDevice::update() {
             delta_ms = now_ms - _last_update_ms;
         }
 
-        _state.control.duty_cycle = _pi_controller.update(
+        _pi_controller.update(
             _state.control.set_point,
             _state.sense.temperature,
             delta_ms
         );
-        _state.sense.controller_proportional_term = _pi_controller.get_proportional_state();
-        _state.sense.controller_integral_term = _pi_controller.get_integral_state();
+        _state.control.duty_cycle = _pi_controller.get_duty_cycle();
+        _state.sense.proportional_duty_cycle = _pi_controller.get_proportional_duty_cycle();
+        _state.sense.integral_duty_cycle = _pi_controller.get_integral_duty_cycle();
 
         _last_update_ms = now_ms;
     }

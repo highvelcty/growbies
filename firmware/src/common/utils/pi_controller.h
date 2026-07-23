@@ -10,14 +10,15 @@ public:
         float output_min = 0.0f,
         float output_max = 100.0f
     );
-    float update(
+    void update(
         float set_point,
         float measurement,
         unsigned long dt_milliseconds
     );
 
-    float get_integral_state() const;
-    float get_proportional_state() const;
+    float get_duty_cycle() const;
+    float get_integral_duty_cycle() const;
+    float get_proportional_duty_cycle() const;
     void reset();
 
 private:
@@ -27,7 +28,8 @@ private:
     float _output_min;
     float _output_max;
 
+    float _duty_cycle = 0.0f;
     float _integral_state = 0.0f;
-    float _proportional_state = 0.0f;
+    float _proportional_duty_cycle = 0.0f;
 };
 

@@ -1,7 +1,6 @@
 #include <cassert>
 #include "pi_controller.h"
 
-
 PIController::PIController(
     const float kp,
     const float ki,
@@ -20,18 +19,18 @@ PIController::PIController(
 }
 
 
-float PIController::update(
+void PIController::update(
     const float set_point,
     const float measurement,
     const unsigned long dt_milliseconds)
 {
-    const float dt_seconds = dt_milliseconds / 1000.0f;
+    const float dt_seconds = dt_milliseconds / 1000.0f; // NOLINT(*-narrowing-conversions)
 
     // Current error
     const float error = set_point - measurement;
 
     // Proportional term
-    _proportional_state = _kp * error;
+    _proportional_duty_cycle = _kp * error;
 
     // Integral term - only accumulate if less than the specified range in grams. This prevents
     // too much accumulation when very below the setpoint. i.e. only accumulate into the integral
@@ -41,7 +40,7 @@ float PIController::update(
         _integral_state += error * dt_seconds;
     }
 
-    float output = _proportional_state + (_ki * _integral_state);
+    _duty_cycle = _proportional_duty_cycle + (_ki * _integral_state);
 
     // Anti-windup.
     // If output saturates, prevent integral from continuing to grow without bound.
@@ -50,28 +49,32 @@ float PIController::update(
     //
     // output = proportional + integral
     /// integral = output - proportional
-    if (output > _output_max) {
-        output = _output_max;
-        _integral_state = (_output_max - _proportional_state) / _ki;
+    if (_duty_cycle > _output_max) {
+        _duty_cycle = _output_max;
+        _integral_state = (_output_max - _proportional_duty_cycle) / _ki;
     }
-    else if (output < _output_min) {
-        output = _output_min;
-        _integral_state = (_output_min - _proportional_state) / _ki;
+    else if (_duty_cycle < _output_min) {
+        _duty_cycle = _output_min;
+        _integral_state = (_output_min - _proportional_duty_cycle) / _ki;
     }
+ }
 
-    return output;
+float PIController::get_duty_cycle() const {
+    return _duty_cycle;
 }
 
-
-float PIController::get_integral_state() const {
-    return _integral_state;
+float PIController::get_integral_duty_cycle() const {
+    return _integral_state * _ki;
 }
 
-float PIController::get_proportional_state() const {
-    return _proportional_state;
+float PIController::get_proportional_duty_cycle() const {
+    return _proportional_duty_cycle;
 }
 
 void PIController::reset()
 {
+    _duty_cycle = 0.0f;
     _integral_state = 0.0f;
+    _proportional_duty_cycle = 0.0f;
 }
+
