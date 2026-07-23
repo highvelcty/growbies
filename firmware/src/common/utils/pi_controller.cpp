@@ -33,8 +33,13 @@ float PIController::update(
     // Proportional term
     _proportional_state = _kp * error;
 
-    // Integral term
-    _integral_state += error * dt_seconds;
+    // Integral term - only accumulate if less than the specified range in grams. This prevents
+    // too much accumulation when very below the setpoint. i.e. only accumulate into the integral
+    // state if within a small number of degrees (positive) of the setpoint and everything above
+    // the setpoint (negative).
+    if (error < INTEGRAL_ACCUMULATE_RANGE_GRAMS) {
+        _integral_state += error * dt_seconds;
+    }
 
     float output = _proportional_state + (_ki * _integral_state);
 
