@@ -620,15 +620,15 @@ def _plot_temp_cal(session: "Session", datapoints: DataPoints, sensor_idx: Optio
         f"  RMSE={rmse_raw:.3f} g | 1σ={s1r:.3f} | 2σ={s2r:.3f} | 3σ={s3r:.3f}\n\n"
 
         "Linear:\n"
-        f"  Mass = {b0:.3f} + {b1:.3f}·ΔT\n"
+        f"  Mass = {b0:.6f} + {b1:.6f}·ΔT\n"
         f"  RMSE={rmse_l:.3f} g | 1σ={s1l:.3f} | 2σ={s2l:.3f} | 3σ={s3l:.3f}\n\n"
 
         "Quadratic:\n"
-        f"  Mass = {a0:.3f} + {a1:.3f}·ΔT + {a2:.6f}·ΔT²\n"
+        f"  Mass = {a0:.6f} + {a1:.6f}·ΔT + {a2:.6f}·ΔT²\n"
         f"  RMSE={rmse_q:.3f} g | 1σ={s1q:.3f} | 2σ={s2q:.3f} | 3σ={s3q:.3f}\n\n"
 
         "Cubic:\n"
-        f"  Mass = {c0:.3f} + {c1:.3f}·ΔT + {c2:.6f}·ΔT² + {c3:.6f}·ΔT³\n"
+        f"  Mass = {c0:.6f} + {c1:.6f}·ΔT + {c2:.6f}·ΔT² + {c3:.6f}·ΔT³\n"
         f"  RMSE={rmse_c:.3f} g | 1σ={s1c:.3f} | 2σ={s2c:.3f} | 3σ={s3c:.3f}"
     )
 
