@@ -68,12 +68,12 @@ void scale::RemoteTask::run() {
     }
 }
 
-void scale::SerialPortOutTask::run() {
+void scale::TelemetryTask::run() {
     if (battery.is_charging()) {
         common::TelemetryTask::run();
     }
 }
 
-uint32_t scale::SerialPortOutTask::interval_ms() const {
+uint32_t scale::TelemetryTask::interval_ms() const {
     return identify_store->payload()->telemetry_interval_ms();
 }

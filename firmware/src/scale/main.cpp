@@ -27,7 +27,7 @@ void loop() {
         new scale::AutoWakeTask(),         // Execution timing dependent upon NVM config and logic
         new scale::PowerTransitionTask(),  // Executed each loop
         new common::SerialPortInTask(10),   // Every 10ms
-        new scale::SerialPortOutTask(),    // Execution timing dependent upon NVM config
+        new scale::TelemetryTask(),    // Execution timing dependent upon NVM config
         new scale::RemoteTask(50),        // Every 50ms
     };
 
