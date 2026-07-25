@@ -53,7 +53,7 @@ class SetIdentification:
             identify.TemperatureUnitsType.FAHRENHEIT,
         identify.Identify.Field.CONTRAST.public_name: 128,
         identify.Identify.Field.TELEMETRY_INTERVAL.public_name: 0.0,
-        identify.Identify.Field.SLEEP_TIMEOUT.public_name: 60.0,
+        identify.Identify.Field.SLEEP_TIMEOUT.public_name: 90.0,
         identify.Identify.Field.AUTO_WAKE_INTERVAL.public_name: 0.5
     }
 
