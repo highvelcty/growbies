@@ -27,7 +27,7 @@ constexpr float STEINHART_HART_B = 1.811901925E-4f;
 constexpr float STEINHART_HART_C = 1.731869483E-7f;
 #elif THERMISTOR_HW == 1
 // Eaton NRNE105H4100B1H
-constexpr bool THERMISTOR_ON_TOP = true;
+constexpr bool THERMISTOR_ON_TOP_OF_DIVIDER = true;
 constexpr float THERMISTOR_DIVIDER_RESISTOR = 15000.0f;
 constexpr float THERMISTOR_SUPPLY_VOLTAGE = 3.3f;
 constexpr float STEINHART_HART_A = 1.003702421E-3f;
