@@ -50,16 +50,11 @@ class Thermistor {
 public:
 
     explicit Thermistor(
-        const uint8_t analog_pin,
-        const uint8_t power_pin = NO_PIN)
-        : analog_pin_(analog_pin),
-          power_pin_(power_pin) {}
+        const uint8_t analog_pin)
+        : analog_pin_(analog_pin) {}
 
     // Initialize ADC pin
     void begin() const;
-
-    void power_off() const;
-    void power_on() const;
 
     // Measure temperature in °C (default Steinhart-Hart)
     float sample() const;
@@ -69,7 +64,6 @@ private:
     float read_voltage() const;
 
     uint8_t analog_pin_;
-    uint8_t power_pin_;
 };
 
 // Multiple thermistors, analogous to MultiHX711

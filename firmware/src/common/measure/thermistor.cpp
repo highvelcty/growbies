@@ -1,26 +1,11 @@
 #include "build_cfg.h"
 #include "constants.h"
+#include "flags.h"
 #include "thermistor.h"
 
 // --- Thermistor ------------------------
 void Thermistor::begin() const {
     pinMode(analog_pin_, INPUT);
-
-    if (power_pin_ != NO_PIN) {
-        pinMode(power_pin_, OUTPUT);
-    }
-}
-
-void Thermistor::power_off() const {
-    if (power_pin_ != NO_PIN) {
-        digitalWrite(power_pin_, LOW);
-    }
-}
-
-void Thermistor::power_on() const {
-    if (power_pin_ != NO_PIN) {
-        digitalWrite(power_pin_, HIGH);
-    }
 }
 
 float Thermistor::read_voltage() const {
@@ -61,8 +46,11 @@ float Thermistor::sample() const {
 
 // --- MultiThermistor -------------------
 void MultiThermistor::begin() {
+    pinMode(power_pin_, OUTPUT);
+    digitalWrite(power_pin_, HIGH);
+
     for (auto ii = 0; ii < TEMPERATURE_SENSOR_COUNT; ++ii) {
-        add_device(new Thermistor(get_temperature_pin(ii), power_pin_));
+        add_device(new Thermistor(get_temperature_pin(ii)));
     }
 
     for (const auto* device : devices_) {
@@ -78,17 +66,13 @@ void MultiThermistor::begin() {
 
 void MultiThermistor::power_off() const {
 #if POWER_CONTROL
-    for (const auto* device : devices_) {
-        device->power_off();
-    }
+    digitalWrite(power_pin_, LOW);
 #endif
 }
 
 void MultiThermistor::power_on() const {
 #if POWER_CONTROL
-    for (const auto* device : devices_) {
-        device->power_on();
-    }
+    digitalWrite(power_pin_, HIGH);
 #endif
 }
 
