@@ -2,12 +2,23 @@ Source: growbies
 Section: utils
 Priority: optional
 Maintainer: Eric Meyer <ericallenmeyer@gmail.com>
-Build-Depends: debhelper (>=13), debhelper-compat (=13), python3.11, python3.11-venv
+Build-Depends:
+    debhelper (>=13),
+    debhelper-compat (=13),
+    python3 (>= 3.11),
+    python3-venv,
 Standards-Version: 4.0.0
 Homepage: https://growbies.net
 
 Package: growbies
 Architecture: all
-Depends: postgresql, python3-pip, python3.11, python3.11-venv, systemd, udev, vim
+Depends:
+    postgresql,
+    python3 (>= 3.11),
+    python3-venv,
+    python3-pip,
+    systemd,
+    udev,
+    vim
 Description:Communication gateway for the growbies platform.
  This package is installed as a systemd service.

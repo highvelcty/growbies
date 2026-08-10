@@ -18,8 +18,13 @@ if ! id -u "${PATH_APPNAME}" >/dev/null 2>&1; then
   # Add a system user/group that the application will be ran as
   useradd "${PATH_APPNAME}" --system --no-create-home --shell /bin/bash
 fi
-# Add the newly created user to the dialout group for serial port access
-usermod -aG dialout "${PATH_APPNAME}"
+# Add the newly created user to the groups commonly used for serial port access
+for group in dialout plugdev; do
+    if getent group "${group}" >/dev/null; then
+        usermod -aG "${group}" "${PATH_APPNAME}"
+    fi
+done
+
 # Make application user` the owner of the pertinent application paths
 chown -R "${PATH_APPNAME}":"${PATH_APPNAME}" \
   "${PATH_USR_LIB_GROWBIES}" "${PATH_VAR_LIB_GROWBIES}" "${PATH_VAR_LOG_GROWBIES}" \

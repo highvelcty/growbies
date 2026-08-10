@@ -37,30 +37,25 @@ Other Setup
 Installing [platformio udev rules](https://docs.platformio.org/en/latest/core/installation/udev-rules.html) 
 made the /dev/tty* devices accessible from within a rootless podman container.
 
-To allow non-root access to the serial port, add the user to the `dialout` group. Be sure to 
-logout/login for the changes to take effect.
-
-Arduino Setup
-=============
-- Install [arduino-cli](https://arduino.github.io/arduino-cli/1.1/installation/)
-- Install arduino uno board platform `./arduino-cli core install arduino:avr`
+Debian Installation
+===================
+- `sudo apt install ./growbies*.deb`
+- Add User to `growbies` group. A `growbies` group is created at package installation time. This 
+  group can access the `growbies` systemd service. Add your user to this group to gain access to 
+  the client:
+  - `sudo usermod -aG growbies <username>`
+  - Logout and back in.
 
 Arg Complete Setup (Optional)
 =============================
 Growbies supports CLI tab completion via the pip package `argcomplete`. To install and configure:
 
-- `sudo pip install argcomplete`
+- install `argcomplete` via one of the following methods
+  - `sudo pip install argcomplete`
+  - `sudo apt install python3-argcomplete`
 - `sudo activate-global-python-argcomplete`
 - `echo 'eval "$(register-python-argcomplete growbies)"' >> ~/.bashrc`
 - `source ~/.bashrc`
-
-Add User to growbies group
-==========================
-A `growbies` group is created at package installation time. This group can access the `growbies` 
-systemd service. Add your user to this group to gain access to the client:
-
-- `sudo usermod -aG growbies <username>`
-- Logout and back in.
 
 Notes
 =====

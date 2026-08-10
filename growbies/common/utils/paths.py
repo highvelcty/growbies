@@ -112,7 +112,7 @@ class DebianPaths(Enum):
     DEBIAN_SRC_BUILD_LIB_SET_VERSION_PY = DEBIAN_SRC_BUILD_LIB / 'set_version.py'
 
     # command
-    DEBIAN_BASE_PYTHON = 'python3.11'
+    DEBIAN_BASE_PYTHON = 'python3'
 
 # noinspection PyUnresolvedReferences
 class FirmwarePaths(Enum):
