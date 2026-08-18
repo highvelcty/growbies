@@ -91,7 +91,7 @@ public:
 private:
     unsigned long _last_update_ms = 0;
     ThermalDeviceState _state;
-    MultiThermistor _multi_thermistor{SWITCHED_PWR_PIN};
+    MultiThermistor _multi_thermistor{};
     AggregateTemperature* _aggregate_temp = nullptr;
     PulseDensityModulator _pulse_density_modulator;
     PIController _pi_controller{PI_KP, PI_KI, MIN_DUTY_CYCLE, MAX_DUTY_CYCLE};

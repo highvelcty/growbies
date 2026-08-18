@@ -1,7 +1,6 @@
-#include "build_cfg.h"
-#include "constants.h"
-#include "flags.h"
 #include "thermistor.h"
+#include "build_cfg.h"
+#include "flags.h"
 
 // --- Thermistor ------------------------
 void Thermistor::begin() const {
@@ -46,8 +45,9 @@ float Thermistor::sample() const {
 
 // --- MultiThermistor -------------------
 void MultiThermistor::begin() {
-    pinMode(power_pin_, OUTPUT);
-    digitalWrite(power_pin_, HIGH);
+    if (SWITCHED_PWR_PIN != NO_PIN) {
+        pinMode(SWITCHED_PWR_PIN, OUTPUT);
+    }
 
     for (auto ii = 0; ii < TEMPERATURE_SENSOR_COUNT; ++ii) {
         add_device(new Thermistor(get_temperature_pin(ii)));
@@ -64,16 +64,26 @@ void MultiThermistor::begin() {
 #endif
 }
 
-void MultiThermistor::power_off() const {
-#if POWER_CONTROL
-    digitalWrite(power_pin_, LOW);
-#endif
+void MultiThermistor::power_off() {
+    if (SWITCHED_PWR_PIN != NO_PIN) {
+        if (INVERTED_SWITCHED_PWR_PIN) {
+            digitalWrite(SWITCHED_PWR_PIN, HIGH);
+        }
+        else {
+            digitalWrite(SWITCHED_PWR_PIN, LOW);
+        }
+    }
 }
 
-void MultiThermistor::power_on() const {
-#if POWER_CONTROL
-    digitalWrite(power_pin_, HIGH);
-#endif
+void MultiThermistor::power_on(){
+    if (SWITCHED_PWR_PIN != NO_PIN) {
+        if (INVERTED_SWITCHED_PWR_PIN) {
+            digitalWrite(SWITCHED_PWR_PIN, LOW);
+        }
+        else {
+            digitalWrite(SWITCHED_PWR_PIN, HIGH);
+        }
+    }
 }
 
 std::vector<float> MultiThermistor::sample() const {

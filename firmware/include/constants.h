@@ -23,6 +23,7 @@ constexpr int ADC_RESOLUTION = 4096;
 
 static constexpr uint8_t NO_PIN = UINT8_MAX;
 #if PIN_CFG == 1
+// circle-1
 enum Pins : int {
     THERMISTOR_PIN_0 = A0,
     THERMISTOR_PIN_1 = A1,
@@ -37,8 +38,10 @@ enum Pins : int {
     DOUT_2_PIN = D8,
     DOUT_1_PIN = D9,
     DOUT_0_PIN = D10,
+    INVERTED_SWITCHED_PWR_PIN = false,
 };
 #elif PIN_CFG == 2
+// circle-2
 enum Pins : int {
     THERMISTOR_PIN_0 = A0,
     THERMISTOR_PIN_1 = A1,
@@ -53,15 +56,35 @@ enum Pins : int {
     DOUT_2_PIN = D7,
     DOUT_1_PIN = D8,
     DOUT_0_PIN = D9,
+    INVERTED_SWITCHED_PWR_PIN = false,
 };
 #elif PIN_CFG == 3
+// thermal-device-1
 enum Pins : int {
     HEATER_ACTIVE = D6,
     FAN_ACTIVE = D5,
     ACTIVATE_BUTTON = D4,
     GROUNDED_PIN = D3,
     THERMISTOR_PIN_0 = A2,
-    SWITCHED_PWR_PIN = NO_PIN
+    SWITCHED_PWR_PIN = NO_PIN,
+    INVERTED_SWITCHED_PWR_PIN = false,
+};
+#elif PIN_CFG == 4
+enum Pins : int {
+    THERMISTOR_PIN_0 = A0,
+    THERMISTOR_PIN_1 = A1,
+    THERMISTOR_PIN_2 = A2,
+    BATTERY_SENSE_PIN = A3,
+    BUTTON_0_PIN = D1,
+    BUTTON_1_PIN = D2,
+    HW_I2C_SDA_PIN = D4,
+    HW_I2C_SCL_PIN = D5,
+    SWITCHED_PWR_PIN = D6,
+    HX711_SCK_PIN = D10,
+    DOUT_2_PIN = D7,
+    DOUT_1_PIN = D8,
+    DOUT_0_PIN = D9,
+    INVERTED_SWITCHED_PWR_PIN = true,
 };
 #else
 static_assert(always_false<int>::value, "Invalid PIN_CFG value");

@@ -21,7 +21,6 @@ void HX711::power_on() {
 void MultiHX711::begin() {
     pinMode(HX711_SCK_PIN, OUTPUT);
     gpio_hold_dis(static_cast<gpio_num_t>(HX711_SCK_PIN));
-    power_off();
 
     for (size_t ii = 0; ii < MASS_SENSOR_COUNT; ++ii) {
         add_device(new HX711(get_HX711_dout_pin(ii)));
@@ -42,9 +41,9 @@ void MultiHX711::begin() {
     }
 
 #if POWER_CONTROL
-    HX711::power_off();
+    power_off();
 #else
-    HX711::power_on();
+    power_on();
 #endif
 }
 
@@ -53,17 +52,13 @@ void MultiHX711::add_device(HX711* hx) {
 }
 
 void MultiHX711::power_off(){
-#if POWER_CONTROL
     HX711::power_off();
     delayMicroseconds(HX711_POWER_DELAY_US);
-#endif
 }
 
 void MultiHX711::power_on(){
-#if POWER_CONTROL
     HX711::power_on();
     delayMicroseconds(HX711_POWER_DELAY_US);
-#endif
 }
 
 std::vector<float> MultiHX711::sample() const{

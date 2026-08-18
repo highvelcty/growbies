@@ -1,5 +1,6 @@
 #include "Arduino.h"
 #include "thermal.h"
+#include "build_cfg.h"
 
 ThermalDevice& ThermalDevice::get()
 {

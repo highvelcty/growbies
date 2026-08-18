@@ -33,45 +33,45 @@ _upload-all: _build
 # ============================================================================
 # Scale products
 # ============================================================================
-
 circle-1: ENV=scale
 circle-1: MODEL=circle-1
 circle-1: _build
-
 upload-circle-1: ENV=scale
 upload-circle-1: MODEL=circle-1
 upload-circle-1: _upload
-
 upload-all-circle-1: ENV=scale
 upload-all-circle-1: MODEL=circle-1
 upload-all-circle-1: _upload-all
 
-
 circle-2: ENV=scale
 circle-2: MODEL=circle-2
 circle-2: _build
-
 upload-circle-2: ENV=scale
 upload-circle-2: MODEL=circle-2
 upload-circle-2: _upload
-
 upload-all-circle-2: ENV=scale
 upload-all-circle-2: MODEL=circle-2
 upload-all-circle-2: _upload-all
 
+circle-3: ENV=scale
+circle-3: MODEL=circle-3
+circle-3: _build
+upload-circle-3: ENV=scale
+upload-circle-3: MODEL=circle-3
+upload-circle-3: _upload
+upload-all-circle-3: ENV=scale
+upload-all-circle-3: MODEL=circle-3
+upload-all-circle-3: _upload-all
 
 # ============================================================================
 # Thermal device products
 # ============================================================================
-
 thermal-device-1: ENV=thermal
 thermal-device-1: MODEL=thermal-device-1
 thermal-device-1: _build
-
 upload-thermal-device-1: ENV=thermal
 upload-thermal-device-1: MODEL=thermal-device-1
 upload-thermal-device-1: _upload
-
 upload-all-thermal-device-1: ENV=thermal
 upload-all-thermal-device-1: MODEL=thermal-device-1
 upload-all-thermal-device-1: _upload-all

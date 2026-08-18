@@ -87,6 +87,10 @@ class Circle1(CircleEsp32c3):
 
 # noinspection PyPep8Naming
 class Circle2(Circle1):
+    """
+    This is the hand soldered main board using the GPIO as the switching power supply for the
+    measurement stack.
+    """
     MODEL_NUMBER = 'circle-2'
 
     class Key(CircleEsp32c3.Key):
@@ -94,6 +98,22 @@ class Circle2(Circle1):
         def value(cls, key: 'Default.Key.type_'):
             if key == cls.PIN_CFG:
                 return 2
+            else:
+                return super().value(key)
+
+class Circle3(Circle2):
+    """
+    This is the first manufactured circuit board. It uses a PMOS to switch the 3.3v rail for the
+    switching power supply for the measurement stack. It differs from circle-2 in only that the
+    logic is inverted to switch the supply to the stack.
+    """
+    MODEL_NUMBER = 'circle-3'
+
+    class Key(CircleEsp32c3.Key):
+        @classmethod
+        def value(cls, key: 'Default.Key.type_'):
+            if key == cls.PIN_CFG:
+                return 4
             else:
                 return super().value(key)
 

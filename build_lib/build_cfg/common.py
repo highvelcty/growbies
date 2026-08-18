@@ -73,6 +73,8 @@ def dispatch(cmd: Cmd):
             firmware.Circle1().save()
         elif model_number == firmware.Circle2.MODEL_NUMBER:
             firmware.Circle2().save()
+        elif model_number == firmware.Circle3.MODEL_NUMBER:
+            firmware.Circle3().save()
         elif model_number == firmware.CircleEsp32c3.MODEL_NUMBER:
             firmware.CircleEsp32c3().save()
         elif model_number == firmware.ThermalDevice1.MODEL_NUMBER:

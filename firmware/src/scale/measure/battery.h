@@ -19,7 +19,7 @@ public:
 
     // Get the measured battery voltage
     float voltage() {
-#if BATTERY_LEVEL_INDICATOR
+#if !BATTERY_LEVEL_INDICATOR
         return 0.0;
 #endif
         initialize();

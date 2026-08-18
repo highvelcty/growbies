@@ -1,9 +1,8 @@
 #pragma once
 
 #include <vector>
-
-#include "build_cfg.h"
 #include "constants.h"
+#include "build_cfg.h"
 
 // Select thermistor hardware version
 #define THERMISTOR_HW_0 false
@@ -69,10 +68,6 @@ private:
 // Multiple thermistors, analogous to MultiHX711
 class MultiThermistor {
 public:
-    explicit MultiThermistor(uint8_t power_pin = NO_PIN)
-        : power_pin_(power_pin) {}
-
-
     // Initialize all thermistors
     void begin();
 
@@ -81,13 +76,12 @@ public:
         if (therm) devices_.push_back(therm);
     }
 
-    void power_off() const;
-    void power_on() const;
+    static void power_off();
+    static void power_on();
 
     // Sample all thermistors (Steinhart–Hart method)
     std::vector<float> sample() const;
 
 private:
-    uint8_t power_pin_;
     std::vector<Thermistor*> devices_;
 };

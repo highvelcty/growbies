@@ -8,9 +8,6 @@
 #include "types.h"
 #include "common/utils/crc.h"
 
-
-
-
 #pragma pack(1)
 
 constexpr int DEFAULT_CONTRAST = 128;

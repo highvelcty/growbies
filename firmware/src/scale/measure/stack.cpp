@@ -1,4 +1,5 @@
 #include "build_cfg.h"
+#include "flags.h"
 #include "stack.h"
 #include "scale/remote/remote_in.h"
 
@@ -19,8 +20,9 @@ void MeasurementStack::update() const {
     aggregate_temp_->reset_channels();
     aggregate_mass_->reset_channels();
 
-    multi_thermistor_.power_on();
-    HX711::power_on();
+#if POWER_CONTROL
+     power_on();
+#endif
 
     for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
         const bool ready = multi_hx711_.wait_ready();
@@ -43,8 +45,9 @@ void MeasurementStack::update() const {
     // 2026_06_02 meyere: analogReadMillivolts has the side effect of disconnecting
     // interrupts.
     RemoteIn::attach_interrupts();
-    HX711::power_off();
-    multi_thermistor_.power_off();
+#if POWER_CONTROL
+    power_off();
+#endif
 
     // Temperature before mass because mass is a function of temperature.
     aggregate_temp_->update();
