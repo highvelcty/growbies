@@ -5,12 +5,15 @@ import shlex
 import sys
 
 def main():
-    fuzzy_id = 'cbd'
+    fuzzy_id = 'b660'
 
+    overwrite_not_update = True
+
+    # Insert `None` or omit to keep existing.
     new_sensor_coeffs = {
-        0: (0, 0, 0, -1.400507, -.086108, .004060),
-        1: (0, 0, 0, -5.895725, -.253712, .013434),
-        2: (0, 0, 0, -.148693, -.227047, .009921),
+        0: (-250.926, .004684),
+        1: (-1996.064, -.004610),
+        2: (2968.269, -.004850),
     }
 
     proc = run(f"growbies nvm cal {fuzzy_id}")
@@ -25,7 +28,13 @@ def main():
     }
     for sensor_idx, new_coeffs in new_sensor_coeffs.items():
         for coeff_idx, new_coeff in enumerate(new_coeffs):
-            updated_coeffs[sensor_idx].append(existing_coeffs[sensor_idx][coeff_idx] + new_coeff)
+            if new_coeff is None:
+                updated_coeffs[sensor_idx].append(existing_coeffs[sensor_idx][coeff_idx])
+            else:
+                if overwrite_not_update:
+                    updated_coeffs[sensor_idx].append(new_coeff)
+                else:
+                    updated_coeffs[sensor_idx].append(existing_coeffs[sensor_idx][coeff_idx] + new_coeff)
 
     for sensor_idx, coeffs in updated_coeffs.items():
         cmd = (
