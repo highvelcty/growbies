@@ -1,16 +1,24 @@
 from argparse import Namespace
 import time
 
-from .cli import Action, SampleAction, MassSampleParam, TempSSampleParam
+from .cli import (
+    Action,
+    SampleAction,
+    MassSampleParam,
+    TempSampleParam,
+)
 from growbies.app.common.run_cmd import run_cmd
 from growbies.session import log
 from growbies.common.utils import timestamp
 
+
 logger = log.get_logger(__name__)
+
 
 def _sample(count: int, forward_args: str, check):
     cmd = f'growbies read {forward_args}'
     run_cmd(f'{cmd} --reset', check=check)
+
     for ii in range(count - 1):
         run_cmd(cmd, check=check)
 
@@ -19,30 +27,50 @@ def sample_for_mass_cal(args: Namespace, forward_args: str):
     count = getattr(args, MassSampleParam.COUNT)
     _sample(count, forward_args, check=True)
 
+
 def sample_for_thermal_cal(args: Namespace, forward_args: str):
     count = getattr(args, MassSampleParam.COUNT)
-    interval = getattr(args, TempSSampleParam.INTERVAL)
+    interval = getattr(args, TempSampleParam.INTERVAL)
+    duration = getattr(args, TempSampleParam.DURATION)
+
     if '--ref-mass' not in forward_args:
         forward_args = f'{forward_args} --ref-mass 0'
+
     if '--sensor-ref-mass' not in forward_args:
         forward_args = f'{forward_args} --sensor-ref-mass 0 0 0'
+
     try:
         samples = 0
         iterations = 0
         startt = time.time()
-        while True:
+
+        while time.time() - startt < duration:
             _sample(count, forward_args, check=False)
+
             samples += count
             iterations += 1
-            logger.log(log.STDOUT_LEVEL,
-                       f'\nElapsed: {timestamp.get_elapsed_str(int(time.time()-startt))}\n'
-                       f'Iterations: {iterations}\n'
-                       f'Samples: {samples}\n'
-                       f'Interval: {interval}\n'
-                       f'Count / Interval: {count}')
-            time.sleep(interval)
+
+            elapsed = int(time.time() - startt)
+
+            logger.log(
+                log.STDOUT_LEVEL,
+                f'\nElapsed: '
+                f'{timestamp.get_elapsed_str(elapsed)} / '
+                f'{timestamp.get_elapsed_str(int(duration))}\n'
+                f'Iterations: {iterations}\n'
+                f'Samples: {samples}\n'
+                f'Interval: {interval}\n'
+                f'Count / Interval: {count}',
+            )
+
+            remaining = duration - (time.time() - startt)
+
+            if remaining > 0:
+                time.sleep(min(interval, remaining))
+
     except KeyboardInterrupt:
         pass
+
 
 def execute(args: Namespace, forward_args: list[str]):
     sample_type = getattr(args, Action.SAMPLE)

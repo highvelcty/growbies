@@ -1,11 +1,14 @@
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 from enum import StrEnum
+
 from growbies.cli.common import BaseParam, Param
 
 
 DEFAULT_MASS_CAL_SAMPLES = 25
-DEFAULT_TEMP_CAL_SAMPLES = 3
+DEFAULT_TEMP_CAL_SAMPLES = 6
 DEFAULT_TEMP_CAL_INTERVAL_SEC = 10.0
+DEFAULT_TEMP_CAL_DURATION_SEC = 15 * 60
+
 
 class Action(StrEnum):
     PLOT = 'plot'
@@ -24,10 +27,10 @@ class Action(StrEnum):
     def help(self) -> str:
         return self.description
 
+
 class PlotAction(StrEnum):
     MASS = "mass"
     TEMP = "temp"
-
 
     @property
     def description(self) -> str:
@@ -39,6 +42,7 @@ class PlotAction(StrEnum):
     @property
     def help(self) -> str:
         return self.description
+
 
 class SampleAction(StrEnum):
     MASS = "mass"
@@ -55,11 +59,15 @@ class SampleAction(StrEnum):
     def help(self) -> str:
         return self.description
 
+
 class MassSampleParam(BaseParam):
     COUNT = 'count'
 
-class TempSSampleParam(BaseParam):
+
+class TempSampleParam(BaseParam):
     INTERVAL = 'interval'
+    DURATION = 'duration'
+
 
 def make_cli() -> ArgumentParser:
     parser = ArgumentParser(
@@ -122,21 +130,41 @@ def make_cli() -> ArgumentParser:
                 f'--{MassSampleParam.COUNT.kw_cli_name}',
                 type=int,
                 default=DEFAULT_MASS_CAL_SAMPLES,
-                help=f'Number of samples to collect (default: {DEFAULT_MASS_CAL_SAMPLES}).',
+                help=(
+                    f'Number of samples to collect '
+                    f'(default: {DEFAULT_MASS_CAL_SAMPLES}).'
+                ),
             )
+
         elif sample_action == SampleAction.TEMP:
             p.add_argument(
                 f'--{MassSampleParam.COUNT.kw_cli_name}',
                 type=int,
                 default=DEFAULT_TEMP_CAL_SAMPLES,
-                help=f'Number of samples to collect (default: {DEFAULT_TEMP_CAL_SAMPLES}).',
+                help=(
+                    f'Number of samples to collect '
+                    f'(default: {DEFAULT_TEMP_CAL_SAMPLES}).'
+                ),
             )
 
             p.add_argument(
-                f'--{TempSSampleParam.INTERVAL.kw_cli_name}',
+                f'--{TempSampleParam.INTERVAL.kw_cli_name}',
                 type=float,
                 default=DEFAULT_TEMP_CAL_INTERVAL_SEC,
-                help=f'Interval (default: {DEFAULT_TEMP_CAL_INTERVAL_SEC}).',
+                help=(
+                    f'Interval in seconds '
+                    f'(default: {DEFAULT_TEMP_CAL_INTERVAL_SEC}).'
+                ),
+            )
+
+            p.add_argument(
+                f'--{TempSampleParam.DURATION.kw_cli_name}',
+                type=float,
+                default=DEFAULT_TEMP_CAL_DURATION_SEC,
+                help=(
+                    f'Duration in seconds '
+                    f'(default: {DEFAULT_TEMP_CAL_DURATION_SEC}).'
+                ),
             )
 
     return parser
