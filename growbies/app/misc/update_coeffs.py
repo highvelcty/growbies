@@ -5,15 +5,15 @@ import shlex
 import sys
 
 def main():
-    fuzzy_id = 'b660'
+    fuzzy_id = 'f60'
 
     overwrite_not_update = True
 
     # Insert `None` or omit to keep existing.
     new_sensor_coeffs = {
-        0: (-250.926, .004684),
-        1: (-1996.064, -.004610),
-        2: (2968.269, -.004850),
+        0: (None, None, None, 1.615746, 1.214507, .018552),
+        1: (None, None, None, 17.480901, -2.923255, .057110),
+        2: (None, None, None, .0297104, -1.458580, .008890),
     }
 
     proc = run(f"growbies nvm cal {fuzzy_id}")
@@ -42,6 +42,7 @@ def main():
                 + " ".join(str(c) for c in coeffs)
         )
         run(cmd)
+    proc = run(f'growbies nvm cal {fuzzy_id}')
 
 def _parse_table(existing_table: str):
     sensor_coeffs = {}
