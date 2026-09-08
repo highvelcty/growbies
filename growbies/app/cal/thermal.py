@@ -35,7 +35,7 @@ SET_POINTS = [
 TEMPERATURE_TOLERANCE_C = 0.5
 
 # Time that the chamber must remain at temperature before sampling.
-DWELL_SECONDS = 30 * 60
+DWELL_SECONDS = 3 * 60
 
 # How often to check the chamber temperature while waiting.
 THERMAL_POLL_SECONDS = 10
@@ -109,7 +109,7 @@ def set_chamber_temperature(set_point):
             THERMAL_DEVICE,
             "--activate",
             "--mode",
-            "0: AUTO",
+            "0",
             "--set-point",
             str(set_point),
         ],
@@ -212,6 +212,8 @@ def sample():
     processes = []
 
     for device_id in DEVICES:
+        print_status(f"Sampling DUT {device_id}...")
+
         process = subprocess.Popen(
             [
                 sys.executable,
@@ -224,18 +226,30 @@ def sample():
             stdout=subprocess.DEVNULL,
         )
 
-        processes.append((device_id, process))
+        processes.append((device_id, process, time.monotonic()))
 
-    for device_id, process in processes:
+    for device_id, process, start in processes:
         return_code = process.wait()
+        elapsed = time.monotonic() - start
 
         if return_code != 0:
+            clear_status()
             print(
-                f"ERROR: temperature sample failed for device "
-                f"{device_id} (return code {return_code})",
+                f"ERROR: temperature sample failed for DUT {device_id} "
+                f"(return code {return_code}, {elapsed:.1f} seconds)",
                 file=sys.stderr,
             )
 
+    clear_status()
+
+    for device_id, process, start in processes:
+        elapsed = time.monotonic() - start
+        print_status(
+            f"DUT {device_id} sampled in {elapsed:.1f} seconds"
+        )
+        time.sleep(0.5)
+
+    clear_status()
 
 def main():
     if not DEVICES:
