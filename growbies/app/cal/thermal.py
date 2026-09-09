@@ -34,7 +34,7 @@ SET_POINTS = [
 TEMPERATURE_TOLERANCE_C = 0.5
 
 # Time that the chamber must remain at temperature before sampling.
-DWELL_SECONDS = 15
+DWELL_SECONDS = 60*30
 
 # How often to check the chamber temperature while waiting.
 THERMAL_POLL_SECONDS = 10
