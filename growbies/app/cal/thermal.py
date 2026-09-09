@@ -23,6 +23,8 @@ DEVICES = [
 # Temperature set points, in degrees Celsius.
 SET_POINTS = [
     30.0,
+    30.0,
+    30.0,
 ]
 
 # The measured chamber temperature must be within this many degrees of the
