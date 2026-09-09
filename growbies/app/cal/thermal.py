@@ -35,7 +35,7 @@ SET_POINTS = [
 TEMPERATURE_TOLERANCE_C = 0.5
 
 # Time that the chamber must remain at temperature before sampling.
-DWELL_SECONDS = 1 * 60
+DWELL_SECONDS = 15
 
 # How often to check the chamber temperature while waiting.
 THERMAL_POLL_SECONDS = 10
@@ -209,11 +209,11 @@ def dwell(set_point):
 def sample():
     """Sample all DUTs in parallel."""
 
+    import selectors
+
     processes = {}
 
-    print_status(
-        f"Sampling DUTs: {', '.join(DEVICES)}"
-    )
+    print(f"Sampling DUTs: {', '.join(DEVICES)}")
 
     for device_id in DEVICES:
         process = subprocess.Popen(
@@ -228,14 +228,64 @@ def sample():
             stdout=subprocess.DEVNULL,
             stderr=subprocess.PIPE,
             text=True,
+            bufsize=1,
         )
 
         processes[device_id] = (process, time.monotonic())
 
+    selector = selectors.DefaultSelector()
+
+    for device_id, (process, _) in processes.items():
+        selector.register(
+            process.stderr,
+            selectors.EVENT_READ,
+            device_id,
+        )
+
     remaining = set(processes)
     completed = []
 
+    def update_status():
+        parts = []
+
+        if remaining:
+            parts.append(
+                "Sampling: " + ", ".join(sorted(remaining))
+            )
+
+        if completed:
+            parts.append(
+                "Done: " + ", ".join(
+                    f"{device_id} ({elapsed:.1f}s)"
+                    for device_id, elapsed in completed
+                )
+            )
+
+        if parts:
+            print_status(" | ".join(parts))
+
     while remaining:
+        # Check for any stderr output from the sampling processes.
+        for key, _ in selector.select(timeout=0):
+            device_id = key.data
+            stream = key.fileobj
+
+            while True:
+                line = stream.readline()
+
+                if not line:
+                    break
+
+                clear_status()
+
+                print(
+                    f"DUT {device_id}: {line.rstrip()}",
+                    file=sys.stderr,
+                )
+
+                update_status()
+
+        # Check for completed processes.
         for device_id in list(remaining):
             process, start = processes[device_id]
             return_code = process.poll()
@@ -245,21 +295,25 @@ def sample():
 
             elapsed = time.monotonic() - start
 
-            # The process has finished, so its stderr can now be read
-            # without blocking.
-            stderr = process.stderr.read()
+            # Drain any final stderr output.
+            while True:
+                line = process.stderr.readline()
 
-            if stderr:
+                if not line:
+                    break
+
                 clear_status()
 
-                for line in stderr.splitlines():
-                    print(
-                        f"DUT {device_id}: {line}",
-                        file=sys.stderr,
-                    )
+                print(
+                    f"DUT {device_id}: {line.rstrip()}",
+                    file=sys.stderr,
+                )
+
+            selector.unregister(process.stderr)
 
             if return_code != 0:
                 clear_status()
+
                 print(
                     f"ERROR: temperature sample failed for DUT "
                     f"{device_id} "
@@ -271,23 +325,7 @@ def sample():
             completed.append((device_id, elapsed))
             remaining.remove(device_id)
 
-        if remaining or completed:
-            parts = []
-
-            if remaining:
-                parts.append(
-                    "Sampling: " + ", ".join(sorted(remaining))
-                )
-
-            if completed:
-                parts.append(
-                    "Done: " + ", ".join(
-                        f"{device_id} ({elapsed:.1f}s)"
-                        for device_id, elapsed in completed
-                    )
-                )
-
-            print_status(" | ".join(parts))
+        update_status()
 
         if remaining:
             time.sleep(0.1)
