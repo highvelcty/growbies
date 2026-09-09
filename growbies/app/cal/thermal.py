@@ -23,7 +23,6 @@ DEVICES = [
 # Temperature set points, in degrees Celsius.
 SET_POINTS = [
     35.0,
-    40.0,
     45.0,
     50.0
 ]
