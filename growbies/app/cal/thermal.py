@@ -22,7 +22,6 @@ DEVICES = [
 
 # Temperature set points, in degrees Celsius.
 SET_POINTS = [
-    30.0,
     35.0,
     40.0,
     45.0,
@@ -39,6 +38,8 @@ DWELL_SECONDS = 60*30
 # How often to check the chamber temperature while waiting.
 THERMAL_POLL_SECONDS = 10
 
+# How long to wait for the thermal chamber to reach temperature.
+WAIT_FOR_THERMAL_CHAMBER_SEC = 2 * 60 * 60 # 2 hours
 
 # ---------------------------------------------------------------------------
 # Status output
@@ -132,7 +133,7 @@ def set_chamber_temperature(set_point):
 def wait_for_temperature(set_point):
     """Wait until the chamber reaches the requested temperature."""
 
-    timeout = 60 * 60
+    timeout = WAIT_FOR_THERMAL_CHAMBER_SEC
     start = time.monotonic()
 
     print(f"Heating to {set_point:.1f} °C...", flush=True)
@@ -182,24 +183,31 @@ def dwell(set_point):
     start = time.monotonic()
     next_progress = start
 
-    while True:
-        now = time.monotonic()
-        elapsed = now - start
+    try:
+        while True:
+            now = time.monotonic()
+            elapsed = now - start
 
-        if elapsed >= DWELL_SECONDS:
-            break
+            if elapsed >= DWELL_SECONDS:
+                break
 
-        if now >= next_progress:
-            remaining = DWELL_SECONDS - elapsed
-            minutes_remaining = int((remaining + 59) // 60)
+            if now >= next_progress:
+                remaining = DWELL_SECONDS - elapsed
+                minutes_remaining = int((remaining + 59) // 60)
 
-            print_status(
-                f"  {minutes_remaining} minutes remaining"
-            )
+                print_status(
+                    f"  {minutes_remaining} minutes remaining"
+                )
 
-            next_progress += 60
+                next_progress += 60
 
-        time.sleep(1)
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        clear_status()
+        print("Dwell interrupted; continuing to sampling.")
+
+        return
 
     clear_status()
     print("Dwell complete.")
