@@ -211,6 +211,10 @@ def sample():
 
     processes = {}
 
+    print_status(
+        f"Sampling DUTs: {', '.join(DEVICES)}"
+    )
+
     for device_id in DEVICES:
         process = subprocess.Popen(
             [
@@ -222,16 +226,17 @@ def sample():
                 device_id,
             ],
             stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
         )
 
         processes[device_id] = (process, time.monotonic())
 
     remaining = set(processes)
+    completed = []
 
     while remaining:
-        completed = []
-
-        for device_id in remaining:
+        for device_id in list(remaining):
             process, start = processes[device_id]
             return_code = process.poll()
 
@@ -240,29 +245,52 @@ def sample():
 
             elapsed = time.monotonic() - start
 
+            # The process has finished, so its stderr can now be read
+            # without blocking.
+            stderr = process.stderr.read()
+
+            if stderr:
+                clear_status()
+
+                for line in stderr.splitlines():
+                    print(
+                        f"DUT {device_id}: {line}",
+                        file=sys.stderr,
+                    )
+
             if return_code != 0:
                 clear_status()
                 print(
-                    f"ERROR: temperature sample failed for DUT {device_id} "
-                    f"(return code {return_code}, {elapsed:.1f} seconds)",
+                    f"ERROR: temperature sample failed for DUT "
+                    f"{device_id} "
+                    f"(return code {return_code}, "
+                    f"{elapsed:.1f} seconds)",
                     file=sys.stderr,
                 )
-            else:
-                print_status(
-                    f"DUT {device_id} sampled in {elapsed:.1f} seconds"
+
+            completed.append((device_id, elapsed))
+            remaining.remove(device_id)
+
+        if remaining or completed:
+            parts = []
+
+            if remaining:
+                parts.append(
+                    "Sampling: " + ", ".join(sorted(remaining))
                 )
 
-            completed.append(device_id)
+            if completed:
+                parts.append(
+                    "Done: " + ", ".join(
+                        f"{device_id} ({elapsed:.1f}s)"
+                        for device_id, elapsed in completed
+                    )
+                )
 
-        remaining.difference_update(completed)
+            print_status(" | ".join(parts))
 
         if remaining:
-            sampling = ", ".join(sorted(remaining))
-            print_status(
-                f"Sampling DUTs: {sampling}"
-            )
-
-        time.sleep(0.1)
+            time.sleep(0.1)
 
     clear_status()
 
