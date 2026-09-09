@@ -23,10 +23,6 @@ DEVICES = [
 # Temperature set points, in degrees Celsius.
 SET_POINTS = [
     30.0,
-    35.0,
-    40.0,
-    45.0,
-    50.0,
 ]
 
 # The measured chamber temperature must be within this many degrees of the
@@ -244,25 +240,6 @@ def sample():
     remaining = set(processes)
     completed = []
 
-    def update_status():
-        parts = []
-
-        if remaining:
-            parts.append(
-                "Sampling: " + ", ".join(sorted(remaining))
-            )
-
-        if completed:
-            parts.append(
-                "Done: " + ", ".join(
-                    f"{device_id} ({elapsed:.1f}s)"
-                    for device_id, elapsed in completed
-                )
-            )
-
-        if parts:
-            print_status(" | ".join(parts))
-
     while remaining:
         # Check for any stderr output from the sampling processes.
         for key, _ in selector.select(timeout=0):
@@ -281,8 +258,6 @@ def sample():
                     f"DUT {device_id}: {line.rstrip()}",
                     file=sys.stderr,
                 )
-
-                update_status()
 
         # Check for completed processes.
         for device_id in list(remaining):
@@ -323,8 +298,6 @@ def sample():
 
             completed.append((device_id, elapsed))
             remaining.remove(device_id)
-
-        update_status()
 
         if remaining:
             time.sleep(0.1)
