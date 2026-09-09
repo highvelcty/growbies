@@ -35,7 +35,7 @@ SET_POINTS = [
 TEMPERATURE_TOLERANCE_C = 0.5
 
 # Time that the chamber must remain at temperature before sampling.
-DWELL_SECONDS = 3 * 60
+DWELL_SECONDS = 1 * 60
 
 # How often to check the chamber temperature while waiting.
 THERMAL_POLL_SECONDS = 10
@@ -209,11 +209,9 @@ def dwell(set_point):
 def sample():
     """Sample all DUTs in parallel."""
 
-    processes = []
+    processes = {}
 
     for device_id in DEVICES:
-        print_status(f"Sampling DUT {device_id}...")
-
         process = subprocess.Popen(
             [
                 sys.executable,
@@ -226,28 +224,45 @@ def sample():
             stdout=subprocess.DEVNULL,
         )
 
-        processes.append((device_id, process, time.monotonic()))
+        processes[device_id] = (process, time.monotonic())
 
-    for device_id, process, start in processes:
-        return_code = process.wait()
-        elapsed = time.monotonic() - start
+    remaining = set(processes)
 
-        if return_code != 0:
-            clear_status()
-            print(
-                f"ERROR: temperature sample failed for DUT {device_id} "
-                f"(return code {return_code}, {elapsed:.1f} seconds)",
-                file=sys.stderr,
+    while remaining:
+        completed = []
+
+        for device_id in remaining:
+            process, start = processes[device_id]
+            return_code = process.poll()
+
+            if return_code is None:
+                continue
+
+            elapsed = time.monotonic() - start
+
+            if return_code != 0:
+                clear_status()
+                print(
+                    f"ERROR: temperature sample failed for DUT {device_id} "
+                    f"(return code {return_code}, {elapsed:.1f} seconds)",
+                    file=sys.stderr,
+                )
+            else:
+                print_status(
+                    f"DUT {device_id} sampled in {elapsed:.1f} seconds"
+                )
+
+            completed.append(device_id)
+
+        remaining.difference_update(completed)
+
+        if remaining:
+            sampling = ", ".join(sorted(remaining))
+            print_status(
+                f"Sampling DUTs: {sampling}"
             )
 
-    clear_status()
-
-    for device_id, process, start in processes:
-        elapsed = time.monotonic() - start
-        print_status(
-            f"DUT {device_id} sampled in {elapsed:.1f} seconds"
-        )
-        time.sleep(0.5)
+        time.sleep(0.1)
 
     clear_status()
 
