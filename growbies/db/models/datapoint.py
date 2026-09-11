@@ -158,15 +158,18 @@ class DataPointEngine(BaseTableEngine):
 
             datapoint_sql = text("""
                 SELECT
-                    timestamp,
-                    mass,
-                    temperature,
-                    ref_mass
-                FROM datapoint
-                WHERE device_id = :device_id
-                  AND timestamp >= :start_time
-                  AND timestamp <= :end_time
-                ORDER BY timestamp
+                    dp.timestamp,
+                    dp.mass,
+                    dp.temperature,
+                    dp.ref_mass,
+                    t.values AS tare_values
+                FROM datapoint dp
+                JOIN tare t
+                    ON t.id = dp.tare_id
+                WHERE dp.device_id = :device_id
+                  AND dp.timestamp >= :start_time
+                  AND dp.timestamp <= :end_time
+                ORDER BY dp.timestamp
             """)
 
             datapoint_rows = session.exec(

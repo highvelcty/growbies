@@ -1,23 +1,36 @@
-from datetime import datetime, timezone
 from collections import defaultdict
+from datetime import datetime, timezone
+from typing import Iterator
 
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.dates import DateFormatter, AutoDateLocator, num2date
+import numpy as np
+from matplotlib.dates import AutoDateLocator, DateFormatter, num2date
 from sqlalchemy.engine.row import Row
 
-from growbies.db.engine import get_db_engine
 from growbies.common.utils.timestamp import get_elapsed_str
+from growbies.db.engine import get_db_engine
 
 
-def plot_time_series(fuzzy_id: str, start_time: datetime, end_time: datetime):
+FIGURE_SIZE = (16, 10)
+
+SENSOR_COLORS = [
+    'cyan',
+    'magenta',
+    'gray',
+]
+
+
+def plot_time_series(
+        fuzzy_id: str,
+        start_time: datetime,
+        end_time: datetime,
+):
     db_engine = get_db_engine()
     device = db_engine.device.get(fuzzy_id)
-    device_id = device.id
 
     datapoints, mass_sensor_datapoints, temp_sensor_datapoints = \
         db_engine.datapoint.get_device_datapoints(
-            device_id,
+            device.id,
             start_time,
             end_time,
         )
@@ -30,6 +43,14 @@ def plot_time_series(fuzzy_id: str, start_time: datetime, end_time: datetime):
         device.serial,
     )
 
+def _valid_tare_idx() -> Iterator[int]:
+    yield from (0, 1, 2)
+
+def _get_tare_idx_name(idx: int):
+    if idx in _valid_tare_idx():
+        return f'Tare {chr(ord("A") + idx)}'
+    else:
+        return 'Unknown'
 
 def _plot_time_series(
         datapoints: list[Row],
@@ -38,7 +59,46 @@ def _plot_time_series(
         device_name: str,
         device_serial: str,
 ):
+    timestamps, mass, temperature, tare_masses = \
+        _prepare_aggregate_data(
+            datapoints,
+        )
 
+    sensor_mass = _prepare_sensor_data(
+        mass_sensor_datapoints,
+        'mass',
+    )
+
+    sensor_temperature = _prepare_sensor_data(
+        temp_sensor_datapoints,
+        'temperature',
+    )
+
+    _create_aggregate_figure(
+        timestamps,
+        mass,
+        temperature,
+        tare_masses,
+        device_name,
+        device_serial,
+    )
+
+    _create_sensor_figure(
+        sensor_mass,
+        sensor_temperature,
+        device_name,
+        device_serial,
+    )
+
+    plt.show()
+
+
+# ----------------------------------------------------------------------
+# Data preparation
+# ----------------------------------------------------------------------
+
+
+def _prepare_aggregate_data(datapoints):
     timestamps = np.fromiter(
         (dp.timestamp for dp in datapoints),
         dtype='datetime64[ms]',
@@ -57,173 +117,281 @@ def _plot_time_series(
         count=len(datapoints),
     )
 
-    # -------------------------
-    # Aggregate figure
-    # -------------------------
+    tare_values = np.asarray(
+        [dp.tare_values for dp in datapoints],
+        dtype=float,
+    )
 
-    fig_aggregate, (
-        ax_mass,
-        ax_temp,
-    ) = plt.subplots(
+    tare_masses = mass[:, np.newaxis] - tare_values
+
+    return (
+        timestamps,
+        mass,
+        temperature,
+        tare_masses,
+    )
+
+
+def _prepare_sensor_data(rows, value_attribute):
+    sensor_data = defaultdict(lambda: ([], []))
+
+    for row in rows:
+        sensor_data[row.idx][0].append(row.timestamp)
+        sensor_data[row.idx][1].append(
+            getattr(row, value_attribute),
+        )
+
+    result = {}
+
+    for idx, (times, values) in sensor_data.items():
+        result[idx] = (
+            np.asarray(
+                times,
+                dtype='datetime64[ms]',
+            ),
+            np.asarray(
+                values,
+                dtype=float,
+            ),
+        )
+
+    return result
+
+
+# ----------------------------------------------------------------------
+# Figure creation
+# ----------------------------------------------------------------------
+
+
+def _create_aggregate_figure(
+        timestamps,
+        mass,
+        temperature,
+        tare_masses,
+        device_name,
+        device_serial,
+):
+    fig, (ax_mass, ax_temperature) = plt.subplots(
         2,
         1,
-        figsize=(16, 10),
+        figsize=FIGURE_SIZE,
         sharex=True,
     )
 
-    fig_aggregate.suptitle(
+    fig.suptitle(
         f'Name: {device_name}\n'
         f'Serial: {device_serial}\n'
-        f'Aggregate Data'
     )
 
-    aggregate_axes = [
-        ax_mass,
-        ax_temp,
-    ]
+    mass_lines = []
 
-    # -------------------------
-    # Aggregate plots
-    # -------------------------
-
-    ax_mass.plot(
-        timestamps,
-        mass,
-        color='blue',
+    mass_lines.append(
+        ax_mass.plot(
+            timestamps,
+            mass,
+            color='black',
+            linestyle='--',
+            alpha=0.5,
+            label='Aggregate Mass',
+        )[0]
     )
+
+    for idx in _valid_tare_idx():
+        if idx >= tare_masses.shape[1]:
+            continue
+
+        mass_lines.append(
+            ax_mass.plot(
+                timestamps,
+                tare_masses[:, idx],
+                label=_get_tare_idx_name(idx),
+            )[0]
+        )
 
     ax_mass.set_ylabel('Mass (g)')
-    ax_mass.set_title('Aggregate Mass')
+    ax_mass.set_title('Mass')
 
-    ax_temp.plot(
+    legend = ax_mass.legend(loc='best')
+
+    for legend_line, plot_line in zip(
+            legend.get_lines(),
+            mass_lines,
+    ):
+        legend_line.set_picker(True)
+        legend_line._plot_line = plot_line
+
+    temperature_line = ax_temperature.plot(
         timestamps,
         temperature,
         color='red',
-    )
+    )[0]
 
-    ax_temp.set_ylabel('Temperature (°C)')
-    ax_temp.set_title('Aggregate Temperature')
-    ax_temp.set_xlabel('Time')
+    ax_temperature.set_ylabel('Temperature (°C)')
+    ax_temperature.set_title('Temperature')
+    ax_temperature.set_xlabel('Time')
 
-    # -------------------------
-    # Sensor data
-    # -------------------------
-
-    sensor_colors = [
-        'cyan',
-        'magenta',
-        'gray',
+    axes = [
+        ax_mass,
+        ax_temperature,
     ]
 
-    sensor_mass_arrays = {}
-    sensor_temp_arrays = {}
+    series = [
+        (
+            'Aggregate Mass',
+            ax_mass,
+            timestamps,
+            mass,
+            mass_lines[0],
+        ),
+    ]
 
-    sensor_mass_lists = defaultdict(lambda: ([], []))
-    sensor_temp_lists = defaultdict(lambda: ([], []))
+    for idx in _valid_tare_idx():
+        if idx >= tare_masses.shape[1]:
+            continue
 
-    for row in mass_sensor_datapoints:
-        sensor_mass_lists[row.idx][0].append(row.timestamp)
-        sensor_mass_lists[row.idx][1].append(row.mass)
-
-    for row in temp_sensor_datapoints:
-        sensor_temp_lists[row.idx][0].append(row.timestamp)
-        sensor_temp_lists[row.idx][1].append(row.temperature)
-
-    for idx, (times, values) in sensor_mass_lists.items():
-
-        times = np.asarray(
-            times,
-            dtype='datetime64[ms]',
+        series.append(
+            (
+                _get_tare_idx_name(idx),
+                ax_mass,
+                timestamps,
+                tare_masses[:, idx],
+                mass_lines[idx + 1],
+            )
         )
 
-        values = np.asarray(
-            values,
-            dtype=float,
+    series.append(
+        (
+            'Temperature',
+            ax_temperature,
+            timestamps,
+            temperature,
+            temperature_line,
         )
+    )
 
-        sensor_mass_arrays[idx] = (
-            times,
-            values,
-        )
+    _configure_figure(
+        fig,
+        axes,
+    )
 
-    for idx, (times, values) in sensor_temp_lists.items():
+    stats_boxes = _create_stats_boxes(
+        axes,
+    )
 
-        times = np.asarray(
-            times,
-            dtype='datetime64[ms]',
-        )
+    _install_interaction(
+        fig,
+        axes,
+        ax_mass,
+        series,
+        stats_boxes,
+    )
 
-        values = np.asarray(
-            values,
-            dtype=float,
-        )
 
-        sensor_temp_arrays[idx] = (
-            times,
-            values,
-        )
-
-    # -------------------------
-    # Sensor figure
-    # -------------------------
-
-    fig_sensor, (
-        ax_sensor_mass,
-        ax_sensor_temp,
-    ) = plt.subplots(
+def _create_sensor_figure(
+        sensor_mass,
+        sensor_temperature,
+        device_name,
+        device_serial,
+):
+    fig, (ax_mass, ax_temperature) = plt.subplots(
         2,
         1,
-        figsize=(16, 10),
+        figsize=FIGURE_SIZE,
         sharex=True,
     )
 
-    fig_sensor.suptitle(
+    fig.suptitle(
         f'Name: {device_name}\n'
         f'Serial: {device_serial}\n'
         f'Sensor Data'
     )
 
-    sensor_axes = [
-        ax_sensor_mass,
-        ax_sensor_temp,
+    mass_series = _plot_sensor_series(
+        ax_mass,
+        sensor_mass,
+        'Mass Sensor',
+    )
+
+    temperature_series = _plot_sensor_series(
+        ax_temperature,
+        sensor_temperature,
+        'Temperature Sensor',
+    )
+
+    ax_mass.set_ylabel('Mass (g)')
+    ax_mass.set_title('Sensor Mass')
+
+    ax_temperature.set_ylabel('Temperature (°C)')
+    ax_temperature.set_title('Sensor Temperature')
+    ax_temperature.set_xlabel('Time')
+
+    if mass_series:
+        ax_mass.legend()
+
+    if temperature_series:
+        ax_temperature.legend()
+
+    axes = [
+        ax_mass,
+        ax_temperature,
     ]
 
-    # -------------------------
-    # Sensor plots
-    # -------------------------
+    series = mass_series + temperature_series
 
-    for idx, (times, values) in sensor_mass_arrays.items():
+    _configure_figure(
+        fig,
+        axes,
+    )
 
-        ax_sensor_mass.plot(
+    stats_boxes = _create_stats_boxes(
+        axes,
+    )
+
+    _install_interaction(
+        fig,
+        axes,
+        ax_mass,
+        series,
+        stats_boxes,
+    )
+
+
+def _plot_sensor_series(
+        ax,
+        sensor_data,
+        name_prefix,
+):
+    series = []
+
+    for idx, (times, values) in sensor_data.items():
+        ax.plot(
             times,
             values,
-            color=sensor_colors[idx % len(sensor_colors)],
+            color=SENSOR_COLORS[
+                idx % len(SENSOR_COLORS)
+            ],
             label=f'Sensor {idx}',
         )
 
-    for idx, (times, values) in sensor_temp_arrays.items():
-
-        ax_sensor_temp.plot(
-            times,
-            values,
-            color=sensor_colors[idx % len(sensor_colors)],
-            label=f'Sensor {idx}',
+        series.append(
+            (
+                f'{name_prefix} {idx}',
+                ax,
+                times,
+                values,
+            )
         )
 
-    ax_sensor_mass.set_ylabel('Mass (g)')
-    ax_sensor_mass.set_title('Sensor Mass')
-    ax_sensor_mass.legend()
+    return series
 
-    ax_sensor_temp.set_ylabel('Temperature (°C)')
-    ax_sensor_temp.set_title('Sensor Temperature')
-    ax_sensor_temp.set_xlabel('Time')
-    ax_sensor_temp.legend()
 
-    # -------------------------
-    # X axis formatting
-    # -------------------------
+# ----------------------------------------------------------------------
+# Figure configuration
+# ----------------------------------------------------------------------
 
-    utc_formatter = DateFormatter(
+
+def _configure_figure(fig, axes):
+    formatter = DateFormatter(
         '%Y-%m-%dT%H:%M:%SZ',
         tz=timezone.utc,
     )
@@ -233,433 +401,317 @@ def _plot_time_series(
         maxticks=20,
     )
 
-    for ax in aggregate_axes + sensor_axes:
-        ax.xaxis.set_major_formatter(utc_formatter)
-        ax.xaxis.set_major_locator(locator)
-
-    # -------------------------
-    # Plot registry
-    # -------------------------
-
-    aggregate_series = []
-
-    aggregate_series.append(
-        (
-            'Aggregate Mass',
-            ax_mass,
-            timestamps,
-            mass,
+    for ax in axes:
+        ax.xaxis.set_major_formatter(
+            formatter,
         )
+        ax.xaxis.set_major_locator(
+            locator,
+        )
+
+    fig.autofmt_xdate()
+
+    fig.subplots_adjust(
+        left=0.08,
+        right=0.98,
+        top=0.88,
+        bottom=0.13,
+        hspace=0.25,
     )
 
-    aggregate_series.append(
-        (
-            'Aggregate Temperature',
-            ax_temp,
-            timestamps,
-            temperature,
-        )
+
+# ----------------------------------------------------------------------
+# Statistics
+# ----------------------------------------------------------------------
+
+
+def _finite_values(values):
+    return values[np.isfinite(values)]
+
+
+def _format_stats(values, elapsed):
+    values = _finite_values(values)
+
+    if len(values):
+        mean = np.mean(values)
+        median = np.median(values)
+        std = np.std(values)
+        min_value = np.min(values)
+        max_value = np.max(values)
+    else:
+        mean = median = std = min_value = max_value = np.nan
+
+    delta = max_value - min_value
+
+    return (
+        f'{"samples":<10} {"range":<20}\n'
+        f'{len(values):<10d} {elapsed:<20}\n'
+        f'{"min":<10} {"max":<10} {"Δ":<10} '
+        f'{"μ":<10} {"med":<10}\n'
+        f'{min_value:<10.3f} {max_value:<10.3f} '
+        f'{delta:<10.3f} {mean:<10.3f} {median:<10.3f}\n'
+        f'{"1σ":<10} {"2σ":<10} {"3σ":<10}\n'
+        f'{std:<10.3f} {2 * std:<10.3f} {3 * std:<10.3f}'
     )
 
-    sensor_series = []
 
-    for idx, (times, values) in sensor_mass_arrays.items():
-        sensor_series.append(
-            (
-                f'Mass Sensor {idx}',
-                ax_sensor_mass,
-                times,
-                values,
-            )
+def _create_stats_boxes(axes):
+    stats_boxes = {}
+
+    for ax in axes:
+        stats_boxes[ax] = ax.text(
+            0.02,
+            0.98,
+            '',
+            transform=ax.transAxes,
+            verticalalignment='top',
+            fontsize=8,
+            family='monospace',
         )
 
-    for idx, (times, values) in sensor_temp_arrays.items():
-        sensor_series.append(
-            (
-                f'Temperature Sensor {idx}',
-                ax_sensor_temp,
-                times,
-                values,
-            )
-        )
+    return stats_boxes
 
-    # -------------------------
-    # Statistics
-    # -------------------------
 
-    def finite_values(values):
-        return values[np.isfinite(values)]
+# ----------------------------------------------------------------------
+# View handling
+# ----------------------------------------------------------------------
 
-    def format_stats(values, elapsed):
 
-        values = finite_values(values)
+def _visible_range(ax):
+    x_min, x_max = ax.get_xlim()
 
-        if len(values):
-            mean = np.mean(values)
-            median = np.median(values)
-            std = np.std(values)
-            min_value = np.min(values)
-            max_value = np.max(values)
+    start = np.datetime64(
+        num2date(
+            x_min,
+            tz=timezone.utc,
+        ).replace(tzinfo=None)
+    )
+
+    end = np.datetime64(
+        num2date(
+            x_max,
+            tz=timezone.utc,
+        ).replace(tzinfo=None)
+    )
+
+    return start, end
+
+
+def _update_view(
+        fig,
+        x_axis,
+        series,
+        stats_boxes,
+        autoscale_y=True,
+):
+    start, end = _visible_range(
+        x_axis,
+    )
+
+    elapsed = int(
+        (end - start) /
+        np.timedelta64(1, 's')
+    )
+
+    elapsed_str = get_elapsed_str(
+        elapsed,
+    )
+
+    axis_text = defaultdict(list)
+    axis_values = defaultdict(list)
+
+    for item in series:
+        if len(item) == 5:
+            name, axis, times, values, plot_line = item
+
+            if not plot_line.get_visible():
+                continue
         else:
-            mean = median = std = min_value = max_value = np.nan
+            name, axis, times, values = item
 
-        delta = max_value - min_value
-
-        return (
-            f'{"samples":<10} {"range":<20}\n'
-            f'{len(values):<10d} {elapsed:<20}\n'
-            f'{"min":<10} {"max":<10} {"Δ":<10} '
-            f'{"μ":<10} {"med":<10}\n'
-            f'{min_value:<10.3f} {max_value:<10.3f} '
-            f'{delta:<10.3f} {mean:<10.3f} {median:<10.3f}\n'
-            f'{"1σ":<10} {"2σ":<10} {"3σ":<10}\n'
-            f'{std:<10.3f} {2 * std:<10.3f} {3 * std:<10.3f}'
+        start_idx = np.searchsorted(
+            times,
+            start,
+            side='left',
         )
 
-    aggregate_stats_boxes = {}
-
-    for ax in aggregate_axes:
-        aggregate_stats_boxes[ax] = ax.text(
-            0.02,
-            0.98,
-            '',
-            transform=ax.transAxes,
-            verticalalignment='top',
-            fontsize=8,
-            family='monospace',
+        end_idx = np.searchsorted(
+            times,
+            end,
+            side='right',
         )
 
-    sensor_stats_boxes = {}
+        if start_idx >= end_idx:
+            continue
 
-    for ax in sensor_axes:
-        sensor_stats_boxes[ax] = ax.text(
-            0.02,
-            0.98,
-            '',
-            transform=ax.transAxes,
-            verticalalignment='top',
-            fontsize=8,
-            family='monospace',
+        visible = values[
+            start_idx:end_idx
+        ]
+
+        finite = _finite_values(
+            visible,
         )
 
-    # -------------------------
-    # Helpers
-    # -------------------------
+        if not len(finite):
+            continue
 
-    def visible_range(ax):
-
-        x_min, x_max = ax.get_xlim()
-
-        start = np.datetime64(
-            num2date(
-                x_min,
-                tz=timezone.utc,
-            ).replace(tzinfo=None)
+        axis_text[axis].append(
+            f'{name}\n'
+            f'{_format_stats(finite, elapsed_str)}'
         )
 
-        end = np.datetime64(
-            num2date(
-                x_max,
-                tz=timezone.utc,
-            ).replace(tzinfo=None)
+        axis_values[axis].append(
+            finite,
         )
 
-        return start, end
+    # Clear all statistics first so that an axis with no visible
+    # finite data does not retain stale statistics.
+    for box in stats_boxes.values():
+        box.set_text('')
 
-    # -------------------------
-    # Aggregate update
-    # -------------------------
+    for axis, texts in axis_text.items():
+        stats_boxes[axis].set_text(
+            '\n\n'.join(texts),
+        )
 
-    aggregate_busy = False
+    if autoscale_y:
+        for axis, values in axis_values.items():
+            ymin = min(
+                np.min(values)
+                for values in values
+            )
 
-    def update_aggregate_view(autoscale_y=True):
+            ymax = max(
+                np.max(values)
+                for values in values
+            )
 
-        nonlocal aggregate_busy
+            span = ymax - ymin
 
-        if aggregate_busy:
+            if span == 0:
+                span = abs(ymin) if ymin else 1
+
+            padding = span * 0.05
+
+            axis.set_ylim(
+                ymin - padding,
+                ymax + padding,
+            )
+
+    fig.canvas.draw_idle()
+
+
+# ----------------------------------------------------------------------
+# Interaction
+# ----------------------------------------------------------------------
+
+
+def _install_interaction(
+        fig,
+        axes,
+        x_axis,
+        series,
+        stats_boxes,
+):
+    press_limits = None
+    busy = False
+
+    def update(autoscale_y=True):
+        nonlocal busy
+
+        if busy:
             return
 
-        aggregate_busy = True
+        busy = True
 
         try:
-
-            start, end = visible_range(ax_mass)
-
-            elapsed = int(
-                (end - start) /
-                np.timedelta64(1, 's')
+            _update_view(
+                fig,
+                x_axis,
+                series,
+                stats_boxes,
+                autoscale_y=autoscale_y,
             )
-
-            elapsed_str = get_elapsed_str(elapsed)
-
-            axis_text = defaultdict(list)
-            axis_values = defaultdict(list)
-
-            for name, axis, times, values in aggregate_series:
-
-                start_idx = np.searchsorted(
-                    times,
-                    start,
-                    side='left',
-                )
-
-                end_idx = np.searchsorted(
-                    times,
-                    end,
-                    side='right',
-                )
-
-                if start_idx >= end_idx:
-                    continue
-
-                visible = values[start_idx:end_idx]
-                finite = finite_values(visible)
-
-                if not len(finite):
-                    continue
-
-                axis_text[axis].append(
-                    f'{name}\n'
-                    f'{format_stats(finite, elapsed_str)}'
-                )
-
-                axis_values[axis].append(finite)
-
-            for axis, texts in axis_text.items():
-                aggregate_stats_boxes[axis].set_text(
-                    '\n\n'.join(texts)
-                )
-
-            if autoscale_y:
-                for axis, values in axis_values.items():
-
-                    ymin = min(np.min(v) for v in values)
-                    ymax = max(np.max(v) for v in values)
-
-                    span = ymax - ymin
-
-                    if span == 0:
-                        span = abs(ymin) if ymin else 1
-
-                    padding = span * 0.05
-
-                    axis.set_ylim(
-                        ymin - padding,
-                        ymax + padding,
-                    )
-
-            fig_aggregate.canvas.draw_idle()
-
         finally:
-            aggregate_busy = False
+            busy = False
 
-    # -------------------------
-    # Sensor update
-    # -------------------------
+    def on_press(event):
+        nonlocal press_limits
 
-    sensor_busy = False
-
-    def update_sensor_view(autoscale_y=True):
-
-        nonlocal sensor_busy
-
-        if sensor_busy:
+        if event.inaxes not in axes:
             return
 
-        sensor_busy = True
+        press_limits = (
+            event.inaxes.get_xlim(),
+            event.inaxes.get_ylim(),
+        )
 
-        try:
+    def on_release(event):
+        nonlocal press_limits
 
-            start, end = visible_range(ax_sensor_mass)
-
-            elapsed = int(
-                (end - start) /
-                np.timedelta64(1, 's')
-            )
-
-            elapsed_str = get_elapsed_str(elapsed)
-
-            axis_text = defaultdict(list)
-            axis_values = defaultdict(list)
-
-            for name, axis, times, values in sensor_series:
-
-                start_idx = np.searchsorted(
-                    times,
-                    start,
-                    side='left',
-                )
-
-                end_idx = np.searchsorted(
-                    times,
-                    end,
-                    side='right',
-                )
-
-                if start_idx >= end_idx:
-                    continue
-
-                visible = values[start_idx:end_idx]
-                finite = finite_values(visible)
-
-                if not len(finite):
-                    continue
-
-                axis_text[axis].append(
-                    f'{name}\n'
-                    f'{format_stats(finite, elapsed_str)}'
-                )
-
-                axis_values[axis].append(finite)
-
-            for axis, texts in axis_text.items():
-                sensor_stats_boxes[axis].set_text(
-                    '\n\n'.join(texts)
-                )
-
-            if autoscale_y:
-                for axis, values in axis_values.items():
-
-                    ymin = min(np.min(v) for v in values)
-                    ymax = max(np.max(v) for v in values)
-
-                    span = ymax - ymin
-
-                    if span == 0:
-                        span = abs(ymin) if ymin else 1
-
-                    padding = span * 0.05
-
-                    axis.set_ylim(
-                        ymin - padding,
-                        ymax + padding,
-                    )
-
-            fig_sensor.canvas.draw_idle()
-
-        finally:
-            sensor_busy = False
-
-    # -------------------------
-    # Update after interaction
-    # -------------------------
-
-    aggregate_press_limits = None
-    sensor_press_limits = None
-
-    def on_aggregate_press(event):
-
-        nonlocal aggregate_press_limits
-
-        if event.inaxes in aggregate_axes:
-            aggregate_press_limits = (
-                event.inaxes.get_xlim(),
-                event.inaxes.get_ylim(),
-            )
-
-    def on_sensor_press(event):
-
-        nonlocal sensor_press_limits
-
-        if event.inaxes in sensor_axes:
-            sensor_press_limits = (
-                event.inaxes.get_xlim(),
-                event.inaxes.get_ylim(),
-            )
-
-    def on_aggregate_release(event):
-
-        nonlocal aggregate_press_limits
-
-        if aggregate_press_limits is None:
+        if press_limits is None:
             return
 
-        old_xlim, old_ylim = aggregate_press_limits
-        aggregate_press_limits = None
+        old_xlim, old_ylim = press_limits
+        press_limits = None
 
-        if event.inaxes not in aggregate_axes:
+        if event.inaxes not in axes:
             return
 
         new_xlim = event.inaxes.get_xlim()
         new_ylim = event.inaxes.get_ylim()
 
-        x_changed = not np.allclose(old_xlim, new_xlim)
-        y_changed = not np.allclose(old_ylim, new_ylim)
+        x_changed = not np.allclose(
+            old_xlim,
+            new_xlim,
+        )
 
-        if x_changed:
-            update_aggregate_view(
-                autoscale_y=not y_changed,
-            )
+        y_changed = not np.allclose(
+            old_ylim,
+            new_ylim,
+        )
 
-    def on_sensor_release(event):
-
-        nonlocal sensor_press_limits
-
-        if sensor_press_limits is None:
+        if not x_changed:
             return
 
-        old_xlim, old_ylim = sensor_press_limits
-        sensor_press_limits = None
+        update(
+            autoscale_y=not y_changed,
+        )
 
-        if event.inaxes not in sensor_axes:
+    def on_pick(event):
+        legend_line = event.artist
+
+        if not hasattr(
+                legend_line,
+                '_plot_line',
+        ):
             return
 
-        new_xlim = event.inaxes.get_xlim()
-        new_ylim = event.inaxes.get_ylim()
+        plot_line = legend_line._plot_line
 
-        x_changed = not np.allclose(old_xlim, new_xlim)
-        y_changed = not np.allclose(old_ylim, new_ylim)
+        visible = not plot_line.get_visible()
 
-        if x_changed:
-            update_sensor_view(
-                autoscale_y=not y_changed,
-            )
+        plot_line.set_visible(visible)
 
-    fig_aggregate.canvas.mpl_connect(
+        legend_line.set_alpha(
+            1.0 if visible else 0.3,
+        )
+
+        update()
+
+    fig.canvas.mpl_connect(
         'button_press_event',
-        on_aggregate_press,
+        on_press,
     )
 
-    fig_aggregate.canvas.mpl_connect(
+    fig.canvas.mpl_connect(
         'button_release_event',
-        on_aggregate_release,
+        on_release,
     )
 
-    fig_sensor.canvas.mpl_connect(
-        'button_press_event',
-        on_sensor_press,
+    fig.canvas.mpl_connect(
+        'pick_event',
+        on_pick,
     )
 
-    fig_sensor.canvas.mpl_connect(
-        'button_release_event',
-        on_sensor_release,
-    )
-
-    update_aggregate_view()
-    update_sensor_view()
-
-    # -------------------------
-    # Layout
-    # -------------------------
-
-    fig_aggregate.autofmt_xdate()
-
-    fig_aggregate.subplots_adjust(
-        left=0.08,
-        right=0.98,
-        top=0.88,
-        bottom=0.13,
-        hspace=0.25,
-    )
-
-    fig_sensor.autofmt_xdate()
-
-    fig_sensor.subplots_adjust(
-        left=0.08,
-        right=0.98,
-        top=0.88,
-        bottom=0.13,
-        hspace=0.25,
-    )
-
-    plt.show()
+    update()
