@@ -59,7 +59,7 @@ def _plot_time_series(
         device_name: str,
         device_serial: str,
 ):
-    timestamps, mass, temperature, tare_masses = \
+    timestamps, mass, temperature, tare_masses, tare_values = \
         _prepare_aggregate_data(
             datapoints,
         )
@@ -79,6 +79,7 @@ def _plot_time_series(
         mass,
         temperature,
         tare_masses,
+        tare_values,
         device_name,
         device_serial,
     )
@@ -129,6 +130,7 @@ def _prepare_aggregate_data(datapoints):
         mass,
         temperature,
         tare_masses,
+        tare_values,
     )
 
 
@@ -168,6 +170,7 @@ def _create_aggregate_figure(
         mass,
         temperature,
         tare_masses,
+        tare_values,
         device_name,
         device_serial,
 ):
@@ -178,10 +181,8 @@ def _create_aggregate_figure(
         sharex=True,
     )
 
-    fig.suptitle(
-        f'Name: {device_name}\n'
-        f'Serial: {device_serial}\n'
-    )
+    fig.suptitle(f'Device Name: {device_name}\n'
+                 f'Device Serial: {device_serial}')
 
     mass_lines = []
 
@@ -191,8 +192,8 @@ def _create_aggregate_figure(
             mass,
             color='black',
             linestyle='--',
-            alpha=0.5,
-            label='Aggregate Mass',
+            alpha=1.0,
+            label='Mass',
         )[0]
     )
 
@@ -208,17 +209,39 @@ def _create_aggregate_figure(
             )[0]
         )
 
+    tare_value_lines = []
+
+    for idx in _valid_tare_idx():
+        if idx >= tare_values.shape[1]:
+            continue
+
+        tare_value_lines.append(
+            ax_mass.plot(
+                timestamps,
+                tare_values[:, idx],
+                color=mass_lines[idx+1].get_color(),
+                linestyle=':',
+                label=f'{_get_tare_idx_name(idx)} Val',
+            )[0]
+        )
+
     ax_mass.set_ylabel('Mass (g)')
     ax_mass.set_title('Mass')
 
-    legend = ax_mass.legend(loc='best')
+    legend = ax_mass.legend(
+        loc='center right',
+        bbox_to_anchor=(-0.09, 0.5),
+    )
+
+    plot_lines = mass_lines + tare_value_lines
 
     for legend_line, plot_line in zip(
             legend.get_lines(),
-            mass_lines,
+            plot_lines,
     ):
         legend_line.set_picker(True)
         legend_line._plot_line = plot_line
+        legend_line.set_pickradius(10)
 
     temperature_line = ax_temperature.plot(
         timestamps,
@@ -229,6 +252,10 @@ def _create_aggregate_figure(
     ax_temperature.set_ylabel('Temperature (°C)')
     ax_temperature.set_title('Temperature')
     ax_temperature.set_xlabel('Time')
+
+    ax_temperature_f = _add_temperature_fahrenheit_axis(
+        ax_temperature,
+    )
 
     axes = [
         ax_mass,
@@ -256,6 +283,20 @@ def _create_aggregate_figure(
                 timestamps,
                 tare_masses[:, idx],
                 mass_lines[idx + 1],
+            )
+        )
+
+    for idx in _valid_tare_idx():
+        if idx >= tare_values.shape[1]:
+            continue
+
+        series.append(
+            (
+                f'{_get_tare_idx_name(idx)} Value',
+                ax_mass,
+                timestamps,
+                tare_values[:, idx],
+                tare_value_lines[idx],
             )
         )
 
@@ -325,6 +366,10 @@ def _create_sensor_figure(
     ax_temperature.set_title('Sensor Temperature')
     ax_temperature.set_xlabel('Time')
 
+    ax_temperature_f = _add_temperature_fahrenheit_axis(
+        ax_temperature,
+    )
+
     if mass_series:
         ax_mass.legend()
 
@@ -388,7 +433,27 @@ def _plot_sensor_series(
 # ----------------------------------------------------------------------
 # Figure configuration
 # ----------------------------------------------------------------------
+def _add_temperature_fahrenheit_axis(ax):
+    fahrenheit_ax = ax.twinx()
 
+    def update_fahrenheit_axis(_=None):
+        celsius_min, celsius_max = ax.get_ylim()
+
+        fahrenheit_ax.set_ylim(
+            celsius_min * 9.0 / 5.0 + 32.0,
+            celsius_max * 9.0 / 5.0 + 32.0,
+        )
+
+    ax.callbacks.connect(
+        'ylim_changed',
+        update_fahrenheit_axis,
+    )
+
+    update_fahrenheit_axis()
+
+    fahrenheit_ax.set_ylabel('Temperature (°F)')
+
+    return fahrenheit_ax
 
 def _configure_figure(fig, axes):
     formatter = DateFormatter(
@@ -412,13 +477,12 @@ def _configure_figure(fig, axes):
     fig.autofmt_xdate()
 
     fig.subplots_adjust(
-        left=0.08,
-        right=0.98,
+        left=0.19,
+        right=0.94,
         top=0.88,
-        bottom=0.13,
+        bottom=0.14,
         hspace=0.25,
     )
-
 
 # ----------------------------------------------------------------------
 # Statistics
@@ -528,6 +592,11 @@ def _update_view(
                 continue
         else:
             name, axis, times, values = item
+
+        # Tare Value signals are displayed on the plot, but are
+        # intentionally excluded from statistics and autoscaling.
+        if name.endswith(' Value'):
+            continue
 
         start_idx = np.searchsorted(
             times,
@@ -639,6 +708,7 @@ def _install_interaction(
         nonlocal press_limits
 
         if event.inaxes not in axes:
+            press_limits = None
             return
 
         press_limits = (
