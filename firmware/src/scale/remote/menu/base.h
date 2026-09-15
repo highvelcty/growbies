@@ -12,7 +12,8 @@ constexpr auto MAX_DISPLAY_COLUMNS = 16;
 constexpr auto MAX_DISPLAY_ROWS     = 4;
 
 constexpr auto ONE_BY_FONT         = u8x8_font_chroma48medium8_r;
-constexpr auto TWO_BY_TWO_BY_FONT  = u8x8_font_px437wyse700a_2x2_r;
+// constexpr auto TWO_BY_TWO_BY_FONT  = u8x8_font_px437wyse700a_2x2_r;
+constexpr auto TWO_BY_TWO_FONT   = u8x8_font_px437wyse700b_2x2_n;
 constexpr auto TWO_BY_THREE_FONT   = u8x8_font_courR18_2x3_r;
 
 // -----------------------------------------------------------------------------
@@ -22,6 +23,7 @@ constexpr auto TWO_BY_THREE_FONT   = u8x8_font_courR18_2x3_r;
 struct BaseMenu {
     static constexpr char SELECTED_CHAR = '-';
     static constexpr char UNSELECTED_CHAR = '+';
+    static constexpr char LEAF_CHAR = '>';
 
     U8X8& display;
     const char* msg{nullptr};
@@ -96,25 +98,22 @@ struct BaseCfgMenu : BaseMenu {
 
 struct BaseStrMenuLeaf : BaseCfgMenu {
     constexpr static size_t MSG_BUF_LEN = 16;
-    static constexpr char SELECTED_CHAR = '>';
     char msg_buf[MSG_BUF_LEN]{};
 
     explicit BaseStrMenuLeaf(U8X8& display_, const int level_) :
         BaseCfgMenu(display_, nullptr, level_) {
         msg = msg_buf;
     }
-    char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
+    char get_selected_char(bool selected) const override { return LEAF_CHAR; }
 };
 
 struct BaseIntMenuLeaf : BaseCfgMenu {
-    static constexpr char SELECTED_CHAR = '>';
-
     int value{0};
 
     explicit BaseIntMenuLeaf(U8X8& display_ ,const int level_) :
         BaseCfgMenu(display_, nullptr, level_) {}
 
-    char get_selected_char(bool selected) const override { return SELECTED_CHAR; }
+    char get_selected_char(bool selected) const override { return LEAF_CHAR; }
 
     void draw(const bool selected) override {
         BaseCfgMenu::draw(selected);
@@ -123,6 +122,11 @@ struct BaseIntMenuLeaf : BaseCfgMenu {
         snprintf(line_buf, sizeof(line_buf), "%c %d", get_selected_char(selected), value);
         display.drawString(0, level, line_buf);
     }
+};
+
+enum class TelemetryDrawingFormat {
+    STANDARD,
+    BOTTOM_TWO_LINES,
 };
 
 struct BaseTelemetryDrawing : BaseCfgMenu {
@@ -135,28 +139,53 @@ struct BaseTelemetryDrawing : BaseCfgMenu {
     char value_str[VALUE_CHARS + 1]{};
     char units_str[UNITS_CHARS + 1]{};
 
+    const TelemetryDrawingFormat format;
+
     explicit BaseTelemetryDrawing(
         U8X8& display_,
         const char* msg_ = "",
+        const TelemetryDrawingFormat format_ =
+            TelemetryDrawingFormat::STANDARD,
         std::vector<std::shared_ptr<BaseMenu>> _children = {}
     )
-        : BaseCfgMenu(display_, msg_, 0, std::move(_children)) {}
+        : BaseCfgMenu(display_, msg_, 0, std::move(_children)),
+          format(format_)
+    {}
 
     void draw(const bool selected) override {
         BaseCfgMenu::draw(selected);
 
-        if (!selected) {
-            display.setFont(ONE_BY_FONT);
-            display.drawString(14, 3, units_str);
-
-            display.setFont(TWO_BY_THREE_FONT);
-            draw_value();
+        if (selected) {
+            return;
         }
+
+        display.setFont(ONE_BY_FONT);
+        display.drawString(14, 3, units_str);
+
+        switch (format) {
+            case TelemetryDrawingFormat::STANDARD:
+                display.setFont(TWO_BY_THREE_FONT);
+                break;
+
+            case TelemetryDrawingFormat::BOTTOM_TWO_LINES:
+                display.setFont(TWO_BY_TWO_FONT);
+                break;
+        }
+        draw_value();
     }
 
-    void draw_value() const {
-        if (!cached_selected) {
-            display.drawString(0, 1, value_str);
+    virtual void draw_value() const {
+        // Efficiency optimized function
+        switch (format) {
+            case TelemetryDrawingFormat::STANDARD:
+                if (!cached_selected) {
+                    display.drawString(0, 1, value_str);
+                }
+                break;
+
+            case TelemetryDrawingFormat::BOTTOM_TWO_LINES:
+                display.drawString(0, 2, value_str);
+                break;
         }
     }
 };

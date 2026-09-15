@@ -192,6 +192,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
         : BaseTelemetryDrawing(
               display_,
               get_tare_name(tare_idx_),
+              TelemetryDrawingFormat::STANDARD,
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<TareMenu>(display_, tare_idx_),
                   std::make_shared<MassUnitsMenu>(display_),
