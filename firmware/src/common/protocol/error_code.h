@@ -11,4 +11,5 @@ enum class ErrorCode: uint32_t {
     ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW     = 5,
     ERROR_NOT_READY                             = 6,
     ERROR_MEASUREMENT_DEGRADED                  = 7,
+    ERROR_MEASUREMENT_FAILED                    = 8,
 };

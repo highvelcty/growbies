@@ -125,7 +125,7 @@ public:
             }
         }
         if (!has_valid_sensor) {
-            error_code_ = ErrorCode::ERROR_NOT_READY;
+            error_code_ = ErrorCode::ERROR_MEASUREMENT_FAILED;
             total_mass_ = 0.0f;
             return;
         }
