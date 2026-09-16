@@ -52,7 +52,9 @@ public:
             value_ = median_filter_.update(raw_value);
     }
 
-    Measurement measurement() const noexcept { return { value_, error_code_, }; }
+    Measurement measurement() const noexcept {
+        return { value_, error_code_, };
+    }
 
     ErrorCode error_code() const noexcept { return error_code_; }
 
@@ -69,6 +71,7 @@ public:
     explicit AggregateMeasurement(
         const size_t num_sensors,
         SensorType sensor_type)
+        : error_code_(ErrorCode::ERROR_NONE)
     {
         channels_.reserve(num_sensors);
         per_sensor_values_.reserve(num_sensors);
@@ -100,6 +103,10 @@ public:
         return per_sensor_values_;
     }
 
+    ErrorCode error_code() const noexcept {
+        return error_code_;
+    }
+
     virtual void update() = 0;
 
     virtual void reset() {
@@ -108,6 +115,8 @@ public:
         for (auto& value : per_sensor_values_) {
             value = 0.0f;
         }
+
+        error_code_ = ErrorCode::ERROR_NONE;
     }
 
 protected:
@@ -119,4 +128,6 @@ protected:
 
     std::vector<MeasurementChannel> channels_;
     std::vector<float> per_sensor_values_;
+    ErrorCode error_code_;
 };
+

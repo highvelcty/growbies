@@ -9,5 +9,6 @@ enum class ErrorCode: uint32_t {
     ERROR_INCOMPLETE_SLIP_FRAME                 = 3,
     ERROR_INVALID_SLIP_CRC                      = 4,
     ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW     = 5,
-    NOT_READY                                   = 6,
+    ERROR_NOT_READY                             = 6,
+    ERROR_MEASUREMENT_DEGRADED                  = 7,
 };
