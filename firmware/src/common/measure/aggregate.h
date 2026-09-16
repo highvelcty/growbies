@@ -14,6 +14,11 @@ enum class SensorType : uint8_t {
     UNKNOWN,
 };
 
+struct Measurement {
+    float value;
+    ErrorCode error_code;
+};
+
 // -------------------------------
 // Single measurement channel
 // -------------------------------
@@ -24,27 +29,38 @@ public:
         const size_t median_window_size)
         : type_(type),
           median_filter_(median_window_size),
-          value_(0.0f)
+          value_(0.0f),
+          error_code_(ErrorCode::ERROR_NONE)
     {}
 
 
     void reset() {
         median_filter_.reset();
         value_ = 0.0f;
+        error_code_ = ErrorCode::ERROR_NONE;
     }
 
     SensorType type() const noexcept { return type_; }
 
-    void update(const float raw_value, ErrorCode error_code = ErrorCode::ERROR_NONE) {
-        value_ = median_filter_.update(raw_value);
+    void update(
+        const float raw_value,
+        const ErrorCode error_code = ErrorCode::ERROR_NONE)
+    {
+        error_code_ = error_code;
+
+        if (error_code_ == ErrorCode::ERROR_NONE)
+            value_ = median_filter_.update(raw_value);
     }
 
-    float value() const noexcept { return value_; }
+    Measurement measurement() const noexcept { return { value_, error_code_, }; }
+
+    ErrorCode error_code() const noexcept { return error_code_; }
 
 private:
     SensorType type_;
     SlidingMedianFilter median_filter_;
     float value_;
+    ErrorCode error_code_;
 };
 
 

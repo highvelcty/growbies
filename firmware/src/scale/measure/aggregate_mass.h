@@ -53,10 +53,11 @@ public:
         const auto& cal_hdr = nvm_cal->hdr;
         const auto& sensors = nvm_cal->sensor;
         const float Tref = cal_hdr.ref_temperature;
+        float corrected_mass = 0.0;
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
             auto& ch = channels_[ii];
-            float mass = ch.value();
+            const Measurement measurement = ch.measurement();
 
             if (ii < cal_hdr.mass_sensor_count) {
                 const auto& coeffs = sensors[ii].coeffs;
@@ -76,21 +77,20 @@ public:
 
                 // --- Mass calibration ---
                 const float calibrated_mass = coeffs.mass_offset
-                                              + coeffs.mass_slope * mass
-                                              + coeffs.mass_quadratic * mass * mass;
-
+                                              + coeffs.mass_slope * measurement.value
+                                              + coeffs.mass_quadratic * measurement.value
+                                                * measurement.value;
 
                 // --- Temperature correction ---
                 const float delta_M_temp = coeffs.temperature_offset
                                            + coeffs.temperature_slope * dT
                                            + coeffs.temperature_quadratic * dT * dT;
 
-                // --- Total corrected mass ---
-                mass = calibrated_mass - delta_M_temp;
+                corrected_mass = calibrated_mass - delta_M_temp;
             }
 
-            per_sensor_mass_[ii] = mass;
-            total_mass_ += mass;
+            per_sensor_mass_[ii] = corrected_mass;
+            total_mass_ += corrected_mass;
         }
 
         // Subtract global tare

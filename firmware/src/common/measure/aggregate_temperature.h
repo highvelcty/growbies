@@ -40,7 +40,10 @@ public:
     void update() {
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
             const auto& ch = channels_[ii];
-            const float raw_temp = ch.value() + _get_thermistor_offset(ii);
+            const Measurement measurement = ch.measurement();
+            // meyere: todo - handle measurement errors here
+
+            const float raw_temp = measurement.value + _get_thermistor_offset(ii);
             aewma_[ii].add(raw_temp);
         }
     }

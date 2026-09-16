@@ -40,7 +40,7 @@ void MeasurementStack::update() const {
                 aggregate_mass_->channel(i).update(mass_vals[i]);
             }
             else {
-                aggregate_mass_->channel(i).update(NAN, ErrorCode::NOT_READY);
+                aggregate_mass_->channel(i).update(0.0f, ErrorCode::NOT_READY);
             }
     }
     // 2026_06_02 meyere: analogReadMillivolts has the side effect of disconnecting
