@@ -124,7 +124,7 @@ public:
             else {
                 temps.push_back({
                     estimated_temperature,
-                    ErrorCode::ERROR_MEASUREMENT_DEGRADED,
+                    channels_[ii].measurement().error,
                 });
             }
         }

@@ -34,10 +34,10 @@ enum class Resp: uint16_t {
 typedef enum EndpointType: uint8_t {
     EP_MASS_SENSOR = 0,
     EP_MASS = 1,
-    EP_MASS_ERRORS = 2,
+    EP_MASS_SENSOR_ERRORS = 2,
     EP_TEMPERATURE_SENSORS = 3,
     EP_TEMPERATURE = 4,
-    EP_TEMPERATURE_ERRORS = 5,
+    EP_TEMPERATURE_SENSOR_ERRORS = 5,
     EP_TARE = 6,
     EP_UNKNOWN = 0xFF
 } EndpointType;
