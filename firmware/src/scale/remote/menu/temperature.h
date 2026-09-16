@@ -242,10 +242,9 @@ struct TemperatureDrawing final : BaseTemperatureDrawing {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
-        const auto new_value =
-            measurement_stack.aggregate_temp().conditioned_total();
+        const Measurement measurement = measurement_stack.aggregate_temp().conditioned_total();
 
-        if (set_temperature(new_value)) {
+        if (set_temperature(measurement.value)) {
             redraw();
         }
         else {

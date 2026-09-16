@@ -45,6 +45,7 @@ constexpr float STEINHART_HART_C = 7.41006996E-6f;
 
 
 class Thermistor {
+    // meyere, this is the wrong layer to do this - it has been moved to the aggregate
     static constexpr float DEFAULT_TEMPERATURE_CELSIUS = 22.0;
 public:
 

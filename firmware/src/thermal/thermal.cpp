@@ -43,7 +43,8 @@ ThermalDeviceState ThermalDevice::get_state() {
     }
     _aggregate_temp->update();
 
-    _state.sense.temperature = _aggregate_temp->conditioned_total();
+    Measurement measurement = _aggregate_temp->conditioned_total();
+    _state.sense.temperature = measurement.value;
     _state.sense.heater_on = _is_heater_on();
     _state.sense.fan_on = _is_fan_on();
 

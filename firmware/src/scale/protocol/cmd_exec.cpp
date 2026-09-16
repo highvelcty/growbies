@@ -138,14 +138,17 @@ void CmdExec::update_telemetry(const bool async) const {
     }
 
     datapoint.add<float>(EP_MASS, stack.aggregate_mass().conditioned_total());
-    datapoint.add<float>(EP_TEMPERATURE, stack.aggregate_temp().conditioned_total());
+    Measurement measurement = stack.aggregate_temp().conditioned_total();
+    datapoint.add<float>(EP_TEMPERATURE, measurement.value);
 
     for (auto sensor_mass : stack.aggregate_mass().sensor_masses()) {
         datapoint.add<float>(EP_MASS_SENSOR, sensor_mass);
+        datapoint.add<ErrorCode>(EP_MASS_ERRORS, sensor_mass.error);
     }
 
     for (auto sensor_temp : stack.aggregate_temp().sensor_temperatures()) {
-        datapoint.add<float>(EP_TEMPERATURE_SENSORS, sensor_temp);
+        datapoint.add<float>(EP_TEMPERATURE_SENSORS, sensor_temp.value);
+        datapoint.add<ErrorCode>(EP_TEMPERATURE_ERRORS, sensor_temp.error);
     }
 
     usb_transport.send_resp(&datapoint, datapoint.get_size(), async);

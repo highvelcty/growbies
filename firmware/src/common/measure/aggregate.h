@@ -16,7 +16,7 @@ enum class SensorType : uint8_t {
 
 struct Measurement {
     float value;
-    ErrorCode error_code;
+    ErrorCode error;
 };
 
 // -------------------------------

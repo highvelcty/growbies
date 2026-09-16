@@ -27,7 +27,7 @@ public:
             MeasurementChannel(SensorType::MASS, MEDIAN_FILTER_BUF_SIZE)),
         temperature_(temperature),
         per_sensor_mass_(num_sensors, 0.0f),
-        total_mass_(0.0f)
+        _mass(0.0f)
     {}
 
     MeasurementChannel& channel(const size_t idx) { return channels_[idx]; }
@@ -39,8 +39,8 @@ public:
         }
 
         std::fill(per_sensor_mass_.begin(), per_sensor_mass_.end(), 0.0f);
-        total_mass_ = 0.0f;
-        error_code_ = ErrorCode::ERROR_NONE;
+        _mass = 0.0f;
+        _error = ErrorCode::ERROR_NONE;
     }
 
     void reset() {
@@ -65,8 +65,8 @@ public:
     }
 
     void update() {
-        total_mass_ = 0.0f;
-        error_code_ = ErrorCode::ERROR_NONE;
+        _mass = 0.0f;
+        _error = ErrorCode::ERROR_NONE;
 
         // ---- Load Calibration ----
         const auto* nvm_cal = calibration_store->payload();
@@ -78,25 +78,16 @@ public:
             const auto& ch = channels_[ii];
             const Measurement measurement = ch.measurement();
 
-            if (measurement.error_code != ErrorCode::ERROR_NONE) {
-                error_code_ = ErrorCode::ERROR_MEASUREMENT_DEGRADED;
+            if (measurement.error != ErrorCode::ERROR_NONE) {
+                _error = ErrorCode::ERROR_MEASUREMENT_DEGRADED;
                 continue;
             }
 
+            // Retrieve coefficients for this sensor
             const auto& coeffs = sensors[ii].coeffs;
 
-            // --- Per-sensor temperature if available ---
-            float sensor_temp_value = 0.0f;
-
-            if (ii < temperature_.size()) {
-                sensor_temp_value = temperature_.sensor_temperatures()[ii];
-            }
-            // Fallback to aggregate average
-            else {
-                sensor_temp_value = temperature_.conditioned_total();
-            }
-
-            const float dT = sensor_temp_value - Tref;
+            // Retrieve temperature for this sensor
+            const Measurement temp_measurement = temperature_.sensor_temperatures()[ii];
 
             // --- Mass calibration ---
             const float calibrated_mass =
@@ -106,44 +97,45 @@ public:
                   * measurement.value;
 
             // --- Temperature correction ---
+            const float dT = temp_measurement.value - Tref;
             const float delta_M_temp =
                 coeffs.temperature_offset
                 + coeffs.temperature_slope * dT
                 + coeffs.temperature_quadratic * dT * dT;
 
-            const float corrected_mass = calibrated_mass - delta_M_temp;
+            const float mass = calibrated_mass - delta_M_temp;
 
-            per_sensor_mass_[ii] = corrected_mass;
+            per_sensor_mass_[ii] = mass;
         }
 
         // If every sensor was invalid, there is no valid aggregate.
         bool has_valid_sensor = false;
         for (const auto& ch : channels_) {
-            if (ch.measurement().error_code == ErrorCode::ERROR_NONE) {
+            if (ch.measurement().error == ErrorCode::ERROR_NONE) {
                 has_valid_sensor = true;
                 break;
             }
         }
         if (!has_valid_sensor) {
-            error_code_ = ErrorCode::ERROR_MEASUREMENT_FAILED;
-            total_mass_ = 0.0f;
+            _error = ErrorCode::ERROR_MEASUREMENT_FAILED;
+            _mass = 0.0f;
             return;
         }
 
         // Estimate any invalid sensor measurements from the valid sensors.
-        if (error_code_ == ErrorCode::ERROR_MEASUREMENT_DEGRADED) {
+        if (_error == ErrorCode::ERROR_MEASUREMENT_DEGRADED) {
             _estimate();
         }
 
         // Sum the calibrated and estimated sensor masses.
         for (const float mass : per_sensor_mass_) {
-            total_mass_ += mass;
+            _mass += mass;
         }
 
         // Subtract global tare
-        total_mass_ -= tare_store->payload()->tares[TareIdx::GLOBAL].value;
+        _mass -= tare_store->payload()->tares[TareIdx::GLOBAL].value;
 
-        aewma_buffer_.add(total_mass_);
+        aewma_buffer_.add(_mass);
     }
 
 private:
@@ -152,7 +144,7 @@ private:
         size_t valid_mass_count = 0;
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
-            if (channels_[ii].measurement().error_code
+            if (channels_[ii].measurement().error
                 == ErrorCode::ERROR_NONE) {
                 valid_mass_sum += per_sensor_mass_[ii];
                 ++valid_mass_count;
@@ -167,7 +159,7 @@ private:
             valid_mass_sum / static_cast<float>(valid_mass_count);
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
-            if (channels_[ii].measurement().error_code != ErrorCode::ERROR_NONE) {
+            if (channels_[ii].measurement().error != ErrorCode::ERROR_NONE) {
                 per_sensor_mass_[ii] = estimated_mass;
                 }
         }
@@ -177,7 +169,7 @@ private:
     std::vector<MeasurementChannel> channels_;
     AggregateTemperature& temperature_;
     std::vector<float> per_sensor_mass_{};
-    float total_mass_;
-    ErrorCode error_code_ = ErrorCode::ERROR_NONE;
+    float _mass;
+    ErrorCode _error = ErrorCode::ERROR_NONE;
 };
 

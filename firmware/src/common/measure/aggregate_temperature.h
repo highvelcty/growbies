@@ -2,6 +2,7 @@
 
 #include "aggregate.h"
 
+constexpr float DEFAULT_TEMPERATURE_CELSIUS = 22.0;
 constexpr float EWMA_TEMPERATURE_ALPHA_MIN = 0.05;
 constexpr float EWMA_TEMPERATURE_ALPHA_MAX = 0.7;
 constexpr float EWMA_TEMPERATURE_ALPHA_THRESH_CELSIUS = 2;
@@ -29,15 +30,17 @@ public:
         return error_code_;
     }
 
-    float conditioned_total() const {
+    Measurement conditioned_total() const {
         const auto temps = sensor_temperatures();
-        if (temps.empty()) return 0.0f;
 
         float sum = 0.0f;
-        for (const float t : temps) sum += t;
-        return sum / static_cast<float>(temps.size());
+        for (const auto& temp : temps) sum += temp.value;
 
-    }
+        return {
+                sum / static_cast<float>(temps.size()),
+                error_code_,
+            };
+        }
 
     static float _get_thermistor_offset(size_t idx);
 
@@ -50,7 +53,7 @@ public:
             const auto& ch = channels_[ii];
             const Measurement measurement = ch.measurement();
 
-            if (measurement.error_code != ErrorCode::ERROR_NONE) {
+            if (measurement.error != ErrorCode::ERROR_NONE) {
                 error_code_ = ErrorCode::ERROR_MEASUREMENT_DEGRADED;
                 continue;
             }
@@ -82,33 +85,47 @@ public:
         reset_channels();
     }
 
-    std::vector<float> sensor_temperatures() const {
-        std::vector<float> temps;
+    std::vector<Measurement> sensor_temperatures() const {
+        std::vector<Measurement> temps;
         temps.reserve(channels_.size());
 
         float valid_temperature_sum = 0.0f;
         size_t valid_temperature_count = 0;
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
-            if (channels_[ii].measurement().error_code == ErrorCode::ERROR_NONE) {
+            if (channels_[ii].measurement().error == ErrorCode::ERROR_NONE) {
                 valid_temperature_sum += aewma_[ii].value();
                 ++valid_temperature_count;
             }
         }
 
-        if (valid_temperature_count == 0)
+        if (valid_temperature_count == 0) {
+            for (size_t ii = 0; ii < channels_.size(); ++ii) {
+                temps.push_back({
+                    DEFAULT_TEMPERATURE_CELSIUS,
+                    ErrorCode::ERROR_MEASUREMENT_FAILED,
+                });
+            }
+
             return temps;
+        }
 
         const float estimated_temperature =
             valid_temperature_sum
             / static_cast<float>(valid_temperature_count);
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
-            if (channels_[ii].measurement().error_code == ErrorCode::ERROR_NONE) {
-                temps.push_back(aewma_[ii].value());
+            if (channels_[ii].measurement().error == ErrorCode::ERROR_NONE) {
+                temps.push_back({
+                    aewma_[ii].value(),
+                    ErrorCode::ERROR_NONE,
+                });
             }
             else {
-                temps.push_back(estimated_temperature);
+                temps.push_back({
+                    estimated_temperature,
+                    ErrorCode::ERROR_MEASUREMENT_DEGRADED,
+                });
             }
         }
 
@@ -120,3 +137,4 @@ private:
     std::vector<MeasurementChannel> channels_;
     ErrorCode error_code_ = ErrorCode::ERROR_NONE;
 };
+
