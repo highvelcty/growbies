@@ -1,4 +1,5 @@
 #include "common/protocol/cmd_exec.h"
+#include "common/protocol/error_code.h"
 #include "command.h"
 #include "scale/measure/stack.h"
 #include "scale/remote/remote_out.h"

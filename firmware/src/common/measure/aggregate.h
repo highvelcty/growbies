@@ -1,7 +1,7 @@
 #pragma once
 
-#include <cstdint>
 #include <vector>
+#include "common/protocol/error_code.h"
 #include "common/measure/filter.h"
 
 static constexpr size_t MEDIAN_FILTER_BUF_SIZE = 3;
@@ -35,7 +35,7 @@ public:
 
     SensorType type() const noexcept { return type_; }
 
-    void update(const float raw_value) {
+    void update(const float raw_value, ErrorCode error_code = ErrorCode::ERROR_NONE) {
         value_ = median_filter_.update(raw_value);
     }
 
