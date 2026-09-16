@@ -26,7 +26,9 @@ public:
             num_sensors,
             MeasurementChannel(SensorType::MASS, MEDIAN_FILTER_BUF_SIZE)),
         temperature_(temperature),
-        per_sensor_mass_(num_sensors, 0.0f),
+        _per_sensor_measurement(
+            num_sensors,
+            Measurement{ 0.0f, ErrorCode::ERROR_NONE }),
         _mass(0.0f)
     {}
 
@@ -38,7 +40,12 @@ public:
             ch.reset();
         }
 
-        std::fill(per_sensor_mass_.begin(), per_sensor_mass_.end(), 0.0f);
+        for (auto& measurement : _per_sensor_measurement) {
+            measurement = {
+                0.0f,
+                ErrorCode::ERROR_NONE,
+            };
+        }
         _mass = 0.0f;
         _error = ErrorCode::ERROR_NONE;
     }
@@ -48,16 +55,19 @@ public:
         reset_channels();
     }
 
-    const std::vector<float>& sensor_masses() const {
-        return per_sensor_mass_;
+    const std::vector<Measurement>& sensor_measurements() const {
+        return _per_sensor_measurement;
     }
 
     size_t size() const {
         return channels_.size();
     }
 
-    float conditioned_total() const {
-        return aewma_buffer_.value();
+    Measurement conditioned_total() const {
+        return {
+            aewma_buffer_.value(),
+            _error,
+        };
     }
 
     bool is_event_tripped() const {
@@ -73,12 +83,17 @@ public:
         const auto& cal_hdr = nvm_cal->hdr;
         const auto& sensors = nvm_cal->sensor;
         const float Tref = cal_hdr.ref_temperature;
+        const auto temperatures = temperature_.sensor_temperatures();
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
             const auto& ch = channels_[ii];
             const Measurement measurement = ch.measurement();
 
             if (measurement.error != ErrorCode::ERROR_NONE) {
+                _per_sensor_measurement[ii] = {
+                    0.0f,
+                    measurement.error,
+                };
                 _error = ErrorCode::ERROR_MEASUREMENT_DEGRADED;
                 continue;
             }
@@ -87,7 +102,7 @@ public:
             const auto& coeffs = sensors[ii].coeffs;
 
             // Retrieve temperature for this sensor
-            const Measurement temp_measurement = temperature_.sensor_temperatures()[ii];
+            const Measurement temp_measurement = temperatures[ii];
 
             // --- Mass calibration ---
             const float calibrated_mass =
@@ -105,7 +120,10 @@ public:
 
             const float mass = calibrated_mass - delta_M_temp;
 
-            per_sensor_mass_[ii] = mass;
+            _per_sensor_measurement[ii] = {
+                mass,
+                measurement.error,
+            };
         }
 
         // If every sensor was invalid, there is no valid aggregate.
@@ -128,8 +146,8 @@ public:
         }
 
         // Sum the calibrated and estimated sensor masses.
-        for (const float mass : per_sensor_mass_) {
-            _mass += mass;
+        for (const auto& measurement : _per_sensor_measurement) {
+            _mass += measurement.value;
         }
 
         // Subtract global tare
@@ -144,11 +162,11 @@ private:
         size_t valid_mass_count = 0;
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
-            if (channels_[ii].measurement().error
+            if (_per_sensor_measurement[ii].error
                 == ErrorCode::ERROR_NONE) {
-                valid_mass_sum += per_sensor_mass_[ii];
+                valid_mass_sum += _per_sensor_measurement[ii].value;
                 ++valid_mass_count;
-                }
+            }
         }
 
         if (valid_mass_count == 0) {
@@ -159,8 +177,11 @@ private:
             valid_mass_sum / static_cast<float>(valid_mass_count);
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
-            if (channels_[ii].measurement().error != ErrorCode::ERROR_NONE) {
-                per_sensor_mass_[ii] = estimated_mass;
+            if (_per_sensor_measurement[ii].error != ErrorCode::ERROR_NONE) {
+                _per_sensor_measurement[ii] = {
+                    estimated_mass,
+                    ErrorCode::ERROR_MEASUREMENT_DEGRADED,
+                };
                 }
         }
     }
@@ -168,7 +189,7 @@ private:
     LogisticAEWMABuffer aewma_buffer_;
     std::vector<MeasurementChannel> channels_;
     AggregateTemperature& temperature_;
-    std::vector<float> per_sensor_mass_{};
+    std::vector<Measurement> _per_sensor_measurement{};
     float _mass;
     ErrorCode _error = ErrorCode::ERROR_NONE;
 };

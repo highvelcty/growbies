@@ -137,13 +137,15 @@ void CmdExec::update_telemetry(const bool async) const {
         datapoint.add<float>(EP_TARE, tare.value);
     }
 
-    datapoint.add<float>(EP_MASS, stack.aggregate_mass().conditioned_total());
-    Measurement measurement = stack.aggregate_temp().conditioned_total();
-    datapoint.add<float>(EP_TEMPERATURE, measurement.value);
+    const Measurement mass_measurement = stack.aggregate_mass().conditioned_total();
+    datapoint.add<float>(EP_MASS, mass_measurement.value);
 
-    for (auto sensor_mass : stack.aggregate_mass().sensor_masses()) {
-        datapoint.add<float>(EP_MASS_SENSOR, sensor_mass);
-        datapoint.add<ErrorCode>(EP_MASS_ERRORS, sensor_mass.error);
+    const Measurement temperature_measurement = stack.aggregate_temp().conditioned_total();
+    datapoint.add<float>(EP_TEMPERATURE, temperature_measurement.value);
+
+    for (auto sensor_measurement : stack.aggregate_mass().sensor_measurements()) {
+        datapoint.add<float>(EP_MASS_SENSOR, sensor_measurement.value);
+        datapoint.add<ErrorCode>(EP_MASS_ERRORS, sensor_measurement.error);
     }
 
     for (auto sensor_temp : stack.aggregate_temp().sensor_temperatures()) {

@@ -75,8 +75,8 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
             draw(true);
         }
 
-        tare_store->edit().payload.tares[tare_idx].value = \
-            stack.aggregate_mass().conditioned_total();
+        Measurement measurement = stack.aggregate_mass().conditioned_total();
+        tare_store->edit().payload.tares[tare_idx].value = measurement.value;
         tare_store->commit();
 
         msg = "zero";
@@ -219,8 +219,9 @@ struct MassDrawing final : BaseTelemetryDrawing {
             system_state.notify_activity(millis());
         }
 
+        Measurement measurement = measurement_stack.aggregate_mass().conditioned_total();
         const bool needs_redraw =
-            _convert_units(measurement_stack.aggregate_mass().conditioned_total(), new_units);
+            _convert_units(measurement.value, new_units);
         if (needs_redraw) {
             redraw();
         }

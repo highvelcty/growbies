@@ -168,10 +168,10 @@ struct ThermistorDrawing final : BaseTemperatureDrawing {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
-        const auto new_value =
+        const auto measurement =
             measurement_stack.aggregate_temp().sensor_temperatures()[sensor];
 
-        set_temperature(new_value);
+        set_temperature(measurement.value);
         draw_value();
     }
 };
