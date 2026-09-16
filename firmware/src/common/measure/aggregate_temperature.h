@@ -103,7 +103,7 @@ public:
             for (size_t ii = 0; ii < channels_.size(); ++ii) {
                 temps.push_back({
                     DEFAULT_TEMPERATURE_CELSIUS,
-                    ErrorCode::ERROR_MEASUREMENT_FAILED,
+                    channels_[ii].measurement().error,
                 });
             }
 
@@ -137,4 +137,3 @@ private:
     std::vector<MeasurementChannel> channels_;
     ErrorCode error_code_ = ErrorCode::ERROR_NONE;
 };
-

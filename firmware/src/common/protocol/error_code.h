@@ -12,4 +12,7 @@ enum class ErrorCode: uint32_t {
     ERROR_NOT_READY                             = 6,
     ERROR_MEASUREMENT_DEGRADED                  = 7,
     ERROR_MEASUREMENT_FAILED                    = 8,
+    ERROR_READ_VOLTAGE                          = 9,
+    ERROR_UNDER_TEMPERATURE                     = 10,
+    ERROR_OVER_TEMPERATURE                      = 11,
 };

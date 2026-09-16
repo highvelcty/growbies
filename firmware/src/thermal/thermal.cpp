@@ -37,9 +37,9 @@ void ThermalDevice::begin()
 ThermalDeviceState ThermalDevice::get_state() {
     _aggregate_temp->reset_channels();
     for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
-        std::vector<float> temp_vals = _multi_thermistor.sample();
-        for (size_t i = 0; i < temp_vals.size() && i < _aggregate_temp->size(); ++i)
-            _aggregate_temp->channel(i).update(temp_vals[i]);
+        std::vector<Measurement> measurements = _multi_thermistor.sample();
+        for (size_t i = 0; i < measurements.size() && i < _aggregate_temp->size(); ++i)
+            _aggregate_temp->channel(i).update(measurements[i].value);
     }
     _aggregate_temp->update();
 

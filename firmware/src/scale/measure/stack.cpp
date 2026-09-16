@@ -31,10 +31,11 @@ void MeasurementStack::update() const {
         // There is some settling with the thermistor, and it is typically longer than mass,
         // hence this ordering.
         std::vector<float> mass_vals = multi_hx711_.sample();
-        std::vector<float> temp_vals = multi_thermistor_.sample();
+        std::vector<Measurement> temp_measurements = multi_thermistor_.sample();
 
-        for (size_t i = 0; i < temp_vals.size() && i < aggregate_temp_->size(); ++i)
-            aggregate_temp_->channel(i).update(temp_vals[i]);
+        for (size_t i = 0; i < temp_measurements.size() && i < aggregate_temp_->size(); ++i)
+            aggregate_temp_->channel(i).update(temp_measurements[i].value,
+                temp_measurements[i].error);
         for (size_t i = 0; i < mass_vals.size() && i < aggregate_mass_->size(); ++i)
             if (ready_mask & (1 << i)) {
                 aggregate_mass_->channel(i).update(mass_vals[i]);

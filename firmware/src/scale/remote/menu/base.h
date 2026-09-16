@@ -126,7 +126,7 @@ struct BaseIntMenuLeaf : BaseCfgMenu {
 
 enum class TelemetryDrawingFormat {
     STANDARD,
-    BOTTOM_TWO_LINES,
+    BOTTOM_DETAIL,
 };
 
 struct BaseTelemetryDrawing : BaseCfgMenu {
@@ -140,17 +140,20 @@ struct BaseTelemetryDrawing : BaseCfgMenu {
     char units_str[UNITS_CHARS + 1]{};
 
     const TelemetryDrawingFormat format;
+    ErrorCode error{ErrorCode::ERROR_NONE};
 
     explicit BaseTelemetryDrawing(
         U8X8& display_,
         const char* msg_ = "",
         const TelemetryDrawingFormat format_ =
             TelemetryDrawingFormat::STANDARD,
+        const int level_ = 0,
         std::vector<std::shared_ptr<BaseMenu>> _children = {}
     )
-        : BaseCfgMenu(display_, msg_, 0, std::move(_children)),
+        : BaseCfgMenu(display_, msg_, level_, std::move(_children)),
           format(format_)
     {}
+
 
     void draw(const bool selected) override {
         BaseCfgMenu::draw(selected);
@@ -167,8 +170,8 @@ struct BaseTelemetryDrawing : BaseCfgMenu {
                 display.setFont(TWO_BY_THREE_FONT);
                 break;
 
-            case TelemetryDrawingFormat::BOTTOM_TWO_LINES:
-                display.setFont(TWO_BY_TWO_FONT);
+            case TelemetryDrawingFormat::BOTTOM_DETAIL:
+                display.setFont(ONE_BY_FONT);
                 break;
         }
         draw_value();
@@ -178,12 +181,10 @@ struct BaseTelemetryDrawing : BaseCfgMenu {
         // Efficiency optimized function
         switch (format) {
             case TelemetryDrawingFormat::STANDARD:
-                if (!cached_selected) {
-                    display.drawString(0, 1, value_str);
-                }
+                display.drawString(0, 1, value_str);
                 break;
 
-            case TelemetryDrawingFormat::BOTTOM_TWO_LINES:
+            case TelemetryDrawingFormat::BOTTOM_DETAIL:
                 display.drawString(0, 2, value_str);
                 break;
         }

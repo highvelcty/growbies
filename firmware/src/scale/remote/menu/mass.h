@@ -193,6 +193,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
               display_,
               get_tare_name(tare_idx_),
               TelemetryDrawingFormat::STANDARD,
+              0,
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<TareMenu>(display_, tare_idx_),
                   std::make_shared<MassUnitsMenu>(display_),
@@ -213,25 +214,26 @@ struct MassDrawing final : BaseTelemetryDrawing {
     void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
-        const auto new_units = identify_store->view()->payload.mass_units;
 
         if (measurement_stack.aggregate_mass().is_event_tripped()) {
             system_state.notify_activity(millis());
         }
 
-        Measurement measurement = measurement_stack.aggregate_mass().conditioned_total();
-        const bool needs_redraw =
-            _convert_units(measurement.value, new_units);
+        const Measurement measurement = measurement_stack.aggregate_mass().conditioned_total();
+        const bool needs_redraw = _set_state(measurement);
         if (needs_redraw) {
-            redraw();
+            if (cached_selected) {
+                redraw();
+            }
         }
         else {
             draw_value();
         }
     }
 
-    bool _convert_units(const float grams, const MassUnits new_units) {
-        float converted_mass = grams - tare_store->payload()->tares[tare_idx].value;
+    bool _set_state(const Measurement measurement) {
+        const auto new_units = identify_store->view()->payload.mass_units;
+        float tare_mass = measurement.value - tare_store->payload()->tares[tare_idx].value;
         MassUnits converted_units = new_units;
 
         constexpr float GRAMS_PER_KG = 1000.0f;
@@ -252,9 +254,9 @@ struct MassDrawing final : BaseTelemetryDrawing {
         // Unit conversion
         switch (converted_units) {
             case MassUnits::GRAMS: break;
-            case MassUnits::KILOGRAMS: converted_mass /= GRAMS_PER_KG; break;
-            case MassUnits::OUNCES: converted_mass /= GRAMS_PER_OZ; break;
-            case MassUnits::POUNDS: converted_mass /= (GRAMS_PER_OZ * OUNCES_PER_LB); break;
+            case MassUnits::KILOGRAMS: tare_mass /= GRAMS_PER_KG; break;
+            case MassUnits::OUNCES: tare_mass /= GRAMS_PER_OZ; break;
+            case MassUnits::POUNDS: tare_mass /= (GRAMS_PER_OZ * OUNCES_PER_LB); break;
         }
 
         // Precision by units
@@ -262,48 +264,48 @@ struct MassDrawing final : BaseTelemetryDrawing {
         switch (converted_units) {
             case MassUnits::GRAMS: {
                 precision = 0;
-                if (converted_mass > MAX_SINGLE_PRECISION ||
-                    converted_mass < MIN_SINGLE_PRECISION) {
+                if (tare_mass > MAX_SINGLE_PRECISION ||
+                    tare_mass < MIN_SINGLE_PRECISION) {
                     converted_units = MassUnits::KILOGRAMS;
-                    converted_mass /= GRAMS_PER_KG;
+                    tare_mass /= GRAMS_PER_KG;
                 }
                 break;
             }
             case MassUnits::OUNCES: {
                 precision = 2;
-                if (converted_mass > MAX_DOUBLE_PRECISION ||
-                    converted_mass < MIN_DOUBLE_PRECISION) {
+                if (tare_mass > MAX_DOUBLE_PRECISION ||
+                    tare_mass < MIN_DOUBLE_PRECISION) {
                     converted_units = MassUnits::POUNDS;
-                    converted_mass /= OUNCES_PER_LB;
+                    tare_mass /= OUNCES_PER_LB;
                 }
                 break;
             }
             case MassUnits::POUNDS:
             case MassUnits::KILOGRAMS: {
                 precision = 3;
-                if (converted_mass > MAX_TRIPLE_PRECISION ||
-                    converted_mass < MIN_TRIPLE_PRECISION) {
+                if (tare_mass > MAX_TRIPLE_PRECISION ||
+                    tare_mass < MIN_TRIPLE_PRECISION) {
                     precision = 2;
                 }
-                else if (converted_mass > MAX_DOUBLE_PRECISION ||
-                         converted_mass < MIN_DOUBLE_PRECISION) {
+                else if (tare_mass > MAX_DOUBLE_PRECISION ||
+                         tare_mass < MIN_DOUBLE_PRECISION) {
                     precision = 1;
                 }
-                else if (converted_mass > MAX_SINGLE_PRECISION ||
-                         converted_mass < MIN_SINGLE_PRECISION) {
+                else if (tare_mass > MAX_SINGLE_PRECISION ||
+                         tare_mass < MIN_SINGLE_PRECISION) {
                     precision = 0;
-                    if (converted_mass > MAX_ZERO_PRECISION) {
-                        converted_mass = MAX_ZERO_PRECISION;
+                    if (tare_mass > MAX_ZERO_PRECISION) {
+                        tare_mass = MAX_ZERO_PRECISION;
                     }
-                    else if (converted_mass < MIN_ZERO_PRECISION) {
-                        converted_mass = MIN_ZERO_PRECISION;
+                    else if (tare_mass < MIN_ZERO_PRECISION) {
+                        tare_mass = MIN_ZERO_PRECISION;
                     }
                 }
                 break;
             }
         }
 
-        dtostrf(converted_mass, VALUE_CHARS, precision, value_str);
+        dtostrf(tare_mass, VALUE_CHARS, precision, value_str);
         value_str[VALUE_CHARS] = '\0';
 
         bool redraw = false;
