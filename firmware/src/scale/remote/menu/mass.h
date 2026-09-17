@@ -5,7 +5,6 @@
 #include <memory>
 #include <Arduino.h>
 
-
 #include "base.h"
 #include "scale/measure/stack.h"
 #include "common/system_state.h"
@@ -14,13 +13,17 @@
 // -----------------------------------------------------------------------------
 // MassDrawing
 // -----------------------------------------------------------------------------
+
 struct TareZeroLeaf final : BaseStrMenuLeaf {
     constexpr static int TARE_SAMPLE_DELAY = 2000;
     TareIdx tare_idx;
 
-    explicit TareZeroLeaf(U8X8& display_, const TareIdx tare_idx_)
+    explicit TareZeroLeaf(
+        U8X8& display_,
+        const TareIdx tare_idx_)
         : BaseStrMenuLeaf(display_, 2),
-        tare_idx(tare_idx_) {
+          tare_idx(tare_idx_)
+    {
         msg = "zero";
     }
 
@@ -58,6 +61,7 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
             ".       ",
             "        "
         };
+
         const auto& stack = MeasurementStack::get();
         constexpr size_t dots_len = sizeof(dots) / sizeof(dots[0]);
 
@@ -75,8 +79,12 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
             draw(true);
         }
 
-        Measurement measurement = stack.aggregate_mass().conditioned_total();
-        tare_store->edit().payload.tares[tare_idx].value = measurement.value;
+        Measurement measurement =
+            stack.aggregate_mass().conditioned_total();
+
+        tare_store->edit().payload.tares[tare_idx].value =
+            measurement.value;
+
         tare_store->commit();
 
         msg = "zero";
@@ -87,15 +95,20 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
     }
 };
 
+
 struct TareCancelLeaf final : BaseStrMenuLeaf {
     explicit TareCancelLeaf(U8X8& display_)
-        : BaseStrMenuLeaf(display_, 2) {
+        : BaseStrMenuLeaf(display_, 2)
+    {
         msg = "cancel";
     }
 };
 
+
 struct TareMenu final : BaseCfgMenu {
-    explicit TareMenu(U8X8& display, TareIdx tare_idx)
+    explicit TareMenu(
+        U8X8& display,
+        TareIdx tare_idx)
         : BaseCfgMenu(
             display,
             "Tare",
@@ -103,13 +116,17 @@ struct TareMenu final : BaseCfgMenu {
             std::vector<std::shared_ptr<BaseMenu>>{
                 std::make_shared<TareZeroLeaf>(display, tare_idx),
                 std::make_shared<TareCancelLeaf>(display)
-            }) {}
+            })
+    {}
 };
+
 
 struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
     MassUnits units{MassUnits::GRAMS};
 
-    explicit  MassUnitsMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 2) {}
+    explicit MassUnitsMenuLeaf(U8X8& display_) :
+        BaseStrMenuLeaf(display_, 2)
+    {}
 
     void on_down() override {
         // Convert to integer for cycling
@@ -128,7 +145,8 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
         // Convert to integer for cycling
         uint8_t next = static_cast<uint8_t>(units) - 1;
 
-        // Wrap around if we exceed the first element - note the uint8 wraps to 255.
+        // Wrap around if we exceed the first element.
+        // Note that the uint8 wraps to 255.
         if (next > static_cast<uint8_t>(MassUnits::POUNDS)) {
             next = static_cast<uint8_t>(MassUnits::POUNDS);
         }
@@ -168,6 +186,7 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
     }
 };
 
+
 struct MassUnitsMenu final : BaseCfgMenu {
     explicit MassUnitsMenu(U8X8& display_)
         : BaseCfgMenu(
@@ -176,42 +195,44 @@ struct MassUnitsMenu final : BaseCfgMenu {
               1,
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<MassUnitsMenuLeaf>(display_)
-              }) {}
+              })
+    {}
 };
 
-struct MassDrawing final : BaseTelemetryDrawing {
+
+struct MassDrawing final : BaseAggregateTelemetryDrawing {
     MassUnits units{};
     TareIdx tare_idx{};
     SystemState& system_state = SystemState::get();
 
-
     MassDrawing(
         U8X8& display_,
-        const TareIdx tare_idx_
-    )
-        : BaseTelemetryDrawing(
+        const TareIdx tare_idx_)
+        : BaseAggregateTelemetryDrawing(
               display_,
               get_tare_name(tare_idx_),
-              TelemetryDrawingFormat::STANDARD,
               0,
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<TareMenu>(display_, tare_idx_),
                   std::make_shared<MassUnitsMenu>(display_),
-              }), tare_idx(tare_idx_)
-    {
-    }
+              }),
+          tare_idx(tare_idx_)
+    {}
 
     void draw(const bool selected) override {
         _set_units_str();
-        BaseTelemetryDrawing::draw(selected);
+        BaseAggregateTelemetryDrawing::draw(selected);
     }
-
 
     void synchronize() override {
         units = identify_store->view()->payload.mass_units;
     }
 
-    void update() override {
+    void update(const bool current) override {
+        if (!current) {
+            return;
+        }
+
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
@@ -219,21 +240,27 @@ struct MassDrawing final : BaseTelemetryDrawing {
             system_state.notify_activity(millis());
         }
 
-        const Measurement measurement = measurement_stack.aggregate_mass().conditioned_total();
+        const Measurement measurement =
+            measurement_stack.aggregate_mass().conditioned_total();
+
         const bool needs_redraw = _set_state(measurement);
+
         if (needs_redraw) {
-            if (cached_selected) {
-                redraw();
-            }
+            redraw();
         }
         else {
-            draw_value();
+            draw_fast();
         }
     }
 
     bool _set_state(const Measurement measurement) {
-        const auto new_units = identify_store->view()->payload.mass_units;
-        float tare_mass = measurement.value - tare_store->payload()->tares[tare_idx].value;
+        const auto new_units =
+            identify_store->view()->payload.mass_units;
+
+        float tare_mass =
+            measurement.value -
+            tare_store->payload()->tares[tare_idx].value;
+
         MassUnits converted_units = new_units;
 
         constexpr float GRAMS_PER_KG = 1000.0f;
@@ -253,36 +280,54 @@ struct MassDrawing final : BaseTelemetryDrawing {
 
         // Unit conversion
         switch (converted_units) {
-            case MassUnits::GRAMS: break;
-            case MassUnits::KILOGRAMS: tare_mass /= GRAMS_PER_KG; break;
-            case MassUnits::OUNCES: tare_mass /= GRAMS_PER_OZ; break;
-            case MassUnits::POUNDS: tare_mass /= (GRAMS_PER_OZ * OUNCES_PER_LB); break;
+            case MassUnits::GRAMS:
+                break;
+
+            case MassUnits::KILOGRAMS:
+                tare_mass /= GRAMS_PER_KG;
+                break;
+
+            case MassUnits::OUNCES:
+                tare_mass /= GRAMS_PER_OZ;
+                break;
+
+            case MassUnits::POUNDS:
+                tare_mass /= (GRAMS_PER_OZ * OUNCES_PER_LB);
+                break;
         }
 
         // Precision by units
         int precision = 0;
+
         switch (converted_units) {
             case MassUnits::GRAMS: {
                 precision = 0;
+
                 if (tare_mass > MAX_SINGLE_PRECISION ||
                     tare_mass < MIN_SINGLE_PRECISION) {
                     converted_units = MassUnits::KILOGRAMS;
                     tare_mass /= GRAMS_PER_KG;
                 }
+
                 break;
             }
+
             case MassUnits::OUNCES: {
                 precision = 2;
+
                 if (tare_mass > MAX_DOUBLE_PRECISION ||
                     tare_mass < MIN_DOUBLE_PRECISION) {
                     converted_units = MassUnits::POUNDS;
                     tare_mass /= OUNCES_PER_LB;
                 }
+
                 break;
             }
+
             case MassUnits::POUNDS:
             case MassUnits::KILOGRAMS: {
                 precision = 3;
+
                 if (tare_mass > MAX_TRIPLE_PRECISION ||
                     tare_mass < MIN_TRIPLE_PRECISION) {
                     precision = 2;
@@ -294,6 +339,7 @@ struct MassDrawing final : BaseTelemetryDrawing {
                 else if (tare_mass > MAX_SINGLE_PRECISION ||
                          tare_mass < MIN_SINGLE_PRECISION) {
                     precision = 0;
+
                     if (tare_mass > MAX_ZERO_PRECISION) {
                         tare_mass = MAX_ZERO_PRECISION;
                     }
@@ -301,14 +347,21 @@ struct MassDrawing final : BaseTelemetryDrawing {
                         tare_mass = MIN_ZERO_PRECISION;
                     }
                 }
+
                 break;
             }
         }
 
-        dtostrf(tare_mass, VALUE_CHARS, precision, value_str);
-        value_str[VALUE_CHARS] = '\0';
+        dtostrf(
+            tare_mass,
+            VALUE_CHARS,
+            precision,
+            telemetry.value_str);
+
+        telemetry.value_str[VALUE_CHARS] = '\0';
 
         bool redraw = false;
+
         if (units != converted_units) {
             redraw = true;
             units = converted_units;
@@ -319,12 +372,36 @@ struct MassDrawing final : BaseTelemetryDrawing {
 
     void _set_units_str() {
         switch (units) {
-            case MassUnits::GRAMS: strncpy(units_str, "g", UNITS_CHARS); break;
-            case MassUnits::KILOGRAMS: strncpy(units_str, "kg", UNITS_CHARS); break;
-            case MassUnits::OUNCES: strncpy(units_str, "oz", UNITS_CHARS); break;
-            case MassUnits::POUNDS: strncpy(units_str, "lb", UNITS_CHARS); break;
+            case MassUnits::GRAMS:
+                strncpy(
+                    telemetry.units_str,
+                    "g",
+                    UNITS_CHARS);
+                break;
+
+            case MassUnits::KILOGRAMS:
+                strncpy(
+                    telemetry.units_str,
+                    "kg",
+                    UNITS_CHARS);
+                break;
+
+            case MassUnits::OUNCES:
+                strncpy(
+                    telemetry.units_str,
+                    "oz",
+                    UNITS_CHARS);
+                break;
+
+            case MassUnits::POUNDS:
+                strncpy(
+                    telemetry.units_str,
+                    "lb",
+                    UNITS_CHARS);
+                break;
         }
-        units_str[UNITS_CHARS] = '\0';
+
+        telemetry.units_str[UNITS_CHARS] = '\0';
     }
 };
 

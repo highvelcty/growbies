@@ -243,8 +243,8 @@ struct BatteryLeaf final : BaseStrMenuLeaf {
         BaseStrMenuLeaf::draw(selected);
     }
 
-    void update() override {
-        draw(cached_selected);
+    void update(const bool current) override {
+        draw(current);
     }
 
     void set_msg() override{
