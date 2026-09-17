@@ -15,9 +15,9 @@
 constexpr auto MAX_DISPLAY_COLUMNS = 16;
 constexpr auto MAX_DISPLAY_ROWS     = 4;
 
-constexpr auto ONE_BY_FONT         = u8x8_font_chroma48medium8_r;
+constexpr auto ONE_BY_ONE_FONT     = u8x8_font_chroma48medium8_r;
+constexpr auto ONE_BY_TWO_FONT     = u8x8_font_8x13B_1x2_f;
 constexpr auto TWO_BY_TWO_FONT     = u8x8_font_px437wyse700b_2x2_n;
-// constexpr auto TWO_BY_THREE_FONT   = u8x8_font_courR18_2x3_r;
 constexpr auto TWO_BY_THREE_FONT   = growbies_font_courR18_2x3_r;
 
 // -----------------------------------------------------------------------------
@@ -90,7 +90,7 @@ struct BaseCfgMenu : BaseMenu {
         BaseMenu::draw(selected);
 
         if (level == 0) {
-            display.setFont(ONE_BY_FONT);
+            display.setFont(ONE_BY_ONE_FONT);
         }
 
         if (!msg) return;
@@ -152,10 +152,7 @@ struct BaseIntMenuLeaf : BaseCfgMenu {
 // Telemetry drawing state
 // -----------------------------------------------------------------------------
 struct TelemetryDrawingState {
-    // static constexpr auto VALUE_CHARS = 7;
-    // static constexpr auto VALUE_CHARS_TIGHT = 4;
     static constexpr auto UNITS_CHARS = 2;
-    // static constexpr auto ERROR_CHARS = MAX_DISPLAY_COLUMNS;
 
     char error_str[MAX_DISPLAY_COLUMNS + 1]{};
     char units_str[UNITS_CHARS + 1]{};
@@ -255,9 +252,10 @@ struct BaseAggregateTelemetryDrawing : BaseTelemetryDrawing {
         _set_units_str();
         _set_error_str();
 
-        display.setFont(ONE_BY_FONT);
+        display.setFont(ONE_BY_ONE_FONT);
         display.drawString(14, 3, state.units_str);
-        display.drawString(15, 2, state.error_str);
+        display.setFont(ONE_BY_TWO_FONT);
+        display.drawString(15, 1, state.error_str);
 
         display.setFont(TWO_BY_THREE_FONT);
         draw_fast();
@@ -315,7 +313,7 @@ struct BaseSensorTelemetryDrawing : BaseTelemetryDrawing {
         _set_value_str();
         _set_error_str();
 
-        display.setFont(ONE_BY_FONT);
+        display.setFont(ONE_BY_ONE_FONT);
         display.drawString(2, 2, state.value_str);
         display.drawString(0, 3, state.error_str);
     }
