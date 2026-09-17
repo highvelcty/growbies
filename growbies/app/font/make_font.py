@@ -191,8 +191,8 @@ def stretch_vertical(glyph):
     # -------------------------------------------------------------------------
     # Map each target row back to the corresponding source row.
     #
-    # This is nearest-neighbor scaling. It avoids the previous interpolation
-    # calculation's tendency to produce unexpected repeated/skipped rows.
+    # This is nearest-neighbor scaling. It avoids interpolation artifacts
+    # while filling the available rows.
     # -------------------------------------------------------------------------
 
     for target_y in range(target_height):
@@ -212,6 +212,38 @@ def stretch_vertical(glyph):
         ] = source[
             top + source_y
         ].copy()
+
+    return pixels_to_glyph(result)
+
+
+def bold_glyph(glyph):
+    '''
+    Make a glyph one pixel thicker horizontally.
+
+    Every lit pixel also lights the pixel immediately
+    to its right.
+
+    The glyph remains within the original 16-pixel-wide
+    cell.
+    '''
+
+    source = glyph_to_pixels(glyph)
+
+    result = [
+        [False] * GLYPH_WIDTH
+        for _ in range(GLYPH_HEIGHT)
+    ]
+
+    for y in range(GLYPH_HEIGHT):
+
+        for x in range(GLYPH_WIDTH):
+
+            if source[y][x]:
+
+                result[y][x] = True
+
+                if x + 1 < GLYPH_WIDTH:
+                    result[y][x + 1] = True
 
     return pixels_to_glyph(result)
 
@@ -262,36 +294,24 @@ def make_period_glyph():
 
 def format_c(data):
     '''
-    Format bytes as concatenated C string literals,
-    matching the style of the original font.
+    Format bytes as C hexadecimal byte initializers.
     '''
 
     lines = []
 
-    for offset in range(0, len(data), 24):
+    for offset in range(0, len(data), 16):
 
         chunk = data[
-            offset:offset + 24
+            offset:offset + 16
         ]
 
-        escaped = []
-
-        for value in chunk:
-
-            if (
-                32 <= value <= 126
-                and value not in (34, 92)
-            ):
-                escaped.append(chr(value))
-            else:
-                escaped.append(
-                    f'\\{value:o}'
-                )
-
         lines.append(
-            '  "' +
-            ''.join(escaped) +
-            '"'
+            '  ' +
+            ', '.join(
+                f'0x{value:02x}'
+                for value in chunk
+            ) +
+            ','
         )
 
     return '\n'.join(lines)
@@ -320,7 +340,7 @@ def main():
 
         raise RuntimeError(
             f'Unexpected last character: '
-            f'{data[1]:#x}'
+            f'{data[1]}'
         )
 
     if data[2] != GLYPH_WIDTH_TILES:
@@ -356,6 +376,10 @@ def main():
             glyph
         )
 
+        new_glyph = bold_glyph(
+            new_glyph
+        )
+
         offset = glyph_offset(char)
 
         output[
@@ -365,8 +389,8 @@ def main():
     # -------------------------------------------------------------------------
     # Punctuation
     #
-    # Do not vertically stretch these. A thin '-' or '.' becomes a filled
-    # block when stretched.
+    # Do not vertically stretch or bold these. A thin '-' or '.'
+    # becomes a filled block when stretched.
     # -------------------------------------------------------------------------
 
     minus_offset = glyph_offset('-')
@@ -394,14 +418,14 @@ def main():
             'growbies_font_courR18_2x3_r[4564] '
             'U8X8_FONT_SECTION('
             '"growbies_font_courR18_2x3_r"'
-            ') =\n'
+            ') = {\n'
         )
 
         f.write(
             format_c(output)
         )
 
-        f.write(';\n')
+        f.write('};\n')
 
     print()
     print(f'Wrote {OUTPUT}')
