@@ -26,16 +26,14 @@ struct BaseMassDataFormatting {
             static_cast<uint8_t>(identify_store->view()->payload.mass_units);
     }
 
-    bool _set_state(const Measurement measurement, const TareIdx tare_idx) const {
+    bool _set_state(const Measurement measurement, const float tare_val) const {
         bool redraw = false;
         const auto new_units =
             identify_store->view()->payload.mass_units;
 
-        float tare_mass =
-            measurement.value -
-            tare_store->payload()->tares[tare_idx].value;
+        float tare_mass =measurement.value - tare_val;
 
-        MassUnits converted_units = new_units;
+        const MassUnits converted_units = new_units;
 
         constexpr float GRAMS_PER_KG = 1000.0f;
         constexpr float GRAMS_PER_OZ = 28.3495f;
@@ -79,7 +77,6 @@ struct BaseMassDataFormatting {
 
                 if (tare_mass > MAX_SINGLE_PRECISION ||
                     tare_mass < MIN_SINGLE_PRECISION) {
-                    converted_units = MassUnits::KILOGRAMS;
                     tare_mass /= GRAMS_PER_KG;
                 }
 
@@ -91,7 +88,6 @@ struct BaseMassDataFormatting {
 
                 if (tare_mass > MAX_DOUBLE_PRECISION ||
                     tare_mass < MIN_DOUBLE_PRECISION) {
-                    converted_units = MassUnits::POUNDS;
                     tare_mass /= OUNCES_PER_LB;
                 }
 
@@ -332,6 +328,82 @@ struct MassUnitsMenu final : BaseCfgMenu {
     {}
 };
 
+struct MassSensorDrawing final : BaseSensorTelemetryDrawing {
+    const uint8_t sensor;
+    BaseMassDataFormatting mass_data;
+
+    MassSensorDrawing(
+        U8X8& display_,
+        const char* msg_,
+        const uint8_t sensor_
+    )
+        : BaseSensorTelemetryDrawing(
+            display_,
+            msg_,
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          sensor(sensor_),
+          mass_data(*this)
+    {}
+
+    void update(const bool selected) override {
+        if (!selected) {
+            return;
+        }
+
+        const auto& measurement_stack = MeasurementStack::get();
+        measurement_stack.update();
+
+        const auto measurement =
+            measurement_stack.aggregate_mass().sensor_measurements()[sensor];
+
+        // ReSharper disable once CppExpressionWithoutSideEffects
+        mass_data._set_state(measurement, 0.0f);
+        draw(selected);
+    }
+
+    char get_selected_char(bool selected) const override {
+        return LEAF_CHAR;
+    }
+};
+
+struct MassSensorMenu final : BaseCfgMenu {
+    MassSensorDrawing leaf;
+
+    static const char* name(const uint8_t sensor_) {
+        switch (sensor_) {
+            case 0: return "Load Cell 0";
+            case 1: return "Load Cell 1";
+            case 2: return "Load Cell 2";
+            default: return "Load Cell";
+        }
+    }
+
+    explicit MassSensorMenu(
+        U8X8& display_,
+        const uint8_t sensor_
+    )
+        : BaseCfgMenu(
+            display_,
+            name(sensor_),
+            1,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(
+              display_,
+              "",
+              sensor_)
+    {}
+
+    void update(const bool selected) override {
+        BaseCfgMenu::update(selected);
+        leaf.update(selected);
+    }
+
+    void draw(const bool selected) override {
+        BaseCfgMenu::draw(true);
+        leaf.draw(selected);
+    }
+};
 
 struct MassDrawing final : BaseAggregateTelemetryDrawing {
     BaseMassDataFormatting telemetry_drawing;
@@ -348,6 +420,9 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<TareMenu>(display_, tare_idx_),
                   std::make_shared<MassUnitsMenu>(display_),
+                  std::make_shared<MassSensorMenu>(display_, 0),
+                  std::make_shared<MassSensorMenu>(display_, 1),
+                  std::make_shared<MassSensorMenu>(display_, 2),
               }),
             telemetry_drawing(*this),
             tare_idx(tare_idx_)
@@ -368,7 +443,9 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
         const Measurement measurement =
             measurement_stack.aggregate_mass().conditioned_total();
 
-        const bool needs_redraw = telemetry_drawing._set_state(measurement, tare_idx);
+
+        const bool needs_redraw =
+            telemetry_drawing._set_state(measurement, tare_store->payload()->tares[tare_idx].value);
 
         if (needs_redraw) {
             redraw();

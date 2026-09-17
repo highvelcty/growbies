@@ -191,7 +191,7 @@ struct ThermistorMenu final : BaseCfgMenu {
     }
 
     void draw(const bool selected) override {
-        BaseCfgMenu::draw(selected);
+        BaseCfgMenu::draw(true);
         leaf.draw(selected);
     }
 };

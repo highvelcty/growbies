@@ -178,11 +178,8 @@ private:
 
         for (size_t ii = 0; ii < channels_.size(); ++ii) {
             if (_per_sensor_measurement[ii].error != ErrorCode::ERROR_NONE) {
-                _per_sensor_measurement[ii] = {
-                    estimated_mass,
-                    ErrorCode::ERROR_MEASUREMENT_DEGRADED,
-                };
-                }
+                _per_sensor_measurement[ii].value = estimated_mass;
+            }
         }
     }
 

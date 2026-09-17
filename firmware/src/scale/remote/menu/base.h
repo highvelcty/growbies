@@ -14,6 +14,7 @@
 // -----------------------------------------------------------------------------
 constexpr auto MAX_DISPLAY_COLUMNS = 16;
 constexpr auto MAX_DISPLAY_ROWS     = 4;
+constexpr auto LINE_PREFIX_CHARS    = 2;
 
 constexpr auto ONE_BY_ONE_FONT     = u8x8_font_chroma48medium8_r;
 constexpr auto ONE_BY_TWO_FONT     = u8x8_font_8x13B_1x2_f;
@@ -194,7 +195,7 @@ struct BaseTelemetryDrawing : BaseCfgMenu {
         if (state.units_type == UnitsType::MASS) {
             switch (static_cast<MassUnits>(state.units)) {
                 case MassUnits::GRAMS:
-                    return " g";
+                    return "g";
 
                 case MassUnits::KILOGRAMS:
                     return "kg";
@@ -213,12 +214,11 @@ struct BaseTelemetryDrawing : BaseCfgMenu {
     }
 
     void _set_units_str() {
-        strncpy(
+        snprintf(
             state.units_str,
-            _units_str(),
-            TelemetryDrawingState::UNITS_CHARS);
-
-        state.units_str[TelemetryDrawingState::UNITS_CHARS] = '\0';
+            sizeof(state.units_str),
+            "%2s",
+            _units_str());
     }
 };
 
@@ -334,6 +334,7 @@ struct BaseSensorTelemetryDrawing : BaseTelemetryDrawing {
     }
 
     void _set_value_str() {
+        constexpr auto pad_count = MAX_DISPLAY_COLUMNS - LINE_PREFIX_CHARS;
         snprintf(
             state.value_str,
             sizeof(state.value_str),
@@ -342,6 +343,14 @@ struct BaseSensorTelemetryDrawing : BaseTelemetryDrawing {
             state.precision,
             state.value,
             _units_str());
+
+        const size_t len = strlen(state.value_str);
+
+        for (size_t i = len; i < pad_count; ++i) {
+            state.value_str[i] = ' ';
+        }
+
+        state.value_str[LINE_PREFIX_CHARS] = '\0';
     }
 };
 
