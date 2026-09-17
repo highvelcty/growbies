@@ -354,3 +354,60 @@ struct BaseSensorTelemetryDrawing : BaseTelemetryDrawing {
     }
 };
 
+// -----------------------------------------------------------------------------
+// Aggregate Error drawing
+//
+// This implements the drawing format for per sensor (not aggregate) telemetry.
+// -----------------------------------------------------------------------------
+struct BaseErrorDrawing : BaseTelemetryDrawing {
+    BaseErrorDrawing(
+        U8X8& display_,
+        const char* msg_)
+        : BaseTelemetryDrawing(
+            display_,
+            msg_,
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{})
+    {}
+
+    void update(const bool selected) override {
+        if (!selected) {
+            return;
+        }
+
+        const auto& measurement_stack = MeasurementStack::get();
+        measurement_stack.update();
+
+        state.error = get_measurement(measurement_stack).error;
+
+        draw(selected);
+    }
+
+    void draw(const bool selected) override {
+        if (!selected) {
+            return;
+        }
+
+        display.setFont(ONE_BY_ONE_FONT);
+
+        snprintf(
+            state.error_str,
+            sizeof(state.error_str),
+            "%lu: %s",
+            static_cast<unsigned long>(state.error),
+            error_code_str(state.error));
+
+        display.drawString(
+            0,
+            2,
+            state.error_str);
+    }
+
+    char get_selected_char(bool selected) const override {
+        return LEAF_CHAR;
+    }
+
+    virtual Measurement get_measurement(
+        const MeasurementStack& measurement_stack) const = 0;
+
+};

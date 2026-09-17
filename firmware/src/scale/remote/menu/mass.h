@@ -328,6 +328,49 @@ struct MassUnitsMenu final : BaseCfgMenu {
     {}
 };
 
+struct MassErrorDrawing final : BaseErrorDrawing {
+    MassErrorDrawing(
+        U8X8& display_,
+        const char* msg_)
+        : BaseErrorDrawing(display_, msg_)
+    {}
+
+    Measurement get_measurement(
+        const MeasurementStack& measurement_stack) const override
+    {
+        return measurement_stack.aggregate_mass().conditioned_total();
+    }
+};
+
+struct MassErrorMenu final : BaseCfgMenu {
+    MassErrorDrawing leaf;
+
+    explicit MassErrorMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Error",
+            1,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(
+              display_,
+              "")
+    {}
+
+    void update(const bool selected) override {
+        BaseCfgMenu::update(selected);
+        leaf.update(selected);
+    }
+
+    void draw(const bool selected) override {
+        BaseCfgMenu::draw(selected);
+        leaf.draw(selected);
+    }
+
+    char get_selected_char(bool selected) const override {
+        return LEAF_CHAR;
+    }
+};
+
 struct MassSensorDrawing final : BaseSensorTelemetryDrawing {
     const uint8_t sensor;
     BaseMassDataFormatting mass_data;
@@ -420,6 +463,7 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<TareMenu>(display_, tare_idx_),
                   std::make_shared<MassUnitsMenu>(display_),
+                  std::make_shared<MassErrorMenu>(display_),
                   std::make_shared<MassSensorMenu>(display_, 0),
                   std::make_shared<MassSensorMenu>(display_, 1),
                   std::make_shared<MassSensorMenu>(display_, 2),

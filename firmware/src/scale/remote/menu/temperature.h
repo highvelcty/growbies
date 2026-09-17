@@ -118,6 +118,50 @@ struct TemperatureUnitsMenu final : BaseCfgMenu {
 };
 
 
+struct TemperatureErrorDrawing final : BaseErrorDrawing {
+    TemperatureErrorDrawing(
+        U8X8& display_,
+        const char* msg_)
+        : BaseErrorDrawing(display_, msg_)
+    {}
+
+    Measurement get_measurement(
+        const MeasurementStack& measurement_stack) const override
+    {
+        return measurement_stack.aggregate_temp().conditioned_total();
+    }
+};
+
+struct TemperatureErrorMenu final : BaseCfgMenu {
+    TemperatureErrorDrawing leaf;
+
+    explicit TemperatureErrorMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Error",
+            1,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(
+              display_,
+              "")
+    {}
+
+    void update(const bool selected) override {
+        BaseCfgMenu::update(selected);
+        leaf.update(selected);
+    }
+
+    void draw(const bool selected) override {
+        BaseCfgMenu::draw(selected);
+        leaf.draw(selected);
+    }
+
+    char get_selected_char(bool selected) const override {
+        return LEAF_CHAR;
+    }
+};
+
+
 struct ThermistorDrawing final : BaseSensorTelemetryDrawing {
     const uint8_t sensor;
     BaseTemperatureDataFormatting temperature_data;
@@ -208,6 +252,7 @@ struct TemperatureDrawing final : BaseAggregateTelemetryDrawing {
             0,
             std::vector<std::shared_ptr<BaseMenu>>{
                 std::make_shared<TemperatureUnitsMenu>(display_),
+                std::make_shared<TemperatureErrorMenu>(display_),
                 std::make_shared<ThermistorMenu>(display_, 0),
                 std::make_shared<ThermistorMenu>(display_, 1),
                 std::make_shared<ThermistorMenu>(display_, 2),
