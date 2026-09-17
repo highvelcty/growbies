@@ -6,7 +6,6 @@
 #include "scale/measure/stack.h"
 #include "scale/nvm/nvm.h"
 
-
 struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
     TemperatureUnits units{TemperatureUnits::CELSIUS};
 
@@ -131,18 +130,14 @@ struct ThermistorMenu final : BaseCfgMenu {
               sensor_)
     {}
 
-    void update(const bool current) override {
-        if (current) {
-            leaf.update(true);
-        }
+    void update(const bool selected) override {
+        BaseCfgMenu::update(selected);
+        leaf.update(selected);
     }
 
     void draw(const bool selected) override {
         BaseCfgMenu::draw(selected);
-
-        if (!selected) {
-            leaf.draw(false);
-        }
+        leaf.draw(selected);
     }
 };
 
@@ -166,8 +161,8 @@ struct TemperatureDrawing final : BaseAggregateTelemetryDrawing {
           temperature(*this)
     {}
 
-    void update(const bool current) override {
-        if (!current) {
+    void update(const bool selected) override {
+        if (!selected) {
             return;
         }
 

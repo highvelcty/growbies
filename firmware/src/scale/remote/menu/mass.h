@@ -27,10 +27,6 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
         msg = "zero";
     }
 
-    void draw(const bool selected) override {
-        BaseStrMenuLeaf::draw(selected);
-    }
-
     void on_up() override {
         ;
     }
