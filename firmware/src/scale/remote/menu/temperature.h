@@ -6,6 +6,60 @@
 #include "scale/measure/stack.h"
 #include "scale/nvm/nvm.h"
 
+// -----------------------------------------------------------------------------
+// Temperature data formatting
+// -----------------------------------------------------------------------------
+struct BaseTemperatureDataFormatting {
+    BaseTelemetryDrawing& telemetry_drawing;
+    static constexpr int PRECISION{1};
+
+    explicit BaseTemperatureDataFormatting(
+        BaseTelemetryDrawing& telemetry_drawing_)
+        : telemetry_drawing(telemetry_drawing_)
+    {}
+
+    void synchronize() const {
+        telemetry_drawing.state.units =
+            static_cast<uint8_t>(identify_store->view()->payload.temperature_units);
+    }
+
+    bool _set_state(const Measurement measurement) const {
+        const auto new_units = identify_store->view()->payload.temperature_units;
+
+        bool redraw = false;
+        float temperature = measurement.value;
+
+        if (new_units == TemperatureUnits::FAHRENHEIT) {
+            temperature = (measurement.value * 9.0f / 5.0f) + 32.0f;
+        }
+
+        if (temperature > 999.9f)
+            temperature = 999.9f;
+
+        if (temperature < -99.9f)
+            temperature = -99.9f;
+
+        if (temperature != telemetry_drawing.state.value) {
+            telemetry_drawing.state.value = temperature;
+        }
+
+        if (static_cast<uint8_t>(new_units) != telemetry_drawing.state.units) {
+            redraw = true;
+            telemetry_drawing.state.units = static_cast<uint8_t>(new_units);
+        }
+
+        if (measurement.error != telemetry_drawing.state.error) {
+            redraw = true;
+            telemetry_drawing.state.error = measurement.error;
+        }
+
+        telemetry_drawing.state.units_type = UnitsType::TEMPERATURE;
+        telemetry_drawing.state.precision = PRECISION;
+
+        return redraw;
+    }
+};
+
 struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
     TemperatureUnits units{TemperatureUnits::CELSIUS};
 
@@ -66,7 +120,7 @@ struct TemperatureUnitsMenu final : BaseCfgMenu {
 
 struct ThermistorDrawing final : BaseSensorTelemetryDrawing {
     const uint8_t sensor;
-    BaseTemperatureDrawing temperature;
+    BaseTemperatureDataFormatting temperature_data;
 
     ThermistorDrawing(
         U8X8& display_,
@@ -79,7 +133,7 @@ struct ThermistorDrawing final : BaseSensorTelemetryDrawing {
             2,
             std::vector<std::shared_ptr<BaseMenu>>{}),
           sensor(sensor_),
-          temperature(*this)
+          temperature_data(*this)
     {}
 
     void update(const bool selected) override {
@@ -93,7 +147,8 @@ struct ThermistorDrawing final : BaseSensorTelemetryDrawing {
         const auto measurement =
             measurement_stack.aggregate_temp().sensor_temperatures()[sensor];
 
-        temperature._set_state(measurement);
+        // ReSharper disable once CppExpressionWithoutSideEffects
+        temperature_data._set_state(measurement);
         draw(selected);
     }
 
@@ -141,9 +196,8 @@ struct ThermistorMenu final : BaseCfgMenu {
     }
 };
 
-
 struct TemperatureDrawing final : BaseAggregateTelemetryDrawing {
-    BaseTemperatureDrawing temperature;
+    BaseTemperatureDataFormatting telemetry_drawing;
 
     TemperatureDrawing(
         U8X8& display_,
@@ -158,7 +212,7 @@ struct TemperatureDrawing final : BaseAggregateTelemetryDrawing {
                 std::make_shared<ThermistorMenu>(display_, 1),
                 std::make_shared<ThermistorMenu>(display_, 2),
             }),
-          temperature(*this)
+          telemetry_drawing(*this)
     {}
 
     void update(const bool selected) override {
@@ -172,8 +226,7 @@ struct TemperatureDrawing final : BaseAggregateTelemetryDrawing {
         const Measurement measurement =
             measurement_stack.aggregate_temp().conditioned_total();
 
-        const bool needs_redraw =
-            temperature._set_state(measurement);
+        const bool needs_redraw = telemetry_drawing._set_state(measurement);
 
         if (needs_redraw) {
             redraw();

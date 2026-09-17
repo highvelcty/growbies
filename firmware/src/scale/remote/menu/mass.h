@@ -1,7 +1,6 @@
 #pragma once
 
 #include <U8x8lib.h>
-#include <cstring>
 #include <memory>
 #include <Arduino.h>
 
@@ -11,9 +10,147 @@
 #include "scale/nvm/nvm.h"
 
 // -----------------------------------------------------------------------------
+// Temperature data formatting
+// -----------------------------------------------------------------------------
+struct BaseMassDataFormatting {
+    BaseTelemetryDrawing& telemetry_drawing;
+    static constexpr int PRECISION{1};
+
+    explicit BaseMassDataFormatting(
+        BaseTelemetryDrawing& telemetry_drawing_)
+        : telemetry_drawing(telemetry_drawing_)
+    {}
+
+    void synchronize() const {
+        telemetry_drawing.state.units =
+            static_cast<uint8_t>(identify_store->view()->payload.mass_units);
+    }
+
+    bool _set_state(const Measurement measurement, const TareIdx tare_idx) const {
+        bool redraw = false;
+        const auto new_units =
+            identify_store->view()->payload.mass_units;
+
+        float tare_mass =
+            measurement.value -
+            tare_store->payload()->tares[tare_idx].value;
+
+        MassUnits converted_units = new_units;
+
+        constexpr float GRAMS_PER_KG = 1000.0f;
+        constexpr float GRAMS_PER_OZ = 28.3495f;
+        constexpr float OUNCES_PER_LB = 16.0f;
+
+        // ReSharper disable CppTooWideScope
+        constexpr float MAX_ZERO_PRECISION   = 9999999;
+        constexpr float MIN_ZERO_PRECISION   = -999999;
+        constexpr float MAX_SINGLE_PRECISION = 99999.9;
+        constexpr float MIN_SINGLE_PRECISION = -9999.9;
+        constexpr float MAX_DOUBLE_PRECISION = 9999.99;
+        constexpr float MIN_DOUBLE_PRECISION = -999.99;
+        constexpr float MAX_TRIPLE_PRECISION = 999.999;
+        constexpr float MIN_TRIPLE_PRECISION = -99.999;
+        // ReSharper restore CppTooWideScope
+
+        // Unit conversion
+        switch (converted_units) {
+            case MassUnits::GRAMS:
+                break;
+
+            case MassUnits::KILOGRAMS:
+                tare_mass /= GRAMS_PER_KG;
+                break;
+
+            case MassUnits::OUNCES:
+                tare_mass /= GRAMS_PER_OZ;
+                break;
+
+            case MassUnits::POUNDS:
+                tare_mass /= (GRAMS_PER_OZ * OUNCES_PER_LB);
+                break;
+        }
+
+        // Precision by units
+        int precision = 0;
+
+        switch (converted_units) {
+            case MassUnits::GRAMS: {
+                precision = 0;
+
+                if (tare_mass > MAX_SINGLE_PRECISION ||
+                    tare_mass < MIN_SINGLE_PRECISION) {
+                    converted_units = MassUnits::KILOGRAMS;
+                    tare_mass /= GRAMS_PER_KG;
+                }
+
+                break;
+            }
+
+            case MassUnits::OUNCES: {
+                precision = 2;
+
+                if (tare_mass > MAX_DOUBLE_PRECISION ||
+                    tare_mass < MIN_DOUBLE_PRECISION) {
+                    converted_units = MassUnits::POUNDS;
+                    tare_mass /= OUNCES_PER_LB;
+                }
+
+                break;
+            }
+
+            case MassUnits::POUNDS:
+            case MassUnits::KILOGRAMS: {
+                precision = 3;
+
+                if (tare_mass > MAX_TRIPLE_PRECISION ||
+                    tare_mass < MIN_TRIPLE_PRECISION) {
+                    precision = 2;
+                }
+                else if (tare_mass > MAX_DOUBLE_PRECISION ||
+                         tare_mass < MIN_DOUBLE_PRECISION) {
+                    precision = 1;
+                }
+                else if (tare_mass > MAX_SINGLE_PRECISION ||
+                         tare_mass < MIN_SINGLE_PRECISION) {
+                    precision = 0;
+
+                    if (tare_mass > MAX_ZERO_PRECISION) {
+                        tare_mass = MAX_ZERO_PRECISION;
+                    }
+                    else if (tare_mass < MIN_ZERO_PRECISION) {
+                        tare_mass = MIN_ZERO_PRECISION;
+                    }
+                }
+
+                break;
+            }
+        }
+
+        telemetry_drawing.state.value = tare_mass;
+
+        if (static_cast<uint8_t>(new_units) != telemetry_drawing.state.units) {
+            redraw = true;
+            telemetry_drawing.state.units = static_cast<uint8_t>(new_units);
+        }
+
+        if (measurement.error != telemetry_drawing.state.error) {
+            redraw = true;
+            telemetry_drawing.state.error = measurement.error;
+        }
+        if (precision != telemetry_drawing.state.precision) {
+            redraw = true;
+            telemetry_drawing.state.precision = precision;
+        }
+
+        telemetry_drawing.state.units_type = UnitsType::MASS;
+
+        return redraw;
+    }
+};
+
+// -----------------------------------------------------------------------------
 // MassDrawing
 // -----------------------------------------------------------------------------
-
 struct TareZeroLeaf final : BaseStrMenuLeaf {
     constexpr static int TARE_SAMPLE_DELAY = 2000;
     TareIdx tare_idx;
@@ -197,7 +334,7 @@ struct MassUnitsMenu final : BaseCfgMenu {
 
 
 struct MassDrawing final : BaseAggregateTelemetryDrawing {
-    MassUnits units{};
+    BaseMassDataFormatting telemetry_drawing;
     TareIdx tare_idx{};
     SystemState& system_state = SystemState::get();
 
@@ -212,20 +349,12 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
                   std::make_shared<TareMenu>(display_, tare_idx_),
                   std::make_shared<MassUnitsMenu>(display_),
               }),
-          tare_idx(tare_idx_)
+            telemetry_drawing(*this),
+            tare_idx(tare_idx_)
     {}
 
-    void draw(const bool selected) override {
-        _set_units_str();
-        BaseAggregateTelemetryDrawing::draw(selected);
-    }
-
-    void synchronize() override {
-        units = identify_store->view()->payload.mass_units;
-    }
-
-    void update(const bool current) override {
-        if (!current) {
+    void update(const bool selected) override {
+        if (!selected) {
             return;
         }
 
@@ -239,7 +368,7 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
         const Measurement measurement =
             measurement_stack.aggregate_mass().conditioned_total();
 
-        const bool needs_redraw = _set_state(measurement);
+        const bool needs_redraw = telemetry_drawing._set_state(measurement, tare_idx);
 
         if (needs_redraw) {
             redraw();
@@ -247,157 +376,6 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
         else {
             draw_fast();
         }
-    }
-
-    bool _set_state(const Measurement measurement) {
-        const auto new_units =
-            identify_store->view()->payload.mass_units;
-
-        float tare_mass =
-            measurement.value -
-            tare_store->payload()->tares[tare_idx].value;
-
-        MassUnits converted_units = new_units;
-
-        constexpr float GRAMS_PER_KG = 1000.0f;
-        constexpr float GRAMS_PER_OZ = 28.3495f;
-        constexpr float OUNCES_PER_LB = 16.0f;
-
-        // ReSharper disable CppTooWideScope
-        constexpr float MAX_ZERO_PRECISION   = 9999999;
-        constexpr float MIN_ZERO_PRECISION   = -999999;
-        constexpr float MAX_SINGLE_PRECISION = 99999.9;
-        constexpr float MIN_SINGLE_PRECISION = -9999.9;
-        constexpr float MAX_DOUBLE_PRECISION = 9999.99;
-        constexpr float MIN_DOUBLE_PRECISION = -999.99;
-        constexpr float MAX_TRIPLE_PRECISION = 999.999;
-        constexpr float MIN_TRIPLE_PRECISION = -99.999;
-        // ReSharper restore CppTooWideScope
-
-        // Unit conversion
-        switch (converted_units) {
-            case MassUnits::GRAMS:
-                break;
-
-            case MassUnits::KILOGRAMS:
-                tare_mass /= GRAMS_PER_KG;
-                break;
-
-            case MassUnits::OUNCES:
-                tare_mass /= GRAMS_PER_OZ;
-                break;
-
-            case MassUnits::POUNDS:
-                tare_mass /= (GRAMS_PER_OZ * OUNCES_PER_LB);
-                break;
-        }
-
-        // Precision by units
-        int precision = 0;
-
-        switch (converted_units) {
-            case MassUnits::GRAMS: {
-                precision = 0;
-
-                if (tare_mass > MAX_SINGLE_PRECISION ||
-                    tare_mass < MIN_SINGLE_PRECISION) {
-                    converted_units = MassUnits::KILOGRAMS;
-                    tare_mass /= GRAMS_PER_KG;
-                }
-
-                break;
-            }
-
-            case MassUnits::OUNCES: {
-                precision = 2;
-
-                if (tare_mass > MAX_DOUBLE_PRECISION ||
-                    tare_mass < MIN_DOUBLE_PRECISION) {
-                    converted_units = MassUnits::POUNDS;
-                    tare_mass /= OUNCES_PER_LB;
-                }
-
-                break;
-            }
-
-            case MassUnits::POUNDS:
-            case MassUnits::KILOGRAMS: {
-                precision = 3;
-
-                if (tare_mass > MAX_TRIPLE_PRECISION ||
-                    tare_mass < MIN_TRIPLE_PRECISION) {
-                    precision = 2;
-                }
-                else if (tare_mass > MAX_DOUBLE_PRECISION ||
-                         tare_mass < MIN_DOUBLE_PRECISION) {
-                    precision = 1;
-                }
-                else if (tare_mass > MAX_SINGLE_PRECISION ||
-                         tare_mass < MIN_SINGLE_PRECISION) {
-                    precision = 0;
-
-                    if (tare_mass > MAX_ZERO_PRECISION) {
-                        tare_mass = MAX_ZERO_PRECISION;
-                    }
-                    else if (tare_mass < MIN_ZERO_PRECISION) {
-                        tare_mass = MIN_ZERO_PRECISION;
-                    }
-                }
-
-                break;
-            }
-        }
-
-        dtostrf(
-            tare_mass,
-            VALUE_CHARS,
-            precision,
-            telemetry.value_str);
-
-        telemetry.value_str[VALUE_CHARS] = '\0';
-
-        bool redraw = false;
-
-        if (units != converted_units) {
-            redraw = true;
-            units = converted_units;
-        }
-
-        return redraw;
-    }
-
-    void _set_units_str() {
-        switch (units) {
-            case MassUnits::GRAMS:
-                strncpy(
-                    telemetry.units_str,
-                    "g",
-                    UNITS_CHARS);
-                break;
-
-            case MassUnits::KILOGRAMS:
-                strncpy(
-                    telemetry.units_str,
-                    "kg",
-                    UNITS_CHARS);
-                break;
-
-            case MassUnits::OUNCES:
-                strncpy(
-                    telemetry.units_str,
-                    "oz",
-                    UNITS_CHARS);
-                break;
-
-            case MassUnits::POUNDS:
-                strncpy(
-                    telemetry.units_str,
-                    "lb",
-                    UNITS_CHARS);
-                break;
-        }
-
-        telemetry.units_str[UNITS_CHARS] = '\0';
     }
 };
 

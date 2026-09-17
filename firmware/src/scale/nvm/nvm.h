@@ -47,6 +47,11 @@ enum class TemperatureUnits: uint8_t {
     FAHRENHEIT = 1,
 };
 
+enum class UnitsType: uint8_t {
+    MASS = 0,
+    TEMPERATURE = 1,
+};
+
 struct NvmHdr {
     Version_t version;
     uint8_t reserved0;

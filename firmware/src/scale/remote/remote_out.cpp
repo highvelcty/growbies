@@ -191,9 +191,9 @@ void RemoteOut::update() const {
         if (idx >= level->size()) return;
 
         const auto& item = (*level)[idx];
-        const bool current = (i + 1 == menu_path_depth);
+        const bool selected = (i + 1 == menu_path_depth);
 
-        item->update(current);
+        item->update(selected);
         level = &item->children;
     }
 }
