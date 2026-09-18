@@ -199,17 +199,17 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
 
         for (const char* s : dots) {
             msg = s;
-            draw(true);
+            draw(true, true);
             delay(TARE_SAMPLE_DELAY / dots_len);
         }
 
         for (const char* s : back_dots) {
             stack.update();
             msg = s;
-            draw(true);
+            draw(true, true);
         }
 
-        Measurement measurement =
+        const Measurement measurement =
             stack.aggregate_mass().conditioned_total();
 
         tare_store->edit().payload.tares[tare_idx].value =
@@ -294,9 +294,12 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
         units = identify_store->view()->payload.mass_units;
     }
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void set_msg() override {
@@ -364,9 +367,12 @@ struct MassErrorMenu final : BaseCfgMenu {
         leaf.update();
     }
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(selected);
-        leaf.draw(selected);
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
+        BaseCfgMenu::draw(selected, current);
+        leaf.draw(selected, current);
     }
 
     char get_selected_char(bool selected) const override {
@@ -442,9 +448,12 @@ struct MassSensorMenu final : BaseCfgMenu {
         leaf.update();
     }
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(true);
-        leaf.draw(selected);
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
+        BaseCfgMenu::draw(true, current);
+        leaf.draw(selected, current);
     }
 };
 

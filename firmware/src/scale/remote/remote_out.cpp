@@ -94,7 +94,7 @@ const std::vector<std::shared_ptr<BaseMenu>>* RemoteOut::level_from_path() const
     return level;
 }
 
-BaseMenu* RemoteOut::current_item() const {
+BaseMenu* RemoteOut::is_current_item() const {
     auto* level = level_from_path();
     if (!level) return nullptr;
 
@@ -102,6 +102,10 @@ BaseMenu* RemoteOut::current_item() const {
     if (idx >= level->size()) return nullptr;
 
     return (*level)[idx].get();
+}
+
+bool RemoteOut::is_selected_item(const size_t path_index) {
+    return path_index + 1 < menu_path_depth;
 }
 
 void RemoteOut::up() {
@@ -117,7 +121,7 @@ void RemoteOut::up() {
         --idx;
     }
 
-    auto* item = current_item();
+    auto* item = is_current_item();
     if (!item) return;
 
     item->on_up();
@@ -134,7 +138,7 @@ void RemoteOut::down() {
     // Down with wrapping
     idx = (idx + 1) % level->size();
 
-    auto* item = current_item();
+    auto* item = is_current_item();
     if (!item) return;
 
     item->on_down();
@@ -143,7 +147,7 @@ void RemoteOut::down() {
 }
 
 void RemoteOut::select() {
-    auto* item = current_item();
+    auto* item = is_current_item();
     if (!item) return;
 
     if (item->children.empty()) {
@@ -156,7 +160,7 @@ void RemoteOut::select() {
         ++menu_path_depth;
     }
 
-    item = current_item();
+    item = is_current_item();
     if (!item) return;
 
     item->update();
@@ -165,7 +169,9 @@ void RemoteOut::select() {
 
 void RemoteOut::render() {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
+
     display.clear();
+
     for (size_t i = 0; i < menu_path_depth; ++i) {
         const size_t idx = menu_path[i];
         if (idx >= level->size()) return;
@@ -174,8 +180,9 @@ void RemoteOut::render() {
 
         item->initialize();
 
-        // Draw every item as selected, except the last one.
-        item->draw((i + 1 < menu_path_depth));
+        item->draw(
+            is_selected_item(i),
+            !is_selected_item(i));
 
         level = &item->children;
     }
@@ -201,9 +208,10 @@ void RemoteOut::synchronize() const {
 }
 
 void RemoteOut::update() const {
-    auto* item = current_item();
+    auto* item = is_current_item();
     if (!item) return;
 
     item->update();
-    item->draw(false);
+    item->draw(false, true);
 }
+

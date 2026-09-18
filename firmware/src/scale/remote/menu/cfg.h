@@ -64,9 +64,12 @@ struct FlipMenuLeaf final : BaseStrMenuLeaf {
 
     explicit FlipMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void on_up() override {
@@ -189,9 +192,12 @@ struct SleepMenuLeaf final : BaseStrMenuLeaf {
 
     explicit SleepMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void on_up() override {
@@ -239,9 +245,12 @@ struct BatteryLeaf final : BaseStrMenuLeaf {
 
     explicit BatteryLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void set_msg() override {
@@ -279,9 +288,12 @@ struct BatteryMenu final : BaseCfgMenu {
 struct FirmwareVersionMenuLeaf final : BaseStrMenuLeaf {
     explicit FirmwareVersionMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void set_msg() override {
@@ -322,18 +334,24 @@ struct FirmwareVersionMenu final : BaseCfgMenu {
           leaf(display_)
     {}
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(selected);
-        leaf.draw(false);
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        BaseCfgMenu::draw(selected, current);
+        leaf.draw(false, current);
     }
 };
 
 struct MfgDateMenuLeaf final : BaseStrMenuLeaf {
     explicit MfgDateMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void set_msg() override {
@@ -372,18 +390,24 @@ struct MfgDateMenu final : BaseCfgMenu {
           leaf(display_)
     {}
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(selected);
-        leaf.draw(false);
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        BaseCfgMenu::draw(selected, current);
+        leaf.draw(false, current);
     }
 };
 
 struct SerialNumberMenuLeaf final : BaseStrMenuLeaf {
     explicit SerialNumberMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void set_msg() override {
@@ -403,18 +427,24 @@ struct SerialNumberMenu final : BaseCfgMenu {
           leaf(display_)
     {}
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(selected);
-        leaf.draw(false);
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        BaseCfgMenu::draw(selected, current);
+        leaf.draw(false, current);
     }
 };
 
 struct SourceHashMenuLeaf final : BaseStrMenuLeaf {
     explicit SourceHashMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void set_msg() override {
@@ -457,9 +487,12 @@ struct SourceHashMenu final : BaseCfgMenu {
           leaf(display_)
     {}
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(selected);
-        leaf.draw(false);
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        BaseCfgMenu::draw(selected, current);
+        leaf.draw(false, current);
     }
 };
 

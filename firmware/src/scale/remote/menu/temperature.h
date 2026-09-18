@@ -91,9 +91,12 @@ struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
         units = identify_store->view()->payload.temperature_units;
     }
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void set_msg() override {
@@ -154,9 +157,12 @@ struct TemperatureErrorMenu final : BaseCfgMenu {
         leaf.update();
     }
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(selected);
-        leaf.draw(selected);
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        BaseCfgMenu::draw(selected, current);
+        leaf.draw(selected, current);
     }
 
     char get_selected_char(bool selected) const override {
@@ -232,9 +238,12 @@ struct ThermistorMenu final : BaseCfgMenu {
         leaf.update();
     }
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(true);
-        leaf.draw(selected);
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        BaseCfgMenu::draw(true, current);
+        leaf.draw(selected, current);
     }
 };
 

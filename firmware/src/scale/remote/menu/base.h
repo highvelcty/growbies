@@ -33,8 +33,6 @@ struct BaseMenu {
     int level{0};
     std::vector<std::shared_ptr<BaseMenu>> children;
 
-    bool cached_selected{false};
-
     explicit BaseMenu(
         U8X8& display_,
         const char* msg_ = nullptr,
@@ -47,9 +45,10 @@ struct BaseMenu {
           children(std::move(_children))
     {}
 
-    virtual void draw(const bool selected) {
-        cached_selected = selected;
-    }
+    virtual void draw(
+        const bool selected,
+        const bool current)
+    {}
 
     virtual void initialize() {}
 
@@ -82,8 +81,11 @@ struct BaseCfgMenu : BaseMenu {
         : BaseMenu(display_, msg_, level_, std::move(_children))
     {}
 
-    void draw(const bool selected) override {
-        BaseMenu::draw(selected);
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
+        BaseMenu::draw(selected, current);
 
         display.setFont(ONE_BY_ONE_FONT);
 
@@ -127,8 +129,11 @@ struct BaseIntMenuLeaf : BaseCfgMenu {
         return LEAF_CHAR;
     }
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(selected);
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
+        BaseCfgMenu::draw(selected, current);
 
         char line_buf[MAX_DISPLAY_COLUMNS + 1];
         snprintf(
@@ -236,9 +241,17 @@ struct BaseAggregateTelemetryDrawing : BaseTelemetryDrawing {
             std::move(_children))
     {}
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
+        if (!current) {
+            BaseTelemetryDrawing::draw(selected, current);
+            return;
+        }
+
         if (state.needs_full_redraw) {
-            BaseTelemetryDrawing::draw(selected);
+            BaseTelemetryDrawing::draw(selected, current);
             _set_units_str();
             _set_error_str();
 
@@ -307,8 +320,11 @@ struct BaseSensorTelemetryDrawing : BaseTelemetryDrawing {
             std::move(_children))
     {}
 
-    void draw(const bool selected) override {
-        BaseTelemetryDrawing::draw(selected);
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
+        BaseTelemetryDrawing::draw(selected, current);
 
         _set_value_str();
         _set_error_str();
@@ -377,7 +393,10 @@ struct BaseErrorDrawing : BaseTelemetryDrawing {
         state.error = get_measurement(measurement_stack).error;
     }
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
         display.setFont(ONE_BY_ONE_FONT);
 
         snprintf(
@@ -400,4 +419,3 @@ struct BaseErrorDrawing : BaseTelemetryDrawing {
     virtual Measurement get_measurement(
         const MeasurementStack& measurement_stack) const = 0;
 };
-
