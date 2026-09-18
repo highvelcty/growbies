@@ -199,7 +199,7 @@ void RemoteOut::synchronize() const {
     }
 }
 
-void RemoteOut::update() {
+void RemoteOut::update() const {
     auto* item = current_item();
     if (!item) return;
 

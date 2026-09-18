@@ -10,7 +10,7 @@
 #include "scale/nvm/nvm.h"
 
 // -----------------------------------------------------------------------------
-// Temperature data formatting
+// Mass data formatting
 // -----------------------------------------------------------------------------
 struct BaseMassDataFormatting {
     BaseTelemetryDrawing& telemetry_drawing;
@@ -26,8 +26,9 @@ struct BaseMassDataFormatting {
             static_cast<uint8_t>(identify_store->view()->payload.mass_units);
     }
 
-    bool _set_state(const Measurement measurement, const float tare_val) const {
-        bool redraw = false;
+    void _set_state(const Measurement measurement, const float tare_val) const {
+        telemetry_drawing.state.needs_full_redraw = false;
+
         const auto new_units =
             identify_store->view()->payload.mass_units;
 
@@ -125,28 +126,27 @@ struct BaseMassDataFormatting {
         telemetry_drawing.state.value = tare_mass;
 
         if (static_cast<uint8_t>(new_units) != telemetry_drawing.state.units) {
-            redraw = true;
+            telemetry_drawing.state.needs_full_redraw = true;
             telemetry_drawing.state.units = static_cast<uint8_t>(new_units);
         }
 
         if (measurement.error != telemetry_drawing.state.error) {
-            redraw = true;
+            telemetry_drawing.state.needs_full_redraw = true;
             telemetry_drawing.state.error = measurement.error;
         }
 
         if (precision != telemetry_drawing.state.precision) {
-            redraw = true;
+            telemetry_drawing.state.needs_full_redraw = true;
             telemetry_drawing.state.precision = precision;
         }
 
         telemetry_drawing.state.units_type = UnitsType::MASS;
-
-        return redraw;
     }
 };
 
+
 // -----------------------------------------------------------------------------
-// MassDrawing
+// Tare zero leaf
 // -----------------------------------------------------------------------------
 struct TareZeroLeaf final : BaseStrMenuLeaf {
     constexpr static int TARE_SAMPLE_DELAY = 2000;
@@ -329,6 +329,7 @@ struct MassUnitsMenu final : BaseCfgMenu {
     {}
 };
 
+
 struct MassErrorDrawing final : BaseErrorDrawing {
     MassErrorDrawing(
         U8X8& display_,
@@ -342,6 +343,7 @@ struct MassErrorDrawing final : BaseErrorDrawing {
         return measurement_stack.aggregate_mass().conditioned_total();
     }
 };
+
 
 struct MassErrorMenu final : BaseCfgMenu {
     MassErrorDrawing leaf;
@@ -371,6 +373,7 @@ struct MassErrorMenu final : BaseCfgMenu {
         return LEAF_CHAR;
     }
 };
+
 
 struct MassSensorDrawing final : BaseSensorTelemetryDrawing {
     const uint8_t sensor;
@@ -405,6 +408,7 @@ struct MassSensorDrawing final : BaseSensorTelemetryDrawing {
         return LEAF_CHAR;
     }
 };
+
 
 struct MassSensorMenu final : BaseCfgMenu {
     MassSensorDrawing leaf;
@@ -444,6 +448,7 @@ struct MassSensorMenu final : BaseCfgMenu {
     }
 };
 
+
 struct MassDrawing final : BaseAggregateTelemetryDrawing {
     BaseMassDataFormatting telemetry_drawing;
     TareIdx tare_idx{};
@@ -479,16 +484,9 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
         const Measurement measurement =
             measurement_stack.aggregate_mass().conditioned_total();
 
-        const bool needs_redraw =
-            telemetry_drawing._set_state(
-                measurement,
-                tare_store->payload()->tares[tare_idx].value);
-
-        if (needs_redraw) {
-            redraw();
-        }
-        else {
-            draw_fast();
-        }
+        telemetry_drawing._set_state(
+            measurement,
+            tare_store->payload()->tares[tare_idx].value);
     }
 };
+

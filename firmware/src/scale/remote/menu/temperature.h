@@ -20,13 +20,16 @@ struct BaseTemperatureDataFormatting {
 
     void synchronize() const {
         telemetry_drawing.state.units =
-            static_cast<uint8_t>(identify_store->view()->payload.temperature_units);
+            static_cast<uint8_t>(
+                identify_store->view()->payload.temperature_units);
     }
 
-    bool _set_state(const Measurement measurement) const {
-        const auto new_units = identify_store->view()->payload.temperature_units;
+    void _set_state(const Measurement measurement) const {
+        telemetry_drawing.state.needs_full_redraw = false;
 
-        bool redraw = false;
+        const auto new_units =
+            identify_store->view()->payload.temperature_units;
+
         float temperature = measurement.value;
 
         if (new_units == TemperatureUnits::FAHRENHEIT) {
@@ -44,21 +47,20 @@ struct BaseTemperatureDataFormatting {
         }
 
         if (static_cast<uint8_t>(new_units) != telemetry_drawing.state.units) {
-            redraw = true;
+            telemetry_drawing.state.needs_full_redraw = true;
             telemetry_drawing.state.units = static_cast<uint8_t>(new_units);
         }
 
         if (measurement.error != telemetry_drawing.state.error) {
-            redraw = true;
+            telemetry_drawing.state.needs_full_redraw = true;
             telemetry_drawing.state.error = measurement.error;
         }
 
         telemetry_drawing.state.units_type = UnitsType::TEMPERATURE;
         telemetry_drawing.state.precision = PRECISION;
-
-        return redraw;
     }
 };
+
 
 struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
     TemperatureUnits units{TemperatureUnits::CELSIUS};
@@ -132,6 +134,7 @@ struct TemperatureErrorDrawing final : BaseErrorDrawing {
     }
 };
 
+
 struct TemperatureErrorMenu final : BaseCfgMenu {
     TemperatureErrorDrawing leaf;
 
@@ -146,9 +149,9 @@ struct TemperatureErrorMenu final : BaseCfgMenu {
               "")
     {}
 
-    void update(const bool selected) override {
-        BaseCfgMenu::update(selected);
-        leaf.update(selected);
+    void update() override {
+        BaseCfgMenu::update();
+        leaf.update();
     }
 
     void draw(const bool selected) override {
@@ -180,11 +183,7 @@ struct ThermistorDrawing final : BaseSensorTelemetryDrawing {
           temperature_data(*this)
     {}
 
-    void update(const bool selected) override {
-        if (!selected) {
-            return;
-        }
-
+    void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
@@ -193,7 +192,6 @@ struct ThermistorDrawing final : BaseSensorTelemetryDrawing {
 
         // ReSharper disable once CppExpressionWithoutSideEffects
         temperature_data._set_state(measurement);
-        draw(selected);
     }
 
     char get_selected_char(bool selected) const override {
@@ -229,9 +227,9 @@ struct ThermistorMenu final : BaseCfgMenu {
               sensor_)
     {}
 
-    void update(const bool selected) override {
-        BaseCfgMenu::update(selected);
-        leaf.update(selected);
+    void update() override {
+        BaseCfgMenu::update();
+        leaf.update();
     }
 
     void draw(const bool selected) override {
@@ -239,6 +237,7 @@ struct ThermistorMenu final : BaseCfgMenu {
         leaf.draw(selected);
     }
 };
+
 
 struct TemperatureDrawing final : BaseAggregateTelemetryDrawing {
     BaseTemperatureDataFormatting telemetry_drawing;
@@ -260,24 +259,14 @@ struct TemperatureDrawing final : BaseAggregateTelemetryDrawing {
           telemetry_drawing(*this)
     {}
 
-    void update(const bool selected) override {
-        if (!selected) {
-            return;
-        }
-
+    void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
         const Measurement measurement =
             measurement_stack.aggregate_temp().conditioned_total();
 
-        const bool needs_redraw = telemetry_drawing._set_state(measurement);
-
-        if (needs_redraw) {
-            redraw();
-        }
-        else {
-            draw_fast();
-        }
+        telemetry_drawing._set_state(measurement);
     }
 };
+

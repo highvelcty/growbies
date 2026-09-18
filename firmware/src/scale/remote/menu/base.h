@@ -243,13 +243,13 @@ struct BaseAggregateTelemetryDrawing : BaseTelemetryDrawing {
     {}
 
     void draw(const bool selected) override {
-        BaseTelemetryDrawing::draw(selected);
-
         if (selected) {
+            BaseTelemetryDrawing::draw(selected);
             return;
         }
 
         if (state.needs_full_redraw) {
+            BaseTelemetryDrawing::draw(selected);
             _set_units_str();
             _set_error_str();
 

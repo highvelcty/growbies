@@ -28,7 +28,7 @@ public:
     void select();
     void render();
     void synchronize() const;
-    void update();
+    void update() const;
 
 private:
     U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
