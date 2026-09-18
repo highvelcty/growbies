@@ -166,12 +166,13 @@ void RemoteOut::select() {
 void RemoteOut::render() {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
     display.clear();
-
     for (size_t i = 0; i < menu_path_depth; ++i) {
         const size_t idx = menu_path[i];
         if (idx >= level->size()) return;
 
         const auto& item = (*level)[idx];
+
+        item->initialize();
 
         // Draw every item as selected, except the last one.
         item->draw((i + 1 < menu_path_depth));

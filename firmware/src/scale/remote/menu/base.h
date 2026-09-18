@@ -51,10 +51,7 @@ struct BaseMenu {
         cached_selected = selected;
     }
 
-    virtual void redraw() {
-        display.clear();
-        draw(cached_selected);
-    }
+    virtual void initialize() {}
 
     virtual char get_selected_char(const bool _selected) const {
         if (_selected) {
@@ -88,9 +85,7 @@ struct BaseCfgMenu : BaseMenu {
     void draw(const bool selected) override {
         BaseMenu::draw(selected);
 
-        if (level == 0) {
-            display.setFont(ONE_BY_ONE_FONT);
-        }
+        display.setFont(ONE_BY_ONE_FONT);
 
         if (!msg) return;
 
@@ -189,7 +184,6 @@ struct BaseTelemetryDrawing : BaseCfgMenu {
             std::move(_children))
     {}
 
-
     const char* _units_str() const {
         if (state.units_type == UnitsType::MASS) {
             switch (static_cast<MassUnits>(state.units)) {
@@ -243,11 +237,6 @@ struct BaseAggregateTelemetryDrawing : BaseTelemetryDrawing {
     {}
 
     void draw(const bool selected) override {
-        if (selected) {
-            BaseTelemetryDrawing::draw(selected);
-            return;
-        }
-
         if (state.needs_full_redraw) {
             BaseTelemetryDrawing::draw(selected);
             _set_units_str();
@@ -270,6 +259,11 @@ struct BaseAggregateTelemetryDrawing : BaseTelemetryDrawing {
     void draw_fast() {
         _set_value_str();
         display.drawString(0, 1, state.value_str);
+    }
+
+    void initialize() override {
+        BaseTelemetryDrawing::initialize();
+        state.needs_full_redraw = true;
     }
 
     void _set_error_str() {
@@ -384,10 +378,6 @@ struct BaseErrorDrawing : BaseTelemetryDrawing {
     }
 
     void draw(const bool selected) override {
-        if (!selected) {
-            return;
-        }
-
         display.setFont(ONE_BY_ONE_FONT);
 
         snprintf(
@@ -410,3 +400,4 @@ struct BaseErrorDrawing : BaseTelemetryDrawing {
     virtual Measurement get_measurement(
         const MeasurementStack& measurement_stack) const = 0;
 };
+
