@@ -12,7 +12,9 @@ constexpr int HX711_BIT_BANG_DELAY = 3;
 // Additionally, this is used for power on delay to allow for settling of inrush current
 constexpr int HX711_POWER_DELAY_US = 64 * 2;
 constexpr int WAIT_READY_RETRY_DELAY_MS = 10;
-constexpr int WAIT_READY_RETRIES = 100;
+constexpr int WAIT_READY_RETRIES = 10;
+
+using HX711ReadyMask = uint8_t;
 
 
 /// HX711 driver for a single load cell
@@ -24,7 +26,6 @@ public:
 
     static void power_off();
     static void power_on();
-
 };
 
 
@@ -47,6 +48,8 @@ public:
 
     std::vector<HX711*> devices;
 
-    // Internal method to wait until DOUT goes low
-    bool wait_ready() const;
+    // Wait until DOUT goes low and return a bit mask indicating
+    // which devices are ready.
+    HX711ReadyMask wait_ready() const;
 };
+

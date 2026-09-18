@@ -1,6 +1,7 @@
 #include "build_cfg.h"
 #include "flags.h"
 #include "stack.h"
+#include "common/protocol/command.h"
 #include "scale/remote/remote_in.h"
 
 void MeasurementStack::begin() {
@@ -25,22 +26,23 @@ void MeasurementStack::update() const {
 #endif
 
     for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
-        const bool ready = multi_hx711_.wait_ready();
+        const HX711ReadyMask ready_mask = multi_hx711_.wait_ready();
 
-        if (ready) {
-            // There is some settling with the thermistor, and it is typically longer than mass,
-            // hence this ordering.
-            std::vector<float> mass_vals = multi_hx711_.sample();
-            std::vector<float> temp_vals = multi_thermistor_.sample();
+        // There is some settling with the thermistor, and it is typically longer than mass,
+        // hence this ordering.
+        std::vector<float> mass_vals = multi_hx711_.sample();
+        std::vector<Measurement> temp_measurements = multi_thermistor_.sample();
 
-            for (size_t i = 0; i < temp_vals.size() && i < aggregate_temp_->size(); ++i)
-                aggregate_temp_->channel(i).update(temp_vals[i]);
-            for (size_t i = 0; i < mass_vals.size() && i < aggregate_mass_->size(); ++i)
+        for (size_t i = 0; i < temp_measurements.size() && i < aggregate_temp_->size(); ++i)
+            aggregate_temp_->channel(i).update(temp_measurements[i].value,
+                temp_measurements[i].error);
+        for (size_t i = 0; i < mass_vals.size() && i < aggregate_mass_->size(); ++i)
+            if (ready_mask & (1 << i)) {
                 aggregate_mass_->channel(i).update(mass_vals[i]);
-        }
-        else {
-            break;
-        }
+            }
+            else {
+                aggregate_mass_->channel(i).update(0.0f, ErrorCode::ERROR_NOT_READY);
+            }
     }
     // 2026_06_02 meyere: analogReadMillivolts has the side effect of disconnecting
     // interrupts.

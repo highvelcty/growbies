@@ -90,14 +90,6 @@ enum Pins : int {
 static_assert(always_false<int>::value, "Invalid PIN_CFG value");
 #endif
 
-typedef enum Unit : uint16_t {
-    // Bitfield
-    UNIT_GRAMS          = 0x0001,
-    UNIT_MASS_DAC       = 0x0002,
-    UNIT_CELSIUS        = 0x0008,
-} Units;
-
-
 inline int get_HX711_dout_pin(const SensorIdx_t sensor){
 #if PIN_CFG == 3
     assert(false && "Invalid for pin configuration.");

@@ -1,18 +1,73 @@
 #pragma once
 
 #include <U8x8lib.h>
-#include <cstring>
-#include <Arduino.h>
 
 #include "base.h"
 #include "scale/measure/stack.h"
 #include "scale/nvm/nvm.h"
 
+// -----------------------------------------------------------------------------
+// Temperature data formatting
+// -----------------------------------------------------------------------------
+struct BaseTemperatureDataFormatting {
+    BaseTelemetryDrawing& telemetry_drawing;
+    static constexpr int PRECISION{1};
+
+    explicit BaseTemperatureDataFormatting(
+        BaseTelemetryDrawing& telemetry_drawing_)
+        : telemetry_drawing(telemetry_drawing_)
+    {}
+
+    void synchronize() const {
+        telemetry_drawing.state.units =
+            static_cast<uint8_t>(
+                identify_store->view()->payload.temperature_units);
+    }
+
+    void _set_state(const Measurement measurement) const {
+        telemetry_drawing.state.needs_full_redraw = false;
+
+        const auto new_units =
+            identify_store->view()->payload.temperature_units;
+
+        float temperature = measurement.value;
+
+        if (new_units == TemperatureUnits::FAHRENHEIT) {
+            temperature = (measurement.value * 9.0f / 5.0f) + 32.0f;
+        }
+
+        if (temperature > 999.9f)
+            temperature = 999.9f;
+
+        if (temperature < -99.9f)
+            temperature = -99.9f;
+
+        if (temperature != telemetry_drawing.state.value) {
+            telemetry_drawing.state.value = temperature;
+        }
+
+        if (static_cast<uint8_t>(new_units) != telemetry_drawing.state.units) {
+            telemetry_drawing.state.needs_full_redraw = true;
+            telemetry_drawing.state.units = static_cast<uint8_t>(new_units);
+        }
+
+        if (measurement.error != telemetry_drawing.state.error) {
+            telemetry_drawing.state.needs_full_redraw = true;
+            telemetry_drawing.state.error = measurement.error;
+        }
+
+        telemetry_drawing.state.units_type = UnitsType::TEMPERATURE;
+        telemetry_drawing.state.precision = PRECISION;
+    }
+};
+
 
 struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
     TemperatureUnits units{TemperatureUnits::CELSIUS};
 
-    explicit TemperatureUnitsMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 2) {}
+    explicit TemperatureUnitsMenuLeaf(U8X8& display_) :
+        BaseStrMenuLeaf(display_, 2)
+    {}
 
     void on_down() override {
         on_up();
@@ -36,9 +91,12 @@ struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
         units = identify_store->view()->payload.temperature_units;
     }
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void set_msg() override {
@@ -51,6 +109,7 @@ struct TemperatureUnitsMenuLeaf final : BaseStrMenuLeaf {
     }
 };
 
+
 struct TemperatureUnitsMenu final : BaseCfgMenu {
     explicit TemperatureUnitsMenu(U8X8& display_)
         : BaseCfgMenu(
@@ -59,120 +118,90 @@ struct TemperatureUnitsMenu final : BaseCfgMenu {
               1,
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<TemperatureUnitsMenuLeaf>(display_),
-              }) {}
+              })
+    {}
 };
 
-struct BaseTemperatureDrawing : BaseTelemetryDrawing {
-    TemperatureUnits units{TemperatureUnits::CELSIUS};
 
-    explicit BaseTemperatureDrawing(
+struct TemperatureErrorDrawing final : BaseErrorDrawing {
+    TemperatureErrorDrawing(
         U8X8& display_,
-        const char* msg_,
-        const TelemetryDrawingFormat format_ =
-            TelemetryDrawingFormat::STANDARD,
-        std::vector<std::shared_ptr<BaseMenu>> _children = {}
-    )
-        : BaseTelemetryDrawing(
-            display_,
-            msg_,
-            format_,
-            std::move(_children))
+        const char* msg_)
+        : BaseErrorDrawing(display_, msg_)
     {}
 
-    void draw(const bool selected) override {
-        _set_units_str();
-        BaseTelemetryDrawing::draw(selected);
-    }
-
-    void synchronize() override {
-        units = identify_store->view()->payload.temperature_units;
-    }
-
-    bool set_temperature(const float celsius) {
-        const auto new_units = identify_store->view()->payload.temperature_units;
-        return _convert_units(celsius, new_units);
-    }
-
-    bool _convert_units(
-        const float celsius,
-        const TemperatureUnits new_units
-    ) {
-        float temp = celsius;
-
-        if (new_units == TemperatureUnits::FAHRENHEIT) {
-            temp = (celsius * 9.0f / 5.0f) + 32.0f;
-        }
-
-        if (temp > 999.9f) temp = 999.9f;
-        if (temp < -99.9f) temp = -99.9f;
-
-        dtostrf(temp, VALUE_CHARS, 1, value_str);
-        value_str[VALUE_CHARS] = '\0';
-
-        switch (new_units) {
-            case TemperatureUnits::CELSIUS:
-                strncpy(units_str, "*C", UNITS_CHARS);
-                break;
-
-            case TemperatureUnits::FAHRENHEIT:
-                strncpy(units_str, "*F", UNITS_CHARS);
-                break;
-        }
-
-        units_str[UNITS_CHARS] = '\0';
-
-        bool redraw = false;
-
-        if (units != new_units) {
-            units = new_units;
-            redraw = true;
-        }
-
-        return redraw;
-    }
-
-    void _set_units_str() {
-        if (units == TemperatureUnits::FAHRENHEIT) {
-            strncpy(units_str, "*F", UNITS_CHARS);
-        }
-        else {
-            strncpy(units_str, "*C", UNITS_CHARS);
-        }
-
-        units_str[UNITS_CHARS] = '\0';
+    Measurement get_measurement(
+        const MeasurementStack& measurement_stack) const override
+    {
+        return measurement_stack.aggregate_temp().conditioned_total();
     }
 };
 
-struct ThermistorDrawing final : BaseTemperatureDrawing {
+
+struct TemperatureErrorMenu final : BaseCfgMenu {
+    TemperatureErrorDrawing leaf;
+
+    explicit TemperatureErrorMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Error",
+            1,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(
+              display_,
+              "")
+    {}
+
+    void update() override {
+        BaseCfgMenu::update();
+        leaf.update();
+    }
+
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        BaseCfgMenu::draw(selected, current);
+        leaf.draw(selected, current);
+    }
+
+    char get_selected_char(bool selected) const override {
+        return LEAF_CHAR;
+    }
+};
+
+
+struct ThermistorDrawing final : BaseSensorTelemetryDrawing {
     const uint8_t sensor;
+    BaseTemperatureDataFormatting temperature_data;
 
     ThermistorDrawing(
         U8X8& display_,
         const char* msg_,
-        const uint8_t sensor_,
-        const float celsius_ = 0.0f,
-        const TemperatureUnits requested_units_ =
-            TemperatureUnits::CELSIUS
+        const uint8_t sensor_
     )
-        : BaseTemperatureDrawing(
+        : BaseSensorTelemetryDrawing(
             display_,
             msg_,
-            TelemetryDrawingFormat::BOTTOM_TWO_LINES,
-            std::vector<std::shared_ptr<BaseMenu>>{})
-        , sensor(sensor_)
-    {
-        _convert_units(celsius_, requested_units_);
-    }
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          sensor(sensor_),
+          temperature_data(*this)
+    {}
 
     void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
-        const auto new_value =
+        const auto measurement =
             measurement_stack.aggregate_temp().sensor_temperatures()[sensor];
 
-        set_temperature(new_value);
-        draw_value();
+        // ReSharper disable once CppExpressionWithoutSideEffects
+        temperature_data._set_state(measurement);
+    }
+
+    char get_selected_char(bool selected) const override {
+        return LEAF_CHAR;
     }
 };
 
@@ -197,59 +226,56 @@ struct ThermistorMenu final : BaseCfgMenu {
             display_,
             name(sensor_),
             1,
-            std::vector<std::shared_ptr<BaseMenu>>{}
-        ),
-        leaf(
-            display_,
-            "",
-            sensor_
-        )
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(
+              display_,
+              "",
+              sensor_)
     {}
 
     void update() override {
+        BaseCfgMenu::update();
         leaf.update();
     }
 
-    void draw(const bool selected) override {
-        BaseCfgMenu::draw(selected);
-        leaf.draw(false);
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        BaseCfgMenu::draw(true, current);
+        leaf.draw(selected, current);
     }
 };
 
-struct TemperatureDrawing final : BaseTemperatureDrawing {
+
+struct TemperatureDrawing final : BaseAggregateTelemetryDrawing {
+    BaseTemperatureDataFormatting telemetry_drawing;
+
     TemperatureDrawing(
         U8X8& display_,
-        const char* msg_,
-        const float celsius_ = 0.0f,
-        const TemperatureUnits requested_units_ =
-            TemperatureUnits::CELSIUS
-    )
-        : BaseTemperatureDrawing(
+        const char* msg_)
+        : BaseAggregateTelemetryDrawing(
             display_,
             msg_,
-            TelemetryDrawingFormat::STANDARD,
+            0,
             std::vector<std::shared_ptr<BaseMenu>>{
                 std::make_shared<TemperatureUnitsMenu>(display_),
+                std::make_shared<TemperatureErrorMenu>(display_),
                 std::make_shared<ThermistorMenu>(display_, 0),
                 std::make_shared<ThermistorMenu>(display_, 1),
                 std::make_shared<ThermistorMenu>(display_, 2),
-            })
-    {
-        _convert_units(celsius_, requested_units_);
-    }
+            }),
+          telemetry_drawing(*this)
+    {}
 
     void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
-        const auto new_value =
+        const Measurement measurement =
             measurement_stack.aggregate_temp().conditioned_total();
 
-        if (set_temperature(new_value)) {
-            redraw();
-        }
-        else {
-            draw_value();
-        }
+        telemetry_drawing._set_state(measurement);
     }
 };
+

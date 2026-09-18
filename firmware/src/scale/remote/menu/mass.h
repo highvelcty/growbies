@@ -1,10 +1,8 @@
 #pragma once
 
 #include <U8x8lib.h>
-#include <cstring>
 #include <memory>
 #include <Arduino.h>
-
 
 #include "base.h"
 #include "scale/measure/stack.h"
@@ -12,20 +10,155 @@
 #include "scale/nvm/nvm.h"
 
 // -----------------------------------------------------------------------------
-// MassDrawing
+// Mass data formatting
+// -----------------------------------------------------------------------------
+struct BaseMassDataFormatting {
+    BaseTelemetryDrawing& telemetry_drawing;
+    static constexpr int PRECISION{1};
+
+    explicit BaseMassDataFormatting(
+        BaseTelemetryDrawing& telemetry_drawing_)
+        : telemetry_drawing(telemetry_drawing_)
+    {}
+
+    void synchronize() const {
+        telemetry_drawing.state.units =
+            static_cast<uint8_t>(identify_store->view()->payload.mass_units);
+    }
+
+    void _set_state(const Measurement measurement, const float tare_val) const {
+        telemetry_drawing.state.needs_full_redraw = false;
+
+        const auto new_units =
+            identify_store->view()->payload.mass_units;
+
+        float tare_mass = measurement.value - tare_val;
+
+        const MassUnits converted_units = new_units;
+
+        constexpr float GRAMS_PER_KG = 1000.0f;
+        constexpr float GRAMS_PER_OZ = 28.3495f;
+        constexpr float OUNCES_PER_LB = 16.0f;
+
+        // ReSharper disable CppTooWideScope
+        constexpr float MAX_ZERO_PRECISION   = 9999999;
+        constexpr float MIN_ZERO_PRECISION   = -999999;
+        constexpr float MAX_SINGLE_PRECISION = 99999.9;
+        constexpr float MIN_SINGLE_PRECISION = -9999.9;
+        constexpr float MAX_DOUBLE_PRECISION = 9999.99;
+        constexpr float MIN_DOUBLE_PRECISION = -999.99;
+        constexpr float MAX_TRIPLE_PRECISION = 999.999;
+        constexpr float MIN_TRIPLE_PRECISION = -99.999;
+        // ReSharper restore CppTooWideScope
+
+        // Unit conversion
+        switch (converted_units) {
+            case MassUnits::GRAMS:
+                break;
+
+            case MassUnits::KILOGRAMS:
+                tare_mass /= GRAMS_PER_KG;
+                break;
+
+            case MassUnits::OUNCES:
+                tare_mass /= GRAMS_PER_OZ;
+                break;
+
+            case MassUnits::POUNDS:
+                tare_mass /= (GRAMS_PER_OZ * OUNCES_PER_LB);
+                break;
+        }
+
+        // Precision by units
+        int precision = 0;
+
+        switch (converted_units) {
+            case MassUnits::GRAMS: {
+                precision = 0;
+
+                if (tare_mass > MAX_SINGLE_PRECISION ||
+                    tare_mass < MIN_SINGLE_PRECISION) {
+                    tare_mass /= GRAMS_PER_KG;
+                }
+
+                break;
+            }
+
+            case MassUnits::OUNCES: {
+                precision = 2;
+
+                if (tare_mass > MAX_DOUBLE_PRECISION ||
+                    tare_mass < MIN_DOUBLE_PRECISION) {
+                    tare_mass /= OUNCES_PER_LB;
+                }
+
+                break;
+            }
+
+            case MassUnits::POUNDS:
+            case MassUnits::KILOGRAMS: {
+                precision = 3;
+
+                if (tare_mass > MAX_TRIPLE_PRECISION ||
+                    tare_mass < MIN_TRIPLE_PRECISION) {
+                    precision = 2;
+                }
+                else if (tare_mass > MAX_DOUBLE_PRECISION ||
+                         tare_mass < MIN_DOUBLE_PRECISION) {
+                    precision = 1;
+                }
+                else if (tare_mass > MAX_SINGLE_PRECISION ||
+                         tare_mass < MIN_SINGLE_PRECISION) {
+                    precision = 0;
+
+                    if (tare_mass > MAX_ZERO_PRECISION) {
+                        tare_mass = MAX_ZERO_PRECISION;
+                    }
+                    else if (tare_mass < MIN_ZERO_PRECISION) {
+                        tare_mass = MIN_ZERO_PRECISION;
+                    }
+                }
+
+                break;
+            }
+        }
+
+        telemetry_drawing.state.value = tare_mass;
+
+        if (static_cast<uint8_t>(new_units) != telemetry_drawing.state.units) {
+            telemetry_drawing.state.needs_full_redraw = true;
+            telemetry_drawing.state.units = static_cast<uint8_t>(new_units);
+        }
+
+        if (measurement.error != telemetry_drawing.state.error) {
+            telemetry_drawing.state.needs_full_redraw = true;
+            telemetry_drawing.state.error = measurement.error;
+        }
+
+        if (precision != telemetry_drawing.state.precision) {
+            telemetry_drawing.state.needs_full_redraw = true;
+            telemetry_drawing.state.precision = precision;
+        }
+
+        telemetry_drawing.state.units_type = UnitsType::MASS;
+    }
+};
+
+
+// -----------------------------------------------------------------------------
+// Tare zero leaf
 // -----------------------------------------------------------------------------
 struct TareZeroLeaf final : BaseStrMenuLeaf {
     constexpr static int TARE_SAMPLE_DELAY = 2000;
     TareIdx tare_idx;
 
-    explicit TareZeroLeaf(U8X8& display_, const TareIdx tare_idx_)
+    explicit TareZeroLeaf(
+        U8X8& display_,
+        const TareIdx tare_idx_)
         : BaseStrMenuLeaf(display_, 2),
-        tare_idx(tare_idx_) {
+          tare_idx(tare_idx_)
+    {
         msg = "zero";
-    }
-
-    void draw(const bool selected) override {
-        BaseStrMenuLeaf::draw(selected);
     }
 
     void on_up() override {
@@ -58,6 +191,7 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
             ".       ",
             "        "
         };
+
         const auto& stack = MeasurementStack::get();
         constexpr size_t dots_len = sizeof(dots) / sizeof(dots[0]);
 
@@ -65,18 +199,22 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
 
         for (const char* s : dots) {
             msg = s;
-            draw(true);
+            draw(true, true);
             delay(TARE_SAMPLE_DELAY / dots_len);
         }
 
         for (const char* s : back_dots) {
             stack.update();
             msg = s;
-            draw(true);
+            draw(true, true);
         }
 
-        tare_store->edit().payload.tares[tare_idx].value = \
+        const Measurement measurement =
             stack.aggregate_mass().conditioned_total();
+
+        tare_store->edit().payload.tares[tare_idx].value =
+            measurement.value;
+
         tare_store->commit();
 
         msg = "zero";
@@ -87,15 +225,20 @@ struct TareZeroLeaf final : BaseStrMenuLeaf {
     }
 };
 
+
 struct TareCancelLeaf final : BaseStrMenuLeaf {
     explicit TareCancelLeaf(U8X8& display_)
-        : BaseStrMenuLeaf(display_, 2) {
+        : BaseStrMenuLeaf(display_, 2)
+    {
         msg = "cancel";
     }
 };
 
+
 struct TareMenu final : BaseCfgMenu {
-    explicit TareMenu(U8X8& display, TareIdx tare_idx)
+    explicit TareMenu(
+        U8X8& display,
+        TareIdx tare_idx)
         : BaseCfgMenu(
             display,
             "Tare",
@@ -103,13 +246,17 @@ struct TareMenu final : BaseCfgMenu {
             std::vector<std::shared_ptr<BaseMenu>>{
                 std::make_shared<TareZeroLeaf>(display, tare_idx),
                 std::make_shared<TareCancelLeaf>(display)
-            }) {}
+            })
+    {}
 };
+
 
 struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
     MassUnits units{MassUnits::GRAMS};
 
-    explicit  MassUnitsMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 2) {}
+    explicit MassUnitsMenuLeaf(U8X8& display_) :
+        BaseStrMenuLeaf(display_, 2)
+    {}
 
     void on_down() override {
         // Convert to integer for cycling
@@ -128,7 +275,8 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
         // Convert to integer for cycling
         uint8_t next = static_cast<uint8_t>(units) - 1;
 
-        // Wrap around if we exceed the first element - note the uint8 wraps to 255.
+        // Wrap around if we exceed the first element.
+        // Note that the uint8 wraps to 255.
         if (next > static_cast<uint8_t>(MassUnits::POUNDS)) {
             next = static_cast<uint8_t>(MassUnits::POUNDS);
         }
@@ -146,9 +294,12 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
         units = identify_store->view()->payload.mass_units;
     }
 
-    void draw(const bool selected) override {
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
         set_msg();
-        BaseStrMenuLeaf::draw(selected);
+        BaseStrMenuLeaf::draw(selected, current);
     }
 
     void set_msg() override {
@@ -168,6 +319,7 @@ struct MassUnitsMenuLeaf final : BaseStrMenuLeaf {
     }
 };
 
+
 struct MassUnitsMenu final : BaseCfgMenu {
     explicit MassUnitsMenu(U8X8& display_)
         : BaseCfgMenu(
@@ -176,152 +328,174 @@ struct MassUnitsMenu final : BaseCfgMenu {
               1,
               std::vector<std::shared_ptr<BaseMenu>>{
                   std::make_shared<MassUnitsMenuLeaf>(display_)
-              }) {}
+              })
+    {}
 };
 
-struct MassDrawing final : BaseTelemetryDrawing {
-    MassUnits units{};
-    TareIdx tare_idx{};
-    SystemState& system_state = SystemState::get();
 
-
-    MassDrawing(
+struct MassErrorDrawing final : BaseErrorDrawing {
+    MassErrorDrawing(
         U8X8& display_,
-        const TareIdx tare_idx_
-    )
-        : BaseTelemetryDrawing(
-              display_,
-              get_tare_name(tare_idx_),
-              TelemetryDrawingFormat::STANDARD,
-              std::vector<std::shared_ptr<BaseMenu>>{
-                  std::make_shared<TareMenu>(display_, tare_idx_),
-                  std::make_shared<MassUnitsMenu>(display_),
-              }), tare_idx(tare_idx_)
+        const char* msg_)
+        : BaseErrorDrawing(display_, msg_)
+    {}
+
+    Measurement get_measurement(
+        const MeasurementStack& measurement_stack) const override
     {
+        return measurement_stack.aggregate_mass().conditioned_total();
     }
-
-    void draw(const bool selected) override {
-        _set_units_str();
-        BaseTelemetryDrawing::draw(selected);
-    }
+};
 
 
-    void synchronize() override {
-        units = identify_store->view()->payload.mass_units;
+struct MassErrorMenu final : BaseCfgMenu {
+    MassErrorDrawing leaf;
+
+    explicit MassErrorMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Error",
+            1,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(
+              display_,
+              "")
+    {}
+
+    void update() override {
+        BaseCfgMenu::update();
+        leaf.update();
     }
+
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
+        BaseCfgMenu::draw(selected, current);
+        leaf.draw(selected, current);
+    }
+
+    char get_selected_char(bool selected) const override {
+        return LEAF_CHAR;
+    }
+};
+
+
+struct MassSensorDrawing final : BaseSensorTelemetryDrawing {
+    const uint8_t sensor;
+    BaseMassDataFormatting mass_data;
+
+    MassSensorDrawing(
+        U8X8& display_,
+        const char* msg_,
+        const uint8_t sensor_
+    )
+        : BaseSensorTelemetryDrawing(
+            display_,
+            msg_,
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          sensor(sensor_),
+          mass_data(*this)
+    {}
 
     void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
-        const auto new_units = identify_store->view()->payload.mass_units;
+
+        const auto measurement =
+            measurement_stack.aggregate_mass().sensor_measurements()[sensor];
+
+        // ReSharper disable once CppExpressionWithoutSideEffects
+        mass_data._set_state(measurement, 0.0f);
+    }
+
+    char get_selected_char(bool selected) const override {
+        return LEAF_CHAR;
+    }
+};
+
+
+struct MassSensorMenu final : BaseCfgMenu {
+    MassSensorDrawing leaf;
+
+    static const char* name(const uint8_t sensor_) {
+        switch (sensor_) {
+            case 0: return "Load Cell 0";
+            case 1: return "Load Cell 1";
+            case 2: return "Load Cell 2";
+            default: return "Load Cell";
+        }
+    }
+
+    explicit MassSensorMenu(
+        U8X8& display_,
+        const uint8_t sensor_
+    )
+        : BaseCfgMenu(
+            display_,
+            name(sensor_),
+            1,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(
+              display_,
+              "",
+              sensor_)
+    {}
+
+    void update() override {
+        BaseCfgMenu::update();
+        leaf.update();
+    }
+
+    void draw(
+        const bool selected,
+        const bool current) override
+    {
+        BaseCfgMenu::draw(true, current);
+        leaf.draw(selected, current);
+    }
+};
+
+
+struct MassDrawing final : BaseAggregateTelemetryDrawing {
+    BaseMassDataFormatting telemetry_drawing;
+    TareIdx tare_idx{};
+    SystemState& system_state = SystemState::get();
+
+    MassDrawing(
+        U8X8& display_,
+        const TareIdx tare_idx_)
+        : BaseAggregateTelemetryDrawing(
+              display_,
+              get_tare_name(tare_idx_),
+              0,
+              std::vector<std::shared_ptr<BaseMenu>>{
+                  std::make_shared<TareMenu>(display_, tare_idx_),
+                  std::make_shared<MassUnitsMenu>(display_),
+                  std::make_shared<MassErrorMenu>(display_),
+                  std::make_shared<MassSensorMenu>(display_, 0),
+                  std::make_shared<MassSensorMenu>(display_, 1),
+                  std::make_shared<MassSensorMenu>(display_, 2),
+              }),
+            telemetry_drawing(*this),
+            tare_idx(tare_idx_)
+    {}
+
+    void update() override {
+        const auto& measurement_stack = MeasurementStack::get();
+        measurement_stack.update();
 
         if (measurement_stack.aggregate_mass().is_event_tripped()) {
             system_state.notify_activity(millis());
         }
 
-        const bool needs_redraw =
-            _convert_units(measurement_stack.aggregate_mass().conditioned_total(), new_units);
-        if (needs_redraw) {
-            redraw();
-        }
-        else {
-            draw_value();
-        }
-    }
+        const Measurement measurement =
+            measurement_stack.aggregate_mass().conditioned_total();
 
-    bool _convert_units(const float grams, const MassUnits new_units) {
-        float converted_mass = grams - tare_store->payload()->tares[tare_idx].value;
-        MassUnits converted_units = new_units;
-
-        constexpr float GRAMS_PER_KG = 1000.0f;
-        constexpr float GRAMS_PER_OZ = 28.3495f;
-        constexpr float OUNCES_PER_LB = 16.0f;
-
-        // ReSharper disable CppTooWideScope
-        constexpr float MAX_ZERO_PRECISION   = 9999999;
-        constexpr float MIN_ZERO_PRECISION   = -999999;
-        constexpr float MAX_SINGLE_PRECISION = 99999.9;
-        constexpr float MIN_SINGLE_PRECISION = -9999.9;
-        constexpr float MAX_DOUBLE_PRECISION = 9999.99;
-        constexpr float MIN_DOUBLE_PRECISION = -999.99;
-        constexpr float MAX_TRIPLE_PRECISION = 999.999;
-        constexpr float MIN_TRIPLE_PRECISION = -99.999;
-        // ReSharper restore CppTooWideScope
-
-        // Unit conversion
-        switch (converted_units) {
-            case MassUnits::GRAMS: break;
-            case MassUnits::KILOGRAMS: converted_mass /= GRAMS_PER_KG; break;
-            case MassUnits::OUNCES: converted_mass /= GRAMS_PER_OZ; break;
-            case MassUnits::POUNDS: converted_mass /= (GRAMS_PER_OZ * OUNCES_PER_LB); break;
-        }
-
-        // Precision by units
-        int precision = 0;
-        switch (converted_units) {
-            case MassUnits::GRAMS: {
-                precision = 0;
-                if (converted_mass > MAX_SINGLE_PRECISION ||
-                    converted_mass < MIN_SINGLE_PRECISION) {
-                    converted_units = MassUnits::KILOGRAMS;
-                    converted_mass /= GRAMS_PER_KG;
-                }
-                break;
-            }
-            case MassUnits::OUNCES: {
-                precision = 2;
-                if (converted_mass > MAX_DOUBLE_PRECISION ||
-                    converted_mass < MIN_DOUBLE_PRECISION) {
-                    converted_units = MassUnits::POUNDS;
-                    converted_mass /= OUNCES_PER_LB;
-                }
-                break;
-            }
-            case MassUnits::POUNDS:
-            case MassUnits::KILOGRAMS: {
-                precision = 3;
-                if (converted_mass > MAX_TRIPLE_PRECISION ||
-                    converted_mass < MIN_TRIPLE_PRECISION) {
-                    precision = 2;
-                }
-                else if (converted_mass > MAX_DOUBLE_PRECISION ||
-                         converted_mass < MIN_DOUBLE_PRECISION) {
-                    precision = 1;
-                }
-                else if (converted_mass > MAX_SINGLE_PRECISION ||
-                         converted_mass < MIN_SINGLE_PRECISION) {
-                    precision = 0;
-                    if (converted_mass > MAX_ZERO_PRECISION) {
-                        converted_mass = MAX_ZERO_PRECISION;
-                    }
-                    else if (converted_mass < MIN_ZERO_PRECISION) {
-                        converted_mass = MIN_ZERO_PRECISION;
-                    }
-                }
-                break;
-            }
-        }
-
-        dtostrf(converted_mass, VALUE_CHARS, precision, value_str);
-        value_str[VALUE_CHARS] = '\0';
-
-        bool redraw = false;
-        if (units != converted_units) {
-            redraw = true;
-            units = converted_units;
-        }
-
-        return redraw;
-    }
-
-    void _set_units_str() {
-        switch (units) {
-            case MassUnits::GRAMS: strncpy(units_str, "g", UNITS_CHARS); break;
-            case MassUnits::KILOGRAMS: strncpy(units_str, "kg", UNITS_CHARS); break;
-            case MassUnits::OUNCES: strncpy(units_str, "oz", UNITS_CHARS); break;
-            case MassUnits::POUNDS: strncpy(units_str, "lb", UNITS_CHARS); break;
-        }
-        units_str[UNITS_CHARS] = '\0';
+        telemetry_drawing._set_state(
+            measurement,
+            tare_store->payload()->tares[tare_idx].value);
     }
 };
 

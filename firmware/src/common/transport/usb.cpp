@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <cstring>
 #include "usb.h"
+#include "common/protocol/error_code.h"
 #include "common/utils/crc.h"
 #include "thermal/thermal.h"
 

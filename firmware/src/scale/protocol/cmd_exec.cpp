@@ -1,4 +1,5 @@
 #include "common/protocol/cmd_exec.h"
+#include "common/protocol/error_code.h"
 #include "command.h"
 #include "scale/measure/stack.h"
 #include "scale/remote/remote_out.h"
@@ -136,15 +137,24 @@ void CmdExec::update_telemetry(const bool async) const {
         datapoint.add<float>(EP_TARE, tare.value);
     }
 
-    datapoint.add<float>(EP_MASS, stack.aggregate_mass().conditioned_total());
-    datapoint.add<float>(EP_TEMPERATURE, stack.aggregate_temp().conditioned_total());
+    const Measurement mass_measurement = stack.aggregate_mass().conditioned_total();
+    datapoint.add<float>(EP_MASS, mass_measurement.value);
 
-    for (auto sensor_mass : stack.aggregate_mass().sensor_masses()) {
-        datapoint.add<float>(EP_MASS_SENSOR, sensor_mass);
+    const Measurement temperature_measurement = stack.aggregate_temp().conditioned_total();
+    datapoint.add<float>(EP_TEMPERATURE, temperature_measurement.value);
+
+    for (auto sensor_measurement : stack.aggregate_mass().sensor_measurements()) {
+        datapoint.add<float>(EP_MASS_SENSOR, sensor_measurement.value);
+        if (mass_measurement.error != ErrorCode::ERROR_NONE) {
+            datapoint.add<ErrorCode>(EP_MASS_SENSOR_ERRORS, sensor_measurement.error);
+        }
     }
 
-    for (auto sensor_temp : stack.aggregate_temp().sensor_temperatures()) {
-        datapoint.add<float>(EP_TEMPERATURE_SENSORS, sensor_temp);
+    for (auto sensor_measurement : stack.aggregate_temp().sensor_temperatures()) {
+        datapoint.add<float>(EP_TEMPERATURE_SENSORS, sensor_measurement.value);
+        if (temperature_measurement.error != ErrorCode::ERROR_NONE) {
+            datapoint.add<ErrorCode>(EP_TEMPERATURE_SENSOR_ERRORS, sensor_measurement.error);
+        }
     }
 
     usb_transport.send_resp(&datapoint, datapoint.get_size(), async);

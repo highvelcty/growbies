@@ -124,36 +124,45 @@ std::vector<float> MultiHX711::sample() const{
     return float_readings;
 }
 
-bool MultiHX711::wait_ready() const {
-    bool ready;
+HX711ReadyMask MultiHX711::wait_ready() const {
+    HX711ReadyMask ready_mask = 0;
+
 #if ARDUINO_ARCH_AVR
     uint8_t gpio_in_reg;
 #elif ARDUINO_ARCH_ESP32
     uint32_t gpio_in_reg;
 #endif
-    bool all_ready = false;
+
     int retry_count = 0;
 
     do {
-        // Check for readiness from all sensors
-        // Read pins 8-13
+        // Check readiness from all sensors.
 #if ARDUINO_ARCH_AVR
         gpio_in_reg = PINB;
 #elif ARDUINO_ARCH_ESP32
         gpio_in_reg = REG_READ(GPIO_IN_REG);
 #endif
-        all_ready = true;
+
+        ready_mask = 0;
+
         for (size_t jj = 0; jj < devices.size(); ++jj) {
-            ready = static_cast<bool>(gpio_in_reg & get_HX711_dout_port_bit(jj)) == LOW;
-            all_ready &= ready;
+            const bool ready =
+                static_cast<bool>(
+                    gpio_in_reg & get_HX711_dout_port_bit(jj)
+                ) == LOW;
+
+            if (ready)
+                ready_mask |= (1 << jj);
         }
 
-        if (!all_ready){
-            ++retry_count;
-            delay(WAIT_READY_RETRY_DELAY_MS);
-        }
+        // If all devices are ready, return immediately.
+        if (ready_mask == ((1 << devices.size()) - 1))
+            break;
 
-    } while ((retry_count <= WAIT_READY_RETRIES) && (!all_ready));
+        ++retry_count;
+        delay(WAIT_READY_RETRY_DELAY_MS);
 
-    return all_ready;
+    } while (retry_count <= WAIT_READY_RETRIES);
+
+    return ready_mask;
 }

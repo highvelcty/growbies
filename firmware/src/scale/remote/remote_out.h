@@ -35,9 +35,13 @@ private:
 
     std::vector<std::shared_ptr<BaseMenu>> menu_root;
     const std::vector<std::shared_ptr<BaseMenu>>* level_from_path() const;
+    BaseMenu* is_current_item() const;
+
+    static bool is_selected_item(size_t path_index);
 
     // internal singleton pointer
     static RemoteOut* instance;
 
     static void initialize();
 };
+

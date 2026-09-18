@@ -3,6 +3,7 @@
 #include <vector>
 #include "constants.h"
 #include "build_cfg.h"
+#include "common/measure/aggregate.h"
 
 // Select thermistor hardware version
 #define THERMISTOR_HW_0 false
@@ -45,6 +46,7 @@ constexpr float STEINHART_HART_C = 7.41006996E-6f;
 
 
 class Thermistor {
+    // meyere, this is the wrong layer to do this - it has been moved to the aggregate
     static constexpr float DEFAULT_TEMPERATURE_CELSIUS = 22.0;
 public:
 
@@ -56,7 +58,7 @@ public:
     void begin() const;
 
     // Measure temperature in °C (default Steinhart-Hart)
-    float sample() const;
+    Measurement sample() const;
 
 private:
     // Convert raw ADC value to output voltage
@@ -80,7 +82,7 @@ public:
     static void power_on();
 
     // Sample all thermistors (Steinhart–Hart method)
-    std::vector<float> sample() const;
+    std::vector<Measurement> sample() const;
 
 private:
     std::vector<Thermistor*> devices_;

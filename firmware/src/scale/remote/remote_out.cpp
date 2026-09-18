@@ -94,6 +94,20 @@ const std::vector<std::shared_ptr<BaseMenu>>* RemoteOut::level_from_path() const
     return level;
 }
 
+BaseMenu* RemoteOut::is_current_item() const {
+    auto* level = level_from_path();
+    if (!level) return nullptr;
+
+    const size_t idx = menu_path[menu_path_depth - 1];
+    if (idx >= level->size()) return nullptr;
+
+    return (*level)[idx].get();
+}
+
+bool RemoteOut::is_selected_item(const size_t path_index) {
+    return path_index + 1 < menu_path_depth;
+}
+
 void RemoteOut::up() {
     auto* level = level_from_path();
     if (!level) return;
@@ -107,8 +121,11 @@ void RemoteOut::up() {
         --idx;
     }
 
-    const auto& item = (*level)[idx];
+    auto* item = is_current_item();
+    if (!item) return;
+
     item->on_up();
+    item->update();
     render();
 }
 
@@ -121,19 +138,17 @@ void RemoteOut::down() {
     // Down with wrapping
     idx = (idx + 1) % level->size();
 
-    const auto& item = (*level)[idx];
+    auto* item = is_current_item();
+    if (!item) return;
+
     item->on_down();
+    item->update();
     render();
 }
 
 void RemoteOut::select() {
-    auto* level = level_from_path();
-    if (!level) return;
-
-    const size_t idx = menu_path[menu_path_depth - 1];
-    if (idx >= level->size()) return;
-
-    const auto& item = (*level)[idx];
+    auto* item = is_current_item();
+    if (!item) return;
 
     if (item->children.empty()) {
         // Truncate path to the top-level menu that led to this leaf
@@ -145,11 +160,16 @@ void RemoteOut::select() {
         ++menu_path_depth;
     }
 
+    item = is_current_item();
+    if (!item) return;
+
+    item->update();
     render();
 }
 
 void RemoteOut::render() {
     const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
+
     display.clear();
 
     for (size_t i = 0; i < menu_path_depth; ++i) {
@@ -158,8 +178,12 @@ void RemoteOut::render() {
 
         const auto& item = (*level)[idx];
 
-        // Draw every item as selected, except the last one.
-        item->draw((i + 1 < menu_path_depth));
+        item->initialize();
+
+        item->draw(
+            is_selected_item(i),
+            !is_selected_item(i));
+
         level = &item->children;
     }
 }
@@ -184,15 +208,10 @@ void RemoteOut::synchronize() const {
 }
 
 void RemoteOut::update() const {
-    const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
+    auto* item = is_current_item();
+    if (!item) return;
 
-    for (size_t i = 0; i < menu_path_depth; ++i) {
-        const size_t idx = menu_path[i];
-        if (idx >= level->size()) return;
-
-        const auto& item = (*level)[idx];
-
-        item->update();
-        level = &item->children;
-    }
+    item->update();
+    item->draw(false, true);
 }
+

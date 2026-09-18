@@ -37,13 +37,14 @@ void ThermalDevice::begin()
 ThermalDeviceState ThermalDevice::get_state() {
     _aggregate_temp->reset_channels();
     for (int ii = 0; ii < MEDIAN_FILTER_BUF_SIZE; ++ii) {
-        std::vector<float> temp_vals = _multi_thermistor.sample();
-        for (size_t i = 0; i < temp_vals.size() && i < _aggregate_temp->size(); ++i)
-            _aggregate_temp->channel(i).update(temp_vals[i]);
+        std::vector<Measurement> measurements = _multi_thermistor.sample();
+        for (size_t i = 0; i < measurements.size() && i < _aggregate_temp->size(); ++i)
+            _aggregate_temp->channel(i).update(measurements[i].value);
     }
     _aggregate_temp->update();
 
-    _state.sense.temperature = _aggregate_temp->conditioned_total();
+    const Measurement measurement = _aggregate_temp->conditioned_total();
+    _state.sense.temperature = measurement.value;
     _state.sense.heater_on = _is_heater_on();
     _state.sense.fan_on = _is_fan_on();
 

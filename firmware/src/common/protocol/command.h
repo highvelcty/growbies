@@ -1,6 +1,7 @@
 #pragma once
 
 #include "constants.h"
+#include "error_code.h"
 
 #pragma pack(1)
 
@@ -30,22 +31,13 @@ enum class Resp: uint16_t {
 };
 
 
-enum class ErrorCode: uint32_t {
-    ERROR_NONE                                  = 0,
-    ERROR_CMD_DESERIALIZATION_BUFFER_UNDERFLOW  = 1,
-    ERROR_UNRECOGNIZED_COMMAND                  = 2,
-    ERROR_INCOMPLETE_SLIP_FRAME                 = 3,
-    ERROR_INVALID_SLIP_CRC                      = 4,
-    ERROR_CMD_HDR_DESERIALIZATION_UNDERFLOW     = 5,
-};
-
 typedef enum EndpointType: uint8_t {
     EP_MASS_SENSOR = 0,
     EP_MASS = 1,
-    EP_MASS_ERRORS = 2,
+    EP_MASS_SENSOR_ERRORS = 2,
     EP_TEMPERATURE_SENSORS = 3,
     EP_TEMPERATURE = 4,
-    EP_TEMPERATURE_ERRORS = 5,
+    EP_TEMPERATURE_SENSOR_ERRORS = 5,
     EP_TARE = 6,
     EP_UNKNOWN = 0xFF
 } EndpointType;
