@@ -8,21 +8,11 @@ void Thermistor::begin() const {
 }
 
 float Thermistor::read_voltage() const {
-    const auto vout = static_cast<float>(analogReadMilliVolts(analog_pin_) / 1000.0);
-    if (vout < 0.001f || vout > (THERMISTOR_SUPPLY_VOLTAGE - 0.001f)) {
-        return NAN; // Safely bail out
-    }
-    return vout;
+    return static_cast<float>(analogReadMilliVolts(analog_pin_) / 1000.0);
 }
 
 Measurement Thermistor::sample() const {
     const float vout = read_voltage();
-    if (isnan(vout)) {
-        return {
-            DEFAULT_TEMPERATURE_CELSIUS,
-            ErrorCode::ERROR_READ_VOLTAGE
-        };
-    }
 
     float r_therm;
 
@@ -45,18 +35,18 @@ Measurement Thermistor::sample() const {
             ErrorCode::ERROR_UNDER_TEMPERATURE
         };
     }
-    else if (celsius > MAX_TEMPERATURE_CELSIUS) {
+
+    if (celsius > MAX_TEMPERATURE_CELSIUS) {
         return {
             DEFAULT_TEMPERATURE_CELSIUS,
             ErrorCode::ERROR_OVER_TEMPERATURE
         };
     }
-    else {
-        return {
-            celsius,
-            ErrorCode::ERROR_NONE
-        };
-    }
+
+    return {
+        celsius,
+        ErrorCode::ERROR_NONE
+    };
 }
 
 // --- MultiThermistor -------------------

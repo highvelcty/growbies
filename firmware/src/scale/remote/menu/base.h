@@ -350,7 +350,7 @@ struct BaseSensorTelemetryDrawing : BaseTelemetryDrawing {
             state.value_str[i] = ' ';
         }
 
-        state.value_str[LINE_PREFIX_CHARS] = '\0';
+        state.value_str[pad_count] = '\0';
     }
 };
 
