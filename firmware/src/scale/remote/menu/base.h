@@ -160,10 +160,11 @@ struct TelemetryDrawingState {
     float value{NAN};
     int precision{1};
 
-
     UnitsType units_type{UnitsType::MASS};
     uint8_t units{static_cast<uint8_t>(MassUnits::GRAMS)};
     ErrorCode error{ErrorCode::ERROR_NONE};
+
+    bool needs_full_redraw{true};
 };
 
 // -----------------------------------------------------------------------------
@@ -243,19 +244,26 @@ struct BaseAggregateTelemetryDrawing : BaseTelemetryDrawing {
 
     void draw(const bool selected) override {
         BaseTelemetryDrawing::draw(selected);
-        if (selected)
+
+        if (selected) {
             return;
+        }
 
-        _set_value_str();
-        _set_units_str();
-        _set_error_str();
+        if (state.needs_full_redraw) {
+            _set_units_str();
+            _set_error_str();
 
-        display.setFont(ONE_BY_ONE_FONT);
-        display.drawString(14, 3, state.units_str);
-        display.setFont(ONE_BY_TWO_FONT);
-        display.drawString(15, 1, state.error_str);
+            display.setFont(ONE_BY_ONE_FONT);
+            display.drawString(14, 3, state.units_str);
 
-        display.setFont(TWO_BY_THREE_FONT);
+            display.setFont(ONE_BY_TWO_FONT);
+            display.drawString(15, 1, state.error_str);
+
+            state.needs_full_redraw = false;
+
+            display.setFont(TWO_BY_THREE_FONT);
+        }
+
         draw_fast();
     }
 
@@ -401,5 +409,4 @@ struct BaseErrorDrawing : BaseTelemetryDrawing {
 
     virtual Measurement get_measurement(
         const MeasurementStack& measurement_stack) const = 0;
-
 };
