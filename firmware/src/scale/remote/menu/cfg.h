@@ -27,7 +27,6 @@ struct ContrastMenuLeaf final : BaseIntMenuLeaf {
     }
 
     void on_down() override {
-
         if (value == 0) {
             value = UINT8_MAX;
         }
@@ -112,6 +111,7 @@ struct FlipMenu final : BaseCfgMenu {
 
 struct SleepTimeoutMenuLeaf final : BaseIntMenuLeaf {
     static constexpr size_t values_len = 17;
+
     static const int* values() {
         static constexpr int v[values_len] = {
             0, 1, 2, 3, 5, 8, 15, 20, 30,
@@ -119,6 +119,7 @@ struct SleepTimeoutMenuLeaf final : BaseIntMenuLeaf {
         };
         return v;
     }
+
     static constexpr int default_idx = 6;
     int idx{default_idx};
 
@@ -137,7 +138,6 @@ struct SleepTimeoutMenuLeaf final : BaseIntMenuLeaf {
     }
 
     void on_down() override {
-
         if (idx == 0) {
             idx = values_len - 1;
         }
@@ -161,9 +161,10 @@ struct SleepTimeoutMenuLeaf final : BaseIntMenuLeaf {
 
         for (size_t i = 0; i < values_len; ++i) {
             if (values()[i] <= stored) {
-                new_idx = i;   // candidate
-            } else {
-                break;        // table is sorted, so we’re done
+                new_idx = i;
+            }
+            else {
+                break;
             }
         }
 
@@ -179,7 +180,7 @@ struct SleepTimeoutMenu final : BaseCfgMenu {
             "Sleep TO (s)",
             2,
             std::vector<std::shared_ptr<BaseMenu>>{
-                    std::make_shared<SleepTimeoutMenuLeaf>(display_)
+                std::make_shared<SleepTimeoutMenuLeaf>(display_)
             }) {}
 };
 
@@ -239,27 +240,21 @@ struct BatteryLeaf final : BaseStrMenuLeaf {
     explicit BatteryLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
     void draw(const bool selected) override {
-        set_msg();                 // refresh each draw
+        set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
 
-    void update(const bool selected) override {
-        draw(selected);
-    }
-
-    void set_msg() override{
+    void set_msg() override {
         if (battery.is_charging()) {
             snprintf(msg_buf, MSG_BUF_LEN, "charging");
             snprintf(msg_buf, MSG_BUF_LEN, fmt_str, msg_buf);
-
-
         }
         else {
 #if BATTERY_LEVEL_INDICATOR
             snprintf(
                 msg_buf,
                 MSG_BUF_LEN,
-                "%d%% (%.1fV)", // 100% (4.2V)
+                "%d%% (%.1fV)",
                 battery.percentage(),
                 battery.voltage()
             );
@@ -285,11 +280,11 @@ struct FirmwareVersionMenuLeaf final : BaseStrMenuLeaf {
     explicit FirmwareVersionMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
     void draw(const bool selected) override {
-        set_msg();                 // refresh each draw
+        set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
 
-    void set_msg() override{
+    void set_msg() override {
         const char* fw = identify_store->payload()->firmware_version;
 
         if (!fw) {
@@ -313,7 +308,6 @@ struct FirmwareVersionMenuLeaf final : BaseStrMenuLeaf {
         snprintf(msg_buf, len + 1, "%s", fw);
         msg_buf[len] = '\0';
     }
-
 };
 
 struct FirmwareVersionMenu final : BaseCfgMenu {
@@ -324,23 +318,21 @@ struct FirmwareVersionMenu final : BaseCfgMenu {
             display_,
             "FW Version",
             2,
-            std::vector<std::shared_ptr<BaseMenu>>{
-            }),
-            leaf(display_)
-            {}
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(display_)
+    {}
 
     void draw(const bool selected) override {
         BaseCfgMenu::draw(selected);
         leaf.draw(false);
     }
-
 };
 
 struct MfgDateMenuLeaf final : BaseStrMenuLeaf {
     explicit MfgDateMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
     void draw(const bool selected) override {
-        set_msg();                 // refresh each draw
+        set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
 
@@ -355,7 +347,7 @@ struct MfgDateMenuLeaf final : BaseStrMenuLeaf {
         const auto sec = static_cast<std::time_t>(ts);
 
         std::tm tm{};
-        gmtime_r(&sec, &tm);   // UTC conversion
+        gmtime_r(&sec, &tm);
 
         snprintf(
             msg_buf,
@@ -376,27 +368,25 @@ struct MfgDateMenu final : BaseCfgMenu {
             display_,
             "Mfg Date",
             2,
-            std::vector<std::shared_ptr<BaseMenu>>{
-            }),
-            leaf(display_)
-            {}
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(display_)
+    {}
 
     void draw(const bool selected) override {
         BaseCfgMenu::draw(selected);
         leaf.draw(false);
     }
-
 };
 
 struct SerialNumberMenuLeaf final : BaseStrMenuLeaf {
     explicit SerialNumberMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
     void draw(const bool selected) override {
-        set_msg();                 // refresh each draw
+        set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
 
-    void set_msg() override{
+    void set_msg() override {
         snprintf(msg_buf, MSG_BUF_LEN, identify_store->payload()->serial_number);
     }
 };
@@ -409,10 +399,9 @@ struct SerialNumberMenu final : BaseCfgMenu {
             display_,
             "Serial No.",
             2,
-            std::vector<std::shared_ptr<BaseMenu>>{
-            }),
-            leaf(display_)
-            {}
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(display_)
+    {}
 
     void draw(const bool selected) override {
         BaseCfgMenu::draw(selected);
@@ -424,7 +413,7 @@ struct SourceHashMenuLeaf final : BaseStrMenuLeaf {
     explicit SourceHashMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
     void draw(const bool selected) override {
-        set_msg();                 // refresh each draw
+        set_msg();
         BaseStrMenuLeaf::draw(selected);
     }
 
@@ -464,10 +453,9 @@ struct SourceHashMenu final : BaseCfgMenu {
             display_,
             "Source Hash",
             2,
-            std::vector<std::shared_ptr<BaseMenu>>{
-            }),
-            leaf(display_)
-            {}
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(display_)
+    {}
 
     void draw(const bool selected) override {
         BaseCfgMenu::draw(selected);
@@ -526,3 +514,4 @@ struct ConfigurationMenu final : BaseCfgMenu {
                   std::make_shared<InfoMenu>(display_),
               }) {}
 };
+

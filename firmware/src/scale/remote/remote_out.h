@@ -28,13 +28,14 @@ public:
     void select();
     void render();
     void synchronize() const;
-    void update() const;
+    void update();
 
 private:
     U8X8_SSD1306_128X32_UNIVISION_HW_I2C display;
 
     std::vector<std::shared_ptr<BaseMenu>> menu_root;
     const std::vector<std::shared_ptr<BaseMenu>>* level_from_path() const;
+    BaseMenu* current_item() const;
 
     // internal singleton pointer
     static RemoteOut* instance;

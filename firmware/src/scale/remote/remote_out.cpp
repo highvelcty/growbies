@@ -94,6 +94,16 @@ const std::vector<std::shared_ptr<BaseMenu>>* RemoteOut::level_from_path() const
     return level;
 }
 
+BaseMenu* RemoteOut::current_item() const {
+    auto* level = level_from_path();
+    if (!level) return nullptr;
+
+    const size_t idx = menu_path[menu_path_depth - 1];
+    if (idx >= level->size()) return nullptr;
+
+    return (*level)[idx].get();
+}
+
 void RemoteOut::up() {
     auto* level = level_from_path();
     if (!level) return;
@@ -107,8 +117,11 @@ void RemoteOut::up() {
         --idx;
     }
 
-    const auto& item = (*level)[idx];
+    auto* item = current_item();
+    if (!item) return;
+
     item->on_up();
+    item->update();
     render();
 }
 
@@ -121,19 +134,17 @@ void RemoteOut::down() {
     // Down with wrapping
     idx = (idx + 1) % level->size();
 
-    const auto& item = (*level)[idx];
+    auto* item = current_item();
+    if (!item) return;
+
     item->on_down();
+    item->update();
     render();
 }
 
 void RemoteOut::select() {
-    auto* level = level_from_path();
-    if (!level) return;
-
-    const size_t idx = menu_path[menu_path_depth - 1];
-    if (idx >= level->size()) return;
-
-    const auto& item = (*level)[idx];
+    auto* item = current_item();
+    if (!item) return;
 
     if (item->children.empty()) {
         // Truncate path to the top-level menu that led to this leaf
@@ -145,6 +156,10 @@ void RemoteOut::select() {
         ++menu_path_depth;
     }
 
+    item = current_item();
+    if (!item) return;
+
+    item->update();
     render();
 }
 
@@ -184,17 +199,10 @@ void RemoteOut::synchronize() const {
     }
 }
 
-void RemoteOut::update() const {
-    const std::vector<std::shared_ptr<BaseMenu>>* level = &menu_root;
+void RemoteOut::update() {
+    auto* item = current_item();
+    if (!item) return;
 
-    for (size_t i = 0; i < menu_path_depth; ++i) {
-        const size_t idx = menu_path[i];
-        if (idx >= level->size()) return;
-
-        const auto& item = (*level)[idx];
-        const bool selected = (i + 1 == menu_path_depth);
-
-        item->update(selected);
-        level = &item->children;
-    }
+    item->update();
+    item->draw(false);
 }

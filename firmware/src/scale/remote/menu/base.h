@@ -1,13 +1,11 @@
 #pragma once
 
-
 #include <Arduino.h>
 #include <cstdio>
 #include <U8x8lib.h>
 
 #include "common/utils/font.h"
 #include "scale/measure/stack.h"
-
 
 // -----------------------------------------------------------------------------
 // Display constants
@@ -70,7 +68,7 @@ struct BaseMenu {
     virtual void on_select() {}
     virtual void set_msg() {}
     virtual void synchronize() {}
-    virtual void update(const bool selected) {}
+    virtual void update() {}
 
     virtual ~BaseMenu() = default;
 };
@@ -370,17 +368,11 @@ struct BaseErrorDrawing : BaseTelemetryDrawing {
             std::vector<std::shared_ptr<BaseMenu>>{})
     {}
 
-    void update(const bool selected) override {
-        if (!selected) {
-            return;
-        }
-
+    void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
         state.error = get_measurement(measurement_stack).error;
-
-        draw(selected);
     }
 
     void draw(const bool selected) override {

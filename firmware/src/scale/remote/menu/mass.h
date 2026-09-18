@@ -31,7 +31,7 @@ struct BaseMassDataFormatting {
         const auto new_units =
             identify_store->view()->payload.mass_units;
 
-        float tare_mass =measurement.value - tare_val;
+        float tare_mass = measurement.value - tare_val;
 
         const MassUnits converted_units = new_units;
 
@@ -133,6 +133,7 @@ struct BaseMassDataFormatting {
             redraw = true;
             telemetry_drawing.state.error = measurement.error;
         }
+
         if (precision != telemetry_drawing.state.precision) {
             redraw = true;
             telemetry_drawing.state.precision = precision;
@@ -356,9 +357,9 @@ struct MassErrorMenu final : BaseCfgMenu {
               "")
     {}
 
-    void update(const bool selected) override {
-        BaseCfgMenu::update(selected);
-        leaf.update(selected);
+    void update() override {
+        BaseCfgMenu::update();
+        leaf.update();
     }
 
     void draw(const bool selected) override {
@@ -389,11 +390,7 @@ struct MassSensorDrawing final : BaseSensorTelemetryDrawing {
           mass_data(*this)
     {}
 
-    void update(const bool selected) override {
-        if (!selected) {
-            return;
-        }
-
+    void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
@@ -402,7 +399,6 @@ struct MassSensorDrawing final : BaseSensorTelemetryDrawing {
 
         // ReSharper disable once CppExpressionWithoutSideEffects
         mass_data._set_state(measurement, 0.0f);
-        draw(selected);
     }
 
     char get_selected_char(bool selected) const override {
@@ -437,9 +433,9 @@ struct MassSensorMenu final : BaseCfgMenu {
               sensor_)
     {}
 
-    void update(const bool selected) override {
-        BaseCfgMenu::update(selected);
-        leaf.update(selected);
+    void update() override {
+        BaseCfgMenu::update();
+        leaf.update();
     }
 
     void draw(const bool selected) override {
@@ -472,11 +468,7 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
             tare_idx(tare_idx_)
     {}
 
-    void update(const bool selected) override {
-        if (!selected) {
-            return;
-        }
-
+    void update() override {
         const auto& measurement_stack = MeasurementStack::get();
         measurement_stack.update();
 
@@ -487,9 +479,10 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
         const Measurement measurement =
             measurement_stack.aggregate_mass().conditioned_total();
 
-
         const bool needs_redraw =
-            telemetry_drawing._set_state(measurement, tare_store->payload()->tares[tare_idx].value);
+            telemetry_drawing._set_state(
+                measurement,
+                tare_store->payload()->tares[tare_idx].value);
 
         if (needs_redraw) {
             redraw();
@@ -499,4 +492,3 @@ struct MassDrawing final : BaseAggregateTelemetryDrawing {
         }
     }
 };
-
