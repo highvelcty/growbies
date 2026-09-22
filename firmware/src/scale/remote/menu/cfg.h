@@ -285,6 +285,55 @@ struct BatteryMenu final : BaseCfgMenu {
             }) {}
 };
 
+struct ModelNumberMenuLeaf final : BaseStrMenuLeaf {
+    explicit ModelNumberMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
+
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        set_msg();
+        BaseStrMenuLeaf::draw(selected, current);
+    }
+
+    void set_msg() override {
+        const char* model_number = identify_store->payload()->model_number;
+
+        if (!model_number) {
+            msg_buf[0] = '\0';
+            return;
+        }
+
+        snprintf(
+            msg_buf,
+            MSG_BUF_LEN,
+            "%s",
+            model_number
+        );
+    }
+};
+
+struct ModelNumberMenu final : BaseCfgMenu {
+    ModelNumberMenuLeaf leaf;
+
+    explicit ModelNumberMenu(U8X8& display_)
+        : BaseCfgMenu(
+            display_,
+            "Model No.",
+            2,
+            std::vector<std::shared_ptr<BaseMenu>>{}),
+          leaf(display_)
+    {}
+
+    void draw(
+        const bool selected,
+        const bool current
+    ) override {
+        BaseCfgMenu::draw(selected, current);
+        leaf.draw(false, current);
+    }
+};
+
 struct FirmwareVersionMenuLeaf final : BaseStrMenuLeaf {
     explicit FirmwareVersionMenuLeaf(U8X8& display_) : BaseStrMenuLeaf(display_, 3) {}
 
@@ -411,7 +460,12 @@ struct SerialNumberMenuLeaf final : BaseStrMenuLeaf {
     }
 
     void set_msg() override {
-        snprintf(msg_buf, MSG_BUF_LEN, identify_store->payload()->serial_number);
+        snprintf(
+            msg_buf,
+            MSG_BUF_LEN,
+            "%s",
+            identify_store->payload()->serial_number
+        );
     }
 };
 
@@ -515,6 +569,7 @@ struct InfoMenu final : BaseCfgMenu {
             "Info",
             1,
             std::vector<std::shared_ptr<BaseMenu>>{
+                std::make_shared<ModelNumberMenu>(display_),
                 std::make_shared<FirmwareVersionMenu>(display_),
                 std::make_shared<SourceHashMenu>(display_),
                 std::make_shared<MfgDateMenu>(display_),

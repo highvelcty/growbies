@@ -63,6 +63,16 @@ upload-all-circle-3: ENV=scale
 upload-all-circle-3: MODEL=circle-3
 upload-all-circle-3: _upload-all
 
+circle-4: ENV=scale
+circle-4: MODEL=circle-4
+circle-4: _build
+upload-circle-4: ENV=scale
+upload-circle-4: MODEL=circle-4
+upload-circle-4: _upload
+upload-all-circle-4: ENV=scale
+upload-all-circle-4: MODEL=circle-4
+upload-all-circle-4: _upload-all
+
 # ============================================================================
 # Thermal device products
 # ============================================================================
@@ -75,3 +85,4 @@ upload-thermal-device-1: _upload
 upload-all-thermal-device-1: ENV=thermal
 upload-all-thermal-device-1: MODEL=thermal-device-1
 upload-all-thermal-device-1: _upload-all
+

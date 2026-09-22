@@ -1,6 +1,7 @@
 #include "thermistor.h"
 #include "build_cfg.h"
 #include "flags.h"
+#include "scale/measure/hx711.h"
 
 // --- Thermistor ------------------------
 void Thermistor::begin() const {

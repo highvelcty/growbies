@@ -86,6 +86,23 @@ enum Pins : int {
     DOUT_0_PIN = D9,
     INVERTED_SWITCHED_PWR_PIN = true,
 };
+#elif PIN_CFG == 5
+enum Pins : int {
+    THERMISTOR_PIN_0 = A0,
+    THERMISTOR_PIN_1 = A1,
+    THERMISTOR_PIN_2 = A2,
+    BATTERY_SENSE_PIN = A3,
+    BUTTON_0_PIN = D1,
+    BUTTON_1_PIN = D2,
+    HW_I2C_SDA_PIN = D4,
+    HW_I2C_SCL_PIN = D5,
+    SWITCHED_PWR_PIN = NO_PIN,
+    HX711_SCK_PIN = D10,
+    DOUT_2_PIN = D7,
+    DOUT_1_PIN = D8,
+    DOUT_0_PIN = D9,
+    INVERTED_SWITCHED_PWR_PIN = false,
+};
 #else
 static_assert(always_false<int>::value, "Invalid PIN_CFG value");
 #endif

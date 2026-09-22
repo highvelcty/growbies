@@ -106,6 +106,10 @@ class Circle3(Circle2):
     This is the first manufactured circuit board. It uses a PMOS to switch the 3.3v rail for the
     switching power supply for the measurement stack. It differs from circle-2 in only that the
     logic is inverted to switch the supply to the stack.
+
+    There was a logical error in PCBA "Growbies 3x scale v1.0.0". Due to this, a couple of traces
+    needed to be cut post-processing in addition to a jumper wire from D6 to the sensor power
+    control gate of the high-side PMOS switch.
     """
     MODEL_NUMBER = 'circle-3'
 
@@ -114,6 +118,20 @@ class Circle3(Circle2):
         def value(cls, key: 'Default.Key.type_'):
             if key == cls.PIN_CFG:
                 return 4
+            else:
+                return super().value(key)
+
+class Circle4(Circle3):
+    """
+    - Use the SCK line to control the power to the load cells and thermistor.
+    """
+    MODEL_NUMBER = 'circle-4'
+
+    class Key(CircleEsp32c3.Key):
+        @classmethod
+        def value(cls, key: 'Default.Key.type_'):
+            if key == cls.PIN_CFG:
+                return 5
             else:
                 return super().value(key)
 
