@@ -133,7 +133,7 @@ std::vector<float> ThermalDevice::get_sensor_temperatures() const
     std::vector<float> sensor_temperatures;
 
     for (auto sensor_temp : _aggregate_temp->sensor_temperatures()) {
-        sensor_temperatures.push_back(sensor_temp);
+        sensor_temperatures.push_back(sensor_temp.value);
     }
 
     return sensor_temperatures;
