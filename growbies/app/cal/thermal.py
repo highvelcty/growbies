@@ -13,18 +13,18 @@ THERMAL_DEVICE = "therm"
 
 # Devices to calibrate.
 DEVICES = [
-    "205",
-    "696",
-    "871",
-    "8e9",
-    "bc7b",
+    "0bc",
+    "7bb",
+    "976",
+    "9e9",
+    "f8c",
 ]
 
 # Temperature set points, in degrees Celsius.
 SET_POINTS = [
-    35.0,
-    45.0,
-    50.0
+    5.0,
+    25.0,
+    50.0,
 ]
 
 # The measured chamber temperature must be within this many degrees of the
@@ -32,13 +32,13 @@ SET_POINTS = [
 TEMPERATURE_TOLERANCE_C = 0.5
 
 # Time that the chamber must remain at temperature before sampling.
-DWELL_SECONDS = 60*30
+DWELL_SECONDS = 60*40  # 40 minutes
 
 # How often to check the chamber temperature while waiting.
 THERMAL_POLL_SECONDS = 10
 
 # How long to wait for the thermal chamber to reach temperature.
-WAIT_FOR_THERMAL_CHAMBER_SEC = 2 * 60 * 60 # 2 hours
+WAIT_FOR_THERMAL_CHAMBER_SEC = 12 * 60 * 60 # 12 hours
 
 # ---------------------------------------------------------------------------
 # Status output
