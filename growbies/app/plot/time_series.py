@@ -685,6 +685,9 @@ def _install_interaction(
     press_limits = None
     busy = False
 
+    def on_xlim_changed(ax):
+        update(autoscale_y=False)
+
     def update(autoscale_y=True):
         nonlocal busy
 
@@ -782,6 +785,11 @@ def _install_interaction(
     fig.canvas.mpl_connect(
         'pick_event',
         on_pick,
+    )
+
+    x_axis.callbacks.connect(
+        'xlim_changed',
+        on_xlim_changed,
     )
 
     update()
