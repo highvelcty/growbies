@@ -29,10 +29,12 @@ struct BaseMassDataFormatting {
     void _set_state(const Measurement measurement, const float tare_val) const {
         telemetry_drawing.state.needs_full_redraw = false;
 
-        MassUnits new_units =
+        const auto new_units =
             identify_store->view()->payload.mass_units;
 
         float tare_mass = measurement.value - tare_val;
+
+        const MassUnits converted_units = new_units;
 
         constexpr float GRAMS_PER_KG = 1000.0f;
         constexpr float GRAMS_PER_OZ = 28.3495f;
@@ -49,8 +51,8 @@ struct BaseMassDataFormatting {
         constexpr float MIN_TRIPLE_PRECISION = -99.999;
         // ReSharper restore CppTooWideScope
 
-        // Convert from grams to the selected units.
-        switch (new_units) {
+        // Unit conversion
+        switch (converted_units) {
             case MassUnits::GRAMS:
                 break;
 
@@ -67,43 +69,34 @@ struct BaseMassDataFormatting {
                 break;
         }
 
-        // Automatically promote units when the value is too large to display.
-        switch (new_units) {
-            case MassUnits::GRAMS:
+        // Precision by units
+        int precision = 0;
+
+        switch (converted_units) {
+            case MassUnits::GRAMS: {
+                precision = 0;
+
                 if (tare_mass > MAX_SINGLE_PRECISION ||
                     tare_mass < MIN_SINGLE_PRECISION) {
                     tare_mass /= GRAMS_PER_KG;
-                    new_units = MassUnits::KILOGRAMS;
                 }
-                break;
 
-            case MassUnits::OUNCES:
+                break;
+            }
+
+            case MassUnits::OUNCES: {
+                precision = 2;
+
                 if (tare_mass > MAX_DOUBLE_PRECISION ||
                     tare_mass < MIN_DOUBLE_PRECISION) {
                     tare_mass /= OUNCES_PER_LB;
-                    new_units = MassUnits::POUNDS;
                 }
-                break;
 
-            case MassUnits::KILOGRAMS:
+                break;
+            }
+
             case MassUnits::POUNDS:
-                break;
-        }
-
-        // Determine precision from the final units and value.
-        int precision = 0;
-
-        switch (new_units) {
-            case MassUnits::GRAMS:
-                precision = 0;
-                break;
-
-            case MassUnits::OUNCES:
-                precision = 2;
-                break;
-
-            case MassUnits::KILOGRAMS:
-            case MassUnits::POUNDS:
+            case MassUnits::KILOGRAMS: {
                 precision = 3;
 
                 if (tare_mass > MAX_TRIPLE_PRECISION ||
@@ -127,6 +120,7 @@ struct BaseMassDataFormatting {
                 }
 
                 break;
+            }
         }
 
         telemetry_drawing.state.value = tare_mass;
@@ -148,8 +142,6 @@ struct BaseMassDataFormatting {
 
         telemetry_drawing.state.units_type = UnitsType::MASS;
     }
-
-
 };
 
 
