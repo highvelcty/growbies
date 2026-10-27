@@ -78,14 +78,6 @@ class BaseNamedTableEngine(BaseTableEngine):
             results = session.exec(stmt).all()
             return results
 
-            # Convert to DTOs
-            # Exclude datapoints from DTO conversion
-            # meyere
-            # return [
-            #     self.model_class.model_validate(obj.model_dump(exclude={}))
-            #     for obj in results
-            # ]
-
     def _get_exact(self, name: str, *relationships) -> Optional[TSQLModel]:
         with self._engine.new_session() as session:
             stmt = select(self.model_class).where(

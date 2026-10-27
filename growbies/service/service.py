@@ -1,9 +1,11 @@
 import logging
 
-from .common import ServiceOp, ServiceCmdError
-from .queue import ServiceQueue, IDQueue
+from .cmd.ls import (get_device_monitor_singleton, make_device_monitor_singleton,
+                     stop_device_monitor_singleton)
+from .common import ServiceCmd, ServiceOp, ServiceCmdError
+from .service_queue import ServiceQueue, IDQueue
 from growbies.protocol.resp import DeviceError
-from growbies.service.cmd import cal, device, ls, project, read, session, tag, thermal, user
+from growbies.service.cmd import cal, device, project, read, session, tag, thermal, user
 from growbies.service.cmd import nvm
 from growbies.session import get_session
 from growbies.worker.pool import get_pool
@@ -17,16 +19,16 @@ class Service:
         # This will initiate the execution session. It needs to be called early in the execution
         # flow so that things can be initialized for use, such as logging.
         self._session =  get_session()
-
         self._queue = ServiceQueue()
 
-    @staticmethod
-    def _connect_all_active():
-        get_pool().connect(*(dev.id for dev in ls.execute() if dev.is_active()))
+        # Construction order matters. The callback requires the service queue.
+        make_device_monitor_singleton([self.service_connections_callback])
+
+    def service_connections_callback(self):
+        self._queue.put(ServiceCmd(op=ServiceOp.SERVICE_CONNECTIONS, kw={}))
 
     def run(self):
         logger.info('Service start.')
-        self._connect_all_active()
 
         done = False
         try:
@@ -38,7 +40,7 @@ class Service:
                             if cmd.op == ServiceOp.CAL:
                                 resp = cal.execute(cmd)
                             elif cmd.op == ServiceOp.DEVICE:
-                                resp = device.execute(cmd)
+                                resp = device.execute(cmd, self.service_connections_callback)
                             elif cmd.op == ServiceOp.NVM:
                                 resp = nvm.execute(cmd)
                             elif cmd.op == ServiceOp.PROJECT:
@@ -53,6 +55,8 @@ class Service:
                                 resp = thermal.execute(cmd)
                             elif cmd.op == ServiceOp.USER:
                                 resp = user.execute(cmd)
+                            elif cmd.op == ServiceOp.SERVICE_CONNECTIONS:
+                                resp = get_pool().synchronize(get_device_monitor_singleton())
                             else:
                                 resp = ServiceCmdError(f'Unknown command "{cmd.op}" received.')
                         except (DeviceError, ServiceCmdError) as err:
@@ -66,7 +70,7 @@ class Service:
 
         except KeyboardInterrupt:
             pass
-        get_pool().disconnect_all()
-        get_pool().join_all()
-        logger.info('Service exit.')
-
+        finally:
+            stop_device_monitor_singleton()
+            get_pool().disconnect_all()
+            logger.info('Service exit.')

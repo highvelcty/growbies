@@ -20,6 +20,8 @@ class ServiceOp(StrEnum):
     TAG = 'tag'
     THERMAL = 'thermal'
     USER = 'user'
+    SERVICE_CONNECTIONS = 'service_connections'
+
 
     @property
     def help(self) -> str:
@@ -41,6 +43,8 @@ class ServiceOp(StrEnum):
             return f'Interface to a thermal device.'
         elif self == self.USER:
             return f'Get/set user accounts.'
+        elif self == self.SERVICE_CONNECTIONS:
+            return f'Service the connections to devices.'
         else:
             return ''
 
@@ -66,6 +70,9 @@ class ServiceOp(StrEnum):
             desc = f'List/modify thermal device configuration.'
         elif self == self.USER:
             desc = f'List/add/modify/remove users.'
+        elif self == self.SERVICE_CONNECTIONS:
+            desc = (f'Service the connections to devices by updating what is discovered and '
+                    f'connecting only what is set active by the user, as found in the DB.')
 
         return (f'{self.help}\n'
                 f'\n'

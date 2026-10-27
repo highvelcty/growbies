@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Callable, Optional
 import logging
 
 from . import ls
@@ -6,12 +6,10 @@ from ..common import ServiceCmd
 from growbies.cli.device import Action, Param, ModParam
 from growbies.db.engine import get_db_engine
 from growbies.db.models.device import Device, Devices
-from growbies.worker.pool import get_pool
-
 
 logger = logging.getLogger(__name__)
 
-def execute(cmd: ServiceCmd) -> Optional[Device | Devices]:
+def execute(cmd: ServiceCmd, callback: Callable) -> Optional[Device | Devices]:
     engine = get_db_engine()
 
     fuzzy_id = cmd.kw.pop(Param.FUZZY_ID, None)
@@ -19,19 +17,16 @@ def execute(cmd: ServiceCmd) -> Optional[Device | Devices]:
 
     if action in (Action.ACTIVATE, Action.DEACTIVATE):
         dev = engine.device.get(fuzzy_id)
-        worker_pool = get_pool()
         if action == Action.ACTIVATE:
             engine.device.set_active(dev.id)
-            worker_pool.connect(dev.id)
         else:
             engine.device.clear_active(dev.id)
-            worker_pool.disconnect(dev.id)
-            worker_pool.join_all(dev.id)
+        callback()
     elif action in (None, Action.LS):
         if fuzzy_id:
             return engine.device.get(fuzzy_id)
         else:
-            return ls.execute()
+            return ls.get_device_monitor_singleton().rescan()
     elif action == Action.MOD:
         new_name = cmd.kw.pop(ModParam.NAME)
         dev = engine.device.get(fuzzy_id)

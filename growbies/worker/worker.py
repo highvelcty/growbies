@@ -51,6 +51,10 @@ class Worker(Thread):
         return self._device.id
 
     @property
+    def is_stopping_or_stopped(self):
+        return self._stop_event.is_set()
+
+    @property
     def name(self):
         return f'{self._device.serial}'
 

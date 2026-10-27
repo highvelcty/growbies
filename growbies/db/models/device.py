@@ -70,6 +70,15 @@ class Device(BaseTable, table=True):
         self.state &= ~ConnectionState.DISCOVERED
         self.path = None
 
+    def has_same_discovery_info(self, other: 'Device') -> bool:
+        return (
+                self.serial == other.serial
+                and self.vid == other.vid
+                and self.pid == other.pid
+                and self.path == other.path
+        )
+
+
     def is_initial(self) -> bool:
         return bool(not self.state)
 
@@ -95,6 +104,29 @@ class Devices(SortedTable[Device]):
             if device.serial == serial:
                 return device
         return None
+
+    def have_same_discovery_info(self, other: 'Devices') -> bool:
+        if not isinstance(other, Devices):
+            return False
+
+        if len(self._rows) != len(other._rows):
+            return False
+
+        other_by_serial = {
+            device.serial: device
+            for device in other._rows
+        }
+
+        for device in self._rows:
+            other_device = other_by_serial.get(device.serial)
+
+            if other_device is None:
+                return False
+
+            if not device.has_same_discovery_info(other_device):
+                return False
+
+        return True
 
     def __str__(self):
         table = PrettyTable((Device.Key.ID, Device.Key.NAME, Device.Key.SERIAL, Device.Key.STATE,
@@ -124,7 +156,7 @@ class DeviceEngine(BaseNamedTableEngine):
         self.upsert(existing)
 
     def list(self) -> Devices:
-        return Devices(self._get_all(Device.gateways, Device.sessions))
+        return Devices(self._get_all())
 
     def merge_with_discovered(self, discovered_devices: Devices) -> Devices:
         merged_devices = self._merge_with_discovered(discovered_devices)
