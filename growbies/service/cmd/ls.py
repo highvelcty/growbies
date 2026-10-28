@@ -7,11 +7,13 @@ import subprocess
 import threading
 import time
 from collections.abc import Callable
+from enum import StrEnum
 
 import pyudev
 
 from growbies.common.utils.paths import InstallPaths
-from growbies.db.models.device import Device, Devices, ConnectionState
+from growbies.db.engine import get_db_engine
+from growbies.db.models.device import Device, DeviceEngine, Devices, ConnectionState
 from growbies.service.common import ServiceCmdError
 from growbies.session import get_session
 
@@ -45,27 +47,18 @@ class DeviceMonitor(threading.Thread):
     # UDEV_TIMEOUT_SEC) and additional shutdown overhead in python (+1)
     STOP_TIMEOUT_SEC = UDEV_TIMEOUT_SEC + 1
 
-    class Task:
-        EXIT = 0
-        RESCAN = 1
-        NOOP = 2
+    class Task(StrEnum):
+        EXIT = 'exit'
+        RESCAN = 'rescan'
+        NOOP = 'no-operation'
 
-        def __init__(self, _type: int):
-            self._type = _type
+    class TaskRequest:
+        def __init__(self, task_type: 'DeviceMonitor.Task'):
+            self._type = task_type
             self._queue = queue.Queue(maxsize=1)
 
-        def __str__(self):
-            if self._type == self.EXIT:
-                return 'exit'
-            elif self._type == self.RESCAN:
-                return 'rescan'
-            elif self._type == self.NOOP:
-                return 'no-operation'
-            else:
-                raise ValueError(f'Invalid task type "{self._type}".')
-
         @property
-        def type(self) -> int:
+        def type(self) -> 'DeviceMonitor.Task':
             return self._type
 
         @property
@@ -76,8 +69,8 @@ class DeviceMonitor(threading.Thread):
             try:
                 return self._queue.get(timeout=timeout)
             except queue.Empty:
-                raise ServiceCmdError(f'Timeout of {timeout} seconds waiting for '
-                                      f'task "{self._type}".')
+                raise ServiceCmdError(f'Timeout of {timeout} seconds waiting for task "'
+                                      f'{self._type}".')
 
     def __init__(self, callbacks: list[Callable]):
         super().__init__(daemon=True)
@@ -94,14 +87,14 @@ class DeviceMonitor(threading.Thread):
 
     def stop(self):
         self._stop_event.set()
-        self._queue.put(self.Task(self.Task.EXIT))
+        self._queue.put(self.TaskRequest(self.Task.EXIT))
         self.join(timeout=self.STOP_TIMEOUT_SEC)
         if self.is_alive():
             logger.warning(f'Timed out of {self.STOP_TIMEOUT_SEC} seconds waiting for device '
                            f'monitor thread to stop.')
 
     def rescan(self) -> Devices:
-        task = self.Task(self.Task.RESCAN)
+        task = self.TaskRequest(self.Task.RESCAN)
         self._queue.put(task)
         return task.get_result(DeviceMonitor.RESCAN_DEFAULT_TIMEOUT_SEC)
 
@@ -112,13 +105,15 @@ class DeviceMonitor(threading.Thread):
         # udev events will enqueue inter-`monitor.poll` calls due to the `monitor.start` method.
         monitor.start()
 
+        db_engine = get_db_engine()
+
         last_discovery = time.monotonic() - self.DISCOVER_DEVICES_POLL_SEC
 
         while True:
             try:
                 task = self._queue.get(timeout=self.UDEV_EVENT_POLL_SEC)
             except queue.Empty:
-                task = self.Task(self.Task.NOOP)
+                task = self.TaskRequest(self.Task.NOOP)
 
             if task.type == self.Task.EXIT or self._stop_event.is_set():
                 break
@@ -150,10 +145,14 @@ class DeviceMonitor(threading.Thread):
                         self._devices = new_devices
 
                     if task.type == self.Task.RESCAN:
-                        task.queue.put(self._get_shallow_copy_of_devices())
+                        devices = self._get_shallow_copy_of_devices()
 
                 if changed:
+                    db_engine.device.merge_with_discovered(new_devices)
                     self._notify()
+
+                if task.type == self.Task.RESCAN:
+                    task.queue.put(devices)
 
                 last_discovery = time.monotonic()
 

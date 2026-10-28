@@ -52,15 +52,6 @@ class BaseTableEngine(Generic[TSQLModel], ABC):
         self._engine = engine
 
 class BaseNamedTableEngine(BaseTableEngine):
-
-    # def _make_get_stmt(self, fuzzy_id: str | UUID):
-    #     return select(self.model_class).where(
-    #         or_(
-    #             cast(self.model_class.name, String).ilike(f"%{fuzzy_id}%"),
-    #             cast(self.model_class.id, String).ilike(f"{fuzzy_id}%"),
-    #         )
-    #     )
-
     def _make_get_stmt(self, fuzzy_id: str | UUID):
         conditions = [cast(self.model_class.id, String).ilike(f"{fuzzy_id}%")]
 

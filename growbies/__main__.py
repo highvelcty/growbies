@@ -47,7 +47,7 @@ from .common.utils.privileges import drop_privileges
 
 from growbies.protocol.resp import DeviceError
 from growbies.service.common import (ServiceCmd, ServiceOp, ServiceCmdError, TBaseServiceCmd)
-from growbies.service.queue import IDQueue, ServiceQueue
+from growbies.service.service_queue import IDQueue, ServiceQueue
 
 drop_privileges()
 

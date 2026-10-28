@@ -159,13 +159,35 @@ class DeviceEngine(BaseNamedTableEngine):
         return Devices(self._get_all())
 
     def merge_with_discovered(self, discovered_devices: Devices) -> Devices:
-        merged_devices = self._merge_with_discovered(discovered_devices)
-        for device in merged_devices:
-            self._overwrite(device)
-        return Devices(elements=[dev for dev in merged_devices])
+        existing_devices = self.list()
+        existing_by_serial = {
+            device.serial: device
+            for device in existing_devices
+        }
+
+        for discovered in discovered_devices:
+            existing = existing_by_serial.get(discovered.serial)
+
+            if existing is None:
+                # Newly discovered devices start in initial state
+                discovered.state = ConnectionState.INITIAL
+                self.upsert(discovered)
+                continue
+
+            self.upsert(existing, {Device.Key.GATEWAY: discovered.gateway,
+                                   Device.Key.PATH: discovered.path})
+
+        return self.list()
+
 
     def upsert(self, model: Device, fields: Optional[dict] = None) -> Device:
-        return super().upsert(model, {Device.Key.NAME: model.name, Device.Key.STATE: model.state})
+        if fields is None:
+            fields = {
+                Device.Key.NAME: model.name,
+                Device.Key.STATE: model.state,
+            }
+        return super().upsert(model, fields)
+
 
     def clear_active(self, id_: UUID):
         existing = self.get(id_)
@@ -206,33 +228,3 @@ class DeviceEngine(BaseNamedTableEngine):
                 cast(self.model_class.name, String).ilike(f"%{fuzzy_id}%"),
             )
         )
-    def _merge_with_discovered(self, discovered_devices: Devices) -> Devices:
-        merged_devices = self.list()
-
-        # Update existing in DB.
-        for existing_device in merged_devices:
-            existing_device.init_discovery_info()
-            discovered_device = discovered_devices.get_by_serial(existing_device.serial)
-            if discovered_device is not None:
-                existing_device.gateway = discovered_device.gateway
-                existing_device.serial = discovered_device.serial
-                existing_device.vid = discovered_device.vid
-                existing_device.pid = discovered_device.pid
-                existing_device.path = discovered_device.path
-                # Set the bit.
-                existing_device.state |= ConnectionState.DISCOVERED
-
-        # Add new
-        new_serials = set((dev.serial for dev in discovered_devices))
-        existing_serials = set((dev.serial for dev in merged_devices))
-        for serial in (new_serials - existing_serials):
-            merged_devices.append(discovered_devices.get_by_serial(serial))
-
-        return merged_devices
-
-    def _overwrite(self, device: Device) -> Device:
-        with self._engine.new_session() as db_sess:
-            merged = db_sess.merge(device)  # either updates existing or inserts
-            db_sess.commit()  # ensure it persists
-            db_sess.refresh(merged)
-            return merged
