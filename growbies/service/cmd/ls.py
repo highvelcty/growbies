@@ -141,17 +141,18 @@ class DeviceMonitor(threading.Thread):
 
                 with self._devices_lock:
                     changed = not self._devices.have_same_discovery_info(new_devices)
-                    if changed:
-                        self._devices = new_devices
-
-                    if task.type == self.Task.RESCAN:
-                        devices = self._get_shallow_copy_of_devices()
 
                 if changed:
-                    db_engine.device.merge_with_discovered(new_devices)
+                    devices = db_engine.device.merge_with_discovered(new_devices)
+
+                    with self._devices_lock:
+                        self._devices = devices
+
                     self._notify()
 
                 if task.type == self.Task.RESCAN:
+                    with self._devices_lock:
+                        devices = self._get_shallow_copy_of_devices()
                     task.queue.put(devices)
 
                 last_discovery = time.monotonic()
@@ -213,7 +214,7 @@ class DeviceMonitor(threading.Thread):
                                           vid=discovered_device.vid,
                                           pid=discovered_device.pid,
                                           serial=discovered_device.serial,
-                                          path=str(path), state=ConnectionState.DISCOVERED))
+                                          path=str(path)))
                     break
         return devices
 

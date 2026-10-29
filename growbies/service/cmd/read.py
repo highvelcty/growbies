@@ -6,6 +6,7 @@ from growbies.cli.read import Param
 from growbies.db.engine import get_db_engine
 from growbies.protocol.common.read import DataPoint
 from growbies.protocol.cmd import ReadDeviceCmd
+from growbies.service.cmd.ls import get_device_monitor_singleton
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
@@ -13,8 +14,7 @@ logger = logging.getLogger(__name__)
 def execute(cmd: ServiceCmd) -> DataPoint:
     engine = get_db_engine()
     pool = get_pool()
-    fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID, None)
-    device = engine.device.get(fuzzy_id)
+    device = get_device_monitor_singleton().devices.get(cmd.kw.pop(CommonParam.FUZZY_ID))
 
     ref_mass = cmd.kw.pop(Param.REF_MASS, None)
     reset = cmd.kw.pop(Param.RESET, False)

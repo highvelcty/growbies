@@ -15,15 +15,13 @@ if TYPE_CHECKING:
     from .session import Session
 from growbies.common.utils.report import format_8bit_binary, short_uuid
 from growbies.common.utils.types import Serial_t
+from growbies.service.common import NoResultsServiceCmdError, MultipleResultsServiceCmdError
 
 logger = logging.getLogger(__name__)
 
 class ConnectionState(IntFlag):
     INITIAL     = 0x00
-    DISCOVERED  = 0x01
     ACTIVE      = 0x02
-    CONNECTED   = 0x04
-    ERROR       = 0x08
 
 class Device(BaseTable, table=True):
     class Key:
@@ -66,10 +64,6 @@ class Device(BaseTable, table=True):
         if not self.name:
             self.name = str(self.id)
 
-    def init_discovery_info(self):
-        self.state &= ~ConnectionState.DISCOVERED
-        self.path = None
-
     def has_same_discovery_info(self, other: 'Device') -> bool:
         return (
                 self.serial == other.serial
@@ -78,32 +72,37 @@ class Device(BaseTable, table=True):
                 and self.path == other.path
         )
 
-
-    def is_initial(self) -> bool:
-        return bool(not self.state)
-
-    def is_discovered(self) -> bool:
-        return bool(self.state & ConnectionState.DISCOVERED)
-
     def is_active(self) -> bool:
         return bool(self.state & ConnectionState.ACTIVE)
-
-    def is_connected(self) -> bool:
-        return bool(self.state & ConnectionState.CONNECTED)
-
-    def is_error(self) -> bool:
-        return bool(self.state & ConnectionState.ERROR)
 
     def __str__(self):
         return (f'{self.name} {self.serial} '
                 f'{hex(self.vid)}:{hex(self.pid)} {hex(self.state)} {self.path}')
 
 class Devices(SortedTable[Device]):
-    def get_by_serial(self, serial: Serial_t) -> Optional[Device]:
-        for device in self._rows:
-            if device.serial == serial:
-                return device
-        return None
+    def get(self, fuzzy_id: str | UUID) -> Device:
+        fuzzy_id = str(fuzzy_id).lower()
+
+        matches = [
+            device
+            for device in self._rows
+            if (
+                    str(device.id).lower().startswith(fuzzy_id)
+                    or str(device.serial).lower().startswith(fuzzy_id)
+                    or fuzzy_id in device.name.lower()
+            )
+        ]
+
+        if not matches:
+            raise NoResultsServiceCmdError(
+                f'No results for "{fuzzy_id}".'
+            )
+        elif len(matches) > 1:
+            raise MultipleResultsServiceCmdError(
+                f'Multiple results for "{fuzzy_id}".'
+            )
+
+        return matches[0]
 
     def have_same_discovery_info(self, other: 'Devices') -> bool:
         if not isinstance(other, Devices):
@@ -149,12 +148,6 @@ class DeviceEngine(BaseNamedTableEngine):
     def get(self, fuzzy_id: str | UUID) -> Device:
         return self._get_one(fuzzy_id, Device.gateways, Device.sessions)
 
-    def init_start_connection(self, id_: UUID):
-        existing = self.get(id_)
-        existing.state &= ~ConnectionState.ERROR
-        existing.state &= ~ConnectionState.CONNECTED
-        self.upsert(existing)
-
     def list(self) -> Devices:
         return Devices(self._get_all())
 
@@ -164,6 +157,7 @@ class DeviceEngine(BaseNamedTableEngine):
             device.serial: device
             for device in existing_devices
         }
+        merged_by_serial = {}
 
         for discovered in discovered_devices:
             existing = existing_by_serial.get(discovered.serial)
@@ -172,13 +166,19 @@ class DeviceEngine(BaseNamedTableEngine):
                 # Newly discovered devices start in initial state
                 discovered.state = ConnectionState.INITIAL
                 self.upsert(discovered)
+                merged_by_serial[discovered.serial] = discovered
                 continue
 
-            self.upsert(existing, {Device.Key.GATEWAY: discovered.gateway,
-                                   Device.Key.PATH: discovered.path})
+            self.upsert(existing, {
+                Device.Key.GATEWAY: discovered.gateway,
+                Device.Key.PATH: discovered.path,
+            })
+            merged_by_serial[discovered.serial] = existing
 
-        return self.list()
-
+        return Devices(elements=[
+            merged_by_serial[device.serial]
+            for device in discovered_devices
+        ])
 
     def upsert(self, model: Device, fields: Optional[dict] = None) -> Device:
         if fields is None:
@@ -187,7 +187,6 @@ class DeviceEngine(BaseNamedTableEngine):
                 Device.Key.STATE: model.state,
             }
         return super().upsert(model, fields)
-
 
     def clear_active(self, id_: UUID):
         existing = self.get(id_)
@@ -198,33 +197,3 @@ class DeviceEngine(BaseNamedTableEngine):
         existing = self.get(id_)
         existing.state |= ConnectionState.ACTIVE
         self.upsert(existing)
-
-    def clear_connected(self, id_: UUID):
-        existing = self.get(id_)
-        existing.state &= ~ConnectionState.CONNECTED
-        self.upsert(existing)
-
-    def set_connected(self, id_: UUID):
-        existing = self.get(id_)
-        existing.state |= ConnectionState.CONNECTED
-        self.upsert(existing)
-
-    def clear_error(self, id_: UUID):
-        existing = self.get(id_)
-        existing.state &= ~ConnectionState.ERROR
-        self.upsert(existing)
-
-    def set_error(self, id_: UUID):
-        existing = self.get(id_)
-        existing.state |= ConnectionState.ERROR
-        self.upsert(existing)
-
-    def _make_get_stmt(self, fuzzy_id: str | UUID):
-        fuzzy_id  = str(fuzzy_id)
-        return select(self.model_class).where(
-            or_(
-                cast(self.model_class.id, String).ilike(f"{fuzzy_id}%"),
-                cast(self.model_class.serial, String).ilike(f"{fuzzy_id}%"),
-                cast(self.model_class.name, String).ilike(f"%{fuzzy_id}%"),
-            )
-        )

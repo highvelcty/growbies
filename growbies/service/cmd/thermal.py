@@ -7,6 +7,7 @@ from growbies.cli.thermal import ModParam
 from growbies.db.engine import get_db_engine
 from growbies.protocol.cmd import GetThermalDeviceStateCmd, SetThermalDeviceStateCmd
 from growbies.protocol.common.thermal import ThermalDeviceState
+from growbies.service.cmd.ls import get_device_monitor_singleton
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
@@ -14,8 +15,7 @@ logger = logging.getLogger(__name__)
 def execute(cmd: ServiceCmd) -> Optional[ThermalDeviceState]:
     engine = get_db_engine()
     pool = get_pool()
-    fuzzy_id = cmd.kw.pop(Param.FUZZY_ID, None)
-    device = engine.device.get(fuzzy_id)
+    device = get_device_monitor_singleton().devices.get(cmd.kw.pop(Param.FUZZY_ID))
     worker = pool.get_if_active_only(device.id)
 
     activate = cmd.kw.pop(ModParam.ACTIVATE, None)

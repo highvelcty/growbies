@@ -5,8 +5,9 @@ import time
 from argparse import Namespace
 from growbies.app.common.run_cmd import run_cmd
 from growbies.cli.common import Param
-from growbies.protocol.common import identify
 from growbies.db.engine import get_db_engine
+from growbies.protocol.common import identify
+from growbies.service.cmd.ls import get_device_monitor_singleton
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ class SetIdentification:
     def __init__(self, fuzzy_id):
         self._fuzzy_id = fuzzy_id
         self._db_engine = get_db_engine()
-        self._dev = self._db_engine.device.get(self._fuzzy_id)
+        self._dev = get_device_monitor_singleton().devices.get(fuzzy_id)
         self._returncode = 0
     _defaults = {
         identify.Identify.Field.TEMPERATURE_SENSOR_TYPE.public_name:

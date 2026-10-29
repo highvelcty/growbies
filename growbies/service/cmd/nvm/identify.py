@@ -4,13 +4,13 @@ import logging
 from growbies.service.common import ServiceCmd, ServiceCmdError, ServiceOp
 from growbies.cli.common import Param as CommonParam
 from growbies.cli.nvm.identify import Param
-from growbies.db.engine import get_db_engine
+from growbies.common.utils.types import DeviceID
 from growbies.protocol.cmd import (GetIdentifyDeviceCmd, SetIdentifyDeviceCmd1,
                                    SetIdentifyDeviceCmd2, SetIdentifyDeviceCmd3,
                                    SetIdentifyDeviceCmd4, SetIdentifyDeviceCmd5,
                                    SetIdentifyDeviceCmd6, SetIdentifyDeviceCmd7)
 from growbies.protocol.common.identify import TNvmIdentify, Identify
-from growbies.common.utils.types import DeviceID
+from growbies.service.cmd.ls import get_device_monitor_singleton
 from growbies.worker.pool import get_pool
 
 logger = logging.getLogger(__name__)
@@ -37,12 +37,10 @@ def update(device_id: DeviceID, identify_fields: dict[Identify.Field, Any]):
     return execute(cmd)
 
 def execute(cmd: ServiceCmd) -> Optional[TNvmIdentify]:
-    engine = get_db_engine()
     pool = get_pool()
     init = cmd.kw.pop(Param.INIT, None)
 
-    fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID, None)
-    device = engine.device.get(fuzzy_id)
+    device = get_device_monitor_singleton().devices.get(cmd.kw.pop(CommonParam.FUZZY_ID))
     worker = pool.get_if_active_only(device.id)
 
     if init:

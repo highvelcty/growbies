@@ -9,13 +9,14 @@ from growbies.db.engine import get_db_engine
 from growbies.db.models.session import Session
 from growbies.db.models.common import BuiltinTagName
 from growbies.service.common import NoResultsServiceCmdError, ServiceCmd, ServiceCmdError
+from growbies.service.cmd.ls import get_device_monitor_singleton
 
 logger = logging.getLogger(__name__)
 
 def execute(cmd: ServiceCmd) -> None:
     engine = get_db_engine()
     fuzzy_id = cmd.kw.pop(CommonParam.FUZZY_ID)
-    device = engine.device.get(fuzzy_id)
+    device = get_device_monitor_singleton().devices.get(fuzzy_id)
     session_name = cmd.kw.pop(Param.SESSION_NAME)
 
     if session_name is None:

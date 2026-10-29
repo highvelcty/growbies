@@ -654,8 +654,9 @@ def plot_temp_cal(fuzzy_id: str):
       }
     """
 
-    engine = get_db_engine().session
-    session = engine.get(fuzzy_id)
+    engine = get_db_engine()
+
+    session = engine.session.get(fuzzy_id)
     datapoints = engine.get_datapoints(session.id)
 
     if not datapoints:

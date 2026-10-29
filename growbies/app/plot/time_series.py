@@ -9,6 +9,7 @@ from sqlalchemy.engine.row import Row
 
 from growbies.common.utils.timestamp import get_elapsed_str
 from growbies.db.engine import get_db_engine
+from growbies.service.cmd.ls import get_device_monitor_singleton
 
 
 FIGURE_SIZE = (16, 10)
@@ -26,7 +27,7 @@ def plot_time_series(
         end_time: datetime,
 ):
     db_engine = get_db_engine()
-    device = db_engine.device.get(fuzzy_id)
+    device = get_device_monitor_singleton().devices.get(fuzzy_id)
 
     datapoints, mass_sensor_datapoints, temp_sensor_datapoints = \
         db_engine.datapoint.get_device_datapoints(

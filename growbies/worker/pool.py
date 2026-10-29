@@ -55,7 +55,7 @@ class Pool:
     def _connect(self, *device_ids: DeviceID):
         for device_id in device_ids:
             worker = self._workers.get(device_id)
-            if worker is None or not worker.is_stopping_or_stopped():
+            if worker is None or worker.is_stopping_or_stopped:
                 worker = Worker(device_id)
                 worker.start()
                 self._workers[device_id] = worker
