@@ -2,7 +2,7 @@ Summary
 =======
 A feedback-control, based on networks of things and machine learning, for agriculture.
 
-In development. 
+In development, see [growbies.net](https://growbies.net) for the main website.
 
 ![growbies.png](docs/source/binary/growbies.png)
 
