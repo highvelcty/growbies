@@ -1,3 +1,4 @@
+
 from contextlib import contextmanager
 import logging
 from typing import Any, Generator
@@ -30,27 +31,43 @@ class DBEngine:
     @staticmethod
     def _create_engine() -> Engine:
         cfg = get_cfg()
-        address = SQLMODEL_ADDRESS_FMT.format(address = cfg.database.address)
-        return create_engine(address, echo=False, echo_pool=False)
+        address = SQLMODEL_ADDRESS_FMT.format(address=cfg.database.address)
 
+        return create_engine(
+            address,
+            echo=False,
+            echo_pool=False,
+
+            # Connection pool health and lifecycle.
+            pool_pre_ping=True,
+            pool_recycle=1800,
+            pool_timeout=30,
+
+            # PostgreSQL / psycopg2 connection settings.
+            connect_args={
+                'connect_timeout': 10,
+                'application_name': 'growbies-db-access',
+                'keepalives': 1,
+                'keepalives_idle': 30,
+                'keepalives_interval': 10,
+                'keepalives_count': 3,
+            },
+        )
 
     def _init_tables(self):
         # All table models found in the import space at this point will be created.
         with Session(self._engine) as sess:
             SQLModel.metadata.create_all(self._engine)
             sess.commit()
-            sess.close()
 
     @contextmanager
     def new_session(self) -> Generator[Session, Any, None]:
-        sess = Session(self._engine)
-        try:
+        with Session(self._engine) as sess:
             yield sess
-        finally:
-            sess.close()
 
 # Application global singleton.
 _db_engine = None
+
 def get_db_engine():
     """Return the application global singleton, initializing it if it has not yet been."""
     global _db_engine
