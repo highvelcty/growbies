@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Optional, TypeVar
+from typing import Iterator, Optional, TypeVar
 
 class ServiceCmdError(Exception):
     pass
@@ -22,6 +22,12 @@ class ServiceOp(StrEnum):
     USER = 'user'
     SERVICE_CONNECTIONS = 'service_connections'
 
+    @classmethod
+    def external(cls) -> Iterator['ServiceOp']:
+        internal_cmds = {cls.SERVICE_CONNECTIONS,}
+        for op in cls:
+            if op not in internal_cmds:
+                yield op
 
     @property
     def help(self) -> str:

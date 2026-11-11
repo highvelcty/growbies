@@ -23,7 +23,7 @@ parser = ArgumentParser(description=pkg_doc, formatter_class=RawDescriptionHelpF
 parsers = {CMD: parser}
 parser_adder = parser.add_subparsers(dest=CMD, required=True)
 
-for cmd in ServiceOp:
+for cmd in ServiceOp.external():
     parsers[cmd] = parser_adder.add_parser(cmd, description=cmd.description, help=cmd.help,
                                            formatter_class=RawDescriptionHelpFormatter)
 

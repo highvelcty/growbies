@@ -1,0 +1,27 @@
+[Unit]
+Description=Growbies Cloudflare Database Proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+User=cloudflared
+Group=cloudflared
+
+EnvironmentFile=/etc/growbies/cloudflare.env
+
+ExecStart=/usr/bin/cloudflared access tcp \
+    --hostname @@HOSTNAME@@ \
+    --url 127.0.0.1:15432
+
+Restart=always
+RestartSec=10
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
