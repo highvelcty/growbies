@@ -47,7 +47,7 @@ html_css_files = [
 smv_branch_whitelist = r'^docs/gateway-.*$'
 
 # Ignore git tags
-smv_tag_whitelist = None
+smv_tag_whitelist = ''
 
 # Include branches from origin.
 smv_remote_whitelist = None
