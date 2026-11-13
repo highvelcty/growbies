@@ -1,5 +1,6 @@
+
 SPHINXOPTS    ?=
-SPHINXBUILD   ?= sphinx-build
+SPHINXMULTIVERSION ?= sphinx-multiversion
 SOURCEDIR     = source/
 BUILDDIR      = build/
 
@@ -17,5 +18,5 @@ clean:
 
 html: builddir
 	( \
-		$(SPHINXBUILD) -b html $(SOURCEDIR) $(BUILDDIR) $(SPHINXOPTS) $(O); \
+		$(SPHINXMULTIVERSION) $(SOURCEDIR) $(BUILDDIR) $(SPHINXOPTS) $(O); \
 	)
