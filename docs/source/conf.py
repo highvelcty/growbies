@@ -9,7 +9,7 @@
 project = 'Growbies'
 
 # noinspection PyShadowingBuiltins
-copyright = '2025, Eric Meyer'
+copyright = '2026, Eric Meyer'
 
 author = 'Eric Meyer'
 
@@ -21,8 +21,20 @@ exclude_patterns = []
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'sphinx_rtd_theme'
-extensions = ['sphinx_rtd_dark_mode']
+html_theme = 'furo'
 default_dark_mode = True
 
-# html_static_path = ['_static']
+extensions = ['sphinx_multiversion']
+
+# --- Sphinx Multiversion
+# Only build firmware documentation branches.
+smv_branch_whitelist = r'^docs/gateway-.*$'
+
+# Ignore git tags
+smv_tag_whitelist = ''
+
+# Include branches from origin.
+smv_remote_whitelist = r'^origin$'
+
+# Put each revision in its own output directory.
+smv_outputdir_format = '{ref.name}'
