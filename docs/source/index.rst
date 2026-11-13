@@ -1,5 +1,5 @@
-Welcome to Growbies emey |current_version|!
-=======================================
+Welcome to Growbies
+===================
 
 .. image:: binary/growbies.png
 
