@@ -47,10 +47,10 @@ html_css_files = [
 smv_branch_whitelist = r'^docs/gateway-.*$'
 
 # Ignore git tags
-smv_tag_whitelist = ''
+smv_tag_whitelist = None
 
 # Include branches from origin.
-smv_remote_whitelist = r'^origin$'
+smv_remote_whitelist = None
 
 # Put each revision in its own output directory.
 smv_outputdir_format = '{ref.name}'
