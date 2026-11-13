@@ -1,6 +1,7 @@
 Welcome to Growbies
 ===================
 
+Gateway 0.0.1
 
 .. image:: binary/growbies.png
 
