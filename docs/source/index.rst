@@ -1,10 +1,13 @@
-Welcome to Growbies
-===================
+Welcome to Growbies Docs!
+=========================
 
+.. toctree::
+    :maxdepth: 1
 
-.. image:: binary/growbies.png
-
-A feedback-control, based on networks of things and machine learning, for agriculture.
+    manual/index
+    gateway/index
+    firmware/index
 
 `Source Repository <https://github.com/highvelcty/growbies>`_
 
+.. image:: /_static/images/growbies.png
