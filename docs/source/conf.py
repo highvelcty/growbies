@@ -44,8 +44,6 @@ html_css_files = [
 
 # --- Sphinx Multiversion
 # Only build firmware documentation branches.
-smv_branch_whitelist = r'^docs/(gateway|manual|firmware)-.*$'
-
 # Ignore git tags
 smv_tag_whitelist = ''
 

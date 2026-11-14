@@ -1,3 +1,4 @@
+
 SPHINXOPTS ?=
 SPHINXBUILD ?= sphinx-build
 SPHINXMULTIVERSION ?= sphinx-multiversion
@@ -7,6 +8,8 @@ BUILDDIR = build/
 DOCSDIR = build/docs/
 
 default: html
+
+.PHONY: default builddir clean html multihtml
 
 builddir:
 	mkdir -p $(DOCSDIR)
@@ -18,6 +21,6 @@ html: builddir
 	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)html" $(SPHINXOPTS) $(O)
 
 multihtml: builddir
-	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)firmware" "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
-	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)gateway" "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
-	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)manual" "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/firmware-.*$$' "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/gateway-.*$$' "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/manual-.*$$' "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
