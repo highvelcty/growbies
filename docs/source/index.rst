@@ -1,9 +1,7 @@
-Welcome to Growbies
-===================
+Gateway Documentation
+=====================
 
-Gateway 0.0.1
-
-.. image:: binary/growbies.png
+.. image:: /_static/images/growbies.png
 
 A feedback-control, based on networks of things and machine learning, for agriculture.
 
