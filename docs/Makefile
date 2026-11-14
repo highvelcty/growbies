@@ -1,7 +1,10 @@
-SPHINXOPTS    ?=
-SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = source/
-BUILDDIR      = build/
+
+SPHINXOPTS ?=
+SPHINXBUILD ?= sphinx-build
+SPHINXMULTIVERSION ?= sphinx-multiversion
+SOURCEDIR = source/
+BUILDDIR = build/
+OUTPUTDIR = build/docs/this_branch
 
 default: html
 
@@ -15,7 +18,13 @@ clean:
 	    rm -rf ${BUILDDIR}*; \
 	)
 
+multihtml: builddir
+	( \
+		$(SPHINXMULTIVERSION) $(SOURCEDIR) $(BUILDDIR) $(SPHINXOPTS) $(O); \
+	)
+
+
 html: builddir
 	( \
-		$(SPHINXBUILD) -b html $(SOURCEDIR) $(BUILDDIR) $(SPHINXOPTS) $(O); \
+	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(OUTPUTDIR)" $(SPHINXOPTS) $(O) \
 	)

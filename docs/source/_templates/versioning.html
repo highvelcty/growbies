@@ -1,0 +1,18 @@
+
+{% if versions %}
+<div class="sidebar-version-selector">
+<!--    <label for="version-select">{{ project }} Version</label>-->
+
+    <select id="version-select"
+            onchange="window.location.href = this.value">
+        {% for item in versions %}
+        <option value="{{ item.url }}"
+                {% if item.name == current_version.name %}
+                selected
+                {% endif %}>
+            {{ item.name }}
+        </option>
+        {% endfor %}
+    </select>
+</div>
+{% endif %}
