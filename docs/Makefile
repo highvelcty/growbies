@@ -21,6 +21,6 @@ html: builddir
 	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)html" $(SPHINXOPTS) $(O)
 
 multihtml: builddir
-	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/firmware-.*$$' "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
-	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/gateway-.*$$' "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
-	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/manual-.*$$' "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/firmware-.*$$' "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/gateway-.*$$' "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/manual-.*$$' "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
