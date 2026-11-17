@@ -20,7 +20,7 @@ html: builddir
 	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
 
 multihtml: builddir
-	git --no-pager -C .. fetch --all --tags --prune
+	git --no-pager -C .. fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune
 	git --no-pager -C .. remote -v
 	git --no-pager -C .. branch -r
 	git --no-pager -C .. branch -a
