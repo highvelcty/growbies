@@ -1,4 +1,3 @@
-
 {% if versions %}
 <div class="sidebar-version-selector">
 <!--    <label for="version-select">{{ project }} Version</label>-->
@@ -14,5 +13,15 @@
         </option>
         {% endfor %}
     </select>
+</div>
+
+<div class="versioning">
+    <a href="../index.html" class="docs-home">
+        ← Docs Home
+    </a>
+
+    {% if versions %}
+    <!-- Existing version selector -->
+    {% endif %}
 </div>
 {% endif %}

@@ -4,3 +4,15 @@
     margin-top: 1rem;
     margin-bottom: 1rem;
 }
+
+.docs-home {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.docs-home:hover {
+    text-decoration: underline;
+}
