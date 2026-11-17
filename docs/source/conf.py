@@ -42,8 +42,8 @@ html_css_files = [
 
 # --- Sphinx Multiversion
 # discovery - remote branches only. Disregard tags and local branches
-smv_remote_whitelist = '^origin$'
-smv_branch_whitelist= ''
+smv_remote_whitelist = r'^origin$'
+smv_branch_whitelist = r'^docs/(firmware|gateway|manual)-.*$'
 smv_tag_whitelist = ''
 
 # Put each revision in its own output directory.
