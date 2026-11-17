@@ -28,7 +28,6 @@ extensions = ['sphinx_multiversion']
 html_sidebars = {
     '**': [
         'versioning.html',
-        # 'sidebar/brand.html',
         'sidebar/search.html',
         'sidebar/navigation.html',
     ],
@@ -42,12 +41,10 @@ html_css_files = [
 ]
 
 # --- Sphinx Multiversion
-# Only build firmware documentation branches.
-# Ignore git tags
+# discovery - remote branches only. Disregard tags and local branches
+smv_remote_whitelist = '^origin$'
+smv_branch_whitelist=None
 smv_tag_whitelist = ''
-
-# Include branches from origin.
-smv_remote_whitelist = None
 
 # Put each revision in its own output directory.
 smv_outputdir_format = '{ref.name}'

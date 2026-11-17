@@ -20,6 +20,7 @@ html: builddir
 	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
 
 multihtml: builddir
+	git -C .. fetch --all --tags --prune
 	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" \
 		-D 'smv_branch_whitelist=^docs/firmware-.*$$' \
 		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
@@ -31,3 +32,4 @@ multihtml: builddir
 		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	./source/_scripts/make_top_level_index.py
 	$(MAKE) html
+
