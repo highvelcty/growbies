@@ -18,9 +18,17 @@ clean:
 	rm -rf $(BUILDDIR)
 
 html: builddir
-	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(BUILDDIR)html" $(SPHINXOPTS) $(O)
+	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
 
 multihtml: builddir
-	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/firmware-.*$$' "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/gateway-.*$$' "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" -D 'smv_branch_whitelist=^docs/manual-.*$$' "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" \
+		-D 'smv_branch_whitelist=^docs/firmware-.*$$' \
+		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" \
+		-D 'smv_branch_whitelist=^docs/gateway-.*$$' \
+		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" \
+		-D 'smv_branch_whitelist=^docs/manual-.*$$' \
+		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	./source/_scripts/make_top_level_index.py
+	$(MAKE) html
