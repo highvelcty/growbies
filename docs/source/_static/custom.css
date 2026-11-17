@@ -17,3 +17,8 @@
 .docs-home:hover {
     text-decoration: underline;
 }
+
+/* Hide the documentation title in the mobile header. */
+.mobile-header .header-center .brand {
+ display: none;
+}
