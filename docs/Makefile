@@ -21,9 +21,6 @@ html: builddir
 
 multihtml: builddir
 	git --no-pager -C .. fetch origin '+refs/heads/*:refs/remotes/origin/*' --tags --prune
-	git --no-pager -C .. remote -v
-	git --no-pager -C .. branch -r
-	git --no-pager -C .. branch -a
 	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" \
 		-D 'smv_branch_whitelist=^docs/firmware-.*$$' \
 		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
@@ -33,6 +30,6 @@ multihtml: builddir
 	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" \
 		-D 'smv_branch_whitelist=^docs/manual-.*$$' \
 		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	./source/_scripts/make_top_level_index.py
+	./source/_scripts/make_top_level_index.py "$(BUILDDIR)"
 	$(MAKE) html
 
