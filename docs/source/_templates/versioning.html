@@ -4,7 +4,7 @@
 
     <select id="version-select"
             onchange="window.location.href = this.value">
-        {% for item in versions %}
+        {% for item in versions | reverse %}
         <option value="{{ item.url }}"
                 {% if item.name == current_version.name %}
                 selected
