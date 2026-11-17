@@ -20,7 +20,10 @@ html: builddir
 	$(SPHINXBUILD) -b html "$(SOURCEDIR)" "$(DOCSDIR)" $(SPHINXOPTS) $(O)
 
 multihtml: builddir
-	git -C .. fetch --all --tags --prune
+	git --no-pager -C .. fetch --all --tags --prune
+	git --no-pager -C .. remote -v
+	git --no-pager -C .. branch -r
+	git --no-pager -C .. branch -a
 	$(SPHINXMULTIVERSION) -c "$(SOURCEDIR)" \
 		-D 'smv_branch_whitelist=^docs/firmware-.*$$' \
 		"$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
