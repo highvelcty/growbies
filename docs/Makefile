@@ -1,11 +1,10 @@
-
 SPHINXOPTS ?=
 SPHINXBUILD ?= sphinx-build
 SPHINXMULTIVERSION ?= sphinx-multiversion
 
 SOURCEDIR = source/
-BUILDDIR = build/
-DOCSDIR = build/docs/
+BUILDDIR ?= build/
+DOCSDIR ?= $(BUILDDIR)docs/
 
 default: html
 
