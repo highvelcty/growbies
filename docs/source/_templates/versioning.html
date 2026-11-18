@@ -1,27 +1,32 @@
 {% if versions %}
 <div class="sidebar-version-selector">
-<!--    <label for="version-select">{{ project }} Version</label>-->
-
     <select id="version-select"
+            aria-label="{{ project }} Version"
             onchange="window.location.href = this.value">
         {% for item in versions | reverse %}
         <option value="{{ item.url }}"
-                {% if item.name == current_version.name %}
-                selected
-                {% endif %}>
+                {% if item.name == current_version.name %}selected{% endif %}>
             {{ item.name }}
         </option>
         {% endfor %}
     </select>
 </div>
+{% endif %}
 
-<div class="versioning">
+<div class="sidebar-links">
+    {% if versions %}
     <a href="../index.html" class="docs-home">
         ← Docs Home
     </a>
+    {% else %}
+    <a href="https://growbies.net" class="growbies-home top-level">
+        ← Growbies Home
+    </a>
+    {% endif %}
 
     {% if versions %}
-    <!-- Existing version selector -->
+    <a href="https://growbies.net" class="growbies-home">
+        ← Growbies Home
+    </a>
     {% endif %}
 </div>
-{% endif %}

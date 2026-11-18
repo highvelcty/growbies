@@ -18,18 +18,6 @@ class DocumentType(StrEnum):
     FIRMWARE = 'firmware'
     MANUAL = 'manual'
 
-def try_parse_document_type_and_revision(a_str: str) -> tuple[DocumentType, Version] | None:
-    match = DOC_PATTERN.fullmatch(a_str)
-
-    if match:
-        try:
-            document_type = DocumentType(match.group('document_type'))
-            version = Version(match.group('version'))
-        except ValueError:
-            return None
-        return document_type, version
-    return None
-
 class VersionedDocumentation:
     def __init__(self, version: Version, directory: str):
         self._version = version
@@ -69,25 +57,54 @@ class TopLevelIndexRst:
 Growbies Documentation
 ======================
 
-- `Owner's Manual <{{{DocumentType.MANUAL}}}/index.html>`_
-- `Gateway Documentation <{{{DocumentType.GATEWAY}}}/index.html>`_
-- `Firmware Documentation <{{{DocumentType.FIRMWARE}}}/index.html>`_
+- `Owner's Manual <manual/index.html>`_
+- `Gateway Documentation <gateway/index.html>`_
+- `Firmware Documentation <firmware/index.html>`_
 
 """
-    def __init__(self, documentation_sets: dict[DocumentType, VersionedDocumentations]):
-        self._documentation_sets = documentation_sets
-
-    def __str__(self):
-        return self.top_level_index_rst_template.format(
-            **{
-                document_type.value: documentations.latest().directory
-                for document_type, documentations in self._documentation_sets.items()
-            }
-        )
-
     def save(self):
         with open(PATH_TO_SOURCE / 'index.rst', 'w') as outf:
-            outf.write(str(self))
+            outf.write(self.top_level_index_rst_template)
+
+class RedirectIndex:
+    template = """\
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="refresh" content="0; url=../{destination}/index.html">
+    <link rel="canonical" href="../{destination}/">
+    <title>Redirecting...</title>
+</head>
+<body>
+    <p>Redirecting to
+       <a href="../{destination}/index.html">{document_type} Documentation</a>.</p>
+</body>
+</html>
+"""
+
+    def __init__(self, document_type: DocumentType, destination: str):
+        self._document_type = document_type
+        self._destination = destination
+
+    def save(self):
+        path = PATH_TO_BUILD_DOCS / self._document_type.value
+        path.mkdir(parents=True, exist_ok=True)
+
+        with open(path / 'index.html', 'w') as outf:
+            outf.write(
+                self.template.format(
+                    destination=self._destination,
+                    document_type=self._document_type.value.title()
+                )
+            )
+
+def generate_redirect_indices(documentation_sets: dict[DocumentType, VersionedDocumentations]):
+    for document_type, documentations in documentation_sets.items():
+        RedirectIndex(
+            document_type,
+            documentations.latest().directory
+        ).save()
 
 def generate_top_index_rst():
     documentation_sets = {
@@ -103,7 +120,20 @@ def generate_top_index_rst():
                 if document_type in documentation_sets:
                     documentation_sets[document_type].add_documentation(version, path.name)
 
-    TopLevelIndexRst(documentation_sets).save()
+    TopLevelIndexRst().save()
+    generate_redirect_indices(documentation_sets)
+
+def try_parse_document_type_and_revision(a_str: str) -> tuple[DocumentType, Version] | None:
+    match = DOC_PATTERN.fullmatch(a_str)
+
+    if match:
+        try:
+            document_type = DocumentType(match.group('document_type'))
+            version = Version(match.group('version'))
+        except ValueError:
+            return None
+        return document_type, version
+    return None
 
 if __name__ == '__main__':
     generate_top_index_rst()

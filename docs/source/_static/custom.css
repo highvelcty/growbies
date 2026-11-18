@@ -6,7 +6,7 @@
     padding-top: 0.25rem;
 }
 
-.docs-home {
+.sidebar-links a {
     display: block;
     margin-bottom: 0.75rem;
     font-size: 0.9rem;
@@ -14,8 +14,12 @@
     text-decoration: none;
 }
 
-.docs-home:hover {
+.sidebar-links a:hover {
     text-decoration: underline;
+}
+
+.growbies-home.top-level {
+    margin-top: 1.5rem;
 }
 
 /* Hide the documentation title in the mobile header. */

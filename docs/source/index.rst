@@ -1,7 +1,7 @@
 Growbies Documentation
 ======================
 
-- `Owner's Manual <manual-1.0.17/index.html>`_
-- `Gateway Documentation <gateway-0.0.2/index.html>`_
-- `Firmware Documentation <firmware-1.0.17/index.html>`_
+- `Owner's Manual <manual/index.html>`_
+- `Gateway Documentation <gateway/index.html>`_
+- `Firmware Documentation <firmware/index.html>`_
 
