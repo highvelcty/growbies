@@ -1,4 +1,5 @@
-Owner's Manual v.1.0.17
+Growbies Owner's Manual (v|release|)
+====================================
 =======================
 Welcome and we hope you enjoy your Growbies scale!
 
