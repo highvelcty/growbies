@@ -1,0 +1,11 @@
+{% extends "furo/page.html" %}
+
+{% block content %}
+    {% if current_version %}
+    <div class="document-version">
+        {{ current_version.name }}
+    </div>
+    {% endif %}
+
+    {{ super() }}
+{% endblock %}
