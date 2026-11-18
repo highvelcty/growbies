@@ -1,5 +1,4 @@
-Growbies Owner's Manual (v|release|)
-====================================
+Growbies Owner's Manual
 =======================
 Welcome and we hope you enjoy your Growbies scale!
 
@@ -57,7 +56,6 @@ Specifications
 
 10" circle scale
 ~~~~~~~~~~~~~~~~
-
 - 30 kilogram (66 lb) capacity
 - Operating temperature 0-120°F, 0-50°C
 - Thermally calibrated
@@ -283,7 +281,6 @@ Troubleshooting
 
 Contact Information
 -------------------
-
 Eric Meyer, Founder
 email: support@growbies.net
 phone: 720-308-1313
