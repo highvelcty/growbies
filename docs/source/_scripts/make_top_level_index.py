@@ -61,6 +61,9 @@ Growbies Documentation
 - `Gateway Documentation <gateway/index.html>`_
 - `Firmware Documentation <firmware/index.html>`_
 
+.. image:: /_static/images/growbies_loop_logo.png
+
+
 """
     def save(self):
         with open(PATH_TO_SOURCE / 'index.rst', 'w') as outf:

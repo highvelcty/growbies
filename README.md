@@ -4,7 +4,7 @@ A feedback-control, based on networks of things and machine learning, for agricu
 
 In development, see [growbies.net](https://growbies.net) for the main website.
 
-![growbies.png](docs/source/binary/growbies.png)
+![growbies_loop_logo.png](docs/source/_static/images/growbies_loop_logo.png)
 
 Credits
 =======

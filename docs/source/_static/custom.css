@@ -16,15 +16,14 @@
 
 /* Hide the documentation title in the mobile header. */
 .mobile-header .header-center .brand {
- display: none;
+    display: none;
+}
 
 .document-version {
     display: inline-block;
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--color-foreground-muted);
-    border: 1px solid var(--color-foreground-border);
-    border-radius: 0.3rem;
-    padding: 0.2rem 0.5rem;
-    margin-bottom: 0.75rem;
+    margin-left: 0.5rem;
+    font-size: 0.45em;
+    font-weight: 400;
+    opacity: 0.65;
+    vertical-align: middle;
 }

@@ -1,11 +1,18 @@
 {% extends "furo/page.html" %}
 
 {% block content %}
-    {% if current_version %}
-    <div class="document-version">
-        {{ current_version.name }}
-    </div>
-    {% endif %}
+    {{ body }}
 
-    {{ super() }}
+    {% if current_version %}
+    <script>
+        const heading = document.querySelector("#furo-main-content h1");
+
+        if (heading) {
+            const version = document.createElement("span");
+            version.className = "document-version";
+            version.textContent = {{ current_version.name.split("-")[-1] | tojson }};
+            heading.append(" ", version);
+        }
+    </script>
+    {% endif %}
 {% endblock %}

@@ -5,3 +5,6 @@ Growbies Documentation
 - `Gateway Documentation <gateway/index.html>`_
 - `Firmware Documentation <firmware/index.html>`_
 
+.. image:: /_static/images/growbies_loop_logo.png
+
+
