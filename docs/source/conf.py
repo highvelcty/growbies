@@ -5,7 +5,7 @@
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-project = 'Growbies Documentation'
+project = 'Growbies'
 
 # noinspection PyShadowingBuiltins
 copyright = '2026, Growbies, LLC'
