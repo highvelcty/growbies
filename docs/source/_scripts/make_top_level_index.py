@@ -3,12 +3,20 @@ from enum import StrEnum
 from packaging.version import Version
 from pathlib import Path
 import re
+import sys
 
 PATH_TO_SOURCE_SCRIPTS = Path(__file__).resolve().parent
 PATH_TO_SOURCE = PATH_TO_SOURCE_SCRIPTS / '..'
 PATH_TO_ROOT = PATH_TO_SOURCE / '..'
-PATH_TO_BUILD = PATH_TO_ROOT / 'build'
+
+if len(sys.argv) != 2:
+    raise SystemExit('Usage: make_top_level_index.py <build-directory>')
+
+PATH_TO_BUILD = Path(sys.argv[1]).resolve()
 PATH_TO_BUILD_DOCS = PATH_TO_BUILD / 'docs'
+
+if not PATH_TO_BUILD_DOCS.is_dir():
+    raise SystemExit(f'Build documentation directory not found: {PATH_TO_BUILD_DOCS}')
 
 DOC_PATTERN = re.compile(r'^(?P<document_type>.+)-(?P<version>\d+(?:\.\d+)*(?:[a-zA-Z0-9.+!-]*)?)$')
 
