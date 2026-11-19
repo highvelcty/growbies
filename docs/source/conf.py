@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'Growbies Gateway'
+project = 'Growbies Firmware Docs'
 
 # noinspection PyShadowingBuiltins
 copyright = '2026, Eric Meyer'
