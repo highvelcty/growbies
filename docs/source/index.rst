@@ -247,7 +247,7 @@ Gateway
 Remove the dust cap and connect the scale to a Growbies gateway via the provided USB-A to USB-C
 cable. This provides programmatic access to the device. For more detailed information, including
 information regarding valuable insights provided by time tracking the weight of a grow, please see
-`Gateway Documentation <../gateway/index.html>`_ .
+`Gateway Documentation <https://docs.growbies.net>`_ .
 
 Care and Maintenance
 --------------------
