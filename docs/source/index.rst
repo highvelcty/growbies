@@ -282,7 +282,9 @@ Troubleshooting
 Contact Information
 -------------------
 Eric Meyer, Founder
+
 email: support@growbies.net
+
 phone: 720-308-1313
 
 Please provide your Growbies model number, firmware version and serial number, if possible.
