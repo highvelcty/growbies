@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Growbies Cloudflare Database Proxy Setup
 
 ## Overview
