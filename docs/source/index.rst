@@ -1,11 +1,14 @@
-Growbies Owner's Manual
-=======================
+Growbies Owner's Manual |release|
+=================================
 Welcome and we hope you enjoy your Growbies scale!
 
 Growbies scales are built for growing.
 
-If reading this manual online, please be sure the version matches that found on your scale at
-`Configuration->Info->FW Version`.
+If reading this manual online (`https://docs.growbies.net <https://docs.growbies.net>`_), please be
+sure the version matches that found on your scale at `Configuration->Info->FW Version`.
+
+.. image:: _static/images/qr_code-docs.png
+   :height: 75px
 
 .. _quick-start:
 

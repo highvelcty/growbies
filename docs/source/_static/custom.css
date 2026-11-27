@@ -4,3 +4,20 @@
     margin-top: 1rem;
     margin-bottom: 1rem;
 }
+
+@media print {
+    figure,
+    .figure,
+    p:has(> img) {
+        display: table;
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+        max-width: 100%;
+    }
+
+    figure img,
+    p > img {
+        max-width: 100%;
+        height: auto;
+    }
+}

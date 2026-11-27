@@ -7,11 +7,9 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Growbies Owner's Manual"
-
-# noinspection PyShadowingBuiltins
-copyright = '2026, Eric Meyer'
-
-author = 'Eric Meyer'
+author = 'Growbies, LLC'# noinspection PyShadowingBuiltins
+copyright = '2026, Growbies'
+release = '1.0.17'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -41,6 +39,11 @@ html_static_path = ['_static']
 html_css_files = [
     'custom.css',
 ]
+
+latex_elements = {
+    'classoptions': ',openany,oneside',
+}
+latex_theme = 'howto'
 
 # --- Sphinx Multiversion
 # Only build firmware documentation branches.
