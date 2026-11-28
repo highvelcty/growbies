@@ -5,7 +5,7 @@ import shlex
 import sys
 
 def main():
-    fuzzy_id = '7bb'
+    fuzzy_id = 'f8c'
 
     # Set True to simply plug the given values into the tables. Set False to add the given
     # values to the values in the table.
@@ -13,9 +13,9 @@ def main():
 
     # Insert `None` or omit to keep existing.
     new_sensor_coeffs = {
-        0: (None, None, None, -9.765232, -.360043, .027322),
-        1: (None, None, None, -2.185056, -.102616, .000652),
-        2: (None, None, None, -3.249964, -.019485, .022998),
+        0: (None, None, None, 2.291927, -.159622, .001041),
+        1: (None, None, None, -4.643151, .103710, -.003116),
+        2: (None, None, None, 1.205361, -.243947, .003015),
     }
 
     proc = run(f"growbies nvm cal {fuzzy_id}")

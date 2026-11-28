@@ -22,17 +22,18 @@ DEVICES = [
 
 # Temperature set points, in degrees Celsius.
 SET_POINTS = [
-    5.0,
-    25.0,
     50.0,
+    30.0,
+    18.0,
+    3.0
 ]
 
 # The measured chamber temperature must be within this many degrees of the
 # set point before the dwell begins.
-TEMPERATURE_TOLERANCE_C = 0.5
+TEMPERATURE_TOLERANCE_C = 2.0
 
 # Time that the chamber must remain at temperature before sampling.
-DWELL_SECONDS = 60*40  # 40 minutes
+DWELL_SECONDS = 60*60  # 60 minutes
 
 # How often to check the chamber temperature while waiting.
 THERMAL_POLL_SECONDS = 10
